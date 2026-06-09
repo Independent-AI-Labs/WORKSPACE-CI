@@ -1,0 +1,13 @@
+# Patterns blocked in commit messages (both commit-msg and pre-push stages).
+# Each entry has a regex pattern and a human-readable reason.
+# Checked case-insensitively against the full commit message body.
+#
+# Consumers can override or extend this list via their own exceptions config.
+
+blocked:
+  - pattern: 'co[- _]?author(ed)?[- _]?by'
+    reason: "Co-authored-by lines are forbidden"
+  - pattern: 'noreply@anthropic\.com'
+    reason: "Anthropic bot email is forbidden"
+  - pattern: 'generated.with.*claude'
+    reason: "Claude attribution lines are forbidden"

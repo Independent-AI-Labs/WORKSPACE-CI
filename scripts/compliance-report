@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# compliance-report -- Run deep compliance audit.
+#
+# Usage:
+#   compliance-report [PROJECT_DIR]     Audit a single project
+#   compliance-report --recursive [ROOT] Discover all .git roots under ROOT and audit each
+#
+# ROOT defaults to the workspace root (auto-detected).
+set -euo pipefail
+
+_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=../lib/checks.sh
+source "$_SCRIPT_DIR/../lib/checks.sh"
+
+# Skip patterns for recursive discovery (mirrors audit-workspace)
+_SKIP_DIRS="tmp|node_modules|\.venv|__pycache__|research|python-ta-reference|\.boot-linux|\.boot-macos|dist|build|target|\.cache|\.local"
+
+if [[ "${1:-}" == "--recursive" ]]; then
+    shift
+    _root="${1:-$CI_WORKSPACE_ROOT}"
+    _root="$(cd "$_root" && pwd)"
+
+    # Discover all .git roots
+    _repos=()
+    while IFS= read -r _gitdir; do
+        _repo="$(dirname "$_gitdir")"
+        echo "$_repo" | grep -qE "$_SKIP_DIRS" && continue
+        _repos+=("$_repo")
+    done < <(find "$_root" -name ".git" -type d 2>/dev/null | sort)
+
+    if [[ ${#_repos[@]} -eq 0 ]]; then
+        ci_warn "No git repos found under $_root"
+        exit 0
+    fi
+
+    _total_repos=${#_repos[@]}
+    _total_passed=0
+    _total_checks=0
+    _total_violations=0
+    _full_compliance=0
+    _results=()
+
+    for _repo in "${_repos[@]}"; do
+        _rel="${_repo#"$_root"/}"
+        [[ "$_repo" == "$_root" ]] && _rel="(root)"
+
+        # Run compliance, capture output and exit code
+        local _rc=0
+        _output="$(ci_compliance_score "$_repo" 2>&1)" || _rc=$?
+        echo "$_output"
+
+        # Parse score from output: "COMPLIANCE: XX% (P/T)"
+        if [[ "$_output" =~ COMPLIANCE:\ ([0-9]+)%\ \(([0-9]+)/([0-9]+)\) ]]; then
+            _pct="${BASH_REMATCH[1]}"
+            _p="${BASH_REMATCH[2]}"
+            _t="${BASH_REMATCH[3]}"
+            _v=$((_t - _p))
+            _total_passed=$((_total_passed + _p))
+            _total_checks=$((_total_checks + _t))
+            _total_violations=$((_total_violations + _v))
+            [[ $_v -eq 0 ]] && _full_compliance=$((_full_compliance + 1))
+            _results+=("$(printf '%3d%%  %-40s (%d/%d)' "$_pct" "$_rel" "$_p" "$_t")")
+        fi
+    done
+
+    # Summary
+    _agg_pct=0
+    [[ $_total_checks -gt 0 ]] && _agg_pct=$(( (_total_passed * 100) / _total_checks ))
+
+    _tier="Tier F"
+    [[ $_agg_pct -ge 40 ]] && _tier="Tier D"
+    [[ $_agg_pct -ge 60 ]] && _tier="Tier C"
+    [[ $_agg_pct -ge 80 ]] && _tier="Tier B"
+    [[ $_agg_pct -eq 100 ]] && _tier="Tier A"
+
+    echo ""
+    echo ""
+    ci_info "=============================================="
+    ci_info "  WORKSPACE COMPLIANCE SUMMARY"
+    ci_info "=============================================="
+    echo ""
+    for _r in "${_results[@]}"; do
+        echo "  $_r"
+    done
+    echo ""
+    echo "  -------------------------------------------"
+    printf "  Repos: %d | Full compliance: %d/%d\n" "$_total_repos" "$_full_compliance" "$_total_repos"
+    printf "  Checks: %d/%d | Violations: %d\n" "$_total_passed" "$_total_checks" "$_total_violations"
+    echo ""
+
+    if [[ $_total_violations -eq 0 ]]; then
+        ci_pass "WORKSPACE: ${_agg_pct}% -- $_tier"
+    else
+        ci_fail "WORKSPACE: ${_agg_pct}% -- $_tier -- $_total_violations total violation(s)"
+    fi
+    echo "=============================================="
+
+    [[ $_total_violations -eq 0 ]] && exit 0 || exit 1
+else
+    ci_compliance_score "${1:-.}"
+fi

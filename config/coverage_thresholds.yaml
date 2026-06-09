@@ -1,0 +1,13 @@
+# workspace-ci Test Coverage Thresholds
+
+unit:
+  path: tests
+  min_coverage: 90
+  source_path: ci
+  runner: uv run python -m pytest
+
+integration:
+  path: tests
+  min_coverage: 50
+  source_path: ci
+  runner: uv run python -m pytest

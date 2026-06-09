@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# walk-projects — emit one nested .git repo path per line, relative to the
+# workspace root.
+#
+# Used by every workspace-level *-recursive Makefile target so the
+# find-and-iterate logic exists in one place.
+#
+# Usage:
+#   bash scripts/walk-projects [WORKSPACE_ROOT]
+#
+# Output (one path per line, relative to workspace root):
+#   projects/my-project
+#   projects/other-project/packages/sub      # nested repos handled
+#   ...
+#
+# The output excludes the workspace-root repo itself (the umbrella), which
+# is iterated separately by callers when needed.
+
+set -euo pipefail
+
+_workspace_root="${1:-}"
+if [[ -z "$_workspace_root" ]]; then
+    # Walk up from CWD looking for the three workspace markers
+    _cur="$(pwd)"
+    while [[ "$_cur" != "/" ]]; do
+        if [[ -d "$_cur/.boot-linux" \
+              && -d "$_cur/projects" ]]; then
+            _workspace_root="$_cur"
+            break
+        fi
+        _cur="$(dirname "$_cur")"
+    done
+fi
+
+if [[ -z "$_workspace_root" || ! -d "$_workspace_root/projects" ]]; then
+    echo "walk-projects: cannot locate workspace root" >&2
+    exit 1
+fi
+
+# Find every .git directory under projects/, emit the parent path
+# relative to the workspace root. Includes nested repos at any depth.
+cd "$_workspace_root"
+find projects -type d -name .git 2>/dev/null | while IFS= read -r _gitdir; do
+    _repo="$(dirname "$_gitdir")"
+    echo "$_repo"
+done

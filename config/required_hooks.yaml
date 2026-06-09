@@ -1,0 +1,232 @@
+# workspace-ci required-hooks manifest.
+#
+# Single source of truth for what hooks every consumer project must wire.
+# Read by `scripts/generate-hooks` at hook-generation time and by
+# `ci/ci/check_required_hooks_present.py` at validation time.
+#
+# Adding a new check_*.py to ci/ MUST be paired with
+# an entry here, otherwise `check_required_hooks_present` fails.
+#
+# Field reference:
+#   id           — stable hook id; matches the # === Hook: <id> === marker in
+#                  generated .git/hooks/* files.
+#   kind         — shell | python_module | makefile_target.
+#   entry        — bash function name | python module path | make target name.
+#   stage        — pre-commit | commit-msg | pre-push.
+#   pass_filenames, always_run — passed through to the rendered hook.
+#   files        — optional path pattern that scopes the hook (pass-through).
+#   mandatory    — true: cannot be exempted via quality_exceptions.yaml.
+#                  false: exemptable per-path because the check is heuristic.
+#   safety       — true: included even at POC tier (basic-safety subset).
+#                  false: strict-tier only.
+#   applicable_to — list of language hints the check applies to.
+#                  [any] runs for every project. [python] | [node] | [rust]
+#                  scopes by language (detected by language-marker files).
+
+version: 1
+
+hooks:
+  # ─────────────────────────────────────────────────────────────────────
+  # Safety-tier hooks (installed even at POC tier, mandatory always)
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: check-unstaged
+    kind: shell
+    entry: ci_check_unstaged
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    safety: true
+    applicable_to: [any]
+
+  - id: block-sensitive-files
+    kind: shell
+    entry: ci_block_sensitive_files
+    stage: pre-commit
+    pass_filenames: true
+    always_run: false
+    mandatory: true
+    safety: true
+    applicable_to: [any]
+
+  - id: gitleaks
+    kind: shell_inline
+    entry: "gitleaks protect --staged --redact --no-banner --verbose"
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    safety: true
+    applicable_to: [any]
+
+  - id: ci-check-silent-swallow
+    kind: shell
+    entry: ci_check_silent_swallow
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    safety: true
+    applicable_to: [any]
+
+  - id: check-coverage-no-devolution
+    kind: shell
+    entry: ci_check_coverage_thresholds_no_devolution
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    safety: true
+    applicable_to: [any]
+
+  - id: check-banned-words
+    kind: shell
+    entry: ci_check_banned_words
+    stage: pre-commit
+    pass_filenames: false
+    always_run: false
+    mandatory: true
+    safety: true
+    applicable_to: [any]
+
+  - id: check-commit-message
+    kind: shell_with_arg
+    entry: ci_check_commit_message
+    stage: commit-msg
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    safety: true
+    applicable_to: [any]
+
+  - id: block-coauthored
+    kind: shell_with_arg
+    entry: ci_block_coauthored
+    stage: commit-msg
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    safety: true
+    applicable_to: [any]
+
+  - id: block-coauthored-history
+    kind: shell
+    entry: ci_block_coauthored_history
+    stage: pre-push
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    safety: true
+    applicable_to: [any]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Strict-tier mandatory hooks (not in safety subset)
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: check-file-length
+    kind: shell
+    entry: ci_check_file_length
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    safety: false
+    applicable_to: [any]
+
+  - id: check-required-hooks-present
+    kind: python_module
+    entry: ci.check_required_hooks_present
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    safety: false
+    applicable_to: [any]
+
+  - id: ci-lint
+    kind: makefile_target
+    entry: lint
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    safety: false
+    applicable_to: [any]
+
+  - id: ci-type-check
+    kind: makefile_target
+    entry: type-check
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    safety: false
+    applicable_to: [any]
+
+  - id: ci-make-check
+    kind: makefile_target
+    entry: check
+    stage: pre-push
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    safety: false
+    applicable_to: [any]
+
+  - id: verify-coverage
+    kind: shell
+    entry: ci_verify_coverage
+    stage: pre-push
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    safety: false
+    applicable_to: [any]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Strict-tier exemptable hooks (heuristic — false positives possible,
+  # path-scoped exemption allowed via quality_exceptions.yaml)
+  # ─────────────────────────────────────────────────────────────────────
+
+  - id: check-dead-code
+    kind: python_module
+    entry: ci.check_dead_code
+    stage: pre-push
+    pass_filenames: false
+    always_run: true
+    mandatory: false
+    safety: false
+    applicable_to: [python]
+
+  - id: check-dependency-versions
+    kind: python_module
+    entry: ci.check_dependency_versions
+    stage: pre-push
+    pass_filenames: false
+    always_run: true
+    mandatory: false
+    safety: false
+    applicable_to: [python, node]
+
+  - id: check-duplicate-dependencies
+    kind: python_module
+    entry: ci.check_duplicate_dependencies
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: false
+    safety: false
+    applicable_to: [python]
+
+  - id: check-markdown-docs
+    kind: python_module_files
+    entry: ci.check_markdown_docs --check-remote
+    stage: pre-commit
+    pass_filenames: true
+    always_run: false
+    files_types: [markdown]
+    mandatory: true
+    safety: true
+    applicable_to: [any]
+    applicable_to: [any]

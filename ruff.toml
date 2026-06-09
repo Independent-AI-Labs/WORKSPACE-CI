@@ -1,0 +1,9 @@
+exclude = ["__pycache__", "*.egg-info", ".venv", ".git", "node_modules", ".pytest_cache", ".boot-linux"]
+line-length = 88
+
+[lint]
+select = [
+    "E", "F", "W", "I", "C", "B", "PL", "PT", "SIM", "UP", "RUF", "TRY", "FLY", "PERF", "FURB", "PYI", "TID", "PLC0415"
+]
+# Ignore rules are not permitted in this configuration.
+# Per-file ignores are not permitted in this configuration.

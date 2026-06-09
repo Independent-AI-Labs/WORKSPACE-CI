@@ -1,0 +1,76 @@
+# yaml-language-server: $schema=https://moonrepo.dev/schemas/project.json
+#
+# moon project config for ci.
+# Per-repo tasks live in the Makefile.
+
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+project:
+  name: 'ci'
+  description: 'CI hooks, banned-pattern checks, coverage gates'
+
+language: 'python'
+layer: 'library'
+
+tags:
+  - 'library'
+  - 'python'
+  - 'tooling'
+
+dependsOn: []
+
+# Tasks wrap the Makefile contract. `inputs:` are declared on cacheable
+# tasks (lint, type-check, test, check) so affected checks can skip
+# unchanged projects. The implementation still lives in the Makefile.
+tasks:
+  lint:
+    command: 'make _lint-impl'
+    inputs:
+      - 'ci/**/*.py'
+      - 'tests/**/*.py'
+      - 'scripts/**/*'
+      - 'lib/**/*.sh'
+      - 'pyproject.toml'
+      - 'Makefile'
+  type-check:
+    command: 'make _type-check-impl'
+    inputs:
+      - 'ci/**/*.py'
+      - 'pyproject.toml'
+      - 'Makefile'
+  test:
+    command: 'make _test-impl'
+    inputs:
+      - 'ci/**/*.py'
+      - 'tests/**/*.py'
+      - 'scripts/**/*'
+      - 'lib/**/*.sh'
+      - 'templates/**/*'
+      - 'config/**/*'
+      - 'pyproject.toml'
+      - 'Makefile'
+  check:
+    # Aggregator: deps run lint+type-check+test through moon's task DAG;
+    # the command itself is a no-op so we don't re-invoke `make check`
+    # which would recurse back through the public shim.
+    command: 'true'
+    deps:
+      - '~:lint'
+      - '~:type-check'
+      - '~:test'
+  # `ci:` kept as an alias so existing CI invocations keep working.
+  ci:
+    command: 'make check'
+    deps:
+      - '~:check'
+  # Workspace-wide update walk. `^update` runs the same task
+  # in every project this depends on (transitively) BEFORE running
+  # update here. cache=false because git pull has external state;
+  # runDepsInParallel=false to enforce Tier 0 → 1 → 2 ordering.
+  update:
+    command: 'bash -c "git pull --ff-only 2>/dev/null || true && make sync"'
+    deps:
+      - '^:update'
+    options:
+      cache: false
+      runDepsInParallel: false

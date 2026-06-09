@@ -1,0 +1,54 @@
+# project_enforcement.yaml — workspace-level tier registry.
+#
+# This file is the PER-MACHINE COPY of the enforcement template. It
+# is gitignored at the workspace root; it gets autocreated from
+# the template on first need
+# (by the git-guard wrapper, by generate-hooks, or by any *-recursive
+# Makefile target). Edit it to add machine-local overrides.
+#
+# Tier resolution is path-prefix-keyed with most-specific-match-wins. A
+# nested git repo at any depth under projects/ inherits its parent path's
+# tier unless a more-specific entry overrides it.
+#
+# Tiers:
+#   strict    — full contract: all mandatory hooks installed,
+#               quality_exceptions.yaml required, lint+type-check+make-check
+#               required. Wrapper enforces all gates. (Default for any
+#               path not matched below.)
+#   poc       — safety subset only: gitleaks, sensitive-files, banned-words,
+#               blocked-history, commit-message format. No
+#               quality_exceptions.yaml required, no lint/type/check.
+#   vendored  — wrapper passthrough; no hooks installed at all. Use for
+#               git-subtree mirrors and frozen legacy code.
+
+version: 1
+
+# Global enforcement mode. The git-guard wrapper consults this on every
+# commit/push in an in-scope project.
+#
+#   warn     — print a yellow advisory on contract violations, do NOT block.
+#              Used during rollout (Phase 1-2) so contributors see what's
+#              missing without breaking their workflow.
+#   enforce  — hard-block commit/push on any contract violation. Phase 3.
+#
+# Per-machine: this file is gitignored, so different boxes can sit at
+# different rollout phases of the same workspace. Flip to `enforce` only
+# after every consumer has its quality_exceptions.yaml committed and
+# `make install-hooks` re-rendered locally.
+#
+# Default when the field is absent: warn (fail-safe during rollout).
+enforcement_mode: warn
+
+defaults:
+  tier: strict
+
+exemptions:
+  # Example: POC / exploratory repo.
+  # - path: projects/my-prototype/
+  #   tier: poc
+  #   reason: "Early-stage prototype, not a production target"
+
+  # Example: Vendored third-party code.
+  # - path: projects/vendored-lib/
+  #   tier: vendored
+  #   reason: "Third-party mirror; tracked upstream separately"

@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# bootstrap-gitleaks — fetch the gitleaks binary and place it on PATH.
+#
+# This project depends on `gitleaks` for the pre-commit secret-content scanner.
+# This script is idempotent: if a compatible binary is already present at the
+# target path, it exits 0 without redownloading.
+#
+# Default install location:
+#   $AMI_ROOT/.boot-linux/bin/gitleaks
+# Override with $GITLEAKS_BIN to drop somewhere else.
+#
+# Override the version with $GITLEAKS_VERSION (default below).
+
+set -euo pipefail
+
+GITLEAKS_VERSION="${GITLEAKS_VERSION:-8.21.2}"
+# Supply-chain pinning: SHA256 defaults are hard-coded for the default version.
+# checksums per https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_checksums.txt
+# Override only if you intentionally bump $GITLEAKS_VERSION (then supply matching SHAs).
+GITLEAKS_SHA256_X64="${GITLEAKS_SHA256_X64:-5bc41815076e6ed6ef8fbecc9d9b75bcae31f39029ceb55da08086315316e3ba}"
+GITLEAKS_SHA256_ARM64="${GITLEAKS_SHA256_ARM64:-654c935542c89f565aabe7bf7c6c500830f116c114f0aeb509d2460c1ac2e6da}"
+
+_ami_root() {
+    if [[ -n "${AMI_ROOT:-}" ]]; then
+        echo "$AMI_ROOT"
+        return
+    fi
+    # Walk up from this script's directory looking for the workspace root.
+    local d
+    d="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    while [[ "$d" != "/" ]]; do
+        if [[ -d "$d/.boot-linux" ]]; then
+            echo "$d"
+            return
+        fi
+        d="$(dirname "$d")"
+    done
+    echo "ERROR: could not locate AMI_ROOT — set \$AMI_ROOT or run from inside an AMI workspace." >&2
+    exit 2
+}
+
+_log() { printf '[bootstrap-gitleaks] %s\n' "$*" >&2; }
+
+main() {
+    local ami_root bin target_dir target arch tarball url
+    ami_root="$(_ami_root)"
+    target_dir="${ami_root}/.boot-linux/bin"
+    target="${GITLEAKS_BIN:-${target_dir}/gitleaks}"
+
+    mkdir -p "$(dirname "$target")"
+
+    if [[ -x "$target" ]]; then
+        local cur
+        if "$target" version >/dev/null 2>&1; then
+            cur="$("$target" version 2>/dev/null | head -1)"
+        else
+            cur=""
+        fi
+        if [[ "$cur" == *"$GITLEAKS_VERSION"* ]]; then
+            _log "gitleaks ${GITLEAKS_VERSION} already at $target"
+            return 0
+        fi
+        _log "found existing gitleaks ($cur), upgrading to ${GITLEAKS_VERSION}"
+    fi
+
+    case "$(uname -m)" in
+        x86_64|amd64)  arch="x64" ;;
+        aarch64|arm64) arch="arm64" ;;
+        *) _log "unsupported arch: $(uname -m)"; return 1 ;;
+    esac
+
+    tarball="gitleaks_${GITLEAKS_VERSION}_linux_${arch}.tar.gz"
+    url="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${tarball}"
+
+    local tmp
+    tmp="$(mktemp -d)"
+    # Use ${tmp:-} so the trap is safe under `set -u` once `tmp` (a local)
+    # goes out of scope after main() returns.
+    # shellcheck disable=SC2064
+    trap "rm -rf \"\${tmp:-$tmp}\"" EXIT
+
+    _log "fetching ${url}"
+    curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/${tarball}" "$url"
+
+    # Mandatory checksum verification (supply-chain safety).
+    # Defaults are hard-coded above for the default version; any version bump
+    # must supply matching SHAs via $GITLEAKS_SHA256_X64 / $GITLEAKS_SHA256_ARM64.
+    local expected_sha=""
+    case "$arch" in
+        x64)   expected_sha="$GITLEAKS_SHA256_X64" ;;
+        arm64) expected_sha="$GITLEAKS_SHA256_ARM64" ;;
+    esac
+    if [[ -z "$expected_sha" ]]; then
+        _log "no SHA256 pin available for arch=$arch version=$GITLEAKS_VERSION; refusing to install unverified binary"
+        _log "set GITLEAKS_SHA256_${arch^^} to the official checksum for gitleaks_${GITLEAKS_VERSION}_linux_${arch}.tar.gz"
+        return 1
+    fi
+    local actual_sha
+    actual_sha="$(sha256sum "${tmp}/${tarball}" | awk '{print $1}')"
+    if [[ "$actual_sha" != "$expected_sha" ]]; then
+        _log "checksum mismatch: expected $expected_sha, got $actual_sha"
+        return 1
+    fi
+    _log "checksum OK ($expected_sha)"
+
+    tar -xzf "${tmp}/${tarball}" -C "$tmp" gitleaks
+    install -m 0755 "${tmp}/gitleaks" "$target"
+
+    _log "installed: $("$target" version | head -1) → $target"
+}
+
+main "$@"

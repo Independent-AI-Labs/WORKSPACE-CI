@@ -1,0 +1,40 @@
+# workspace-ci banned words exceptions.
+# Only the config file that defines patterns and test/lib files.
+exceptions:
+  # The banned_words.yaml file defines the banned patterns — it must contain them
+  - pattern: '.*'
+    paths: ['config/banned_words.yaml']
+
+  # Shell lib files use these words in check function names and messages.
+  - pattern: '\bsilent'
+    paths: ['lib/', 'tests/', 'scripts/']
+  - pattern: '\.suppress'
+    paths: ['lib/', 'tests/']
+
+  # The check-tester itself authors heredocs containing the banned
+  # "not implemented yet" string as fixture payload; exempt the single
+  # file that exercises the directory_rules check.
+  - pattern: 'reason=.*not implemented yet'
+    paths: ['tests/test_checks.sh']
+
+  # Tests need these words for test descriptions and mocking
+  - pattern: '\bmock\b'
+    paths: ['tests/']
+  - pattern: '\blegacy\b'
+    paths: ['tests/', 'scripts/']
+  - pattern: '\bstubs?\b'
+    paths: ['tests/']
+  - pattern: '\bfallback\b'
+    paths: ['tests/', 'lib/']
+  # check_silent_swallow.py emits the spec'd `<file>:<line>: <pattern> -- <line>`
+  # output format and documents diff/regex syntax containing ` -- `.
+  - pattern: ' -- '
+    paths: ['lib/check_silent_swallow.py', 'lib/checks_silent.sh', 'tests/test_silent_swallow.sh']
+  - pattern: '\bbackwards\b'
+    paths: ['tests/']
+  - pattern: '\bcompatibility\b'
+    paths: ['tests/']
+  - pattern: ':\s*Any\b'
+    paths: ['tests/']
+  - pattern: '\bxfail\b'
+    paths: ['config/banned_words.yaml', 'tests/']

@@ -1,0 +1,219 @@
+#!/usr/bin/env bash
+# audit-workspace -- Discover all git repos under a root and report status.
+# Reports: working tree state, remote sync, CI integration level.
+#
+# Usage: audit-workspace [ROOT]
+set -euo pipefail
+
+_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+_CI_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
+source "$_CI_ROOT/lib/ci.sh"
+
+_ROOT="${1:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+_ROOT="$(cd "$_ROOT" && pwd)"
+
+# Skip patterns for repo discovery
+_SKIP_DIRS="tmp|node_modules|\.venv|__pycache__|research|python-ta-reference|\.boot-linux|\.boot-macos|dist|build"
+
+# Load blocked patterns for L4 check
+_blocked_combined=""
+_blocked_config="$CI_CONFIG_DIR/blocked_commit_patterns.yaml"
+if [[ -f "$_blocked_config" ]]; then
+    while IFS= read -r _line; do
+        if [[ "$_line" =~ pattern:[[:space:]]*[\"\']?(.+)[\"\']?$ ]]; then
+            _pat="${BASH_REMATCH[1]}"
+            _pat="${_pat%\"}" ; _pat="${_pat%\'}"
+            _pat="${_pat#\"}" ; _pat="${_pat#\'}"
+            [[ -n "$_blocked_combined" ]] && _blocked_combined="${_blocked_combined}|"
+            _blocked_combined="${_blocked_combined}${_pat}"
+        fi
+    done < "$_blocked_config"
+fi
+
+# -- Discover repos --
+_repos=()
+while IFS= read -r _gitdir; do
+    _repo="$(dirname "$_gitdir")"
+    # Skip matches
+    if echo "$_repo" | grep -qE "$_SKIP_DIRS"; then
+        continue
+    fi
+    _repos+=("$_repo")
+done < <(find "$_ROOT" -name ".git" -type d 2>/dev/null | sort)
+
+if [[ ${#_repos[@]} -eq 0 ]]; then
+    ci_warn "No git repos found under $_ROOT"
+    exit 0
+fi
+
+_total_repos=${#_repos[@]}
+_fully_integrated=0
+_total_score=0
+_max_possible=0
+
+# -- Helper: relative time --
+_age() {
+    local ts="$1"
+    local now
+    now="$(date +%s)"
+    local diff=$(( now - ts ))
+    if [[ $diff -lt 3600 ]]; then
+        echo "$((diff / 60))m ago"
+    elif [[ $diff -lt 86400 ]]; then
+        echo "$((diff / 3600))h ago"
+    else
+        echo "$((diff / 86400))d ago"
+    fi
+}
+
+# -- Audit each repo --
+for _repo in "${_repos[@]}"; do
+    _rel="${_repo#"$_ROOT"/}"
+    [[ "$_repo" == "$_ROOT" ]] && _rel="(root)"
+
+    echo ""
+    ci_info "=== $_rel ==="
+
+    # 1. Identity
+    _branch="$(git -C "$_repo" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")"
+    _last_hash="$(git -C "$_repo" log -1 --format=%h 2>/dev/null || echo "none")"
+    _last_subj="$(git -C "$_repo" log -1 --format=%s 2>/dev/null || echo "")"
+    _last_ts="$(git -C "$_repo" log -1 --format=%at 2>/dev/null || echo "0")"
+    _last_age="$(_age "$_last_ts")"
+    echo "Branch: $_branch | Last: $_last_hash ${_last_subj:0:60} ($_last_age)"
+
+    # 2. Working tree
+    _unstaged="$(git -C "$_repo" diff --name-only 2>/dev/null | wc -l | tr -d ' ')"
+    _staged="$(git -C "$_repo" diff --cached --name-only 2>/dev/null | wc -l | tr -d ' ')"
+    _untracked="$(git -C "$_repo" ls-files --others --exclude-standard 2>/dev/null | wc -l | tr -d ' ')"
+    _stash="$(git -C "$_repo" stash list 2>/dev/null | wc -l | tr -d ' ')"
+    if [[ $_unstaged -eq 0 && $_staged -eq 0 && $_untracked -eq 0 ]]; then
+        echo "Tree:   clean"
+    else
+        echo "Tree:   dirty (unstaged:$_unstaged staged:$_staged untracked:$_untracked stash:$_stash)"
+    fi
+
+    # 3. Remote sync
+    local _rc_remotes=0
+    _remotes="$(git -C "$_repo" remote 2>/dev/null)" || _rc_remotes=$?
+    if [[ -z "$_remotes" ]]; then
+        echo "Remotes: none"
+    else
+        echo "Remotes:"
+        while IFS= read -r _remote; do
+            _url="$(git -C "$_repo" remote get-url "$_remote" 2>/dev/null || echo "?")"
+            _tracking="$(git -C "$_repo" rev-parse --abbrev-ref "$_branch@{upstream}" 2>/dev/null || echo "")"
+            if [[ -z "$_tracking" || "$_tracking" == *"@{upstream}"* ]]; then
+                printf "  %-8s (%s) : no tracking branch\n" "$_remote" "$_url"
+                continue
+            fi
+            _ahead="$(git -C "$_repo" rev-list --count "$_tracking..HEAD" 2>/dev/null || echo "?")"
+            _behind="$(git -C "$_repo" rev-list --count "HEAD..$_tracking" 2>/dev/null || echo "?")"
+            if [[ "$_ahead" == "0" && "$_behind" == "0" ]]; then
+                _sync="up-to-date"
+            elif [[ "$_ahead" != "0" && "$_behind" != "0" ]]; then
+                _sync="DIVERGED (ahead $_ahead, behind $_behind)"
+            elif [[ "$_ahead" != "0" ]]; then
+                _sync="ahead $_ahead"
+            else
+                _sync="behind $_behind"
+            fi
+            printf "  %-8s (%s) : %s\n" "$_remote" "$_url" "$_sync"
+        done <<< "$_remotes"
+    fi
+
+    # 4. CI Integration
+    _score=0
+    _max=7
+    _max_possible=$((_max_possible + _max))
+    _checks=()
+
+    # L0: Config
+    if [[ -f "$_repo/.pre-commit-config.yaml" ]]; then
+        _checks+=("[x] L0: .pre-commit-config.yaml")
+        _score=$((_score + 1))
+    else
+        _checks+=("[ ] L0: .pre-commit-config.yaml (missing)")
+    fi
+
+    # L1: Native hooks
+    if [[ -f "$_repo/.git/hooks/pre-commit" ]] && grep -q 'generate-hooks\|ci\.sh' "$_repo/.git/hooks/pre-commit" 2>/dev/null; then
+        _checks+=("[x] L1: Native hooks installed")
+        _score=$((_score + 1))
+    elif [[ -f "$_repo/.git/hooks/pre-commit" ]]; then
+        _checks+=("[ ] L1: Native hooks (pre-commit exists but not CI-generated)")
+    else
+        _checks+=("[ ] L1: Native hooks (not installed)")
+    fi
+
+    # L2: Makefile migrated
+    if [[ -f "$_repo/Makefile" ]] && grep -q 'generate-hooks' "$_repo/Makefile" 2>/dev/null; then
+        _checks+=("[x] L2: Makefile migrated")
+        _score=$((_score + 1))
+    elif [[ -f "$_repo/Makefile" ]] && grep -q 'pre-commit install' "$_repo/Makefile" 2>/dev/null; then
+        _checks+=("[ ] L2: Makefile (still uses pre-commit install)")
+    elif [[ -f "$_repo/Makefile" ]]; then
+        _checks+=("[ ] L2: Makefile (no hooks target)")
+    else
+        _checks+=("[ ] L2: Makefile (no Makefile)")
+    fi
+
+    # L3: Commit msg enforced
+    if [[ -f "$_repo/.pre-commit-config.yaml" ]] && grep -q 'check-commit-message\|ci_check_commit_message' "$_repo/.pre-commit-config.yaml" 2>/dev/null; then
+        _checks+=("[x] L3: Commit message format enforced")
+        _score=$((_score + 1))
+    else
+        _checks+=("[ ] L3: Commit message format (not configured)")
+    fi
+
+    # L4: History clean
+    if [[ -n "$_blocked_combined" ]]; then
+        local _rc_blocked=0
+        _violations="$(git -C "$_repo" log --format=%B HEAD 2>/dev/null | grep -ciE "$_blocked_combined")" || _rc_blocked=$?
+        if [[ "$_violations" -eq 0 ]]; then
+            _checks+=("[x] L4: History clean")
+            _score=$((_score + 1))
+        else
+            _checks+=("[ ] L4: History clean ($_violations blocked pattern(s) found)")
+        fi
+    else
+        _checks+=("[ ] L4: History clean (no blocked patterns config)")
+    fi
+
+    # L5: Pre-push hooks
+    if [[ -f "$_repo/.git/hooks/pre-push" ]] && grep -q 'generate-hooks\|ci\.sh' "$_repo/.git/hooks/pre-push" 2>/dev/null; then
+        _checks+=("[x] L5: Pre-push hooks")
+        _score=$((_score + 1))
+    else
+        _checks+=("[ ] L5: Pre-push hooks (not installed)")
+    fi
+
+    # L6: Test suite on push
+    if [[ -f "$_repo/.pre-commit-config.yaml" ]] && grep -q 'run-tests\|verify-coverage' "$_repo/.pre-commit-config.yaml" 2>/dev/null; then
+        _checks+=("[x] L6: Test suite on push")
+        _score=$((_score + 1))
+    else
+        _checks+=("[ ] L6: Test suite on push (not configured)")
+    fi
+
+    echo ""
+    echo "CI Integration: $_score/$_max"
+    for _c in "${_checks[@]}"; do
+        echo "  $_c"
+    done
+
+    _total_score=$((_total_score + _score))
+    [[ $_score -eq $_max ]] && _fully_integrated=$((_fully_integrated + 1))
+done
+
+# -- Summary --
+echo ""
+echo "==========================================="
+ci_info "Workspace: $_ROOT"
+echo "Repos: $_total_repos | Fully integrated: $_fully_integrated/$_total_repos | Score: $_total_score/$_max_possible"
+echo "==========================================="
+
+if [[ $_fully_integrated -lt $_total_repos ]]; then
+    exit 1
+fi
+exit 0

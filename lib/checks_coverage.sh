@@ -1,0 +1,259 @@
+#!/usr/bin/env bash
+# CI Coverage Checks: test suite verification with coverage thresholds.
+# Sourced by checks.sh. Requires ci.sh to be loaded first.
+
+# --- ci_verify_coverage [config-path] ---
+ci_verify_coverage() {
+    # Project MUST define its own coverage config. No defaults.
+    local config="${1:-}"
+    if [[ -z "$config" ]]; then
+        for _cand in "./config/coverage_thresholds.yaml" "./coverage_thresholds.yaml"; do
+            if [[ -f "$_cand" ]]; then config="$_cand"; break; fi
+        done
+    fi
+
+    if [[ -z "$config" || ! -f "$config" ]]; then
+        ci_fail "No coverage_thresholds.yaml found. Each project must define its own test suites."
+        echo "  Create config/coverage_thresholds.yaml with your test suites."
+        echo "  See CI docs for format."
+        return 1
+    fi
+
+    # Parse suites (each has: path, min_coverage, source_path, runner)
+    local suites=()
+    while IFS= read -r suite_name; do
+        [[ -z "$suite_name" ]] && continue
+        suites+=("$suite_name")
+    done < <(awk '/^[a-z][a-z_]*:/ { sub(/:.*/, ""); print }' "$config")
+
+    if [[ ${#suites[@]} -eq 0 ]]; then
+        ci_warn "No test suites found in $config"
+        return 0
+    fi
+
+    local all_pass=0
+
+    for suite in "${suites[@]}"; do
+        # Skip non-suite top-level keys
+        [[ "$suite" == "version" ]] && continue
+
+        local path min_cov source_path runner coverage
+        path="$(ci_read_yaml "$config" "${suite}.path")"
+        min_cov="$(ci_read_yaml "$config" "${suite}.min_coverage")"
+        source_path="$(ci_read_yaml "$config" "${suite}.source_path")"
+        runner="$(ci_read_yaml "$config" "${suite}.runner")"
+        coverage="$(ci_read_yaml "$config" "${suite}.coverage")"
+
+        [[ -z "$path" || -z "$min_cov" ]] && continue
+        [[ -z "$source_path" ]] && source_path="."
+        [[ -z "$runner" ]] && runner="uv run pytest"
+        [[ -z "$coverage" ]] && coverage="true"
+
+        # Check if test path exists
+        if [[ ! -d "$path" ]]; then
+            ci_warn "Test path $path not found for suite '$suite', skipping."
+            continue
+        fi
+
+        # Check if source path exists (skip if config points to wrong module)
+        if [[ "$source_path" != "." && ! -d "$source_path" ]]; then
+            ci_warn "Source path $source_path not found for suite '$suite', skipping."
+            continue
+        fi
+
+        local suite_label
+        suite_label="$(echo "${suite:0:1}" | tr '[:lower:]' '[:upper:]')${suite:1}"
+
+        echo ""
+        if [[ "$coverage" == "false" ]]; then
+            ci_info "--- Running $suite_label Tests (coverage disabled) ---"
+        else
+            ci_info "--- Running $suite_label Tests (Threshold: ${min_cov}%) ---"
+        fi
+
+        # Build command based on runner
+        local cmd
+        case "$runner" in
+            *pytest*)
+                if [[ "$coverage" == "false" ]]; then
+                    cmd="$runner $path --no-cov --tb=short -q"
+                else
+                    cmd="$runner $path --cov=$source_path --cov-report=term-missing --cov-fail-under=$min_cov --tb=short -q"
+                fi
+                ;;
+            *cargo*llvm-cov*)
+                cmd="$runner --manifest-path ${source_path}/Cargo.toml --fail-under-lines $min_cov"
+                ;;
+            *vitest*)
+                cmd="cd ${source_path} && ${runner} --coverage --coverage.thresholds.lines=${min_cov} --coverage.thresholds.functions=${min_cov} --coverage.thresholds.branches=${min_cov} --coverage.thresholds.statements=${min_cov}"
+                ;;
+            "npm test"*|"npx tsx"*|"node --test"*)
+                # Node.js runners: no coverage args, just run the command as-is
+                cmd="$runner"
+                ;;
+            *)
+                # Generic: just append path and threshold as args
+                cmd="$runner $path --min-coverage=$min_cov --source=$source_path"
+                ;;
+        esac
+
+        # Per-suite timeout (default 600s = 10min). Override via
+        # CI_COVERAGE_TIMEOUT env var or `${suite}.timeout` in YAML.
+        # No unmonitored hangs: heartbeat every 30s while running; loud
+        # failure with the suite name + elapsed time on timeout.
+        local timeout_s
+        timeout_s="$(ci_read_yaml "$config" "${suite}.timeout")"
+        [[ -z "$timeout_s" ]] && timeout_s="${CI_COVERAGE_TIMEOUT:-600}"
+
+        local rc=0
+        local _started _heartbeat_pid
+        _started=$SECONDS
+        ci_info "Running $suite_label (timeout=${timeout_s}s, heartbeat every 30s)..."
+
+        # Heartbeat: every 30s emit elapsed-seconds so the operator
+        # knows the hook is alive. Slow environments can stall I/O for
+        # minutes; without a heartbeat the operator sees nothing.
+        ( while sleep 30; do
+            local _e=$((SECONDS - _started))
+            printf '[ci-coverage] %s still running (%ds elapsed)\n' "$suite_label" "$_e" >&2
+          done ) &
+        _heartbeat_pid=$!
+
+        # vitest needs cd+&&; use bash -c. All others: direct execution.
+        # `timeout --kill-after=10s ${timeout_s}s` ensures we get a final
+        # SIGKILL if the suite ignores SIGTERM.
+        if [[ "$runner" == *vitest* ]]; then
+            timeout --signal=TERM --kill-after=10s "${timeout_s}s" bash -c "$cmd" || rc=$?
+        else
+            timeout --signal=TERM --kill-after=10s "${timeout_s}s" $cmd || rc=$?
+        fi
+
+        ps -p "$_heartbeat_pid" >/dev/null && kill "$_heartbeat_pid"
+        local _elapsed=$((SECONDS - _started))
+
+        # `timeout` exits 124 on TERM-kill, 137 on KILL-kill. Loud failure.
+        if [[ $rc -eq 124 || $rc -eq 137 ]]; then
+            ci_fail "$suite_label TIMED OUT after ${timeout_s}s (elapsed: ${_elapsed}s, exit $rc)"
+            echo "  Test runner did not exit within the budget."
+            echo "  Override: CI_COVERAGE_TIMEOUT=NNN git push origin main"
+            echo "  Per-suite override: ${suite}.timeout: NNN in coverage_thresholds.yaml"
+            echo "  Common cause: networked test fixture, broken venv import,"
+            echo "    or pytest-xdist worker stuck on a socket."
+            all_pass=1
+            continue
+        fi
+
+        # SIGSEGV is a hard failure: no quiet retries
+        if [[ $rc -eq 139 || $rc -eq 245 ]]; then
+            ci_fail "$suite_label CRASHED (SIGSEGV, exit $rc, elapsed ${_elapsed}s): investigate the crash, do not retry"
+            all_pass=1
+            continue
+        fi
+
+        if [[ $rc -ne 0 ]]; then
+            if [[ $rc -eq 2 && "$coverage" != "false" ]]; then
+                ci_fail "$suite_label Coverage FAILED (Required: ${min_cov}%)"
+            else
+                ci_fail "$suite_label Tests FAILED (exit code $rc)"
+            fi
+            all_pass=1
+        elif [[ "$coverage" == "false" ]]; then
+            ci_pass "$suite_label Tests Passed (coverage disabled)"
+        else
+            ci_pass "$suite_label Tests and Coverage Passed (>=${min_cov}%)"
+        fi
+    done
+
+    if [[ $all_pass -ne 0 ]]; then
+        echo ""
+        ci_fail "PRE-PUSH CHECK FAILED: Coverage thresholds not met."
+        return 1
+    fi
+
+    echo ""
+    ci_pass "ALL COVERAGE CHECKS PASSED."
+    return 0
+}
+
+# --- ci_check_coverage_thresholds_no_devolution ---
+# Compares the staged coverage_thresholds.yaml against HEAD.  Fails the
+# commit if any suite's min_coverage value is being lowered.  Thresholds
+# are earned — they may only stay the same or increase.
+ci_check_coverage_thresholds_no_devolution() {
+    local config="config/coverage_thresholds.yaml"
+    if [[ ! -f "$config" ]]; then
+        ci_pass "No $config — nothing to guard."
+        return 0
+    fi
+
+    if ! git rev-parse --git-dir >/dev/null 2>&1; then
+        ci_pass "Not a git repo, skipping."
+        return 0
+    fi
+
+    if git diff --cached --quiet -- "$config"; then
+        ci_pass "Coverage thresholds: unchanged, OK."
+        return 0
+    fi
+
+    # Parse HEAD version — suite keys are at column 0 (no indent)
+    declare -A old_thresholds
+    local _head_output _suite="" _val=""
+    _head_output="$(git show HEAD:"$config" 2>&1)"
+    if [[ $? -eq 0 ]]; then
+        while IFS= read -r line; do
+            if echo "$line" | grep -qE '^[a-z][a-z_]*:'; then
+                _suite="$(echo "$line" | cut -d: -f1)"
+            elif echo "$line" | grep -q 'min_coverage:'; then
+                _val="$(echo "$line" | sed 's/.*min_coverage:[[:space:]]*//')"
+                if [[ -n "$_suite" && -n "$_val" ]]; then
+                    old_thresholds["$_suite"]="$_val"
+                fi
+            fi
+        done <<< "$_head_output"
+    fi
+
+    # Parse staged version
+    declare -A new_thresholds
+    local _staged_output
+    _suite="" _val=""
+    _staged_output="$(git show :"$config" 2>&1)"
+    if [[ $? -eq 0 ]]; then
+        while IFS= read -r line; do
+            if echo "$line" | grep -qE '^[a-z][a-z_]*:'; then
+                _suite="$(echo "$line" | cut -d: -f1)"
+            elif echo "$line" | grep -q 'min_coverage:'; then
+                _val="$(echo "$line" | sed 's/.*min_coverage:[[:space:]]*//')"
+                if [[ -n "$_suite" && -n "$_val" ]]; then
+                    new_thresholds["$_suite"]="$_val"
+                fi
+            fi
+        done <<< "$_staged_output"
+    fi
+
+    local violations=0
+    for suite in "${!old_thresholds[@]}"; do
+        local _old="${old_thresholds[$suite]}"
+        local _new="${new_thresholds[$suite]:-}"
+        if [[ -z "$_new" ]]; then
+            ci_fail "Coverage devolution: $suite removed (was ${_old}%)"
+            violations=$((violations + 1))
+            continue
+        fi
+        if [[ "$_new" -lt "$_old" ]]; then
+            ci_fail "Coverage devolution: $suite lowered from ${_old}% to ${_new}%"
+            violations=$((violations + 1))
+        fi
+    done
+
+    if [[ $violations -ne 0 ]]; then
+        echo ""
+        ci_fail "COVERAGE DE-EVOLUTION BLOCKED: Thresholds must only increase."
+        echo "  Lowering coverage thresholds is forbidden."
+        echo "  Raise the actual coverage to the target level, not the threshold."
+        return 1
+    fi
+
+    ci_pass "Coverage thresholds: no de-evolution detected."
+    return 0
+}

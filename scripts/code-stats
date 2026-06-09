@@ -1,0 +1,290 @@
+#!/usr/bin/env bash
+# code-stats -- Codebase statistics across the workspace.
+#
+# Walks every nested .git repo under the workspace root and runs cloc to
+# produce: total lines (code/comment/blank/files), per-repo breakdown, and
+# per-language breakdown. Respects .gitignore by default.
+#
+# Usage:
+#   code-stats                      # workspace-wide (default)
+#   code-stats --repo PATH          # single repo
+#   code-stats --root PATH          # workspace rooted at PATH
+#   code-stats --by-language        # only show language table
+#   code-stats --by-repo            # only show repo table
+#   code-stats --all-files          # ignore .gitignore (count vendored too)
+#   code-stats --top N              # show top N rows in tables (default: 25)
+#   code-stats --json               # emit machine-readable JSON
+#   code-stats --no-umbrella        # skip the workspace-root repo itself
+#
+# Exit codes:
+#   0  ok
+#   1  cloc not found / invalid args
+#   2  no repos found
+set -euo pipefail
+
+_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=../lib/ci.sh
+source "$_SCRIPT_DIR/../lib/ci.sh"
+
+# ---------------------------------------------------------------------------
+# Locate cloc — prefer .boot-linux/.boot-macos, fall back to PATH
+# ---------------------------------------------------------------------------
+_find_cloc() {
+    local _cands=(
+        "$CI_WORKSPACE_ROOT/.boot-linux/bin/cloc"
+        "$CI_WORKSPACE_ROOT/.boot-macos/bin/cloc"
+    )
+    for _c in "${_cands[@]}"; do
+        [[ -x "$_c" ]] && { echo "$_c"; return 0; }
+    done
+    if command -v cloc >/dev/null 2>&1; then
+        command -v cloc
+        return 0
+    fi
+    return 1
+}
+
+CLOC="$(_find_cloc || echo '')"
+if [[ -z "$CLOC" ]]; then
+    ci_fail "cloc not found. Install via: bash ami/scripts/bootstrap/bootstrap_cloc.sh"
+    exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# Arg parsing
+# ---------------------------------------------------------------------------
+_mode="all"          # all | by-language | by-repo
+_root="$CI_WORKSPACE_ROOT"
+_single_repo=""
+_respect_gitignore=1
+_top_n=25
+_json=0
+_skip_umbrella=0
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --repo)         _single_repo="$2"; shift 2 ;;
+        --root)         _root="$2"; shift 2 ;;
+        --by-language)  _mode="by-language"; shift ;;
+        --by-repo)      _mode="by-repo"; shift ;;
+        --all-files)    _respect_gitignore=0; shift ;;
+        --top)          _top_n="$2"; shift 2 ;;
+        --json)         _json=1; shift ;;
+        --no-umbrella)  _skip_umbrella=1; shift ;;
+        -h|--help)      sed -n '2,20p' "$0" | sed 's/^# \?//'; exit 0 ;;
+        *)              ci_fail "unknown arg: $1"; exit 1 ;;
+    esac
+done
+
+_root="$(cd "$_root" && pwd)"
+_tmpdir="$(mktemp -d)"
+trap 'rm -rf "$_tmpdir"' EXIT
+
+# Skip patterns for nested repo discovery (mirrors audit-workspace).
+_SKIP_DIRS="tmp|node_modules|\.venv|__pycache__|research|python-ta-reference|\.boot-linux|\.boot-macos|dist|build|target|\.cache|\.local"
+
+# ---------------------------------------------------------------------------
+# Repo discovery
+# ---------------------------------------------------------------------------
+_repos=()
+if [[ -n "$_single_repo" ]]; then
+    _single_repo="$(cd "$_single_repo" && pwd)"
+    _repos+=("$_single_repo")
+else
+    if [[ "$_skip_umbrella" -eq 0 && -d "$_root/.git" ]]; then
+        _repos+=("$_root")
+    fi
+    while IFS= read -r _gitdir; do
+        _repo="$(dirname "$_gitdir")"
+        [[ "$_repo" == "$_root" ]] && continue
+        echo "$_repo" | grep -qE "$_SKIP_DIRS" && continue
+        _repos+=("$_repo")
+    done < <(find "$_root" -name ".git" -type d 2>/dev/null | sort)
+fi
+
+if [[ ${#_repos[@]} -eq 0 ]]; then
+    ci_warn "No git repos found under $_root"
+    exit 2
+fi
+
+# ---------------------------------------------------------------------------
+# Run cloc per repo, collect results
+# ---------------------------------------------------------------------------
+# Per-repo aggregate file: tab-separated columns
+#   rel_path  files  blank  comment  code
+_per_repo="$_tmpdir/per_repo.tsv"
+# Per-(repo, language) detail file: tab-separated columns
+#   rel_path  language  files  blank  comment  code
+_per_repo_lang="$_tmpdir/per_repo_lang.tsv"
+
+# Track failures to distinguish "0 lines" from "skipped".
+_failed_repos=()
+
+[[ $_json -eq 0 ]] && ci_info "Scanning ${#_repos[@]} repo(s) under ${_root#$HOME/~}..."
+
+for _repo in "${_repos[@]}"; do
+    _rel="${_repo#"$_root"/}"
+    [[ "$_repo" == "$_root" ]] && _rel="(umbrella)"
+
+    _cloc_args=(--quiet --json)
+    if [[ $_respect_gitignore -eq 1 ]] && [[ -d "$_repo/.git" ]]; then
+        _cloc_args+=(--vcs=git)
+    else
+        # No VCS hint — still skip common heavy dirs.
+        _cloc_args+=(
+            --exclude-dir=node_modules,.venv,__pycache__,target,dist,build,.cache,.boot-linux,.boot-macos
+        )
+    fi
+
+    _out="$_tmpdir/$(echo "$_rel" | tr '/' '_').json"
+    if ! ( cd "$_repo" && "$CLOC" "${_cloc_args[@]}" --report-file="$_out" . ) >/dev/null 2>&1; then
+        _failed_repos+=("$_rel")
+        continue
+    fi
+    [[ ! -s "$_out" ]] && continue
+
+    # Parse JSON output. cloc's JSON shape:
+    # { "header": {...}, "<Lang>": {nFiles, blank, comment, code}, ..., "SUM": {...} }
+    # Use a small Python helper for robustness (jq isn't always present).
+    local _py_rc=0
+    python3 - "$_out" "$_rel" "$_per_repo" "$_per_repo_lang" <<'PY' || _py_rc=$?
+import json, sys, os
+src, rel, per_repo, per_lang = sys.argv[1:]
+with open(src) as f:
+    data = json.load(f)
+total = data.pop("SUM", None)
+data.pop("header", None)
+if total:
+    with open(per_repo, "a") as fh:
+        fh.write(f"{rel}\t{total['nFiles']}\t{total['blank']}\t{total['comment']}\t{total['code']}\n")
+with open(per_lang, "a") as fh:
+    for lang, vals in data.items():
+        if not isinstance(vals, dict) or "code" not in vals:
+            continue
+        fh.write(f"{rel}\t{lang}\t{vals['nFiles']}\t{vals['blank']}\t{vals['comment']}\t{vals['code']}\n")
+PY
+done
+
+if [[ ${#_failed_repos[@]} -gt 0 && $_json -eq 0 ]]; then
+    ci_warn "cloc failed on ${#_failed_repos[@]} repo(s): ${_failed_repos[*]}"
+fi
+
+# ---------------------------------------------------------------------------
+# Render
+# ---------------------------------------------------------------------------
+# Use Python for table formatting — awk's number formatting + sort across
+# multiple keys gets ugly fast and we already depend on python3 above.
+python3 - "$_per_repo" "$_per_repo_lang" "$_mode" "$_top_n" "$_json" "$_root" <<'PY'
+import sys, json, os
+per_repo_path, per_lang_path, mode, top_n, as_json, root = sys.argv[1:]
+top_n = int(top_n)
+as_json = as_json == "1"
+
+def read_tsv(path, cols):
+    rows = []
+    if not os.path.exists(path):
+        return rows
+    with open(path) as f:
+        for line in f:
+            line = line.rstrip("\n")
+            if not line:
+                continue
+            parts = line.split("\t")
+            if len(parts) != len(cols):
+                continue
+            row = {}
+            for c, v in zip(cols, parts):
+                row[c] = int(v) if c in {"files","blank","comment","code"} else v
+            rows.append(row)
+    return rows
+
+repos = read_tsv(per_repo_path, ["repo","files","blank","comment","code"])
+langs_raw = read_tsv(per_lang_path, ["repo","language","files","blank","comment","code"])
+
+# Aggregate languages across all repos.
+agg = {}
+for r in langs_raw:
+    a = agg.setdefault(r["language"], {"files":0,"blank":0,"comment":0,"code":0,"repos":set()})
+    a["files"] += r["files"]; a["blank"] += r["blank"]
+    a["comment"] += r["comment"]; a["code"] += r["code"]
+    a["repos"].add(r["repo"])
+
+totals = {
+    "repos": len(repos),
+    "files": sum(r["files"] for r in repos),
+    "blank": sum(r["blank"] for r in repos),
+    "comment": sum(r["comment"] for r in repos),
+    "code": sum(r["code"] for r in repos),
+}
+totals["lines"] = totals["blank"] + totals["comment"] + totals["code"]
+
+if as_json:
+    out = {
+        "root": root,
+        "totals": totals,
+        "repos": sorted(repos, key=lambda x: -x["code"]),
+        "languages": sorted(
+            [{"language":k, **{kk:vv for kk,vv in v.items() if kk!="repos"},
+              "repos": len(v["repos"])} for k,v in agg.items()],
+            key=lambda x: -x["code"],
+        ),
+    }
+    print(json.dumps(out, indent=2))
+    sys.exit(0)
+
+def fmt(n): return f"{n:,}"
+
+BOLD = "\033[1m"; CYAN = "\033[0;36m"; GREEN = "\033[0;32m"
+DIM = "\033[2m"; NC = "\033[0m"
+if not sys.stdout.isatty():
+    BOLD = CYAN = GREEN = DIM = NC = ""
+
+def hr(ch="="): print(ch * 78)
+
+# -- Summary --
+hr("=")
+print(f"{BOLD}CODE STATISTICS{NC}  root: {root}")
+hr("=")
+print(f"  Repositories scanned : {fmt(totals['repos'])}")
+print(f"  Files                : {fmt(totals['files'])}")
+print(f"  Code lines           : {GREEN}{fmt(totals['code'])}{NC}")
+print(f"  Comment lines        : {fmt(totals['comment'])}")
+print(f"  Blank lines          : {fmt(totals['blank'])}")
+print(f"  Total lines          : {BOLD}{fmt(totals['lines'])}{NC}")
+print()
+
+def print_repo_table():
+    if not repos: return
+    print(f"{BOLD}Per-repository (top {top_n} by code lines){NC}")
+    rows = sorted(repos, key=lambda x: -x["code"])[:top_n]
+    name_w = max(len(r["repo"]) for r in rows)
+    name_w = min(max(name_w, 24), 60)
+    print(f"  {'REPO':<{name_w}}  {'FILES':>7}  {'CODE':>12}  {'COMMENT':>10}  {'BLANK':>10}")
+    print(f"  {'-'*name_w}  {'-'*7}  {'-'*12}  {'-'*10}  {'-'*10}")
+    for r in rows:
+        nm = r["repo"]
+        if len(nm) > name_w: nm = "..." + nm[-(name_w-3):]
+        print(f"  {nm:<{name_w}}  {fmt(r['files']):>7}  {fmt(r['code']):>12}  {fmt(r['comment']):>10}  {fmt(r['blank']):>10}")
+    if len(repos) > top_n:
+        print(f"  {DIM}... {len(repos)-top_n} more repo(s) omitted (use --top to show more){NC}")
+    print()
+
+def print_lang_table():
+    if not agg: return
+    print(f"{BOLD}Per-language (top {top_n} by code lines){NC}")
+    rows = sorted(agg.items(), key=lambda kv: -kv[1]["code"])[:top_n]
+    name_w = max(len(k) for k,_ in rows)
+    name_w = max(name_w, 16)
+    print(f"  {'LANGUAGE':<{name_w}}  {'REPOS':>5}  {'FILES':>7}  {'CODE':>12}  {'COMMENT':>10}  {'BLANK':>10}")
+    print(f"  {'-'*name_w}  {'-'*5}  {'-'*7}  {'-'*12}  {'-'*10}  {'-'*10}")
+    for lang, v in rows:
+        print(f"  {lang:<{name_w}}  {len(v['repos']):>5}  {fmt(v['files']):>7}  {fmt(v['code']):>12}  {fmt(v['comment']):>10}  {fmt(v['blank']):>10}")
+    if len(agg) > top_n:
+        print(f"  {DIM}... {len(agg)-top_n} more language(s) omitted{NC}")
+    print()
+
+if mode in ("all","by-repo"):
+    print_repo_table()
+if mode in ("all","by-language"):
+    print_lang_table()
+PY

@@ -1,0 +1,228 @@
+#!/usr/bin/env bash
+# rewrite-history -- Strip blocked patterns from commit messages.
+# Reads patterns from config/blocked_commit_patterns.yaml (same as hooks).
+#
+# SAFE BY DEFAULT: dry-run unless --execute is passed.
+# Always creates a backup ref before rewriting.
+#
+# Usage:
+#   rewrite-history                      # Dry-run: report offending commits
+#   rewrite-history --execute            # Rewrite (prompts for confirmation)
+#   rewrite-history --execute --yes      # Rewrite without confirmation
+#   rewrite-history --base SHA           # Only check/rewrite SHA..HEAD
+#   rewrite-history --config PATH        # Custom config file
+set -euo pipefail
+
+_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+_CI_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
+source "$_CI_ROOT/lib/ci.sh"
+
+# Use system git directly — this script is an explicitly destructive tool
+# that the user invokes manually. The git-guard blocks --force which
+# filter-branch requires. Prepend system git dir to PATH so all git calls
+# (including filter-branch's internal subprocesses) bypass the guard.
+_REAL_GIT="${GIT_GUARD_REAL_GIT:-}"
+if [[ -z "$_REAL_GIT" || ! -x "$_REAL_GIT" ]]; then
+    # Check for git.original first (system guard renames real git)
+    for _candidate in /usr/bin/git.original /usr/local/bin/git.original /usr/bin/git /usr/local/bin/git /snap/bin/git; do
+        if [[ -x "$_candidate" ]]; then
+            _REAL_GIT="$_candidate"
+            break
+        fi
+    done
+fi
+if [[ -z "$_REAL_GIT" ]]; then
+    ci_fail "System git not found. Cannot rewrite history without real git."
+    exit 1
+fi
+# Create temp dir with git symlink pointing to real binary, prepend to PATH.
+# This ensures all subprocesses (including filter-branch's msg-filter shell)
+# use the real git, not any guard wrappers.
+_GIT_TMPBIN="$(mktemp -d)"
+ln -sf "$_REAL_GIT" "$_GIT_TMPBIN/git"
+export PATH="$_GIT_TMPBIN:$PATH"
+hash -r
+trap 'rm -rf "$_GIT_TMPBIN"' EXIT
+
+# -- Defaults --
+_config="${CI_CONFIG_DIR}/blocked_commit_patterns.yaml"
+_base=""
+_execute=0
+_yes=0
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --config)   _config="$2"; shift 2 ;;
+        --base)     _base="$2"; shift 2 ;;
+        --execute)  _execute=1; shift ;;
+        --yes)      _yes=1; shift ;;
+        -h|--help)
+            echo "Usage: rewrite-history [--execute] [--yes] [--base SHA] [--config PATH]"
+            echo ""
+            echo "Strip blocked patterns from git commit messages."
+            echo "Dry-run by default. Pass --execute to actually rewrite."
+            exit 0
+            ;;
+        *) ci_fail "Unknown option: $1"; exit 1 ;;
+    esac
+done
+
+[[ -f "$_config" ]] || { ci_fail "Config not found: $_config"; exit 1; }
+
+# -- Load patterns --
+_patterns=()
+while IFS= read -r _line; do
+    if [[ "$_line" =~ pattern:[[:space:]]*[\"\']?(.+)[\"\']?$ ]]; then
+        _pat="${BASH_REMATCH[1]}"
+        _pat="${_pat%\"}" ; _pat="${_pat%\'}"
+        _pat="${_pat#\"}" ; _pat="${_pat#\'}"
+        _patterns+=("$_pat")
+    fi
+done < "$_config"
+
+if [[ ${#_patterns[@]} -eq 0 ]]; then
+    ci_warn "No patterns found in $_config"
+    exit 0
+fi
+
+# Build combined regex
+_combined=""
+for _p in "${_patterns[@]}"; do
+    [[ -n "$_combined" ]] && _combined="${_combined}|"
+    _combined="${_combined}${_p}"
+done
+
+# -- Determine commit range --
+if [[ -n "$_base" ]]; then
+    _range="${_base}..HEAD"
+else
+    _range="HEAD"
+    # All commits: use --all for log
+fi
+
+# Scan HEAD only (not --all, which would include backup refs from previous runs)
+_commits=""
+if [[ -n "$_base" ]]; then
+    local _log_rc=0
+    _commits="$(git log --format='%H' "$_range" 2>/dev/null)" || _log_rc=$?
+else
+    _log_rc=0
+    _commits="$(git log --format='%H' HEAD 2>/dev/null)" || _log_rc=$?
+fi
+
+if [[ -z "$_commits" ]]; then
+    ci_pass "No commits to check."
+    exit 0
+fi
+
+# -- Scan for offending commits --
+_offending=()
+_offending_subjects=()
+while IFS= read -r _sha; do
+    [[ -z "$_sha" ]] && continue
+    _msg="$(git log -1 --format=%B "$_sha")"
+    if echo "$_msg" | grep -qiE "$_combined"; then
+        _short="$(git log -1 --format=%h "$_sha")"
+        _subj="$(git log -1 --format=%s "$_sha")"
+        _offending+=("$_sha")
+        _offending_subjects+=("$_short $_subj")
+    fi
+done <<< "$_commits"
+
+_total="$(echo "$_commits" | wc -l | tr -d ' ')"
+
+if [[ ${#_offending[@]} -eq 0 ]]; then
+    ci_pass "Scanned $_total commits. No blocked patterns found."
+    exit 0
+fi
+
+# -- Report --
+echo ""
+ci_info "Found ${#_offending[@]} commit(s) with blocked patterns (out of $_total):"
+echo ""
+for _s in "${_offending_subjects[@]}"; do
+    echo "  $_s"
+done
+echo ""
+
+# -- Dry-run stops here --
+if [[ $_execute -eq 0 ]]; then
+    ci_info "Dry-run mode. Pass --execute to rewrite."
+    exit 1
+fi
+
+# -- Safety checks before rewrite --
+
+# Dirty worktree?
+if ! git diff --quiet || ! git diff --cached --quiet; then
+    ci_fail "Working tree has uncommitted changes. Commit or stash first."
+    exit 1
+fi
+
+# Confirmation
+if [[ $_yes -eq 0 ]]; then
+    echo "This will rewrite ${#_offending[@]} commit message(s)."
+    echo "A backup ref will be created before rewriting."
+    printf "Proceed? [y/N] "
+    read -r _answer
+    if [[ "$_answer" != "y" && "$_answer" != "Y" ]]; then
+        ci_info "Aborted."
+        exit 1
+    fi
+fi
+
+# -- Create backup --
+_timestamp="$(date +%Y%m%d-%H%M%S)"
+_backup_ref="refs/backup/pre-rewrite-${_timestamp}"
+git update-ref "$_backup_ref" HEAD || { ci_fail "Failed to create backup ref"; exit 1; }
+ci_pass "Backup created: $_backup_ref"
+
+# -- Rewrite --
+ci_info "Rewriting commit messages..."
+
+# FILTER_BRANCH_SQUELCH_WARNING suppresses the "this is dangerous" nag
+export FILTER_BRANCH_SQUELCH_WARNING=1
+
+# Rewrite only the current branch (HEAD), not --all.
+# --all would rewrite the backup ref too, defeating the purpose.
+_filter_range="HEAD"
+if [[ -n "$_base" ]]; then
+    _filter_range="${_base}..HEAD"
+fi
+
+git filter-branch --msg-filter "
+    local _filter_rc=0
+    grep -viE '$_combined' || _filter_rc=$?
+" --force -- $_filter_range
+
+# Clean up filter-branch refs
+local _cleanup_rc=0
+git for-each-ref --format='delete %(refname)' refs/original/ | git update-ref --stdin 2>/dev/null || _cleanup_rc=$?
+
+# -- Verify (only HEAD, not --all which includes backup refs) --
+_remaining=0
+_verify_commits=""
+if [[ -n "$_base" ]]; then
+    local _verify_log_rc=0
+    _verify_commits="$(git log --format='%H' "${_base}..HEAD" 2>/dev/null)" || _verify_log_rc=$?
+else
+    _verify_commits="$(git log --format='%H' HEAD 2>/dev/null)"
+fi
+
+while IFS= read -r _sha; do
+    [[ -z "$_sha" ]] && continue
+    _msg="$(git log -1 --format=%B "$_sha")"
+    if echo "$_msg" | grep -qiE "$_combined"; then
+        _remaining=$((_remaining + 1))
+    fi
+done <<< "$_verify_commits"
+
+echo ""
+if [[ $_remaining -gt 0 ]]; then
+    ci_warn "$_remaining commit(s) still contain blocked patterns after rewrite."
+else
+    ci_pass "All blocked patterns removed. ${#_offending[@]} commit(s) rewritten."
+fi
+
+echo ""
+ci_info "Recovery: git reset --hard $_backup_ref"

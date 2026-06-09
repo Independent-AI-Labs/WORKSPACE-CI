@@ -1,0 +1,7 @@
+# workspace-ci's own quality_exceptions.yaml. This CI repo enforces
+# quality gates on itself. If a check fails here, the fix is in the code,
+# not in this file.
+
+version: 1
+project: workspace-ci
+exceptions: []

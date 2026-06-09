@@ -1,0 +1,189 @@
+# workspace-ci Pre-commit Configuration
+# This file serves as both the CI project's own hooks AND a reference template.
+#
+# Path patterns for sourcing checks.sh from different project depths:
+#   Root workspace:          projects/CI/lib/checks.sh
+#   projects/<project>/:     ../CI/lib/checks.sh
+#   projects/<group>/<sub>/: ../../CI/lib/checks.sh
+#
+# For CI itself (self-referencing):
+#   lib/checks.sh
+repos:
+  - repo: local
+    hooks:
+      - id: check-unstaged
+        name: Block Unstaged Changes
+        entry: "bash -c 'source lib/checks.sh && ci_check_unstaged'"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format --config ruff.toml ci/
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: ruff
+        name: ruff lint
+        entry: uv run ruff check --config ruff.toml --fix --exit-non-zero-on-fix ci/
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: block-sensitive-files
+        name: Block Sensitive Files
+        entry: "bash -c 'source lib/checks.sh && ci_block_sensitive_files'"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: gitleaks
+        name: Block secrets in staged content (gitleaks)
+        entry: gitleaks protect --staged --redact --no-banner --verbose
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: ci-check-silent-swallow
+        name: Block silent error-swallow patterns
+        entry: "bash -c 'source lib/checks.sh && ci_check_silent_swallow'"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-dependency-versions
+        name: Check Dependency Versions (strict pinning + latest)
+        entry: bash -c 'uv run python -c "import ci" 2>/dev/null || { echo "FAILED: ci not installed — run: make sync" >&2; exit 1; }; exec uv run python -m ci.check_dependency_versions "$@"' --
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-duplicate-dependencies
+        name: Check Duplicate/Redundant Dependencies
+        entry: bash -c 'uv run python -c "import ci" 2>/dev/null || { echo "FAILED: ci not installed — run: make sync" >&2; exit 1; }; exec uv run python -m ci.check_duplicate_dependencies "$@"' --
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-banned-words
+        name: Check Banned Words
+        entry: "bash -c 'source lib/checks.sh && ci_check_banned_words'"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-coverage-no-devolution
+        name: Block Coverage Threshold De-Evolution
+        entry: "bash -c 'source lib/checks.sh && ci_check_coverage_thresholds_no_devolution'"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-file-length
+        name: Check File Length (max 512 lines)
+        entry: "bash -c 'source lib/checks.sh && ci_check_file_length'"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-init-files
+        name: Enforce Empty __init__.py Files
+        entry: "bash -c 'source lib/checks.sh && ci_check_init_files'"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-py-not-executable
+        name: Forbid +x bit on .py modules
+        entry: "bash -c 'source lib/checks.sh && ci_check_py_not_executable'"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-no-dead-imports
+        name: Forbid deleting .py modules that are still imported
+        entry: "bash -c 'source lib/checks.sh && ci_check_no_dead_imports'"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: mypy
+        name: mypy
+        entry: uv run python -m mypy
+        language: system
+        pass_filenames: false
+        always_run: true
+        args: [ci/]
+
+      - id: check-markdown-docs
+        name: Check Markdown Documentation References
+        entry: "uv run python -m ci.check_markdown_docs --all-md --check-remote"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-required-hooks-present
+        name: CI Self-Check (manifest + exceptions + rendered hooks)
+        entry: "uv run python -m ci.check_required_hooks_present --quiet"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: ci-lint
+        name: Lint (make lint)
+        entry: make lint
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: ci-type-check
+        name: Type-check (make type-check)
+        entry: make type-check
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-commit-message
+        name: Check Commit Message Format
+        entry: "bash -c 'source lib/checks.sh && ci_check_commit_message \"$1\"' --"
+        language: system
+        stages: [commit-msg]
+
+      - id: block-coauthored
+        name: Block Co-authored Commits
+        entry: "bash -c 'source lib/checks.sh && ci_block_coauthored \"$1\"' --"
+        language: system
+        stages: [commit-msg]
+
+  - repo: local
+    hooks:
+      - id: run-tests
+        name: Run CI Test Suite
+        entry: bash tests/run_tests.sh
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+
+      - id: block-coauthored-history
+        name: Block Commits with Blocked Patterns (full history scan)
+        entry: "bash -c 'source lib/checks.sh && ci_block_coauthored_history'"
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+
+      - id: verify-coverage
+        name: Verify Test Coverage
+        entry: "bash -c 'source lib/checks.sh && ci_verify_coverage'"
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+
+      - id: ci-make-check
+        name: Full Quality Gate (make check)
+        entry: "make check"
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true

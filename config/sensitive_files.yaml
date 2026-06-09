@@ -1,0 +1,81 @@
+# Sensitive file detection configuration
+# Used by ci_block_sensitive_files to prevent accidental secret leakage.
+
+# Extensions that may contain secrets
+sensitive_extensions:
+  - .yaml
+  - .yml
+  - .toml
+  - .json
+  - .xml
+  - .cfg
+  - .ini
+  - .env
+  - .pickle
+  - .key
+  - .crt
+  - .pem
+  - .p12
+  - .pfx
+
+# Filename keywords that suggest secrets (substring match, case-insensitive)
+sensitive_keywords:
+  - pass
+  - secret
+  - key
+  - var
+  - cred
+  - vault
+  - token
+  - password
+  - cert
+  - private
+  - id_rsa
+  - id_ed25519
+  - config
+  - env
+
+# Exact filenames that are always safe (standard project config files)
+safe_exceptions:
+  - pyproject.toml
+  - uv.lock
+  - poetry.lock
+  - package.json
+  - package-lock.json
+  - requirements.txt
+  - setup.cfg
+  - tox.ini
+  - .pre-commit-config.yaml
+  - alembic.ini
+  - ruff.toml
+  - mypy.toml
+  - Cargo.toml
+  - Cargo.lock
+  - coverage_thresholds.yaml
+  - file_length_limits.yaml
+  - banned_words.yaml
+  - sensitive_files.yaml
+  - dependency_excludes.yaml
+  - commit_checks.yaml
+  - dead_code.yaml
+  - config_exclusion_patterns.yaml
+
+# Filename prefixes that are always safe (e.g. "tsconfig" matches tsconfig.json,
+# tsconfig.app.json, tsconfig.node.json, etc.)
+safe_prefixes:
+  - tsconfig
+  - eslint
+  - prettier
+  - jest.config
+  - babel.config
+  - vitest.config
+  - vite.config
+  - webpack.config
+  - rollup.config
+  - postcss.config
+  - tailwind.config
+  - next.config
+  - nuxt.config
+  - svelte.config
+  - astro.config
+  - biome

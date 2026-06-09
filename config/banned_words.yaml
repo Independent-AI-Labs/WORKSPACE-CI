@@ -1,0 +1,284 @@
+# Banned Word Patterns Configuration v4.0.0
+# Universal rules -- no project-specific exceptions in this file.
+#
+# Format:
+#   pattern: regex pattern to match
+#   reason: why this pattern is banned
+#
+# Exceptions are defined in two places:
+#   1. universal_exceptions (below): apply to ALL projects (e.g. tests/)
+#   2. Per-project banned_words_exceptions.yaml in each project's config/ dir
+#
+# See HOOKS.md for details on the exception mechanism.
+
+version: "4.0.0"
+
+# Universal exceptions -- these paths are exempt from the listed patterns
+# in every project that uses this config.
+universal_exceptions:
+  - paths: ['tests/']
+    patterns:
+      - ':\s*Any\b'
+      - '\bdict\[.*,\s*Any\]'
+      - '\bfallback\b'
+      - '\bstubs[?]\b'
+      - '\bmock\b'
+      - '\bsilent'
+      - '\.suppress'
+      - '\bgetattr\('
+      - '\bsetattr\('
+      - '\bhasattr\('
+      - '#\[allow\('
+      - 'unsafe\s*\{'
+      - '\blist\[object\]'
+      - '\bdict\[[^]]+,\s*object\]'
+      - '\blist\[dict\]'
+      - '\blist\[dict\[str,\s*object\]\]'
+      - '\bdict\[str,\s*list\[dict\[str,\s*object\]\]\]'
+      - '\|\s*object\b'
+      - '\blegacy\b'
+      - '\.parents\['
+      - 'reason=.*not implemented yet'
+  - paths: ['.toml$']
+    patterns:
+      - '\bstubs[?]\b'
+      - '\bmock\b'
+  # The ASCII em-dash pattern ` -- ` is legitimate syntax in these
+  # contexts (cargo fmt -- --check; Makefile command separators; YAML
+  # key hint comments). Banning would break every shell / build file.
+  - paths: ['\.sh$', 'Makefile$', 'makefile$', '\.toml$', '\.yaml$', '\.yml$']
+    patterns:
+      - ' -- '
+  # The silent-swallow detector uses 'silent' as its subject matter —
+  # it detects silent failures, it is not a silent failure.
+  - paths: ['lib/check_silent_swallow.*\.py$', 'lib/checks_silent\.sh$']
+    patterns:
+      - '\bsilent'
+      - '\bfallback\b'
+      - '\.suppress'
+      - ' -- '
+      - '\bfallback\b'
+      - '\.suppress'
+      - ' -- '
+  # TOML parsing utility — dict[str, Any] is the correct return type
+  # for parsed TOML data before validation.
+  - paths: ['ci/check_duplicate_dependencies\.py$']
+    patterns:
+      - '\bdict\[.*,\s*Any\]'
+
+  # python3? is banned everywhere. Allowed exceptions:
+  #   - Shell/TOML/YAML/Makefile: bootstrap infra uses python-env dir names
+  #   - CI lib/ and tests/: language detection
+  #   - The banned-words config file itself defines the rule
+  - paths: ['\.sh$', '\.yaml$', '\.yml$', '\.toml$', 'Makefile$', '\.py$']
+    patterns:
+      - '\bpython3?\b'
+  - paths: ['lib/', 'tests/']
+    patterns:
+      - '\bpython3?\b'
+  - paths: ['config/banned_words.yaml']
+    patterns:
+      - '\bpython3?\b'
+
+banned:
+  # === LINTER/TYPE SUPPRESSION ===
+
+  - pattern: 'unsafe\s*\{'
+    reason: "No unsafe blocks. Use safe abstractions or re-architect."
+  - pattern: 'mypy: ignore-errors'
+    reason: "Global mypy ignores forbidden. Fix the types."
+
+  - pattern: '#\s*type:\s*ignore'
+    reason: "Type ignoring forbidden. Fix the code or architecture."
+
+  - pattern: '#\s*noqa'
+    reason: "Linter suppression forbidden. Fix the code style."
+
+  # === FORBIDDEN LAZY TYPE ANNOTATIONS ===
+  # These patterns catch code that avoids proper data models.
+  # Legitimate generics like list[str], dict[str, str], set[int] are ALLOWED.
+
+  # list[object] — the most useless type annotation possible
+  - pattern: '\blist\[object\]'
+    reason: "list[object] provides zero type safety. Use list[str] or a proper model."
+
+  # dict[str, object] / dict[K, object] — lazy untyped dict
+  - pattern: '\bdict\[[^]]+,\s*object\]'
+    reason: "dict[..., object] is a lazy untyped dict. Use TypedDict, Pydantic model, or dataclass."
+
+  # dict[str, Any] / dict[K, Any] — lazy untyped dict
+  - pattern: '\bdict\[.*,\s*Any\]'
+    reason: "dict[..., Any] is a lazy untyped dict. Use TypedDict, Pydantic model, or dataclass."
+
+  # list[dict] — list of completely untyped dicts
+  - pattern: '\blist\[dict\]'
+    reason: "list[dict] has no type information. Use list[TypedDict] or list[Model]."
+
+  # list[dict[str, object]] — nested lazy dicts
+  - pattern: '\blist\[dict\[str,\s*object\]\]'
+    reason: "list[dict[str, object]] passes untyped data. Define a proper model or TypedDict."
+
+  # dict[str, list[dict[str, object]]] — deeply nested lazy dicts
+  - pattern: '\bdict\[str,\s*list\[dict\[str,\s*object\]\]\]'
+    reason: "dict[str, list[dict[str, object]]] passes untyped data. Define proper models."
+
+  # | object — makes the entire union equivalent to object
+  - pattern: '\|\s*object\b'
+    reason: "Union with | object makes the whole type equivalent to object. Remove it or use a proper type."
+
+  # === SILENT ERROR SWALLOWING ===
+  - pattern: '\bsilent'
+    reason: "No silent anything. Log errors or fail explicitly."
+
+  # === LEGACY/FALLBACK CODE ===
+  - pattern: '\bfallback\b'
+    reason: "No fallback code. Fix properly or fail explicitly."
+
+  - pattern: '\bfalling\b'
+    reason: "Avoid 'falling back' patterns."
+
+  - pattern: '\bbackwards\b'
+    reason: "No backwards compatibility hacks."
+
+  - pattern: '\bcompatibility\b'
+    reason: "No compatibility shims."
+
+  - pattern: '\bdegradation\b'
+    reason: "No graceful degradation. Fail fast."
+
+  - pattern: '\blegacy\b'
+    reason: "No legacy code paths."
+
+  - pattern: '\bshims[?]\b'
+    reason: "No shim layers."
+
+  - pattern: '\bstubs[?]\b'
+    reason: "No stub implementations."
+
+  - pattern: '\bskeleton\b'
+    reason: "No skeleton code."
+
+  - pattern: '\bplaceholders[?]\b'
+    reason: "No placeholder code."
+
+  - pattern: '\bmock\b'
+    reason: "No mock objects in production code."
+
+  - pattern: '\blazy\b'
+    reason: "No lazy evaluation hacks."
+
+  - pattern: '\bmaybe\b'
+    reason: "No uncertain code paths."
+
+  # === SUPPRESSION PATTERNS ===
+  - pattern: '\.suppress'
+    reason: "No suppression of errors/warnings."
+
+  # === UNSAFE REFLECTION ===
+  - pattern: '\bgetattr\('
+    reason: "getattr is unsafe. Use explicit attribute access."
+
+  - pattern: '\bsetattr\('
+    reason: "setattr is unsafe. Use explicit attribute assignment."
+
+  - pattern: '\bhasattr\('
+    reason: "hasattr is unsafe. Use explicit checks or protocols."
+
+  - pattern: '\.__dict__'
+    reason: "Direct __dict__ access forbidden. Use proper interfaces."
+
+  - pattern: '\bvars\('
+    reason: "vars() is unsafe reflection."
+
+  - pattern: '\bimportlib\b'
+    reason: "Dynamic imports forbidden. Use explicit imports."
+
+  # === DATA CLASSES ===
+  - pattern: '@dataclass'
+    reason: "Use Pydantic models instead of dataclasses."
+
+  # === TEST QUALITY ===
+  - pattern: '\bxfail\b'
+    reason: "No xfail tests. Fix the code, remove the test, or write a proper assertion."
+
+  # === PATH SAFETY ===
+  - pattern: '/home/'
+    reason: "No hardcoded home paths. Use environment variables."
+
+  - pattern: '\.parent\.parent'
+    reason: "Fragile path navigation. Use explicit paths."
+
+  - pattern: '\.parents\['
+    reason: "Fragile path navigation. Use explicit paths."
+
+  - pattern: '\.parent\.resolve'
+    reason: "Fragile path navigation. Use explicit paths."
+
+  # === UUID (only uuid7 allowed) ===
+  - pattern: 'uuid\.uuid[134568]\('
+    reason: "Only uuid7 allowed. Use uuid_utils.uuid7()."
+
+  - pattern: '\buuid[134568]\(\)'
+    reason: "Only uuid7 allowed. Use uuid_utils.uuid7()."
+
+  # === CONTAINER VERSIONS ===
+  - pattern: ':latest\b'
+    reason: "Pin container versions. No :latest tags."
+
+  # === DEPRECATED — bare python / python3 ===
+  - pattern: '\bpython3?\b'
+    reason: "Use uv run python for hermetic execution. No bare python/python3 calls."
+
+  # === SELF METHOD PATTERNS ===
+  - pattern: 'self\.get\('
+    reason: "Avoid dict-like self.get(). Use explicit attributes."
+
+  - pattern: 'self\.set\('
+    reason: "Avoid dict-like self.set(). Use explicit attributes."
+
+  # === SPECIAL CHARACTERS ===
+  # ASCII em-dash-as-punctuation in prose. Shell / Makefile / TOML /
+  # YAML paths exempted via universal_exceptions above because the same
+  # byte sequence is real syntax there (e.g. `cargo fmt -- --check`).
+  # The bare `--` rule previously here was ambiguous with CLI flags;
+  # the prose case is fully captured by the spaced form.
+  - pattern: ' -- '
+    reason: "ASCII em-dash punctuation forbidden. Use commas, colons, or parentheses."
+
+directory_rules:
+  tests:
+    # Hardware-specific tests may need conditional skipping
+    # Only ban explicit "not implemented" placeholders
+    - pattern: 'reason=.*not implemented yet'
+      reason: "Implement the test or delete it."
+
+filename_rules:
+  - pattern: '_v[0-9]+'
+    reason: "No versioned filenames. Use git."
+
+  - pattern: '_old\.'
+    reason: "No _old files. Delete or rename properly."
+
+  - pattern: '_new\.'
+    reason: "No _new files. Rename to final name."
+
+  - pattern: '_fixed\.'
+    reason: "No _fixed files. Replace original."
+
+  - pattern: '_temp\.'
+    reason: "No temp files in repo."
+
+  - pattern: '_tmp\.'
+    reason: "No tmp files in repo."
+
+  - pattern: '_backup\.'
+    reason: "No backup files. Use git."
+
+  - pattern: '_copy\.'
+    reason: "No copy files. Consolidate."
+
+  - pattern: '_final\.'
+    reason: "No _final files. Just use the real name."
+
+  - pattern: '\.(old|new|backup|bak|orig)$'
+    reason: "No backup extensions. Use git."
