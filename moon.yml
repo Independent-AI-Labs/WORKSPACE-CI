@@ -63,6 +63,13 @@ tasks:
     command: 'make check'
     deps:
       - '~:check'
+  build-guard:
+    command: 'make build-guard'
+    inputs:
+      - 'scripts/bootstrap-workspace-guard'
+      - 'Makefile'
+    options:
+      cache: false
   # Workspace-wide update walk. `^update` runs the same task
   # in every project this depends on (transitively) BEFORE running
   # update here. cache=false because git pull has external state;

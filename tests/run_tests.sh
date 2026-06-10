@@ -13,7 +13,7 @@ source "$TESTS_DIR/test_helpers.sh"
 source "$TESTS_DIR/test_core.sh"
 source "$TESTS_DIR/test_checks.sh"
 source "$TESTS_DIR/test_blocked_patterns.sh"
-# SKIP: rewrite tests use git filter-branch which RUST-GUARD blocks
+# SKIP: rewrite tests use git filter-branch which WORKSPACE-GUARD blocks
 # source "$TESTS_DIR/test_rewrite_history.sh"
 source "$TESTS_DIR/test_compliance.sh"
 source "$TESTS_DIR/test_silent_swallow.sh"

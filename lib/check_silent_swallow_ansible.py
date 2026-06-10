@@ -111,3 +111,95 @@ def detect_ansible_tasks(added_lines):
         i += 1
 
     return violations
+
+
+# Pattern: debug task that references a registered variable's output
+# but only displays it conditionally on failure (when: rc != 0).
+# The shell task's stdout is silently discarded when the command succeeds.
+REGISTERED_VAR_RE = re.compile(r"^\s+register:\s*(\S+)")
+DEBUG_STDOUT_RE = re.compile(
+    r"^\s+ansible\.builtin\.debug:\s*$|^\s+debug:\s*$"
+)
+STDOUT_REF_RE = re.compile(r"\{\{\s*(\w+)\.stdout\s*(?:\||\}\})")
+WHEN_RC_NONZERO_RE = re.compile(
+    r"when:\s*.*rc\s*!=\s*0|when:\s*.*rc\s*>\s*0|when:\s*.*not\b.*\brc\b.*\b==\s*0"
+)
+
+
+def detect_registered_output_swallow(added_lines):
+    """Find shell/command tasks that register output but only display it
+    conditionally on failure — the output is silently discarded on success.
+
+    Only flags shell/command tasks (not stat, uri, or set_fact) that:
+    1. Have a register: directive
+    2. Do NOT have failed_when: false (intentional tolerance)
+    3. Only display the registered output behind a when: rc != 0 guard
+
+    Returns list of (header_addedline, pattern_id).
+    """
+    violations = []
+
+    shell_re = re.compile(
+        r"^\s+(?:ansible\.builtin\.)?shell:\s*(\||>|['\"])?\s*$"
+    )
+    command_re = re.compile(
+        r"^\s+(?:ansible\.builtin\.)?command:\s*(\||>|['\"])?\s*$"
+    )
+
+    lines = added_lines
+    i = 0
+    while i < len(lines):
+        text = lines[i].text
+
+        if not (shell_re.search(text) or command_re.search(text)):
+            i += 1
+            continue
+
+        # Found shell/command — scan for register + failed_when in next ~15 lines
+        reg_var = None
+        has_tolerant = False
+        for j in range(i + 1, min(i + 15, len(lines))):
+            nt = lines[j].text
+            m = REGISTERED_VAR_RE.match(nt)
+            if m and not reg_var:
+                reg_var = m.group(1)
+            if re.match(r"^\s+failed_when:\s*false\s*$", nt):
+                has_tolerant = True
+            if re.match(r"^\s*- name:", nt):
+                break
+
+        if not reg_var or reg_var in ("item", "ansible_facts", "results"):
+            i += 1
+            continue
+        if has_tolerant:
+            i += 1
+            continue
+
+        # Scan forward for unconditional display of this var's stdout
+        has_unconditional = False
+        scan_end = min(i + 80, len(lines))
+        for j in range(i + 1, scan_end):
+            nt = lines[j].text
+            if f"{reg_var}.stdout" in nt or f"{reg_var}.stderr" in nt:
+                has_when_guard = False
+                for k in range(j - 5, min(j + 5, len(lines))):
+                    if k >= 0 and k < len(lines):
+                        kt = lines[k].text
+                        if WHEN_RC_NONZERO_RE.search(kt):
+                            has_when_guard = True
+                            break
+                if not has_when_guard:
+                    has_unconditional = True
+                    break
+            # Stop at next task barrier
+            if re.match(r"^\s*- name:", nt):
+                break
+
+        if not has_unconditional:
+            violations.append(
+                (lines[i], "ansible-register-output-swallowed")
+            )
+
+        i += 1
+
+    return violations

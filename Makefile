@@ -147,3 +147,21 @@ compliance-all: ## Recursive compliance audit of all repos in workspace
 .PHONY: rewrite-history
 rewrite-history: ## Strip blocked patterns from git history (dangerous)
 	bash scripts/rewrite-history
+
+# =============================================================================
+# WORKSPACE-GUARD — compiled git protection (opt-in)
+# =============================================================================
+
+.PHONY: build-guard install-guard uninstall-guard check-guard
+
+build-guard: ## Build git-guard binary from sibling WORKSPACE-GUARD repo (no root needed)
+	bash scripts/bootstrap-workspace-guard build-only
+
+install-guard: ## Install git-guard to /usr/bin/git (requires sudo, binary must be pre-built)
+	sudo bash scripts/bootstrap-workspace-guard install-only
+
+uninstall-guard: ## Uninstall git-guard, restore original /usr/bin/git (requires sudo)
+	sudo bash scripts/bootstrap-workspace-guard uninstall
+
+check-guard: ## Check git-guard installation status
+	bash scripts/bootstrap-workspace-guard check

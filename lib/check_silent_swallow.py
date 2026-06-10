@@ -38,6 +38,7 @@ from check_silent_swallow_system import (
 from check_silent_swallow_ansible import (
     ANSIBLE_INLINE,
     detect_ansible_tasks,
+    detect_registered_output_swallow,
     is_ansible_file,
 )
 
@@ -116,6 +117,13 @@ def main() -> int:
         )
 
     for header, pid in detect_ansible_tasks(added):
+        if not is_ansible_file(header.path):
+            continue
+        violations.append(
+            (header.path, header.lineno, pid, header.text.rstrip())
+        )
+
+    for header, pid in detect_registered_output_swallow(added):
         if not is_ansible_file(header.path):
             continue
         violations.append(
