@@ -130,30 +130,9 @@ build_guard_binary() {
     fi
 
     if [[ ! -f "$_guard_dir/Cargo.toml" ]]; then
-        log_info "WORKSPACE-GUARD project not found at $_guard_dir — cloning from remote..."
-
-        if [[ -z "${SSH_AUTH_SOCK:-}" ]] && [[ -n "${SUDO_USER:-}" ]]; then
-            local user_ssh_sock
-            user_ssh_sock=$(sudo -u "$SUDO_USER" printenv SSH_AUTH_SOCK)
-            local _ssh_rc=$?
-            if [[ $_ssh_rc -eq 0 && -n "$user_ssh_sock" && -S "$user_ssh_sock" ]]; then
-                export SSH_AUTH_SOCK="$user_ssh_sock"
-                log_info "Forwarded SSH agent socket from $SUDO_USER"
-            fi
-        fi
-
-        local guard_remote
-        guard_remote=$(grep -A3 'workspace-guard:' "${WORKSPACE_ROOT}/workspace/config/workspace-clones.yaml" | grep 'remote:' | awk '{print $2}' | tr -d "'\"")
-        if [[ -z "$guard_remote" ]]; then
-            guard_remote="git@github.com:Independent-AI-Labs/WORKSPACE-GUARD.git"
-        fi
-        mkdir -p "$(dirname "$_guard_dir")"
-        if ! sudo -u "${SUDO_USER:-$USER}" git clone "$guard_remote" "$_guard_dir"; then
-            log_error "Failed to clone WORKSPACE-GUARD from $guard_remote"
-            return 1
-        fi
-        chown -R root:root "$_guard_dir"
-        log_info "WORKSPACE-GUARD cloned from $guard_remote"
+        log_error "WORKSPACE-GUARD project not found at $_guard_dir"
+        log_error "Run 'make ensure-repos' or 'make sync-package' first to clone workspace repos"
+        return 1
     fi
 
     cd "$_guard_dir"
