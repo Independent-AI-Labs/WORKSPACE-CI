@@ -22,6 +22,8 @@
 - [`config/file_length_limits.yaml`](../../config/file_length_limits.yaml) — file length caps
 - [`config/dead_code.yaml`](../../config/dead_code.yaml) — AST analysis config
 - [`config/blocked_commit_patterns.yaml`](../../config/blocked_commit_patterns.yaml) — commit message bans
+- [`ci/*.py`](../../ci/) — Python check modules (canonical docstrings for check catalog)
+- [`lib/*.sh`](../../lib/) — Shell check functions (canonical comments for shell check catalog)
 
 ---
 
@@ -45,15 +47,19 @@ quality gates AMI-CI enforces.
 - A base-component feedback mechanism usable on any wiki section
 - Page-level analytics: views, dwell time, scroll depth, search queries, playground usage
 - A home page with aggregate stats, quick links, and trending content
+- A content pipeline that derives documentation from source code (docstrings, comments,
+  YAML configs, markdown docs) — single source of truth
 
 **The wiki DOES NOT:**
 
-- Execute or spawn Python processes (no AST analysis, no `uv run`, no subprocesses)
+- Execute or spawn Python processes at request time (no `uv run`, no subprocesses)
 - Modify AMI-CI configs, hooks, or source files
 - Require authentication (it is a public documentation surface)
 - Replace or duplicate AMI-PORTAL's shell, tab system, or iframe architecture
 - Serve as a general-purpose documentation viewer for arbitrary files
 - Implement i18n — English only
+- Duplicate content already present in source code — all content MUST derive
+  from canonical sources (docstrings, YAML configs, markdown docs)
 
 ### 1.3 Ownership Split
 
@@ -89,6 +95,8 @@ No symlinks. No duplication of YAML configs into the `web/` tree.
 | Config | YAML rule file | One of the YAML files in `config/` |
 | Feedback component | Inline vote + comment widget | Any wiki section can embed it |
 | Analytics event | User interaction record | Page view, search, playground use, feedback submission |
+| Extraction pipeline | Build-time docstring/comment parser | `scripts/extract-docs` → `web/src/data/*.json` |
+| Single source of truth | Content ownership principle | Docstrings, YAML configs, markdown docs are canonical; wiki derives from them |
 
 ---
 
@@ -223,7 +231,22 @@ No symlinks. No duplication of YAML configs into the `web/` tree.
 | FR-12.1 | An integration guide MUST show step-by-step how to wire AMI-CI into a sibling repo. |
 | FR-12.2 | The guide MUST cover: Makefile contract, hook generation, tier configuration, exception management. |
 
-### 3.3 Analytics and Feedback
+### 3.3 Content Sourcing
+
+#### FR-16: Single Source of Truth — Content from Source Code
+
+| ID | Requirement |
+|----|-------------|
+| FR-16.1 | Check catalog entries MUST be derived from Python docstrings in `ci/*.py` — no hardcoded check descriptions. |
+| FR-16.2 | Shell check catalog entries MUST be derived from function comments in `lib/*.sh` — no hardcoded check descriptions. |
+| FR-16.3 | Pattern library entries MUST be derived from `config/banned_words.yaml` — no duplication of pattern rules. |
+| FR-16.4 | Hook reference entries MUST be derived from `config/required_hooks.yaml` — no duplication of hook definitions. |
+| FR-16.5 | Configuration reference pages MUST read YAML configs directly from the filesystem — no copied YAML content. |
+| FR-16.6 | A build-time extraction tool MUST produce structured JSON from Python docstrings and shell comments that the wiki consumes at request time. |
+| FR-16.7 | Long-form prose that does not belong in source code (narrative guides, rationale, troubleshooting) MUST live in dedicated markdown files within the `web/` directory. |
+| FR-16.8 | Optional `README.md` files in source directories (`ci/`, `lib/`, `config/`, `scripts/`) MUST be discoverable and rendered on relevant index pages. |
+
+### 3.4 Analytics and Feedback
 
 #### FR-13: Page Analytics and Stats Tracking
 
@@ -273,6 +296,8 @@ No symlinks. No duplication of YAML configs into the `web/` tree.
 | NFR-1.3 | Search index building MUST NOT block the main thread perceptibly. |
 | NFR-1.4 | Playground regex matching MUST be debounced to avoid jank during typing. |
 | NFR-1.5 | YAML configs MUST be read and parsed server-side; raw YAML text MUST NOT be sent to the client except when explicitly displayed in a code block. |
+| NFR-1.6 | Content pages MUST render progressively — the shell (sidebar, header) MUST appear before all content data resolves. No page MUST display a blank screen while waiting for data. |
+| NFR-1.7 | The code editor bundle MUST NOT load on pages that do not use it. |
 
 ### NFR-2: Technology Stack
 
@@ -337,6 +362,18 @@ No symlinks. No duplication of YAML configs into the `web/` tree.
 | NFR-7.4 | Component tests MUST be co-located with their source files. |
 | NFR-7.5 | A browser-environment test runner MUST be used for component tests. |
 
+### NFR-8: Test Coverage
+
+| ID | Requirement |
+|----|-------------|
+| NFR-8.1 | Unit test coverage MUST be at least 90% for `src/lib/`, `src/stores/`, and `src/components/ui/` (lines, functions, statements). |
+| NFR-8.2 | Custom hook test coverage MUST be at least 95% — hooks are pure logic, trivially testable in isolation. |
+| NFR-8.3 | Branch coverage MUST be at least 85% for lib, stores, and ui modules. |
+| NFR-8.4 | Wiki feature components MUST have at least 85% coverage. |
+| NFR-8.5 | Playground components MAY have 80% coverage due to CodeMirror DOM interaction complexity in jsdom. |
+| NFR-8.6 | All coverage thresholds MUST be enforced in CI via the test runner. |
+| NFR-8.7 | The pattern classifier MUST be tested against all real patterns from `banned_words.yaml` — full enumeration, not sampling. |
+
 ---
 
 ## 5. Architecture
@@ -350,13 +387,14 @@ The wiki consists of three subsystems:
 │  Content Subsystem (server)             │
 │                                         │
 │  • Reads YAML configs from filesystem   │
+│  • Parses markdown content              │
 │  • Renders server components            │
-│  • Passes serialized data to client     │
+│  • Streams HTML progressively           │
 │                                         │
-│  Reads: ../../config/*.yaml             │
+│  Reads: ../../config/*.yaml, docs/*.md  │
 │  Mutates: nothing                       │
 └──────────────┬──────────────────────────┘
-               │ serialized data (props)
+               │ serialized data (props + streamed HTML)
                ▼
 ┌─────────────────────────────────────────┐
 │  Presentation Subsystem (browser)       │
@@ -370,8 +408,9 @@ The wiki consists of three subsystems:
 │  • Embeds feedback components           │
 │  • Runs pattern playground              │
 │                                         │
-│  Reads: nothing server-side             │
-│  Mutates: DOM, browser storage          │
+│  Interactive elements only:             │
+│  search, filters, toggles, feedback,    │
+│  playground editor                      │
 └──────────────┬──────────────────────────┘
                │
                ▼
@@ -421,7 +460,7 @@ The wiki consists of three subsystems:
 
 ## 6. Phased Implementation
 
-### Phase 1: Skeleton and Home Page
+### Phase 1: Skeleton, Home Page, and Extraction Pipeline
 
 **Capabilities delivered:**
 - [ ] Wiki shell layout with sidebar, header, and content area
@@ -429,6 +468,8 @@ The wiki consists of three subsystems:
 - [ ] Light/dark theme toggle with persistence
 - [ ] Home page with project overview, quick-search input, stats bar, quick-link cards
 - [ ] Analytics: page view tracking, dwell time, scroll depth
+- [ ] `scripts/extract-docs` — Python AST + regex shell parser → `web/src/data/*.json`
+- [ ] Extraction integrated into `make sync`
 
 ### Phase 2: Content Pages
 
@@ -457,7 +498,7 @@ The wiki consists of three subsystems:
 - [ ] Language-aware pattern filtering
 - [ ] Playground usage analytics
 
-### Phase 4: Polish
+### Phase 4: Polish and Test Coverage
 
 **Capabilities delivered:**
 - [ ] Responsive layout (mobile sidebar overlay, playground stacking)
@@ -465,7 +506,9 @@ The wiki consists of three subsystems:
 - [ ] Analytics debug mode
 - [ ] Home page trending wired to analytics store
 - [ ] Lint, format, and type-check clean
-- [ ] Component test suite
+- [ ] Component test suite at 90% coverage (lib/stores/ui), 85% (wiki components), 80% (playground)
+- [ ] Pattern classifier full-enumeration test against `banned_words.yaml`
+- [ ] Analytics store persistence round-trip test
 
 ---
 
@@ -517,3 +560,9 @@ The wiki consists of three subsystems:
 | 16 | Enable debug mode — analytics events logged to console | FR-13.7 |
 | 17 | Run type-check in `web/` — zero errors | NFR-7.1 |
 | 18 | Run lint in `web/` — zero warnings | NFR-7.2 |
+| 19 | Run `scripts/extract-docs` — `web/src/data/api-docs.json` and `shell-docs.json` are generated with valid content | FR-16.1—16.6 |
+| 20 | Modify a Python docstring in `ci/`, re-run extraction, rebuild wiki — check detail page reflects new docstring | FR-16.1 |
+| 21 | Modify a YAML config, rebuild wiki — pattern/hook/config page reflects change without manual wiki edits | FR-16.3—16.5 |
+| 22 | Add `ci/README.md` — check catalog index page shows its content | FR-16.8 |
+| 23 | Run `npm run test:coverage` in `web/` — coverage >= 90% for lib, stores, ui; >= 85% for wiki components; >= 80% for playground | NFR-8.1—8.5 |
+| 24 | Pattern classifier test passes against all real patterns from `banned_words.yaml` — every pattern maps to exactly one category | NFR-8.6 |

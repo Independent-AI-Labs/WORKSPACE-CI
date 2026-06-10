@@ -22,6 +22,17 @@ _load_sensitive_config() {
     _SAFE_PREFIXES=()
     while IFS= read -r v; do [[ -n "$v" ]] && _SAFE_PREFIXES+=("$v"); done \
         < <(ci_read_yaml_list "$config" "safe_prefixes")
+
+    # Merge per-repo exceptions from <repo_root>/config/sensitive_files_exceptions.yaml
+    local repo_root
+    repo_root="$(git rev-parse --show-toplevel 2>&1)" || repo_root=""
+    if [[ -n "$repo_root" ]]; then
+        local per_repo="${repo_root}/config/sensitive_files_exceptions.yaml"
+        if [[ -f "$per_repo" ]]; then
+            while IFS= read -r v; do [[ -n "$v" ]] && _SAFE_EXCEPTIONS+=("$v"); done \
+                < <(ci_read_yaml_list "$per_repo" "safe_exceptions")
+        fi
+    fi
 }
 
 _is_sensitive() {

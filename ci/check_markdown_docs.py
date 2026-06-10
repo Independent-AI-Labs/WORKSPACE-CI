@@ -103,6 +103,35 @@ def _load_config() -> MarkdownDocsConfig:
     return MarkdownDocsConfig()
 
 
+def _find_repo_root() -> Path | None:
+    """Find the repository root via git, for per-repo override loading."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return Path(result.stdout.strip()).resolve()
+    except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+        print(f"warning: cannot determine repo root: {exc}", file=sys.stderr)
+        return None
+
+
+def _load_repo_override(repo_root: Path) -> MarkdownDocsConfig:
+    """Load per-repo overrides from <repo_root>/.markdown_docs_exceptions.yaml."""
+    cfg_file = repo_root / ".markdown_docs_exceptions.yaml"
+    if not cfg_file.is_file():
+        return MarkdownDocsConfig()
+    try:
+        loaded = yaml.safe_load(cfg_file.read_text(encoding="utf-8"))
+    except yaml.YAMLError:
+        return MarkdownDocsConfig()
+    if isinstance(loaded, dict):
+        return MarkdownDocsConfig.model_validate(loaded)
+    return MarkdownDocsConfig()
+
+
 def _path_is_ignored(path: Path, ignore: list[str]) -> bool:
     rp_str = str(path)
     return any(
@@ -411,6 +440,14 @@ def run(argv: list[str] | None = None) -> int:
     args = _build_arg_parser().parse_args(argv)
 
     config = _load_config()
+
+    # Merge per-repo overrides if available
+    repo_root = _find_repo_root()
+    if repo_root is not None:
+        repo_cfg = _load_repo_override(repo_root)
+        config.ignore = list(config.ignore) + list(repo_cfg.ignore)
+        config.exceptions = list(config.exceptions) + list(repo_cfg.exceptions)
+
     ignore = list(args.ignore) + list(config.ignore)
     check_remote = args.check_remote or config.check_remote
     timeout = args.timeout if args.timeout != DEFAULT_HTTP_TIMEOUT else config.timeout
