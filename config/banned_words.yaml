@@ -94,6 +94,12 @@ banned:
   - pattern: '#\s*noqa'
     reason: "Linter suppression forbidden. Fix the code style."
 
+  - pattern: 'eslint-disable'
+    reason: "ESLint suppression forbidden. Fix the code."
+
+  - pattern: 'eslint-disable-next-line'
+    reason: "ESLint suppression forbidden. Fix the code."
+
   # === FORBIDDEN LAZY TYPE ANNOTATIONS ===
   # These patterns catch code that avoids proper data models.
   # Legitimate generics like list[str], dict[str, str], set[int] are ALLOWED.

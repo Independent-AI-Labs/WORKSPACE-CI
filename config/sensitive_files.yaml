@@ -65,6 +65,7 @@ safe_exceptions:
 safe_prefixes:
   - tsconfig
   - eslint
+  - .eslintrc
   - prettier
   - jest.config
   - babel.config
