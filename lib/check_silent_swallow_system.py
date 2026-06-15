@@ -29,7 +29,7 @@ SH_MASK = [
         "sh-pipefail-mask",
         re.compile(r"\|\s*(?:tail|head|cat|true|:)\b[^|]*$"),
     ),
-    ("sh-devnull-silent", re.compile(r"2>\s*/dev/null(?!\s*\|\|\s*(?:echo|printf)\b)")),
+    ("sh-devnull-silent", re.compile(r"2>\s*/dev/null")),
     ("sh-set-plus-e", re.compile(r"^\s*set\s+\+[eE]\b")),
     (
         "sh-trap-err-noop",
@@ -46,6 +46,10 @@ SH_MASK = [
             r"^\s*(?:\.|source)\s+\S"
             r"(?!.*\|\|\s*(?:exit|return))"
         ),
+    ),
+    (
+        "sh-fallback-echo",
+        re.compile(r"\|\|\s*(?:echo|printf)\b"),
     ),
 ]
 

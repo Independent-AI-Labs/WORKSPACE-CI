@@ -183,13 +183,13 @@ test_silent_sh_devnull_no_fallback_blocked() {  # silent-ok: 2>/dev/null appears
 }
 _run_test "silent: shell '2>/dev/null' without fallback blocked" test_silent_sh_devnull_no_fallback_blocked  # silent-ok: name describes the fixture pattern
 
-test_silent_sh_devnull_with_fallback_allowed() {
+test_silent_sh_devnull_with_fallback_blocked() {
     _setup_silent_repo
     local rc=0
     printf 'diff --git a/x.sh b/x.sh\n--- a/x.sh\n+++ b/x.sh\n@@ -0,0 +1,1 @@\n+somecmd 2>/dev/null || echo "missing"\n' | _run_silent_py >/dev/null || rc=$?
-    [[ $rc -eq 0 ]] || { echo "expected zero rc (||echo fallback is allowed)"; return 1; }
+    [[ $rc -ne 0 ]] || { echo "expected nonzero rc (devnull + ||echo fallback both blocked)"; return 1; }
 }
-_run_test "silent: shell 2>/dev/null||echo fallback allowed" test_silent_sh_devnull_with_fallback_allowed
+_run_test "silent: shell 2>/dev/null||echo fallback blocked" test_silent_sh_devnull_with_fallback_blocked
 
 test_silent_sh_pipefail_mask_tail_blocked() {
     _setup_silent_repo
