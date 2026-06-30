@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CI Core Library — sourced by hooks, test runners, and scripts.
+# CI Core Library: sourced by hooks, test runners, and scripts.
 # Consumers set their own shell flags; this file must stay passive.
 # Usage: source /path/to/ci.sh
 
@@ -167,7 +167,7 @@ ci_read_yaml_list() {
 # ---------------------------------------------------------------------------
 # Process substitution (`< <(cmd)`) opens /dev/fd/NN by path, which is
 # broken under PRoot, some bwrap/firejail sandboxes, and chroots without
-# /proc. The helpers below use temp files (mktemp, 0600) instead — works
+# /proc. The helpers below use temp files (mktemp, 0600) instead: works
 # on every POSIX system and every virtualization layer. Requires bash 4.3+
 # for nameref.
 
@@ -197,13 +197,13 @@ ci_capture_lines() {
 }
 
 # ci_capture_pipe <array-nameref> <snippet> [args...]
-#   Like ci_capture_lines but runs <snippet> via eval in a subshell — for
+#   Like ci_capture_lines but runs <snippet> via eval in a subshell: for
 #   pipelines (ci_file_list | ci_filter_ext, find | sort, etc.). The
 #   subshell inherits all shell functions and variables from the parent,
 #   so snippet can call ci_file_list, ci_filter_ext, etc. The snippet's
 #   "$@" / "$1".. refer to the args passed after the snippet.
 #
-#   SECURITY: <snippet> is passed to eval — it MUST be a hardcoded string
+#   SECURITY: <snippet> is passed to eval: it MUST be a hardcoded string
 #   literal in the calling code, NEVER user input. All current call sites
 #   use single-quoted static snippets.
 #
@@ -237,7 +237,7 @@ ci_capture_pipe() {
 #   contains .boot-linux/python-env/bin, prepends it to the accumulator;
 #   at each level that contains .boot-linux/bin, prepends it after the
 #   python-env entry. Returns the accumulated string (colon-separated
-#   entries, no trailing colon — caller prepends ":$PATH").
+#   entries, no trailing colon: caller prepends ":$PATH").
 #
 #   Then reads config/boot_layout.yaml (if present at <start-dir>) and
 #   prepends each inherit: entry's bin subdir AFTER the walk-up results.
@@ -255,7 +255,7 @@ ci_capture_pipe() {
 #   do not mutate the parent shell's CWD.
 #
 #   NO SILENT ERROR SUPPRESSION. A failed `cd "$entry"` emits its native
-#   `bash: cd: <path>: No such file or directory` to stderr — that IS
+#   `bash: cd: <path>: No such file or directory` to stderr: that IS
 #   the visible signal per FR-BL-3.3. `|| continue` propagates the skip;
 #   the stderr keeps the trace honest. No stderr redirection to the
 #   null device, no exit-code-masking fallbacks.
@@ -271,7 +271,7 @@ ci_resolve_boot_path() {
         fi
         walk="$(dirname "$walk")"
     done
-    # Explicit inherit: entries — prepended AFTER walk-up; later-listed = leftmost = wins.
+    # Explicit inherit: entries: prepended AFTER walk-up; later-listed = leftmost = wins.
     # Entries are relative to the repo root (= $start), NOT to CWD. Resolve
     # them by prefixing $start before the existence check and the accum prepend.
     # Use `cd "$start" && cd "$entry"` to resolve relative paths portably

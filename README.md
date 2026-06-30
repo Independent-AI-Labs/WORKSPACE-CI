@@ -1,7 +1,7 @@
 # workspace-ci
 
 Catches secrets, banned patterns, silent errors, and commit garbage
-before they reach your main branch — at native git speed, in any language.
+before they reach your main branch: at native git speed, in any language.
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 ![Hooks: native bash](https://img.shields.io/badge/hooks-native%20bash-blue)
@@ -11,7 +11,7 @@ before they reach your main branch — at native git speed, in any language.
 
 ## Why
 
-The `pre-commit` framework stashes your working tree — files vanish from disk,
+The `pre-commit` framework stashes your working tree: files vanish from disk,
 breaking dev servers and confusing your IDE. Standalone linters don't talk to
 each other, so you wire a dozen separate hooks and pray they agree on what's
 staged. And if an agent generates the code, none of them catch the patterns
@@ -19,7 +19,7 @@ that matter: `except: pass`, `dict[str, Any]`, `Co-authored-by: Claude`.
 
 workspace-ci generates **native** `.git/hooks/*` bash scripts from your
 `.pre-commit-config.yaml`. No framework. No stashing. One coordinated set of
-gates that fire at pre-commit, commit-msg, and pre-push — shell-first, with
+gates that fire at pre-commit, commit-msg, and pre-push: shell-first, with
 Python where shell can't go.
 
 ---
@@ -37,7 +37,7 @@ bash workspace-ci/scripts/generate-hooks
 ```
 
 For monorepo setups with shared config, see
-[`docs/HOOKS.md`](docs/HOOKS.md) — covers the Makefile contract,
+[`docs/HOOKS.md`](docs/HOOKS.md): covers the Makefile contract,
 `bootstrap-gitleaks`, and tier configuration.
 
 ---
@@ -53,7 +53,7 @@ For monorepo setups with shared config, see
 | Deep analysis | pre-push | dead code (AST), dependency freshness (PyPI/npm/Docker Hub), full history scan for blocked patterns, markdown link integrity, hook manifest completeness |
 
 Checks are config-driven. Every rule lives in a YAML file under
-[`config/`](config/). Add a pattern, tune a threshold, exclude a path —
+[`config/`](config/). Add a pattern, tune a threshold, exclude a path -
 no code changes needed.
 
 Full rule reference: browse [`config/banned_words.yaml`](config/banned_words.yaml)
@@ -71,7 +71,7 @@ Full rule reference: browse [`config/banned_words.yaml`](config/banned_words.yam
 | **poc** | Safety subset only: gitleaks, sensitive files, banned words, blocked history, commit message. |
 | **vendored** | No hooks installed. For frozen or mirrored code. |
 
-`enforcement_mode: warn` during rollout — see violations without breaking flow.
+`enforcement_mode: warn` during rollout: see violations without breaking flow.
 Flip to `enforce` when gates are clean.
 
 ---
@@ -83,7 +83,7 @@ Flip to `enforce` when gates are clean.
 | pre-commit framework | Runs hooks from a Python runtime | Stashes files, requires Python, pulls hooks from remote git refs |
 | ruff / eslint | Lint one language | Don't coordinate across languages, don't gate commits, don't catch silent errors or banned patterns |
 | gitleaks | Detect secrets | Doesn't know about sensitive filenames, code quality, or commit hygiene |
-| **workspace-ci** | All of the above, coordinated, from bash | Python-only AST analysis (dead code) — non-Python projects use their own ecosystem for that |
+| **workspace-ci** | All of the above, coordinated, from bash | Python-only AST analysis (dead code): non-Python projects use their own ecosystem for that |
 
 ---
 
@@ -96,8 +96,8 @@ Flip to `enforce` when gates are clean.
 | [`docs/specifications/SPEC-BOOT-LAYOUT.md`](docs/specifications/SPEC-BOOT-LAYOUT.md) | Boot layout implementation: walk-up PATH resolution, config schema, compliance check |
 | [`docs/requirements/REQ-WIKI.md`](docs/requirements/REQ-WIKI.md) | Interactive wiki UI requirements |
 | [`docs/specifications/SPEC-WIKI.md`](docs/specifications/SPEC-WIKI.md) | Wiki implementation specification |
-| [`lib/`](lib/) | Shell check functions — core, files, commit, coverage, compliance, quality, silent |
-| [`ci/`](ci/) | Python checks — dependency versions, dead code, markdown refs, required hooks |
+| [`lib/`](lib/) | Shell check functions: core, files, commit, coverage, compliance, quality, silent |
+| [`ci/`](ci/) | Python checks: dependency versions, dead code, markdown refs, required hooks |
 
 ---
 
@@ -112,15 +112,15 @@ ref pulls.
 
 ### Does it work for non-Python projects?
 
-Yes. The shell layer — secrets, banned patterns, file length, silent errors,
-commit hygiene, coverage gates — treats every language the same. The silent-swallow
+Yes. The shell layer: secrets, banned patterns, file length, silent errors,
+commit hygiene, coverage gates: treats every language the same. The silent-swallow
 detector spans Python (`except: pass`), JavaScript/TypeScript (`catch {}`),
 Rust (`unwrap()` abuse), Shell (`|| true`), and more via regex. The Python layer
 (dead code AST, dependency version checks, markdown refs) is Python-only.
 
 ### Can agents bypass it?
 
-Pre-commit hooks fail closed. Pre-push scans full history — anything snuck in
+Pre-commit hooks fail closed. Pre-push scans full history: anything snuck in
 via rebase or amend gets blocked.
 [WORKSPACE-GUARD](https://github.com/Independent-AI-Labs/WORKSPACE-GUARD)
 wraps the `git` binary itself and refuses `--no-verify`, force-push to main,

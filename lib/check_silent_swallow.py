@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""workspace-ci silent-error-swallow detector — reads unified diff on stdin.
+"""workspace-ci silent-error-swallow detector: reads unified diff on stdin.
 
 Emits one violation per line:
   <file>:<line>: <pattern_id> -- <line content>
 
 Exits 0 if no violations, 1 otherwise.
 
-This script is self-contained — stdlib only. Invoked from
+This script is self-contained: stdlib only. Invoked from
 lib/checks_silent.sh.
 
 Patterns are organised by language in sibling modules:
-  check_silent_swallow_base.py    — diff parsing + AddedLine
-  check_silent_swallow_python.py  — Python inline + multi-line except
-  check_silent_swallow_js.py      — JS/TS inline + multi-line catch
-  check_silent_swallow_system.py  — Shell + cron patterns
+  check_silent_swallow_base.py   : diff parsing + AddedLine
+  check_silent_swallow_python.py : Python inline + multi-line except
+  check_silent_swallow_js.py     : JS/TS inline + multi-line catch
+  check_silent_swallow_system.py : Shell + cron patterns
 """
 
 import re

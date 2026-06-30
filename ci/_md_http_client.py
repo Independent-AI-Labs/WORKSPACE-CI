@@ -122,7 +122,7 @@ class HttpClient:
 
         If ``check()`` is called for a URL not in cache (e.g. an exception
         path skipped prewarm), returns a visible budget-exceeded warning
-        rather than performing a synchronous probe — never hangs.
+        rather than performing a synchronous probe: never hangs.
         """
         if url in self._cache:
             return self._cache[url]

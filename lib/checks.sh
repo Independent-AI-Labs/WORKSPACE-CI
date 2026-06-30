@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CI Check Functions — sourced by hooks and test runners.
+# CI Check Functions: sourced by hooks and test runners.
 # Consumers set their own shell flags; this file must stay passive.
 # Each function exits 0 on success, 1 on violations found.
 

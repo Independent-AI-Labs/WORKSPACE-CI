@@ -55,14 +55,14 @@ repos:
 
       - id: check-dependency-versions
         name: Check Dependency Versions (strict pinning + latest)
-        entry: bash -c 'uv run python -c "import ci" || { echo "FAILED: ci not installed — run: make sync" >&2; exit 1; }; exec uv run python -m ci.check_dependency_versions "$@"' --
+        entry: bash -c 'uv run python -c "import ci" || { echo "FAILED: ci not installed: run: make sync" >&2; exit 1; }; exec uv run python -m ci.check_dependency_versions "$@"' --
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-duplicate-dependencies
         name: Check Duplicate/Redundant Dependencies
-        entry: bash -c 'uv run python -c "import ci" || { echo "FAILED: ci not installed — run: make sync" >&2; exit 1; }; exec uv run python -m ci.check_duplicate_dependencies "$@"' --
+        entry: bash -c 'uv run python -c "import ci" || { echo "FAILED: ci not installed: run: make sync" >&2; exit 1; }; exec uv run python -m ci.check_duplicate_dependencies "$@"' --
         language: system
         pass_filenames: false
         always_run: true

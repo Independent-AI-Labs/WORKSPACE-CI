@@ -198,16 +198,16 @@ repos:
 **One concern per commit.** A single commit should answer a single "why"
 question. Examples of legitimate bundling and illegitimate bundling:
 
-- ✅ Renaming a symbol and updating every caller — one concern
+- ✅ Renaming a symbol and updating every caller: one concern
   (the rename).
-- ✅ Adding a feature and the test that proves it works — one concern
+- ✅ Adding a feature and the test that proves it works: one concern
   (the feature is not done without the test).
-- ✅ Deleting a module and the doc references that pointed at it — one
+- ✅ Deleting a module and the doc references that pointed at it: one
   concern (the cleanup).
 - ❌ Adding a feature *and* bumping a dependency *and* reformatting an
-  unrelated file — three concerns, three commits.
+  unrelated file: three concerns, three commits.
 - ❌ "Big refactor" commits that mix a module split with behaviour
-  changes — the split and the behaviour change should be separate
+  changes: the split and the behaviour change should be separate
   commits so `git blame` and `git bisect` stay useful.
 
 When in doubt: would a reviewer want to `git revert` the behaviour

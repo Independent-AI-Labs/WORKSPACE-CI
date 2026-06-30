@@ -210,11 +210,11 @@ ci_verify_coverage() {
 # --- ci_check_coverage_thresholds_no_devolution ---
 # Compares the staged coverage_thresholds.yaml against HEAD.  Fails the
 # commit if any suite's min_coverage value is being lowered.  Thresholds
-# are earned — they may only stay the same or increase.
+# are earned: they may only stay the same or increase.
 ci_check_coverage_thresholds_no_devolution() {
     local config="config/coverage_thresholds.yaml"
     if [[ ! -f "$config" ]]; then
-        ci_pass "No $config — nothing to guard."
+        ci_pass "No $config: nothing to guard."
         return 0
     fi
 
@@ -228,7 +228,7 @@ ci_check_coverage_thresholds_no_devolution() {
         return 0
     fi
 
-    # Parse HEAD version — suite keys are at column 0 (no indent)
+    # Parse HEAD version: suite keys are at column 0 (no indent)
     declare -A old_thresholds
     local _head_output _suite="" _val=""
     _head_output="$(git show HEAD:"$config" 2>&1)"

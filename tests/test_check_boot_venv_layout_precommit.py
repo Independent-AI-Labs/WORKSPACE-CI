@@ -1,4 +1,4 @@
-"""Tests for ci.check_boot_venv_layout — check 9, _load_moon_yml, main().
+"""Tests for ci.check_boot_venv_layout: check 9, _load_moon_yml, main().
 
 Covers SPEC-BOOT-LAYOUT §6.3 check 9 (.pre-commit-config.yaml --project
 refs), the _load_moon_yml helper, and the main() end-to-end path.
@@ -91,7 +91,7 @@ def _run_main_capturing_exit(
 
 
 # ---------------------------------------------------------------------------
-# Check 9 — _check_precommit_project_refs
+# Check 9: _check_precommit_project_refs
 # ---------------------------------------------------------------------------
 
 

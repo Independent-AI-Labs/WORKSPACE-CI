@@ -15,12 +15,12 @@
 
 **Cross-references:**
 
-- [REQ-BOOT-LAYOUT](../requirements/REQ-BOOT-LAYOUT.md) — companion requirements (FR-/NFR-level acceptance criteria)
-- [HOOKS.md](../HOOKS.md) — hook generation contract
-- [`lib/ci.sh`](../../lib/ci.sh) — where `ci_resolve_boot_path()` will live
-- [`scripts/generate-hooks`](../../scripts/generate-hooks) — the file containing the hardcoded PATH-prepend to be replaced
-- [`config/banned_words.yaml`](../../config/banned_words.yaml) — the `python3?` ban that motivates the `uv run --project` contract
-- [`ci/check_required_hooks_present.py`](../../ci/check_required_hooks_present.py) — the model for the new `check_boot_venv_layout.py` companion check
+- [REQ-BOOT-LAYOUT](../requirements/REQ-BOOT-LAYOUT.md): companion requirements (FR-/NFR-level acceptance criteria)
+- [HOOKS.md](../HOOKS.md): hook generation contract
+- [`lib/ci.sh`](../../lib/ci.sh): where `ci_resolve_boot_path()` will live
+- [`scripts/generate-hooks`](../../scripts/generate-hooks): the file containing the hardcoded PATH-prepend to be replaced
+- [`config/banned_words.yaml`](../../config/banned_words.yaml): the `python3?` ban that motivates the `uv run --project` contract
+- [`ci/check_required_hooks_present.py`](../../ci/check_required_hooks_present.py): the model for the new `check_boot_venv_layout.py` companion check
 
 ---
 
@@ -66,14 +66,14 @@ Siblings (same-level repos under a shared parent) are NOT reachable via walk-up;
 cross-sibling boot sharing requires an EXPLICIT `inherit:` entry in the
 consumer's `boot_layout.yaml` (see §4.1) plus a matching `moon.yml::dependsOn`
 edge (see §8.2). Crucially, despite "explicit", the sibling's `.boot-linux/`
-remains READ-ONLY — the consumer never writes into it.
+remains READ-ONLY: the consumer never writes into it.
 
 ### 2.2 Configuration over convention
 
 Where a `.boot-linux/` lives is configuration, not convention. A repo can
 declare `boot_dir: ../shared-boot/` if it wants a sibling location; the
 compliance check verifies the path resolves. The walk-up is auto-discovery
-ON TOP of the explicit declaration — declared `inherit:` entries win
+ON TOP of the explicit declaration: declared `inherit:` entries win
 (leftmost after walk-up entries).
 
 ### 2.3 `.venv/` is private; cross-repo Python via `uv run --project`
@@ -99,7 +99,7 @@ the layout audit (chicken-and-egg avoidance).
 
 ---
 
-## 3. `ci_resolve_boot_path()` — Algorithm Specification
+## 3. `ci_resolve_boot_path()`: Algorithm Specification
 
 ### 3.1 Signature & Semantics
 
@@ -111,7 +111,7 @@ the layout audit (chicken-and-egg avoidance).
 #   contains .boot-linux/python-env/bin, prepends it to the accumulator;
 #   at each level that contains .boot-linux/bin, prepends it after the
 #   python-env entry. Returns the accumulated string (colon-separated
-#   entries, no trailing colon — caller prepends ":$PATH").
+#   entries, no trailing colon: caller prepends ":$PATH").
 #
 #   Then reads config/boot_layout.yaml (if present at <start-dir>) and
 #   prepends each inherit: entry's bin subdir AFTER the walk-up results.
@@ -168,18 +168,18 @@ ci_resolve_boot_path() {
 ### 3.2 PRoot-safety
 
 - No `< <(...)` process substitution (uses `ci_capture_lines` from `lib/ci.sh` which uses temp files).
-- No `realpath` (uses `cd ... && pwd -P` for path resolution in the inherit loop — `pwd -P` gives the physical path without symlink expansion in intermediate components, matching the NFR-BL-3.1 constraint).
+- No `realpath` (uses `cd ... && pwd -P` for path resolution in the inherit loop: `pwd -P` gives the physical path without symlink expansion in intermediate components, matching the NFR-BL-3.1 constraint).
 - NO `2>/dev/null` anywhere. None. Not even one "allowed" swallow. The
   canon bans silent error-suppression absolutely. In the inherit loop,
   `cd "$entry"` against a non-existent path emits its native `bash: cd:
-  <path>: No such file or directory` to stderr — that error IS visible to
+  <path>: No such file or directory` to stderr: that error IS visible to
   the user (not suppressed), and the `|| continue` propagates the skip
-  per FR-BL-3.3. The error's meaning IS "this entry isn't on disk —
+  per FR-BL-3.3. The error's meaning IS "this entry isn't on disk -
   skip it"; the skip is the documented handling. Suppression is never
   acceptable, even when the error semantics are intentional; the visible
   stderr keeps the trace honest.
 - No `|| true` outside the `$(...)` subshell (uses `if/then/fi` and `|| continue` guards).
-- No `source` without `|| exit/return` — the helper is invoked from generated hooks where `set -euo pipefail` is active.
+- No `source` without `|| exit/return`: the helper is invoked from generated hooks where `set -euo pipefail` is active.
 
 ### 3.3 Precedence rule
 
@@ -191,7 +191,7 @@ For /root/WORKSPACE-GUARD with own .boot-linux/bin/git-guard and
 inherit: [../WORKSPACE-CI/.boot-linux]:
   walk-up emits:    /root/WORKSPACE-GUARD/.boot-linux/bin:
                     (only one .boot-linux/ on the up-path; /root/ has none
-                    post-refactor — /root/.boot-linux/ is deleted per FR-BL-8.10)
+                    post-refactor: /root/.boot-linux/ is deleted per FR-BL-8.10)
   inherit prepend: /root/WORKSPACE-CI/.boot-linux/bin
   final accum:     /root/WORKSPACE-CI/.boot-linux/bin:/root/WORKSPACE-GUARD/.boot-linux/bin:
 ```
@@ -210,12 +210,12 @@ no timestamp, no env-var-dependent behavior.
 
 ### 3.5 Termination
 
-`while [[ "$walk" != "/" && "$walk" != "." ]]` — bounded by walking up to
-`/` or empty dirname. O(depth) — typically 3-5 iterations for our repos.
+`while [[ "$walk" != "/" && "$walk" != "." ]]`: bounded by walking up to
+`/` or empty dirname. O(depth): typically 3-5 iterations for our repos.
 
 ---
 
-## 4. `config/boot_layout.yaml` — Schema Specification
+## 4. `config/boot_layout.yaml`: Schema Specification
 
 ### 4.1 Schema (YAML)
 
@@ -256,11 +256,11 @@ comment: |
 | Field | OK | WARN | INFO |
 |---|---|---|---|
 | `boot_dir` | Resolves to existing dir, or null | Resolves to a file (not dir); resolved leaf dir is world-writable (NFR-BL-3.2) | Field is null/absent (repo has no own boot dir) |
-| `venv_dir` | Resolves to existing dir containing `bin/python`, or null | Resolves to existing dir WITHOUT `bin/python` (incomplete venv); resolved leaf is world-writable | Field is null/absent (repo has no own venv — e.g. GUARD) |
+| `venv_dir` | Resolves to existing dir containing `bin/python`, or null | Resolves to existing dir WITHOUT `bin/python` (incomplete venv); resolved leaf is world-writable | Field is null/absent (repo has no own venv: e.g. GUARD) |
 | `inherit` entry | Resolves to existing `.boot-linux/` dir, AND target repo IS in consuming `moon.yml::dependsOn` | Entry exists as a file (not dir); entry's resolved leaf is world-writable; target repo NOT in `dependsOn` | Entry does not exist on disk (soft-optional per FR-BL-3.3) |
-| `..` usage | Path uses `..` for cross-sibling refs (e.g. `../WORKSPACE-CI/.boot-linux`) | (No warning triggered solely by `..` segments — cross-sibling refs are the canonical pattern) | N/A |
+| `..` usage | Path uses `..` for cross-sibling refs (e.g. `../WORKSPACE-CI/.boot-linux`) | (No warning triggered solely by `..` segments: cross-sibling refs are the canonical pattern) | N/A |
 
-Note: `..` segments are NOT flagged. Cross-sibling inheritance is the documented mechanism (see §4.1 example and REQ §4 Open Q #4 Resolution). The check focuses on (a) existence, (b) world-writable leaf, (c) `dependsOn` alignment — NOT on path-shape policing.
+Note: `..` segments are NOT flagged. Cross-sibling inheritance is the documented mechanism (see §4.1 example and REQ §4 Open Q #4 Resolution). The check focuses on (a) existence, (b) world-writable leaf, (c) `dependsOn` alignment: NOT on path-shape policing.
 
 ### 4.4 Single source of truth
 
@@ -271,7 +271,7 @@ list. `moon.yml::project.bootDir`/`project.parentBoot` are DESCRIPTIVE
 
 ---
 
-## 5. `scripts/generate-hooks` — Modification Spec
+## 5. `scripts/generate-hooks`: Modification Spec
 
 ### 5.1 Before (current implementation, lines 104-111)
 
@@ -295,7 +295,7 @@ fi
 
 ### 5.3 Removal
 
-The chained-symlink design comment (lines 104-110) is removed — the design
+The chained-symlink design comment (lines 104-110) is removed: the design
 no longer relies on `.boot-linux/bin/python → python-env/bin/python` symlinks
 outside the owning repo. (The `python-env/` subdirectory model is owned
 exclusively by WORKSPACE-VM for its own ambient python needs, not by CI.)
@@ -305,7 +305,7 @@ exclusively by WORKSPACE-VM for its own ambient python needs, not by CI.)
 For sibling-repo hooks (e.g. WORKSPACE-GUARD's `check-markdown-docs`), the
 generated hook MUST emit `uv run --project ../CI --no-sync python -m
 ci.check_markdown_docs ...` per FR-BL-6.1. The `../CI` relative path is
-supplied by the CONSUMER in its `.pre-commit-config.yaml::entry` string —
+supplied by the CONSUMER in its `.pre-commit-config.yaml::entry` string -
 NOT injected by `generate-hooks`.
 
 For OWN-repo hooks (WORKSPACE-CI's own `.pre-commit-config.yaml`), the entry
@@ -314,20 +314,20 @@ stays `uv run python -m ci.check_markdown_docs ...` (no `--project`).
 `generate-hooks` does NOT parse `.pre-commit-config.yaml::entry` to swap
 in flags. It just emits the `entry:` string verbatim into the generated
 hook. The `--project ../CI --no-sync` addition is therefore a CONSUMER'S
-RESPONSIBILITY — `WORKSPACE-GUARD/.pre-commit-config.yaml::check-markdown-docs.entry`
+RESPONSIBILITY: `WORKSPACE-GUARD/.pre-commit-config.yaml::check-markdown-docs.entry`
 MUST be edited to include `--project ../CI --no-sync`. This spec does not
 teach `generate-hooks` to auto-inject `--project`; that would couple the
 generator to the consumer's needs. The hook owner supplies the entry.
 
 (Note: `generate-hooks` does have an internal `${_ci_rel}` variable used
 to source `lib/checks.sh` from the correct relative path based on nesting
-depth. That variable is for the hook's `source` line — NOT for editing
+depth. That variable is for the hook's `source` line: NOT for editing
 `entry:` strings. Do not conflate the two. The consumer's `entry:` is
 hand-authored in its `.pre-commit-config.yaml`.)
 
 ---
 
-## 6. `ci/check_boot_venv_layout.py` — Module Spec
+## 6. `ci/check_boot_venv_layout.py`: Module Spec
 
 ### 6.1 Invocation
 
@@ -416,8 +416,8 @@ In WORKSPACE-CI's own `.pre-commit-config.yaml`:
 
 Two distinct operations apply to CI's hook entries simultaneously:
 
-1. **RESTORE `uv run`** — the 2026-06-25 session stripped `uv run` from several entries, violating `banned_words.yaml:236`. The `uv run` prefix MUST be restored.
-2. **ERADICATE `2>/dev/null`** — the `check-dependency-versions` and `check-duplicate-dependencies` entries had pre-existing `2>/dev/null` swallows. Those swallows MUST be replaced with explicit `|| { echo ... >&2; exit 1; }` rc-capture patterns.
+1. **RESTORE `uv run`**: the 2026-06-25 session stripped `uv run` from several entries, violating `banned_words.yaml:236`. The `uv run` prefix MUST be restored.
+2. **ERADICATE `2>/dev/null`**: the `check-dependency-versions` and `check-duplicate-dependencies` entries had pre-existing `2>/dev/null` swallows. Those swallows MUST be replaced with explicit `|| { echo ... >&2; exit 1; }` rc-capture patterns.
 
 Both operations apply to L58/L65 (which need BOTH `uv run` restored AND swallow eradicated).
 
@@ -425,8 +425,8 @@ Both operations apply to L58/L65 (which need BOTH `uv run` restored AND swallow 
 |---|---|---|
 | `WORKSPACE-CI/.pre-commit-config.yaml` L23 | `uv run ruff format` → `ruff format` | Restore `uv run ruff format` (FR-BL-8.7) |
 | `WORKSPACE-CI/.pre-commit-config.yaml` L30 | `uv run ruff check` → `ruff check` | Restore `uv run ruff check` (FR-BL-8.7) |
-| `WORKSPACE-CI/.pre-commit-config.yaml` L58 | Session stripped NOTHING here; the swallow was PRE-EXISTING. Hook entry needs: (a) `uv run python` preserved (it was never stripped here — the entry used `bash -c 'uv run python -c "import ci" 2>/dev/null ...'` already), (b) the `2>/dev/null` swallow replaced. | Replace swallow: `bash -c 'uv run python -c "import ci" \|\| { echo "FAILED: ci not installed — run: make sync" >&2; exit 1; }; exec uv run python -m ci.check_dependency_versions "$@"' --` (FR-BL-8.8) |
-| `WORKSPACE-CI/.pre-commit-config.yaml` L65 | Same as L58 — entry used `2>/dev/null` swallow pre-session; no `uv run` stripping here. | Same replacement pattern as L58, for `ci.check_duplicate_dependencies` (FR-BL-8.8). |
+| `WORKSPACE-CI/.pre-commit-config.yaml` L58 | Session stripped NOTHING here; the swallow was PRE-EXISTING. Hook entry needs: (a) `uv run python` preserved (it was never stripped here: the entry used `bash -c 'uv run python -c "import ci" 2>/dev/null ...'` already), (b) the `2>/dev/null` swallow replaced. | Replace swallow: `bash -c 'uv run python -c "import ci" \|\| { echo "FAILED: ci not installed: run: make sync" >&2; exit 1; }; exec uv run python -m ci.check_dependency_versions "$@"' --` (FR-BL-8.8) |
+| `WORKSPACE-CI/.pre-commit-config.yaml` L65 | Same as L58: entry used `2>/dev/null` swallow pre-session; no `uv run` stripping here. | Same replacement pattern as L58, for `ci.check_duplicate_dependencies` (FR-BL-8.8). |
 | `WORKSPACE-CI/.pre-commit-config.yaml` L121 | `uv run python -m mypy` → `python -m mypy` | Restore `uv run python -m mypy` (FR-BL-8.7) |
 | `WORKSPACE-CI/.pre-commit-config.yaml` L129 | `uv run python -m ci.check_markdown_docs` → bare `python -m ci.check_markdown_docs` | Restore `uv run python -m ci.check_markdown_docs` (FR-BL-8.7) |
 | `WORKSPACE-CI/.pre-commit-config.yaml` L136 | `uv run python -m ci.check_required_hooks_present` → bare `python -m ...` | Restore `uv run python -m ci.check_required_hooks_present` (FR-BL-8.7) |
@@ -483,7 +483,7 @@ Any `inherit:` entry pointing at a sibling `.boot-linux/` (e.g.
 `dependsOn: [ci]` edge in the consuming repo's `moon.yml` (the moon
 project id is derived by lowercasing the WORKSPACE-<NAME> directory's
 <NAME> segment). Reverse direction is invalid (an `inherit` entry
-pointing at a repo NOT in `dependsOn` is an undeclared dependency —
+pointing at a repo NOT in `dependsOn` is an undeclared dependency -
 silent breakage risk per the Riftmap infra-dependency research).
 
 The compliance check (§6 step 8) detects mismatches.
@@ -513,9 +513,9 @@ WARN  moon.yml                  inherit references WORKSPACE-CI/.boot-linux but
 | FR-BL-2.3 | §7.3 (GUARD has no pyproject; uses `uv run --project`) |
 | FR-BL-2.4 | §7.3 (Makefile exports `UV_PROJECT_ENVIRONMENT` when venv_dir relocated) |
 | FR-BL-2.5 | §2.3 (architectural principle), §5.4 (--project contract) |
-| FR-BL-3.1 | §4.1 (inherit schema — ancestor OR sibling), §3.1 (walker appends inherit after walk-up) |
-| FR-BL-3.2 | §4.1 (entry shape — path to `.boot-linux/`, walker appends `/bin`), §3.1 (`entry="${entry%/}"; ... "$entry/bin"`) |
-| FR-BL-3.3 | §3.1 (`|| continue` skips the entry on failed `cd`; cd's native stderr IS the visible signal — no `2>/dev/null` swallowing per §3.2), §6.3 check 5 (INFO for non-existent) |
+| FR-BL-3.1 | §4.1 (inherit schema: ancestor OR sibling), §3.1 (walker appends inherit after walk-up) |
+| FR-BL-3.2 | §4.1 (entry shape: path to `.boot-linux/`, walker appends `/bin`), §3.1 (`entry="${entry%/}"; ... "$entry/bin"`) |
+| FR-BL-3.3 | §3.1 (`|| continue` skips the entry on failed `cd`; cd's native stderr IS the visible signal: no `2>/dev/null` swallowing per §3.2), §6.3 check 5 (INFO for non-existent) |
 | FR-BL-3.4 | §6.3 check 8 (WARN if target repo not in moon.yml::dependsOn), §8.2 (alignment rule) |
 | FR-BL-4.1 | §5.2 (generate-hooks replacement) |
 | FR-BL-4.2 | §3.1 (walk-up algorithm) |
@@ -548,14 +548,14 @@ WARN  moon.yml                  inherit references WORKSPACE-CI/.boot-linux but
 | FR-BL-8.3 | §7.1 (delete bootstrap-python-env) |
 | FR-BL-8.4 | §7.3 (Makefile: remove install-python-env target + prereqs) |
 | FR-BL-8.5 | §7.3 (manifest.yaml: remove bootstrap-python-env entry) |
-| FR-BL-8.7 | §7.2 (revert session edits — restore uv run) |
+| FR-BL-8.7 | §7.2 (revert session edits: restore uv run) |
 | FR-BL-8.8 | §7.2 (eradicate `2>/dev/null` swallows in L58/L65) |
 | FR-BL-8.9 | §7.3 (GUARD hook entry change) |
 | FR-BL-8.10 | §7.1 (delete /root/.boot-linux/python-env + symlink) |
-| NFR-BL-1.1 | §3.1 (pure function — no side effects, subshell `cd` doesn't mutate parent), §3.4 (idempotency) |
+| NFR-BL-1.1 | §3.1 (pure function: no side effects, subshell `cd` doesn't mutate parent), §3.4 (idempotency) |
 | NFR-BL-1.2 | §3.5 (O(depth) termination) |
 | NFR-BL-1.3 | §3.4 (byte-identical output for same fs state) |
-| NFR-BL-1.4 | §11 Phase 1/2 (idempotent bootstraps — bootstrap-gitleaks version-match short-circuit) |
+| NFR-BL-1.4 | §11 Phase 1/2 (idempotent bootstraps: bootstrap-gitleaks version-match short-circuit) |
 | NFR-BL-2.1 | §3.2 (PRoot-safety, no process substitution, no associative arrays) |
 | NFR-BL-2.2 | §4.1 (POSIX forward slashes, no drive letters) |
 | NFR-BL-2.3 | §11 Phase 2 (CI+GUARD install without VM; NFR-BL-2.3 rationale) |
@@ -564,10 +564,10 @@ WARN  moon.yml                  inherit references WORKSPACE-CI/.boot-linux but
 | NFR-BL-3.3 | §11 Phase 5 (SHA256-pinning pattern for new bootstraps) |
 | NFR-BL-3.4 | §2.3 (architectural principle reinforces banned_words.yaml) |
 | NFR-BL-4.1 | §11 Phase 2 (legacy hardcoded prepend removed; no fallback pathway retained) |
-| NFR-BL-4.2 | §7.3 (VM keeps bootstrap_python.sh — VM-owned concern), §6.3 check 1 (INFO on absent boot_layout.yaml) |
+| NFR-BL-4.2 | §7.3 (VM keeps bootstrap_python.sh: VM-owned concern), §6.3 check 1 (INFO on absent boot_layout.yaml) |
 | NFR-BL-5.1 | §8.1 (moon.yml::project.bootDir/parentBoot mirroring) |
 | NFR-BL-5.2 | §8.2 (dependsOn alignment), §6.3 check 8 (enforces) |
-| NFR-BL-5.3 | §8.2 (reverse direction invalid — consumer→producer only) |
+| NFR-BL-5.3 | §8.2 (reverse direction invalid: consumer→producer only) |
 
 ---
 
@@ -579,7 +579,7 @@ If a repo declares `boot_dir: .boot-linux/` AND `inherit: [.boot-linux/]` (self-
 
 ### 10.2 `inherit:` entry that duplicates a walk-up-discovered dir
 
-If `/root/.boot-linux/bin` were ever to exist AND a repo at `/root/WORKSPACE-CI/` declared `inherit: [/root/.boot-linux/]`, the walk-up already prepends `/root/.boot-linux/bin` and the explicit inherit would prepend it again — producing duplicate PATH entries (POSIX shells tolerate this; resolution is unaffected). The walker DOES NOT deduplicate; the caller's `export PATH=` line MAY contain duplicate entries. This is acceptable because (a) duplicates don't change resolution semantics, (b) dedup would require shell-array set-tracking which §3.1 deliberately avoids for PRoot-safety (no associative arrays under `set -u`). Under the post-refactor contract this case is moot: `/root/.boot-linux/` is deleted, so no walk-up level contributes it.
+If `/root/.boot-linux/bin` were ever to exist AND a repo at `/root/WORKSPACE-CI/` declared `inherit: [/root/.boot-linux/]`, the walk-up already prepends `/root/.boot-linux/bin` and the explicit inherit would prepend it again: producing duplicate PATH entries (POSIX shells tolerate this; resolution is unaffected). The walker DOES NOT deduplicate; the caller's `export PATH=` line MAY contain duplicate entries. This is acceptable because (a) duplicates don't change resolution semantics, (b) dedup would require shell-array set-tracking which §3.1 deliberately avoids for PRoot-safety (no associative arrays under `set -u`). Under the post-refactor contract this case is moot: `/root/.boot-linux/` is deleted, so no walk-up level contributes it.
 
 ### 10.3 Repo with `boot_dir: null` and `inherit: null`
 
@@ -597,7 +597,7 @@ Each generated hook does exactly one `export PATH="${_BOOT_PATH}:$PATH"` per she
 
 ## 11. Phased Implementation
 
-### Phase 1 — Reversions and cleanup (single PR after this SPEC is approved)
+### Phase 1: Reversions and cleanup (single PR after this SPEC is approved)
 
 - [ ] Delete `/root/.boot-linux/python-env/` + `/root/.boot-linux/bin/python` symlink.
 - [ ] Delete `/root/WORKSPACE-CI/scripts/bootstrap-python-env`.
@@ -607,7 +607,7 @@ Each generated hook does exactly one `export PATH="${_BOOT_PATH}:$PATH"` per she
 - [ ] Revert `config/coverage_thresholds.yaml`, `lib/checks_coverage.sh`, `lib/checks_compliance.sh` per §7.2.
 - [ ] Change `WORKSPACE-GUARD/.pre-commit-config.yaml` L52 to `uv run --project ../CI --no-sync python -m ci.check_markdown_docs --all-md --check-remote` per §7.3.
 
-### Phase 2 — New contract (after Phase 1 lands)
+### Phase 2: New contract (after Phase 1 lands)
 
 - [ ] Add `ci_resolve_boot_path()` to `lib/ci.sh` per §3.1.
 - [ ] Replace `generate-hooks` hardcoded PATH-prepend with `ci_resolve_boot_path()` invocation per §5.
@@ -616,7 +616,7 @@ Each generated hook does exactly one `export PATH="${_BOOT_PATH}:$PATH"` per she
 - [ ] Add `config/boot_layout.yaml` to WORKSPACE-GUARD: `boot_dir: .boot-linux/`, `venv_dir: null`, `inherit: [../WORKSPACE-CI/.boot-linux]`.
 - [ ] Verify WORKSPACE-GUARD's `moon.yml::dependsOn` includes `ci` (add if missing).
 
-### Phase 3 — Compliance check (after Phase 2 lands)
+### Phase 3: Compliance check (after Phase 2 lands)
 
 - [ ] Add `ci/check_boot_venv_layout.py` per §6.
 - [ ] Register in `scripts/manifest.yaml` per §6.5.
@@ -625,14 +625,14 @@ Each generated hook does exactly one `export PATH="${_BOOT_PATH}:$PATH"` per she
 - [ ] Add `project.bootDir` / `project.parentBoot` custom metadata to WORKSPACE-CI's `moon.yml` mirroring `boot_layout.yaml`.
 - [ ] Add `project.bootDir` / `project.parentBoot` custom metadata to WORKSPACE-GUARD's `moon.yml` mirroring `boot_layout.yaml`.
 
-### Phase 4 — VM-side alignment (separate PR, separate commit)
+### Phase 4: VM-side alignment (separate PR, separate commit)
 
 - [ ] Add `config/boot_layout.yaml` to WORKSPACE-VM: `boot_dir: .boot-linux/`, `venv_dir: .venv/`, `inherit: [../WORKSPACE-CI/.boot-linux]`.
 - [ ] Verify WORKSPACE-VM's `moon.yml::dependsOn` includes `ci`.
 - [ ] Add `project.bootDir` + `project.parentBoot` to WORKSPACE-VM's `moon.yml`.
-- [ ] WORKSPACE-VM KEEPS `bootstrap_python.sh` and its `.boot-linux/python-env/` — these serve VM-internal ambient scripts (e.g. `workspace/scripts/bin/bootstrap-repos` consumes `.boot-linux/bin/python` at lines 43-45). This is VM's owned concern under the new contract, not a legacy artifact to remove.
+- [ ] WORKSPACE-VM KEEPS `bootstrap_python.sh` and its `.boot-linux/python-env/`: these serve VM-internal ambient scripts (e.g. `workspace/scripts/bin/bootstrap-repos` consumes `.boot-linux/bin/python` at lines 43-45). This is VM's owned concern under the new contract, not a legacy artifact to remove.
 
-### Phase 5 (deferred) — Rust toolchain self-sufficiency
+### Phase 5 (deferred): Rust toolchain self-sufficiency
 
 - [ ] Author `scripts/bootstrap-uv` to install uv into `${CI_PROJECT_ROOT}/.boot-linux/bin/uv` hermetically (SHA256-pinned download like `bootstrap-gitleaks`).
 - [ ] Author `scripts/bootstrap-rust` to install rustup + components (cargo, rustc, clippy-driver, rustfmt) into `${CI_PROJECT_ROOT}/.boot-linux/` (with RUSTUP_HOME + CARGO_HOME redirected).
@@ -648,4 +648,4 @@ Each generated hook does exactly one `export PATH="${_BOOT_PATH}:$PATH"` per she
 3. **Compliance check blocking?** SPEC: no, ever (NFR-BL-5 underscored via §6.1 exit 0 invariant).
 4. **`inherit:` glob support?** SPEC: no. Each entry dispatched explicitly; globs introduce undeclared dependencies.
 5. **VM inherits CI's gitleaks or installs its own?** SPEC §10.1: VM `inherit:` lists CI's `.boot-linux` so walk-up + explicit-declared inheritance both surface `/root/WORKSPACE-CI/.boot-linux/bin/gitleaks`. VM does NOT install its own gitleaks copy.
-6. **`inherit:` priority/scope field?** SPEC: no. Positional precedence — later-listed entries prepended later = leftmost = wins. Matches the implementation in §3.1.
+6. **`inherit:` priority/scope field?** SPEC: no. Positional precedence: later-listed entries prepended later = leftmost = wins. Matches the implementation in §3.1.

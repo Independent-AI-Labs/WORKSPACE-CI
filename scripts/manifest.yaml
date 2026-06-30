@@ -8,14 +8,14 @@
 # actual scripts on disk.
 #
 # Field reference:
-#   id          — stable script id (basename without extension).
-#   path        — path relative to repo root.
-#   summary     — one-line description.
-#   usage       — CLI usage string (rendered in a code block).
-#   category    — bootstrap | hook-lifecycle | workspace | compliance | history.
-#   args        — optional list of {name, description} for documented flags.
-#   output      — description of what the script emits (stdout/file/exit).
-#   make_target — optional Makefile target that invokes this script.
+#   id         : stable script id (basename without extension).
+#   path       : path relative to repo root.
+#   summary    : one-line description.
+#   usage      : CLI usage string (rendered in a code block).
+#   category   : bootstrap | hook-lifecycle | workspace | compliance | history.
+#   args       : optional list of {name, description} for documented flags.
+#   output     : description of what the script emits (stdout/file/exit).
+#   make_target: optional Makefile target that invokes this script.
 
 version: 1
 
@@ -38,7 +38,7 @@ scripts:
     usage: cleanup-precommit [--remove-config]
     category: hook-lifecycle
     args:
-      - { name: --remove-config, description: "Also delete .pre-commit-config.yaml (off by default — it's our config source)" }
+      - { name: --remove-config, description: "Also delete .pre-commit-config.yaml (off by default: it's our config source)" }
     output: "Deletes pre-commit hooks, virtualenvs, and cache. Exits 0."
 
   - id: bootstrap-gitleaks
@@ -61,7 +61,7 @@ scripts:
     summary: Bootstrap a $RUST_TOOLCHAIN Rust toolchain into CI's own .boot-linux/rust and symlink binaries into .boot-linux/bin (idempotent, isolated via RUSTUP_HOME/CARGO_HOME).
     usage: bootstrap-rust
     category: bootstrap
-    output: "Installs rustc/cargo/rustup into $CI_PROJECT_ROOT/${boot_dir}/rust and symlinks toolchain + llvm-tools-preview binaries into ${boot_dir}/bin (boot_dir read from config/boot_layout.yaml; default .boot-linux). Refreshes symlinks + components and exits 0 if a working toolchain is already present; reinstalls if rustc is present but fails --version. Repo-private — does NOT touch $HOME/.rustup or $HOME/.cargo."
+    output: "Installs rustc/cargo/rustup into $CI_PROJECT_ROOT/${boot_dir}/rust and symlinks toolchain + llvm-tools-preview binaries into ${boot_dir}/bin (boot_dir read from config/boot_layout.yaml; default .boot-linux). Refreshes symlinks + components and exits 0 if a working toolchain is already present; reinstalls if rustc is present but fails --version. Repo-private: does NOT touch $HOME/.rustup or $HOME/.cargo."
 
   - id: bootstrap-workspace-guard
     path: scripts/bootstrap-workspace-guard

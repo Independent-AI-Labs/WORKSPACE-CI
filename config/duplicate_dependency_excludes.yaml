@@ -3,7 +3,7 @@
 # check_duplicate_dependencies.
 #
 # Self-duplicates (same dep in multiple sections of a single
-# pyproject.toml) are NOT affected by this list — version-mismatch
+# pyproject.toml) are NOT affected by this list: version-mismatch
 # self-duplicates always block, same-version duplicates warn.
 #
 # Add entries here when a dep must stay in the root pyproject.toml

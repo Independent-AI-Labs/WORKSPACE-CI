@@ -49,7 +49,7 @@ universal_exceptions:
   - paths: ['\.sh$', 'Makefile$', 'makefile$', '\.toml$', '\.yaml$', '\.yml$']
     patterns:
       - ' -- '
-  # The silent-swallow detector uses 'silent' as its subject matter —
+  # The silent-swallow detector uses 'silent' as its subject matter -
   # it detects silent failures, it is not a silent failure.
   - paths: ['lib/check_silent_swallow.*\.py$', 'lib/checks_silent\.sh$']
     patterns:
@@ -60,7 +60,7 @@ universal_exceptions:
       - '\bfallback\b'
       - '\.suppress'
       - ' -- '
-  # TOML parsing utility — dict[str, Any] is the correct return type
+  # TOML parsing utility: dict[str, Any] is the correct return type
   # for parsed TOML data before validation.
   - paths: ['ci/check_duplicate_dependencies\.py$']
     patterns:
@@ -104,31 +104,31 @@ banned:
   # These patterns catch code that avoids proper data models.
   # Legitimate generics like list[str], dict[str, str], set[int] are ALLOWED.
 
-  # list[object] — the most useless type annotation possible
+  # list[object]: the most useless type annotation possible
   - pattern: '\blist\[object\]'
     reason: "list[object] provides zero type safety. Use list[str] or a proper model."
 
-  # dict[str, object] / dict[K, object] — lazy untyped dict
+  # dict[str, object] / dict[K, object]: lazy untyped dict
   - pattern: '\bdict\[[^]]+,\s*object\]'
     reason: "dict[..., object] is a lazy untyped dict. Use TypedDict, Pydantic model, or dataclass."
 
-  # dict[str, Any] / dict[K, Any] — lazy untyped dict
+  # dict[str, Any] / dict[K, Any]: lazy untyped dict
   - pattern: '\bdict\[.*,\s*Any\]'
     reason: "dict[..., Any] is a lazy untyped dict. Use TypedDict, Pydantic model, or dataclass."
 
-  # list[dict] — list of completely untyped dicts
+  # list[dict]: list of completely untyped dicts
   - pattern: '\blist\[dict\]'
     reason: "list[dict] has no type information. Use list[TypedDict] or list[Model]."
 
-  # list[dict[str, object]] — nested lazy dicts
+  # list[dict[str, object]]: nested lazy dicts
   - pattern: '\blist\[dict\[str,\s*object\]\]'
     reason: "list[dict[str, object]] passes untyped data. Define a proper model or TypedDict."
 
-  # dict[str, list[dict[str, object]]] — deeply nested lazy dicts
+  # dict[str, list[dict[str, object]]]: deeply nested lazy dicts
   - pattern: '\bdict\[str,\s*list\[dict\[str,\s*object\]\]\]'
     reason: "dict[str, list[dict[str, object]]] passes untyped data. Define proper models."
 
-  # | object — makes the entire union equivalent to object
+  # | object: makes the entire union equivalent to object
   - pattern: '\|\s*object\b'
     reason: "Union with | object makes the whole type equivalent to object. Remove it or use a proper type."
 
@@ -231,7 +231,7 @@ banned:
   - pattern: ':latest\b'
     reason: "Pin container versions. No :latest tags."
 
-  # === DEPRECATED — bare python / python3 ===
+  # === DEPRECATED: bare python / python3 ===
   - pattern: '\bpython3?\b'
     reason: "Use uv run python for hermetic execution. No bare python/python3 calls."
 
@@ -250,6 +250,14 @@ banned:
   # the prose case is fully captured by the spaced form.
   - pattern: ' -- '
     reason: "ASCII em-dash punctuation forbidden. Use commas, colons, or parentheses."
+  # Unicode em-dash (U+2014) and en-dash (U+2013). Non-ASCII typographic
+  # characters have no place in technical source code, documentation, or
+  # config files. Use ASCII punctuation: commas, colons, semicolons, or
+  # parentheses for em-dash; ASCII hyphen (-) for en-dash in ranges.
+  - pattern: '\u2014'
+    reason: "Unicode em-dash (U+2014) forbidden. Use commas, colons, or parentheses."
+  - pattern: '\u2013'
+    reason: "Unicode en-dash (U+2013) forbidden. Use ASCII hyphen (-) for ranges."
 
 directory_rules:
   tests:

@@ -23,7 +23,7 @@ Checks performed (numbered per SPEC §6.3):
 10. Print summary line (ok/warn/info counts). Exit 0.
 
 Exit codes: always 0 (non-blocking). The only hard failure mode is an
-infrastructure error (e.g. unreadable YAML containing an EmbeddedNull) — those
+infrastructure error (e.g. unreadable YAML containing an EmbeddedNull): those
 return 2 per the canon, mirroring `ci/check_required_hooks_present.py`.
 """
 
@@ -67,7 +67,7 @@ from ci._boot_layout_helpers import (
 )
 
 # ---------------------------------------------------------------------------
-# Check functions — each appends to findings as (level, message) tuples.
+# Check functions: each appends to findings as (level, message) tuples.
 # ---------------------------------------------------------------------------
 
 
@@ -78,7 +78,7 @@ def _check_layout_exists(
     layout_path = project_dir / "config" / "boot_layout.yaml"
     if not layout_path.is_file():
         return None, [
-            ("INFO", "config/boot_layout.yaml not found — repo has no own boot dir")
+            ("INFO", "config/boot_layout.yaml not found: repo has no own boot dir")
         ]
     return layout_path, []
 
@@ -104,7 +104,7 @@ def _check_boot_dir(layout: BootLayout, project_dir: Path) -> list[tuple[str, st
     """SPEC §6.3 check 3. boot_dir resolves against project root."""
     bd = _normalize_boot_dir(layout.boot_dir)
     if bd is None:
-        return [("INFO", "boot_dir field null/absent — repo has no own boot_dir")]
+        return [("INFO", "boot_dir field null/absent: repo has no own boot_dir")]
     resolved = (project_dir / bd).resolve(strict=False)
     if not resolved.exists():
         return [
@@ -127,7 +127,7 @@ def _check_venv_dir(layout: BootLayout, project_dir: Path) -> list[tuple[str, st
     """SPEC §6.3 check 4. venv_dir resolves against project root."""
     vd = _normalize_boot_dir(layout.venv_dir)
     if vd is None:
-        return [("INFO", "venv_dir field null/absent — repo declares no .venv")]
+        return [("INFO", "venv_dir field null/absent: repo declares no .venv")]
     resolved = (project_dir / vd).resolve(strict=False)
     if not resolved.exists():
         return [("INFO", f"venv_dir={vd!r} not yet created on disk (run `uv sync`)")]
@@ -235,7 +235,7 @@ def _check_moon_metadata_consistency(
                 (
                     "INFO",
                     "moon.yml::project.bootDir absent "
-                    "(descriptive only — no contract violation)",
+                    "(descriptive only: no contract violation)",
                 )
             )
         elif proj.bootDir.strip().rstrip("/") != bd:
@@ -305,7 +305,7 @@ def _check_moon_dependson_alignment(
             findings.append(
                 (
                     "OK",
-                    f"inherit entry {entry!r} — moon.yml::dependsOn "
+                    f"inherit entry {entry!r}: moon.yml::dependsOn "
                     f"includes {moon_id!r}",
                 )
             )
@@ -313,7 +313,7 @@ def _check_moon_dependson_alignment(
             findings.append(
                 (
                     "WARN",
-                    f"inherit entry {entry!r} — moon.yml::dependsOn "
+                    f"inherit entry {entry!r}: moon.yml::dependsOn "
                     f"MISSING {moon_id!r} "
                     f"(add {moon_id!r} to dependsOn "
                     f"or remove the inherit entry; per §8.2)",
@@ -395,35 +395,35 @@ def main() -> int:
 
     findings: list[tuple[str, str]] = []
 
-    # Check 1 — existence
+    # Check 1: existence
     layout_path, found = _check_layout_exists(project_dir)
     findings.extend(found)
     if layout_path is None:
         # No boot_layout.yaml → emit summary and exit 0 (per §6.3 check 1).
         _emit_and_exit(findings)
-        return EXIT_OK  # unreachable — _emit_and_exit always exits
+        return EXIT_OK  # unreachable: _emit_and_exit always exits
 
-    # Check 2 — parse + schema
+    # Check 2: parse + schema
     layout, parse_findings = _check_layout_parse(layout_path)
     findings.extend(parse_findings)
     if layout is None:
         _emit_and_exit(findings)
         return EXIT_OK
 
-    # Checks 3-6 — filesystem state
+    # Checks 3-6: filesystem state
     findings.extend(_check_boot_dir(layout, project_dir))
     findings.extend(_check_venv_dir(layout, project_dir))
     findings.extend(_check_inherit_entries(layout, project_dir))
 
-    # Check 7-8 — moon.yml consistency
+    # Check 7-8: moon.yml consistency
     moon = _load_moon_yml(project_dir)
     findings.extend(_check_moon_metadata_consistency(layout, moon))
     findings.extend(_check_moon_dependson_alignment(layout, moon))
 
-    # Check 9 — .pre-commit-config.yaml --project refs
+    # Check 9: .pre-commit-config.yaml --project refs
     findings.extend(_check_precommit_project_refs(project_dir))
 
-    # Check 10 — summary
+    # Check 10: summary
     _emit_and_exit(findings)
     return EXIT_OK  # unreachable
 

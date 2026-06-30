@@ -20,7 +20,7 @@ if ! source "$_CI_ROOT/lib/ci.sh"; then
     exit 2
 fi
 
-# Use system git directly — this script is an explicitly destructive tool
+# Use system git directly: this script is an explicitly destructive tool
 # that the user invokes manually. The git-guard blocks --force which
 # filter-branch requires. Prepend system git dir to PATH so all git calls
 # (including filter-branch's internal subprocesses) bypass the guard.

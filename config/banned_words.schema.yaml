@@ -1,4 +1,4 @@
-# Schema for banned_words.yaml — field-level documentation.
+# Schema for banned_words.yaml: field-level documentation.
 #
 # Convention: one config/<name>.schema.yaml per config/<name>.yaml.
 # Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)

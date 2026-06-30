@@ -30,7 +30,7 @@ _setup_tmpdir() {
     cp "$LIB_DIR"/check_silent_swallow_js.py "$TEST_TMP/workspace/projects/CI/lib/"
     cp "$LIB_DIR"/check_silent_swallow_system.py "$TEST_TMP/workspace/projects/CI/lib/"
     cp "$LIB_DIR"/check_silent_swallow_ansible.py "$TEST_TMP/workspace/projects/CI/lib/"
-    # Copy config files — skip if no .yaml files exist (safe on fresh checkout)
+    # Copy config files: skip if no .yaml files exist (safe on fresh checkout)
     shopt -s nullglob
     local yaml_files=("$PROJECT_DIR/config/"*.yaml)
     shopt -u nullglob

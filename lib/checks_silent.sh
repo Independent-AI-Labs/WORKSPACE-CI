@@ -51,7 +51,7 @@ ci_check_silent_swallow() {
     # Build file list: ALL staged files. Pathspec filtering is delegated to
     # the Python classifier (lib/check_silent_swallow_system.py::is_shell_file)
     # so extensionless scripts (scripts/bootstrap-uv, scripts/audit-workspace,
-    # etc.) are scanned per the §3.7 "hooks scan ALL files — no exceptions" rule.
+    # etc.) are scanned per the §3.7 "hooks scan ALL files: no exceptions" rule.
     git diff --cached --name-only > "$files_tmp"
 
     if [[ ! -s "$files_tmp" ]]; then
@@ -68,7 +68,7 @@ ci_check_silent_swallow() {
         # TODO: read exceptions from a per-project silent_swallow_exceptions.yaml
         case "$file" in
             tests/*) continue ;;  # Tests may contain deliberate error patterns
-            res/ansible/compose.yml) continue ;;  # Pre-existing patterns — fix incremental
+            res/ansible/compose.yml) continue ;;  # Pre-existing patterns: fix incremental
         esac
         {
             echo "--- a/$file"

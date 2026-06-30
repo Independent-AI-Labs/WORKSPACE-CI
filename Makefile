@@ -12,7 +12,7 @@ PYTEST := $(UV) run pytest
 # After `make install` creates it, prepend to PATH so make targets use
 # bootstrapped tools, not system-installed ones. Parse-time check: if
 # .boot-linux/bin/uv doesn't exist yet (fresh install), PATH is not
-# modified — install-python-deps handles it in its recipe.
+# modified: install-python-deps handles it in its recipe.
 BOOT_BIN := $(CURDIR)/.boot-linux/bin
 ifneq ($(wildcard $(BOOT_BIN)/uv),)
     export PATH := $(BOOT_BIN):$(PATH)
@@ -97,7 +97,7 @@ sync: ## Sync .venv deps + reinstall hooks
 # Quality Gates
 # =============================================================================
 
-# Public contract targets — delegate to moon for graph-aware caching.
+# Public contract targets: delegate to moon for graph-aware caching.
 # Implementation bodies live under private _<target>-impl: targets so
 # the moon command field can invoke them directly without recursing
 # back through the public shim. INCIDENT-prevention: `make X` shimming
@@ -120,7 +120,7 @@ type-check: ## Run mypy on ci/
 test: ## Run all tests (shell + Python)
 	@$(MAKE) _test-impl
 
-# Private implementation targets — invoked by moon's command: field.
+# Private implementation targets: invoked by moon's command: field.
 # Not part of the contract; do not call directly from CI.
 
 .PHONY: _lint-impl
@@ -182,7 +182,7 @@ rewrite-history: ## Strip blocked patterns from git history (dangerous)
 	bash scripts/rewrite-history
 
 # =============================================================================
-# WORKSPACE-GUARD — compiled git protection (opt-in)
+# WORKSPACE-GUARD: compiled git protection (opt-in)
 # =============================================================================
 
 .PHONY: build-guard install-guard uninstall-guard check-guard

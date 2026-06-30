@@ -1,5 +1,5 @@
 #!/usr/bin/awk -f
-# parse_precommit_config.awk — Parse .pre-commit-config.yaml for generate-hooks.
+# parse_precommit_config.awk: Parse .pre-commit-config.yaml for generate-hooks.
 #
 # Input:  .pre-commit-config.yaml (repo:local, language:system hooks only)
 # Output: One line per hook, fields separated by \034 (ASCII FS):
@@ -27,7 +27,7 @@ in_hook {
     if (/^[[:space:]]+args:/)           { args = inline_list(); next }
     if (/^[[:space:]]+types_or:/)      { types_or = inline_list(); next }
     if (/^[[:space:]]+types:/)         { types_or = inline_list(); next }
-    # language, verbose, etc. — silently ignored
+    # language, verbose, etc.: silently ignored
 }
 
 END { flush() }

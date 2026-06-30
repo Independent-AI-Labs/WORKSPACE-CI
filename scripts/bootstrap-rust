@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bootstrap-rust — bootstrap a $RUST_TOOLCHAIN Rust toolchain into CI's own
+# bootstrap-rust: bootstrap a $RUST_TOOLCHAIN Rust toolchain into CI's own
 # .boot-linux/rust/ and create symlinks in .boot-linux/bin/.
 #
 # This project uses `rustc`/`cargo` for any native-Rust tooling. This script
@@ -16,7 +16,7 @@
 # where ${boot_dir} is read from config/boot_layout.yaml (single source of
 # truth per SPEC-BOOT-LAYOUT §4.1; default '.boot-linux/').
 #
-# Repo-private: does NOT touch $HOME/.rustup or $HOME/.cargo — the toolchain
+# Repo-private: does NOT touch $HOME/.rustup or $HOME/.cargo: the toolchain
 # is fully isolated via RUSTUP_HOME / CARGO_HOME env exports pointing at
 # ${boot_dir}/rust. Sibling repos reach these binaries via the boot-path
 # resolver (lib/ci.sh::ci_resolve_boot_path) + inherit: declarations in
@@ -25,7 +25,7 @@
 # Reference spec: docs/specifications/SPEC-BOOT-LAYOUT.md
 #
 # Overrideable env vars:
-#   $RUST_TOOLCHAIN  — rustup toolchain channel to install (default: "stable").
+#   $RUST_TOOLCHAIN : rustup toolchain channel to install (default: "stable").
 
 set -euo pipefail
 
@@ -156,9 +156,9 @@ main() {
     export CARGO_HOME="$rust_home"
 
     # Rust needs a C linker. Short-circuit AND of absent compilers is the
-    # real check — `command -v` returning nonzero IS the signal, not a swallow.
+    # real check: `command -v` returning nonzero IS the signal, not a swallow.
     if ! command -v cc && ! command -v gcc && ! command -v clang; then
-        _log "no C compiler (cc/gcc/clang) found — required by Rust toolchain"
+        _log "no C compiler (cc/gcc/clang) found: required by Rust toolchain"
         return 1
     fi
 

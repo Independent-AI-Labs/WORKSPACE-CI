@@ -173,7 +173,7 @@ def _has_unconditional_display(
 
 def detect_registered_output_swallow(added_lines):
     """Find shell/command tasks that register output but only display it
-    conditionally on failure — the output is silently discarded on success.
+    conditionally on failure: the output is silently discarded on success.
 
     Returns list of (header_addedline, pattern_id).
     """

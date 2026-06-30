@@ -1,4 +1,4 @@
-"""Reference checkers — dispatched by URL scheme / form.
+"""Reference checkers: dispatched by URL scheme / form.
 
 Each checker inspects a Reference and returns a list of Findings.
 """

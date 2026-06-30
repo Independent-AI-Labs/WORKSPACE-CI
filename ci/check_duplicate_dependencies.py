@@ -205,14 +205,14 @@ def check_self_duplicates(toml_path: Path) -> list[DuplicateIssue]:
             msg = (
                 f"SELF-DUPLICATE in {toml_path.name}: "
                 f"{dep_name} declared in multiple sections with "
-                f"mismatched versions — {detail}"
+                f"mismatched versions: {detail}"
             )
         else:
             kind = "SELF_DUPLICATE_SAME"
             msg = (
                 f"SELF-DUPLICATE in {toml_path.name}: "
                 f"{dep_name} declared in multiple sections "
-                f"(same version) — {detail}"
+                f"(same version): {detail}"
             )
 
         issues.append(DuplicateIssue(kind, msg))

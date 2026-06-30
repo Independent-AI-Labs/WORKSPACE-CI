@@ -1,4 +1,4 @@
-"""Tests for ci.check_required_hooks_present — auto-enforcement self-check."""
+"""Tests for ci.check_required_hooks_present: auto-enforcement self-check."""
 
 from __future__ import annotations
 
@@ -79,7 +79,7 @@ def _make_repo_with_hooks(
     return repo
 
 
-# ── unit: invariant 1 — manifest completeness ─────────────────────────────────
+# ── unit: invariant 1: manifest completeness ─────────────────────────────────
 
 
 def test_manifest_completeness_passes_when_all_registered(tmp_path: Path) -> None:
@@ -113,7 +113,7 @@ def test_manifest_completeness_handles_missing_dir(tmp_path: Path) -> None:
     assert "not found" in issues[0]
 
 
-# ── unit: invariant 2 — quality_exceptions schema ─────────────────────────────
+# ── unit: invariant 2: quality_exceptions schema ─────────────────────────────
 
 
 def _manifest_with_one_exemptable() -> HooksManifest:
@@ -143,7 +143,7 @@ def test_quality_exceptions_passes_for_valid_entry() -> None:
         exceptions=[
             ExceptionEntry(
                 hook="check-dead-code",
-                reason="Vendored adapters with dynamic imports — unanalysable.",
+                reason="Vendored adapters with dynamic imports: unanalysable.",
                 paths=["vendor/"],
                 added_by="dev@example.com",
             ),
@@ -228,7 +228,7 @@ def test_quality_exceptions_rejects_missing_added_by() -> None:
     assert any("added_by" in i for i in issues)
 
 
-# ── unit: invariant 3 — rendered hooks ────────────────────────────────────────
+# ── unit: invariant 3: rendered hooks ────────────────────────────────────────
 
 
 def test_hook_marker_format() -> None:

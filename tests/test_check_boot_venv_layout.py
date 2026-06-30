@@ -1,4 +1,4 @@
-"""Tests for ci.check_boot_venv_layout — helper functions + checks 1-4.
+"""Tests for ci.check_boot_venv_layout: helper functions + checks 1-4.
 
 Covers SPEC-BOOT-LAYOUT §6.3 checks 1-4 (layout existence, parse/schema,
 boot_dir resolution, venv_dir resolution) plus the pure helper functions.
@@ -200,7 +200,7 @@ def test_load_yaml_raises_on_malformed(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Check 1 — _check_layout_exists
+# Check 1: _check_layout_exists
 # ---------------------------------------------------------------------------
 
 
@@ -223,7 +223,7 @@ def test_check_layout_exists_returns_none_with_info_when_absent(tmp_path: Path) 
 
 
 # ---------------------------------------------------------------------------
-# Check 2 — _check_layout_parse
+# Check 2: _check_layout_parse
 # ---------------------------------------------------------------------------
 
 
@@ -279,7 +279,7 @@ def test_check_layout_parse_schema_violation(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Check 3 — _check_boot_dir
+# Check 3: _check_boot_dir
 # ---------------------------------------------------------------------------
 
 
@@ -342,7 +342,7 @@ def test_check_boot_dir_null_returns_info(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Check 4 — _check_venv_dir
+# Check 4: _check_venv_dir
 # ---------------------------------------------------------------------------
 
 

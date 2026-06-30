@@ -8,27 +8,27 @@
 # an entry here, otherwise `check_required_hooks_present` fails.
 #
 # Field reference:
-#   id           — stable hook id; matches the # === Hook: <id> === marker in
+#   id          : stable hook id; matches the # === Hook: <id> === marker in
 #                  generated .git/hooks/* files.
-#   kind         — shell | shell_inline | shell_with_arg | python_module |
+#   kind        : shell | shell_inline | shell_with_arg | python_module |
 #                  python_module_files | makefile_target.
 #                  shell:          entry is a bash function (args = staged files).
 #                  shell_inline:   entry is a literal bash command string.
 #                  shell_with_arg: entry is a bash function taking one arg
-#                                  (the commit-msg file) — used by commit-msg hooks.
+#                                  (the commit-msg file): used by commit-msg hooks.
 #                  python_module:        entry is a dotted module path (run as module).
 #                  python_module_files:  entry is a module path + pass_filenames
 #                                        (staged files passed as CLI args).
 #                  makefile_target: entry is a make target name.
-#   entry        — bash function name | python module path | make target name | inline command.
-#   stage        — pre-commit | commit-msg | pre-push.
-#   pass_filenames, always_run — passed through to the rendered hook.
-#   files        — optional path pattern that scopes the hook (pass-through).
-#   mandatory    — true: cannot be exempted via quality_exceptions.yaml.
+#   entry       : bash function name | python module path | make target name | inline command.
+#   stage       : pre-commit | commit-msg | pre-push.
+#   pass_filenames, always_run: passed through to the rendered hook.
+#   files       : optional path pattern that scopes the hook (pass-through).
+#   mandatory   : true: cannot be exempted via quality_exceptions.yaml.
 #                  false: exemptable per-path because the check is heuristic.
-#   safety       — true: included even at POC tier (basic-safety subset).
+#   safety      : true: included even at POC tier (basic-safety subset).
 #                  false: strict-tier only.
-#   applicable_to — list of language hints the check applies to.
+#   applicable_to: list of language hints the check applies to.
 #                  [any] runs for every project. [python] | [node] | [rust]
 #                  scopes by language (detected by language-marker files).
 
@@ -217,7 +217,7 @@ hooks:
     applicable_to: [any]
 
   # ─────────────────────────────────────────────────────────────────────
-  # Strict-tier exemptable hooks (heuristic — false positives possible,
+  # Strict-tier exemptable hooks (heuristic: false positives possible,
   # path-scoped exemption allowed via quality_exceptions.yaml)
   # ─────────────────────────────────────────────────────────────────────
 

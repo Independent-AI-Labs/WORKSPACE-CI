@@ -31,7 +31,7 @@ if ! source "$_ci_lib"; then
 fi
 
 # ---------------------------------------------------------------------------
-# Locate cloc — prefer .boot-linux/.boot-macos, fall back to PATH
+# Locate cloc: prefer .boot-linux/.boot-macos, fall back to PATH
 # ---------------------------------------------------------------------------
 _find_cloc() {
     local _cands=(
@@ -145,7 +145,7 @@ for _repo in "${_repos[@]}"; do
     if [[ $_respect_gitignore -eq 1 ]] && [[ -d "$_repo/.git" ]]; then
         _cloc_args+=(--vcs=git)
     else
-        # No VCS hint — still skip common heavy dirs.
+        # No VCS hint: still skip common heavy dirs.
         _cloc_args+=(
             --exclude-dir=node_modules,.venv,__pycache__,target,dist,build,.cache,.boot-linux,.boot-macos
         )
@@ -200,7 +200,7 @@ fi
 # ---------------------------------------------------------------------------
 # Render
 # ---------------------------------------------------------------------------
-# Use Python for table formatting — awk's number formatting + sort across
+# Use Python for table formatting: awk's number formatting + sort across
 # multiple keys gets ugly fast and we already depend on python above.
 uv run python - "$_per_repo" "$_per_repo_lang" "$_mode" "$_top_n" "$_json" "$_root" <<'PY'
 import sys, json, os

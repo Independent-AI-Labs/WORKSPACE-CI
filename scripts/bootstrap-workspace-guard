@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bootstrap: Build and install SUID workspace guard (git PoC)
-# Called from CI Makefile — lives in the CI repo, builds from sibling WORKSPACE-GUARD.
+# Called from CI Makefile: lives in the CI repo, builds from sibling WORKSPACE-GUARD.
 set -euo pipefail
 
 _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -43,7 +43,7 @@ uninstall_guard() {
         chmod 0755 /usr/bin/git
         log_info "Restored /usr/bin/git from git.distrib"
     else
-        log_error "No git backup found — cannot restore"
+        log_error "No git backup found: cannot restore"
         log_error "Reinstall git: sudo apt install --reinstall git"
         return 1
     fi
@@ -53,12 +53,12 @@ uninstall_guard() {
     rm -rf /usr/lib/ami-git-guard
     rm -rf /var/log/workspace-guard
     rm -rf /var/log/ami-git-guard
-    log_info "Git guard uninstalled — /usr/bin/git restored, system paths cleaned"
+    log_info "Git guard uninstalled: /usr/bin/git restored, system paths cleaned"
     git --version
 }
 
 rollback_guard() {
-    log_warn "Installation failed — rolling back..."
+    log_warn "Installation failed: rolling back..."
     if command -v chattr >/dev/null; then
         if [[ -f /usr/bin/git ]]; then
             rc=0; chattr -i /usr/bin/git || rc=$?
@@ -133,13 +133,13 @@ build_guard_binary() {
     export CARGO_HOME="$rust_home"
 
     if ! command -v cargo >/dev/null; then
-        log_warn "cargo not on PATH — bootstrapping Rust..."
+        log_warn "cargo not on PATH: bootstrapping Rust..."
         bash "${WORKSPACE_ROOT}/workspace/scripts/bootstrap/bootstrap_rust.sh" || {
             log_error "Rust installation failed"
             return 1
         }
         if ! command -v cargo >/dev/null; then
-            log_error "cargo still not found after bootstrap — check $boot_rust/"
+            log_error "cargo still not found after bootstrap: check $boot_rust/"
             return 1
         fi
         log_info "Rust bootstrapped successfully"
@@ -160,7 +160,7 @@ build_guard_binary() {
                 log_warn "rustup show active-toolchain failed (rc=$_at_rc, no stderr)"
             fi
             rm -f "$_at_out" "$_at_err"
-            log_warn "rustup found but no default toolchain configured — installing stable"
+            log_warn "rustup found but no default toolchain configured: installing stable"
             rustup default stable || {
                 log_error "Failed to set default Rust toolchain"
                 return 1
@@ -183,10 +183,10 @@ build_guard_binary() {
     # build with --features root-only
     local build_features=""
     if ! command -v setcap >/dev/null; then
-        log_warn "setcap not available — building in root-only mode (soft barrier)"
+        log_warn "setcap not available: building in root-only mode (soft barrier)"
         build_features="--no-default-features --features root-only"
     elif ! setcap cap_dac_override+ep /usr/bin/true; then
-        log_warn "setcap present but non-functional — building in root-only mode (soft barrier)"
+        log_warn "setcap present but non-functional: building in root-only mode (soft barrier)"
         build_features="--no-default-features --features root-only"
     fi
 
@@ -214,7 +214,7 @@ build_guard_binary() {
     fi
 
     if [[ ! -f "$guard_bin" ]]; then
-        log_error "Build failed — binary not found at $guard_bin"
+        log_error "Build failed: binary not found at $guard_bin"
         return 1
     fi
     if ! file "$guard_bin" | grep -q ELF; then
@@ -258,12 +258,12 @@ elif ! setcap cap_dac_override+ep /usr/bin/true; then
     if [[ "$install_mode" == "root-only" ]]; then
         echo ""
         echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
-        echo -e "${CYAN}${BOLD} Git Guard — Root-Only Installation (SOFT BARRIER)${NC}"
+        echo -e "${CYAN}${BOLD} Git Guard: Root-Only Installation (SOFT BARRIER)${NC}"
         echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
         echo ""
-        echo "WARNING: Installing in root-only mode — this is a SOFT BARRIER."
+        echo "WARNING: Installing in root-only mode: this is a SOFT BARRIER."
         echo ""
-        echo "  • setcap is unavailable — file capabilities cannot be set"
+        echo "  • setcap is unavailable: file capabilities cannot be set"
         echo "  • The guard policy engine will still block destructive commands"
         echo "  • BUT: root users can bypass the guard by running /usr/bin/git.original"
         echo "  • No chattr +i, no dpkg-divert, no apt hook"
@@ -275,7 +275,7 @@ elif ! setcap cap_dac_override+ep /usr/bin/true; then
     else
         echo ""
         echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
-        echo -e "${CYAN}${BOLD} Git Guard — File Capability Installation${NC}"
+        echo -e "${CYAN}${BOLD} Git Guard: File Capability Installation${NC}"
         echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
         echo ""
         echo "The Git Guard is a capability-enabled binary that wraps /usr/bin/git."
@@ -331,7 +331,7 @@ elif ! setcap cap_dac_override+ep /usr/bin/true; then
     src_hash=$(sha256sum "$git_src" | awk '{print $1}')
     copy_hash=$(sha256sum /usr/bin/git.original | awk '{print $1}')
     if [[ "$src_hash" != "$copy_hash" ]]; then
-        log_error "Checksum mismatch — git.original does not match"
+        log_error "Checksum mismatch: git.original does not match"
         rm -f /usr/bin/git.original
         return 1
     fi
@@ -351,7 +351,7 @@ elif ! setcap cap_dac_override+ep /usr/bin/true; then
     else
         # Capability mode: full installation with dpkg-divert, setcap, chattr
         if divert_is_active; then
-            log_warn "dpkg-divert already in place — continuing"
+            log_warn "dpkg-divert already in place: continuing"
         else
             dpkg-divert --local --divert /usr/bin/git.distrib --rename --add /usr/bin/git
         fi
@@ -359,7 +359,7 @@ elif ! setcap cap_dac_override+ep /usr/bin/true; then
         chown root:root /usr/bin/git.distrib
 
         if ! command -v setcap >/dev/null; then
-            log_error "setcap not found — run 'make init' to install system dependencies"
+            log_error "setcap not found: run 'make init' to install system dependencies"
             return 1
         fi
 
@@ -381,7 +381,7 @@ elif ! setcap cap_dac_override+ep /usr/bin/true; then
             chattr +i /usr/bin/git || log_warn "Could not set immutable on /usr/bin/git"
             chattr +i /usr/bin/git.original || log_warn "Could not set immutable on /usr/bin/git.original"
         else
-            log_warn "chattr not available — skipping immutable attributes"
+            log_warn "chattr not available: skipping immutable attributes"
         fi
 
         cat > /etc/apt/apt.conf.d/99workspace-guard << 'EOF'
@@ -469,7 +469,7 @@ EOF
     if [[ $errors -eq 0 ]]; then
         echo ""
         if [[ "$install_mode" == "root-only" ]]; then
-            log_info "Git guard installation complete (root-only mode — SOFT BARRIER)."
+            log_info "Git guard installation complete (root-only mode: SOFT BARRIER)."
             log_info "  /usr/bin/git          (0755 root:root, no caps)"
             log_info "  /usr/bin/git.original (0700 root:root)"
             log_info "  audit log: /var/log/workspace-guard/"
@@ -485,7 +485,7 @@ EOF
         echo ""
         log_info "To verify: make check-guard"
     else
-        log_error "Installation verification failed — rolling back"
+        log_error "Installation verification failed: rolling back"
         rollback_guard
         return 1
     fi
@@ -514,7 +514,7 @@ check_guard() {
             if command -v getcap >/dev/null && getcap /usr/bin/git | grep -q cap_dac_override; then
                 log_info "  mode: capability (cap_dac_override+ep)"
             else
-                log_info "  mode: root-only (no caps — soft barrier)"
+                log_info "  mode: root-only (no caps: soft barrier)"
             fi
         else
             log_warn "  /usr/bin/git: MISSING"

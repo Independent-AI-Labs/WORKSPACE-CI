@@ -1,4 +1,4 @@
-"""Tests for ci.check_markdown_docs — reference extraction + validation."""
+"""Tests for ci.check_markdown_docs: reference extraction + validation."""
 
 from __future__ import annotations
 

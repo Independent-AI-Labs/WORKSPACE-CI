@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# walk-projects — emit one nested .git repo path per line, relative to the
+# walk-projects: emit one nested .git repo path per line, relative to the
 # workspace root.
 #
 # Used by every workspace-level *-recursive Makefile target so the

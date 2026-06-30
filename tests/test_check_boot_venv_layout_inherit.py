@@ -1,4 +1,4 @@
-"""Tests for ci.check_boot_venv_layout — checks 5-8 (inherit + moon.yml).
+"""Tests for ci.check_boot_venv_layout: checks 5-8 (inherit + moon.yml).
 
 Covers SPEC-BOOT-LAYOUT §6.3 checks 5-6 (inherit entry resolution +
 world-writable), check 7 (moon.yml bootDir/parentBoot consistency), and
@@ -19,7 +19,7 @@ from ci.check_boot_venv_layout import (
 )
 
 # ---------------------------------------------------------------------------
-# Check 5+6 — _check_inherit_entries
+# Check 5+6: _check_inherit_entries
 # ---------------------------------------------------------------------------
 
 
@@ -131,7 +131,7 @@ def test_check_inherit_entries_both_leaf_and_bin_world_writable(
 
 
 # ---------------------------------------------------------------------------
-# Check 7 — _check_moon_metadata_consistency
+# Check 7: _check_moon_metadata_consistency
 # ---------------------------------------------------------------------------
 
 
@@ -217,7 +217,7 @@ def test_check_moon_metadata_parentboot_declared_but_inherit_empty(
 
 
 # ---------------------------------------------------------------------------
-# Check 8 — _check_moon_dependson_alignment
+# Check 8: _check_moon_dependson_alignment
 # ---------------------------------------------------------------------------
 
 

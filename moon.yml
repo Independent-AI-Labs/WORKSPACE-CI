@@ -78,7 +78,7 @@ tasks:
   # update here. cache=false because git pull has external state;
   # runDepsInParallel=false to enforce Tier 0 → 1 → 2 ordering.
   update:
-    command: 'bash -c "rc=0; git pull --ff-only || rc=$$rc; if [ $$rc -ne 0 ]; then echo \"git pull failed (rc=$$rc) — continuing with make sync\" >&2; fi && make sync"'
+    command: 'bash -c "rc=0; git pull --ff-only || rc=$$rc; if [ $$rc -ne 0 ]; then echo \"git pull failed (rc=$$rc): continuing with make sync\" >&2; fi && make sync"'
     deps:
       - '^:update'
     options:

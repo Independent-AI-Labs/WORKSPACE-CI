@@ -68,7 +68,7 @@ DIM = "\033[2m"
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
-# Fail-fast performance knobs (NO silent swallow — every failure surfaces as
+# Fail-fast performance knobs (NO silent swallow: every failure surfaces as
 # a Finding, every timeout / cancellation surfaces as a stderr warning).
 DEFAULT_HTTP_TIMEOUT = 5.0  # per-attempt (each HEAD + GET counts)
 _MD_SUFFIXES = frozenset({".md", ".markdown", ".mdown"})
@@ -336,7 +336,7 @@ def _scan_files(
                 if href.lower().startswith(("http://", "https://")):
                     unique_urls.add(href)
         # Sort for deterministic probe order (logically warmer URLs first,
-        # but order doesn't affect correctness — just reproducibility).
+        # but order doesn't affect correctness: just reproducibility).
         remote.prewarm(sorted(unique_urls))
 
     # Phase 3: run per-ref checkers (HTTP refs served from prewarmed cache).

@@ -38,7 +38,7 @@ ci_capture_lines exts -- ci_read_yaml_list "$config" "extensions"
 
 ### `ci_capture_pipe <array-nameref> <snippet> [args...]]`
 
-Like `ci_capture_lines` but runs `bash -c <snippet> _ <args>` — for
+Like `ci_capture_lines` but runs `bash -c <snippet> _ <args>`: for
 pipelines. The snippet's `$0` is `_` and `$1..` are `<args>`.
 
 ```bash
@@ -96,7 +96,7 @@ These idioms are portable and used freely:
 - **Command substitution** (`$(cmd)` or `` `cmd` ``): no fd path dependency.
 - **Pipes** (`cmd1 | cmd2`): standard POSIX, works everywhere (the consumer
   runs in a subshell, so don't use pipes when you need to mutate outer-scope
-  variables — use `ci_capture_lines` instead).
+  variables: use `ci_capture_lines` instead).
 - **Temp files** (`mktemp`, `< "$tmp"`): the gold standard. Works on every
   POSIX system and every virtualization layer.
 - **`mapfile` / `readarray`** from temp files: portable when reading from a

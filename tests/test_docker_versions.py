@@ -22,7 +22,7 @@ from ci.models import LooseDependency, OutdatedDependency
 
 
 def _tags(*names: str) -> list[DockerHubTag]:
-    """Build a list of DockerHubTag from bare tag names — fixture helper."""
+    """Build a list of DockerHubTag from bare tag names: fixture helper."""
     return [DockerHubTag(name=n) for n in names]
 
 

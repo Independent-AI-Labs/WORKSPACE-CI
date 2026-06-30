@@ -1,14 +1,14 @@
 # workspace-ci banned words exceptions.
 # Only the config file that defines patterns and test/lib files.
 exceptions:
-  # The banned_words.yaml file defines the banned patterns — it must contain them.
+  # The banned_words.yaml file defines the banned patterns: it must contain them.
   # The *.schema.yaml files document those patterns in field descriptions, so they
   # must contain them too (single source of truth for the wiki config reference).
-  # banned_words_exceptions.yaml defines the exception patterns — must contain them.
+  # banned_words_exceptions.yaml defines the exception patterns: must contain them.
   # .pre-commit-config.yaml and required_hooks.yaml contain hook IDs that
   # reference banned words (ci-check-silent-swallow, check-banned-words, etc.).
-  # docs/HOOKS.md is auto-generated from hook configs — inherits the same IDs.
-  # docs/ and README.md document the banned patterns by name — must reference them.
+  # docs/HOOKS.md is auto-generated from hook configs: inherits the same IDs.
+  # docs/ and README.md document the banned patterns by name: must reference them.
   - pattern: '.*'
     paths:
       - 'config/banned_words\.yaml'

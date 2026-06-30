@@ -2,7 +2,7 @@
 # CI Quality Gates: quality_exceptions.yaml loader, tier resolution,
 # and bootstrap helpers for the project_enforcement.yaml registry.
 #
-# Sourced by checks.sh. Shell-only — no Python deps. The Python self-check
+# Sourced by checks.sh. Shell-only: no Python deps. The Python self-check
 # (ci/ci/check_required_hooks_present.py) does the deeper validation;
 # these shell helpers are fast pre-flights for hooks and the git wrapper.
 
@@ -51,7 +51,7 @@ ci_resolve_tier() {
     fi
 
     if [[ ! -f "$_registry" ]]; then
-        # No registry, no template — fail open with strict default
+        # No registry, no template: fail open with strict default
         echo "strict"
         return 0
     fi
@@ -160,7 +160,7 @@ ci_autocreate_project_enforcement() {
         return 0
     fi
     if [[ ! -f "$_tpl" ]]; then
-        # Workspace incomplete — caller decides what to do
+        # Workspace incomplete: caller decides what to do
         return 1
     fi
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bootstrap-uv — fetch the uv binary and place it on PATH.
+# bootstrap-uv: fetch the uv binary and place it on PATH.
 #
 # This project uses `uv` for dependency management (uv sync -> per-repo
 # .venv/) and for cross-project Python invocation (uv run --project).
@@ -15,22 +15,22 @@
 # Override the version with $UV_VERSION (default below).
 #
 # The per-repo private venv (`.venv/`) is created by `uv sync` (run from the
-# repo root AFTER this script installs the uv binary) — NOT by this script.
+# repo root AFTER this script installs the uv binary): NOT by this script.
 # This script installs ONLY the uv BINARY (and uvx if the release ships it).
 # See: docs/specifications/SPEC-BOOT-LAYOUT.md
 #
 # Overrideable env vars:
-#   $UV_VERSION         — release tag to fetch (default: 0.11.23, the
+#   $UV_VERSION        : release tag to fetch (default: 0.11.23, the
 #                         version confirmed in AGENTS.md §2).
-#   $UV_BIN             — override install target path.
-#   $UV_VERIFY_SHA256   — set to "1" to enforce SHA256 pinning (opt-in).
-#   $UV_SHA256_X64      — SHA256 of the x86_64 linux tarball (default below).
-#   $UV_SHA256_ARM64    — SHA256 of the aarch64 linux tarball (default below).
+#   $UV_BIN            : override install target path.
+#   $UV_VERIFY_SHA256  : set to "1" to enforce SHA256 pinning (opt-in).
+#   $UV_SHA256_X64     : SHA256 of the x86_64 linux tarball (default below).
+#   $UV_SHA256_ARM64   : SHA256 of the aarch64 linux tarball (default below).
 #
 # Supply-chain pinning: SHA256 verification defaults to SKIP (matches the
 # upstream VM reference, which had no checksum verification; download goes
 # over HTTPS from the official GitHub release URL). Set UV_VERIFY_SHA256=1
-# for strict supply-chain safety. The default SHAs below are PLACEHOLDERS —
+# for strict supply-chain safety. The default SHAs below are PLACEHOLDERS -
 # they MUST be replaced with the official per-tarball checksums when you
 # bump $UV_VERSION. Source:
 #   https://github.com/astral-sh/uv/releases/download/v0.11.23/\
@@ -42,7 +42,7 @@
 set -euo pipefail
 
 UV_VERSION="${UV_VERSION:-0.11.23}"
-# PLACEHOLDER checksums (intentionally invalid) — see header comment.
+# PLACEHOLDER checksums (intentionally invalid): see header comment.
 # Replace with real values from the v0.11.23 release .sha256 sidecars before
 # enabling UV_VERIFY_SHA256=1 in production.
 UV_SHA256_X64="${UV_SHA256_X64:-\
@@ -99,7 +99,7 @@ main() {
             err_msg="$(head -1 "$v_err")"
             rm -f "$v_out" "$v_err"
             _log "existing binary at $target did not respond to '--version'"
-            _log "rc=$v_rc: $err_msg — re-downloading fresh copy"
+            _log "rc=$v_rc: $err_msg: re-downloading fresh copy"
         fi
     fi
 
@@ -136,7 +136,7 @@ main() {
     fi
 
     # Optional SHA256 verification (opt-in via UV_VERIFY_SHA256=1).
-    # Default is SKIP — honest about the fact that the default placeholders
+    # Default is SKIP: honest about the fact that the default placeholders
     # below are invalid. Enabling UV_VERIFY_SHA256=1 with placeholders WILL
     # fail loudly; that is intentional (forces operator to set real SHAs).
     if [[ "${UV_VERIFY_SHA256:-0}" == "1" ]]; then

@@ -6,7 +6,7 @@ scans all tracked files for banned patterns, emits violations.
 
 Exits 0 if no violations, 1 otherwise.
 
-Self-contained — requires PyYAML (already a project dependency).
+Self-contained: requires PyYAML (already a project dependency).
 Invoked from lib/checks_core.sh::ci_check_banned_words.
 
 Replaces the bash + AWK implementation (lib/parse_banned_words.awk +
@@ -57,8 +57,8 @@ def _load_config(
 
     Exceptions are loaded from two sources (matching the prior bash
     implementation's behaviour):
-    1. CI_CONFIG_DIR/banned_words_exceptions.yaml — CI's own exceptions
-    2. config/banned_words_exceptions.yaml relative to CWD — per-project
+    1. CI_CONFIG_DIR/banned_words_exceptions.yaml: CI's own exceptions
+    2. config/banned_words_exceptions.yaml relative to CWD: per-project
        exceptions (each repo has its own). Skipped if it resolves to the
        same file as #1 (avoids double-loading when running from CI itself).
     """

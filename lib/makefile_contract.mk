@@ -25,7 +25,7 @@ contract-check: ## Verify Makefile implements all required contract targets
 	done; \
 	if [ -n "$$_missing" ]; then \
 		echo ""; \
-		echo "⚠  MAKEFILE CONTRACT v$(CONTRACT_VERSION) — VIOLATION"; \
+		echo "⚠  MAKEFILE CONTRACT v$(CONTRACT_VERSION): VIOLATION"; \
 		echo "   Missing required targets:$$_missing"; \
 		echo "   Implemented: $$_count / $$_total"; \
 		echo ""; \

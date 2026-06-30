@@ -1,4 +1,4 @@
-# SPEC-WIKI: Interactive Wiki Web UI for workspace-ci — Specification
+# SPEC-WIKI: Interactive Wiki Web UI for workspace-ci: Specification
 
 **Date:** 2026-06-09
 **Status:** DRAFT
@@ -32,13 +32,13 @@ This specification details a multi-source content pipeline powering an interacti
 wiki web UI for workspace-ci. Content is sourced from four canonical locations, establishing
 a **single source of truth** model:
 
-1. **Python docstrings** (`ci/*.py`) — extracted at build-time via `scripts/extract-docs`
+1. **Python docstrings** (`ci/*.py`): extracted at build-time via `scripts/extract-docs`
    into `web/src/data/api-docs.json`.
-2. **Shell function comments** (`lib/*.sh`) — extracted at build-time into
+2. **Shell function comments** (`lib/*.sh`): extracted at build-time into
    `web/src/data/shell-docs.json`.
-3. **YAML configs** (`config/*.yaml`) — read server-side at request time via `js-yaml`.
+3. **YAML configs** (`config/*.yaml`): read server-side at request time via `js-yaml`.
 4. **Markdown docs** (`docs/*.md`, `README.md`, module `README.md` files,
-   `web/content/*.md`) — long-form prose.
+   `web/content/*.md`): long-form prose.
 
 ### 1.1 Architecture Principles
 
@@ -110,12 +110,12 @@ interpreted as described in RFC 2119.
 ┌──────────────────────────────────────────────────────────┐
 │  scripts/extract-docs (Python, uses ast module)           │
 │                                                          │
-│  Phase 1 — Python sources:                               │
+│  Phase 1: Python sources:                               │
 │    Input:  ci/*.py                                       │
 │    Method: ast.parse() → walk AST → extract docstrings   │
 │    Output: web/src/data/api-docs.json                    │
 │                                                          │
-│  Phase 2 — Shell sources:                                │
+│  Phase 2: Shell sources:                                │
 │    Input:  lib/*.sh                                      │
 │    Method: regex match '# --- ci_\\w+' separators → doc │
 │    Output: web/src/data/shell-docs.json                  │
@@ -154,7 +154,7 @@ interpreted as described in RFC 2119.
 | `/config/[name]` | single `config/<name>.yaml` | `config/<name>.schema.yaml` + `web/content/config/<name>.md` |
 | `/checks` | `api-docs.json` + `shell-docs.json` | module `README.md` files |
 | `/checks/[id]` | single entry from api-docs / shell-docs | source file excerpt |
-| `/playground` | `config/banned_words.yaml` | — |
+| `/playground` | `config/banned_words.yaml` |: |
 | `/tiers` | `config/required_hooks.yaml` (tier matrix) | `web/content/tiers.md` |
 | `/tooling` | `scripts/manifest.yaml` (canonical script manifest) | `web/content/tooling/` |
 | `/integration` | `docs/HOOKS.md` | `web/content/integration.md` |
@@ -252,7 +252,7 @@ app/layout.tsx                    ← Server (async, reads i18n if needed)
   instances). No JS shipped for the 50+ pattern cards themselves.
 - **Hook reference page**: ~1.5KB of client JS (stage/tier filter pills +
   FeedbackWidget). No JS for hook metadata rows.
-- **Playground page**: CodeMirror is `next/dynamic` with `ssr: false` — the
+- **Playground page**: CodeMirror is `next/dynamic` with `ssr: false`: the
   ~600KB editor bundle loads only when the user navigates to `/playground`,
   never on other pages.
 
@@ -297,13 +297,13 @@ MUST NOT import `fs`, `js-yaml`, `gray-matter`, or any server-only module.
 
 Every content page with async data fetching MUST use `Suspense` boundaries
 to stream content progressively. The user sees the shell (sidebar + header)
-immediately. Content sections stream in as their data resolves — independently,
+immediately. Content sections stream in as their data resolves: independently,
 without blocking each other.
 
 ### 6.2 Page-Level Pattern
 
 ```typescript
-// app/patterns/page.tsx — Server Component
+// app/patterns/page.tsx: Server Component
 import { Suspense } from 'react'
 
 export default function PatternsPage() {
@@ -313,13 +313,13 @@ export default function PatternsPage() {
         <CategoryNavSection />        {/* Streams when YAML parsed + categories built */}
       </Suspense>
       <Suspense fallback={<PatternGridSkeleton />}>
-        <PatternListSection />        {/* Streams independently — doesn't block CategoryNav */}
+        <PatternListSection />        {/* Streams independently: doesn't block CategoryNav */}
       </Suspense>
     </WikiShell>
   )
 }
 
-// Each section fetches its own data — parallel, not sequential
+// Each section fetches its own data: parallel, not sequential
 async function CategoryNavSection() {
   const patterns = await getBannedPatterns()  // Uses cache() for dedup
   const categories = buildCategories(patterns)
@@ -327,7 +327,7 @@ async function CategoryNavSection() {
 }
 
 async function PatternListSection() {
-  const config = await getBannedPatterns()  // cache() returns same promise — no double fetch
+  const config = await getBannedPatterns()  // cache() returns same promise: no double fetch
   return <PatternList patterns={classifyAll(config)} />  // all three rule groups (§11)
 }
 ```
@@ -360,7 +360,7 @@ app/
 ### 6.4 Skeleton Design Principles
 
 - Skeletons MUST match the layout dimensions of the content they replace
-  (same heights, widths, spacing — prevents Cumulative Layout Shift).
+  (same heights, widths, spacing: prevents Cumulative Layout Shift).
 - Skeletons MUST use `animate-pulse` with `motion-safe:` prefix to respect
   `prefers-reduced-motion`.
 - Category nav skeleton: 16 rows of `h-6 w-40` gray bars.
@@ -371,11 +371,11 @@ app/
 
 One `Suspense` boundary per **independently useful content section**.
 A pattern library with 50 patterns: one boundary for the category nav,
-one for the pattern grid — not one per pattern card (that's skeleton soup).
+one for the pattern grid: not one per pattern card (that's skeleton soup).
 
 ### 6.6 When NOT to Stream
 
-- **Static content pages**: tiers, tooling (hardcoded data, no async fetching) —
+- **Static content pages**: tiers, tooling (hardcoded data, no async fetching) -
   render synchronously.
 - **Fast data**: if all data resolves in under 100ms, Suspense overhead isn't
   worth it. Profile first, then decide.
@@ -434,7 +434,7 @@ useScrollDepth(path: string)
 
 ### 7.3 Hook Composition
 
-Hooks compose — a page component combines multiple hooks:
+Hooks compose: a page component combines multiple hooks:
 
 ```typescript
 // app/patterns/page.tsx (Server Component)
@@ -453,7 +453,7 @@ export default function PatternsPage() {
 ```
 
 ```typescript
-// Client Component — only the interactive parts
+// Client Component: only the interactive parts
 'use client'
 function PatternListClient({ patterns }: { patterns: ClassifiedPattern[] }) {
   const { filtered, activeCategories, toggleCategory, visibleCount, totalCount } = usePatternFilter(patterns)
@@ -679,19 +679,19 @@ workspace-ci/
 
 | Route | Page Type | Loading | Error | Not Found |
 |-------|----------|---------|-------|-----------|
-| `/` | Server → client shell | `loading.tsx` | `error.tsx` | — |
-| `/hooks` | Server → client `HookTable` | `loading.tsx` | `error.tsx` | — |
+| `/` | Server → client shell | `loading.tsx` | `error.tsx` |: |
+| `/hooks` | Server → client `HookTable` | `loading.tsx` | `error.tsx` |: |
 | `/hooks/[id]` | Server → client detail | `loading.tsx` | `error.tsx` | `not-found.tsx` |
-| `/patterns` | Server → client `PatternList` | `loading.tsx` | `error.tsx` | — |
+| `/patterns` | Server → client `PatternList` | `loading.tsx` | `error.tsx` |: |
 | `/patterns/[category]` | Server → client filtered | `loading.tsx` | `error.tsx` | `not-found.tsx` |
-| `/config` | Server → client list | `loading.tsx` | `error.tsx` | — |
+| `/config` | Server → client list | `loading.tsx` | `error.tsx` |: |
 | `/config/[name]` | Server → client detail | `loading.tsx` | `error.tsx` | `not-found.tsx` |
-| `/playground` | Client only | — | — | — |
-| `/checks` | Server → client catalog | `loading.tsx` | `error.tsx` | — |
+| `/playground` | Client only |: |: |: |
+| `/checks` | Server → client catalog | `loading.tsx` | `error.tsx` |: |
 | `/checks/[id]` | Server → client detail | `loading.tsx` | `error.tsx` | `not-found.tsx` |
-| `/tiers` | Server → client static | — | — | — |
-| `/tooling` | Server → client static | — | — | — |
-| `/integration` | Server → client static | — | — | — |
+| `/tiers` | Server → client static |: |: |: |
+| `/tooling` | Server → client static |: |: |: |
+| `/integration` | Server → client static |: |: |: |
 
 ### 9.2 Server Component Data Fetching Pattern
 
@@ -751,7 +751,7 @@ export const getRequiredHooks = cache(async (): Promise<RequiredHooksConfig> => 
   return load(raw) as RequiredHooksConfig
 })
 
-// Schema loader (§21.4) — returns null when no schema file exists so the
+// Schema loader (§21.4): returns null when no schema file exists so the
 // config detail page can fall back to raw-YAML-only rendering.
 export const getConfigSchema = cache(async (name: string): Promise<ConfigSchema | null> => {
   const p = join(CONFIG_ROOT, `${name}.schema.yaml`)
@@ -845,7 +845,7 @@ export default function HookNotFound() {
 ### 10.1 WikiShell
 
 ```typescript
-// Server Component — layout composition only, no interactivity
+// Server Component: layout composition only, no interactivity
 interface WikiShellProps {
   children: React.ReactNode
 }
@@ -869,7 +869,7 @@ interface WikiShellProps {
 ### 10.2 PatternCard
 
 ```typescript
-// Server Component — pure data display, zero JS
+// Server Component: pure data display, zero JS
 interface PatternCardProps {
   pattern: ClassifiedPattern
   categoryLabel: string
@@ -892,7 +892,7 @@ interface PatternCardProps {
 ### 10.3 ConfigFieldTable
 
 ```typescript
-// Server Component — renders field/type/default/description for a config.
+// Server Component: renders field/type/default/description for a config.
 // Reads the schema file (§21.4) as the canonical source of field docs.
 // Pure data display, zero client JS.
 
@@ -929,7 +929,7 @@ interface ConfigFieldTableProps {
 // </section>
 //
 // ConfigFieldRow renders the path as <code>, a RequiredBadge for required:true,
-// the default value (or '—' if none), and the description as prose.
+// the default value (or '-' if none), and the description as prose.
 // Nested paths (foo[].bar) render with indentation reflecting depth.
 ```
 
@@ -941,7 +941,7 @@ missing schemas are visible without blocking deploys.
 ### 10.4 FeedbackWidget
 
 ```typescript
-// 'use client' — interactive leaf
+// 'use client': interactive leaf
 // Uses headless useFeedback hook for state machine logic
 
 interface FeedbackWidgetProps {
@@ -1040,9 +1040,9 @@ export function useFeedback(
 ### 10.6 Playground Components
 
 ```typescript
-// app/playground/page.tsx — Server Component
+// app/playground/page.tsx: Server Component
 // Loads patterns, classifies all three groups, then filters to content/directory
-// scope (filename rules don't match editor text — see §11.1).
+// scope (filename rules don't match editor text: see §11.1).
 export default async function PlaygroundPage() {
   const config = await getBannedPatterns()
   const all = classifyAll(config)
@@ -1052,7 +1052,7 @@ export default async function PlaygroundPage() {
 ```
 
 ```typescript
-// 'use client' — CodeMirror loaded via next/dynamic
+// 'use client': CodeMirror loaded via next/dynamic
 'use client'
 import dynamic from 'next/dynamic'
 
@@ -1108,7 +1108,7 @@ export function PlaygroundShell({ patterns }: { patterns: ClassifiedPattern[] })
 ### 10.7 ContentRenderer
 
 ```typescript
-// Server Component — renders markdown from any source
+// Server Component: renders markdown from any source
 // marked output is sanitized with DOMPurify before insertion to prevent
 // XSS even though content is repo-authored/trusted (defense in depth).
 import { marked } from 'marked'
@@ -1144,7 +1144,7 @@ export function ContentRenderer({ content, className }: ContentRendererProps) {
 
 Marked configuration: GFM tables enabled, fenced code blocks with language
 labels. Code blocks styled via `_prose.css` with class-based syntax highlighting
-(no shiki/highlight.js needed — the wiki displays pattern regexes and shell
+(no shiki/highlight.js needed: the wiki displays pattern regexes and shell
 commands, not complex code).
 
 Sanitization (`src/lib/sanitize.ts`) wraps DOMPurify with a allowlist:
@@ -1152,13 +1152,13 @@ permitted tags are the GFM subset (headings, p, ul/ol/li, table, pre/code,
 blockquote, a, strong/em, hr, br). `<script>`, inline event handlers
 (`on*`), `javascript:` URLs, and `style` attributes are stripped. The
 allowlist is centralized so all markdown rendering goes through one
-sanitizer. DOMPurify is a server-only import — it MUST NOT appear in a
+sanitizer. DOMPurify is a server-only import: it MUST NOT appear in a
 client component bundle.
 
 ### 10.8 HomePage
 
 ```typescript
-// app/page.tsx — Server Component (orchestrator). Fetches overview data
+// app/page.tsx: Server Component (orchestrator). Fetches overview data
 // in parallel and composes the home sections. The shell renders
 // immediately; sections stream via Suspense (§6).
 import { Suspense } from 'react'
@@ -1192,7 +1192,7 @@ as server-fetched props (the set of navigable sections).
 ### 10.9 StatsBar
 
 ```typescript
-// 'use client' — subscribes to the analytics store; updates reactively.
+// 'use client': subscribes to the analytics store; updates reactively.
 // Pure presentational read of aggregate selectors (§12.2a).
 
 interface StatsBarProps {
@@ -1201,7 +1201,7 @@ interface StatsBarProps {
 
 export function StatsBar({ counts }: StatsBarProps) {
   const totalViews = useAnalyticsStore((s) => s.totalViews)
-  // totalViews is maintained incrementally (§12.2a) — O(1) selector.
+  // totalViews is maintained incrementally (§12.2a): O(1) selector.
   return (
     <section className="stats-bar" aria-label="Workspace stats">
       <Stat label="Page views" value={totalViews} />
@@ -1222,7 +1222,7 @@ counts even before any analytics accumulate.
 ### 10.10 QuickLinks
 
 ```typescript
-// Server Component — static cards linking to highest-traffic sections.
+// Server Component: static cards linking to highest-traffic sections.
 // Link targets are fixed (the wiki's top-level sections); ordering MAY be
 // informed by analytics but the card set is server-determined.
 
@@ -1246,12 +1246,12 @@ export function QuickLinks({ links }: { links: QuickLinkCard[] }) {
 The default link set: `/patterns` (Pattern Library), `/hooks` (Hook
 Reference), `/playground` (Playground), `/config` (Configuration
 Reference), `/checks` (Check Catalog), `/tiers` (Enforcement Tiers).
-Zero client JS — these are plain anchor tags.
+Zero client JS: these are plain anchor tags.
 
 ### 10.11 TrendingSection
 
 ```typescript
-// 'use client' — reads top pages from the analytics store via the
+// 'use client': reads top pages from the analytics store via the
 // memoized useTopPages selector (§12.2a) so it only recomputes when
 // pageViews mutates. Falls back to a server-provided default list when
 // the store has insufficient data (cold start).
@@ -1297,7 +1297,7 @@ same `{pattern, reason}` shape but different match semantics, so `ClassifiedPatt
 carries a `scope` discriminator:
 
 ```typescript
-// Match semantics — determines where the pattern is applied.
+// Match semantics: determines where the pattern is applied.
 export type PatternScope = 'content' | 'filename' | 'directory'
 
 export type PatternCategory =
@@ -1348,7 +1348,7 @@ Category assignment rules:
 - Entries under `filename_rules:` map to `filename-rules` with
   `scope: 'filename'`.
 
-The classifier MUST have 100% coverage — every pattern across all three
+The classifier MUST have 100% coverage: every pattern across all three
 groups in `banned_words.yaml` MUST map to exactly one category. The test
 MUST enumerate all real patterns from all three groups.
 
@@ -1358,7 +1358,7 @@ The live pattern playground (FR-8) matches patterns against editor **content**.
 Only `scope: 'content'` and `scope: 'directory'` patterns are eligible (a
 directory-scoped pattern is still a content match, just with a path guard).
 `scope: 'filename'` patterns MUST be excluded from the playground's match
-engine — they match basenames, not code, and have no meaning against editor
+engine: they match basenames, not code, and have no meaning against editor
 text. The pattern library page (FR-4) lists all three scopes; filename-rule
 cards MUST display a "filename match" badge so the distinction is visible.
 
@@ -1685,7 +1685,7 @@ Both loaded via `next/font/google` with `display: 'swap'` and CSS variable expor
 
 RemixIcon 4.3.0 is **self-hosted**: the icon font CSS and webfont files are
 vendored into `web/public/icons/remixicon/` and loaded via a local `<link>`
-in `<head>` (no render-blocking external CDN request — protects LCP per
+in `<head>` (no render-blocking external CDN request: protects LCP per
 NFR-1.1). Usage: `<i className="ri-home-4-line" />`. The `Icon` component
 wraps this with size variants (`sm`/`md`/`lg`) and `aria-hidden="true"`.
 
@@ -1728,15 +1728,15 @@ Class naming: BEM-like, following AMI-PORTAL conventions.
 | Element | Role | Notes |
 |---------|------|-------|
 | Sidebar `<nav>` | `role="navigation"` | `aria-label="Wiki navigation"` |
-| Main `<main>` | implicit | — |
-| Header `<header>` | `role="banner"` | — |
+| Main `<main>` | implicit |: |
+| Header `<header>` | `role="banner"` |: |
 | Search modal | `role="dialog"` | `aria-label="Search wiki"`, `aria-modal="true"` |
 | Feedback widget | `role="group"` | `aria-label="Rate this content"` |
-| Vote buttons | — | `aria-label="Thumbs up"`, `aria-pressed={voted}` |
+| Vote buttons |: | `aria-label="Thumbs up"`, `aria-pressed={voted}` |
 | Tabs container | `role="tablist"` | `aria-label="Check type"` |
 | Tab button | `role="tab"` | `aria-selected={isActive}` |
-| Pattern cards list | `role="list"` | — |
-| Pattern card | `role="listitem"` | — |
+| Pattern cards list | `role="list"` |: |
+| Pattern card | `role="listitem"` |: |
 
 ### 17.2 Keyboard Navigation
 
@@ -1776,9 +1776,9 @@ Class naming: BEM-like, following AMI-PORTAL conventions.
 
 ### 18.2 Bundle Optimization
 
-- **CodeMirror**: `next/dynamic(() => import(...), { ssr: false })` — the ~600KB
+- **CodeMirror**: `next/dynamic(() => import(...), { ssr: false })`: the ~600KB
   editor bundle loads only when the user navigates to `/playground`.
-- **fuse.js**: ~15KB, loaded only in `WikiSearch` (used on every page — acceptable).
+- **fuse.js**: ~15KB, loaded only in `WikiSearch` (used on every page: acceptable).
 - **marked**: Server-only. Renders markdown to HTML in Server Components. Zero
   client bundle impact.
 - **js-yaml**: Server-only. YAML parsing happens in Server Components. Zero
@@ -1894,7 +1894,7 @@ data legitimately contain the very words and regexes the hooks ban
 Exemptions are declared in `config/banned_words_exceptions.yaml` under the
 `web/` paths, with two tiers:
 
-1. **Blanket (`pattern: '.*'`)** for `web/src/data/` and `web/content/` —
+1. **Blanket (`pattern: '.*'`)** for `web/src/data/` and `web/content/` -
    generated JSON and markdown that render patterns and example violations
    as data, mirroring the existing blanket exemption for
    `config/banned_words.yaml` itself.
@@ -1905,14 +1905,14 @@ Exemptions are declared in `config/banned_words_exceptions.yaml` under the
 
 Code-quality patterns (`# type: ignore`, `dict[str, Any]`, `noqa`,
 `eslint-disable`, `getattr`, etc.) remain **enforced** on `web/src/**`
-TS/TSX so the wiki's own source stays clean — only the data/content
+TS/TSX so the wiki's own source stays clean: only the data/content
 directories are blanket-exempt. This split lets the wiki document the
 patterns without fighting its own gates, while keeping its source code
 held to the same quality bar as the rest of the repo.
 
 ---
 
-## 20. Test Requirements — 90% Coverage
+## 20. Test Requirements: 90% Coverage
 
 ### 20.1 Coverage Targets
 
@@ -1946,7 +1946,7 @@ via `renderHook`, and are the backbone of component behavior.
 | Test file | Coverage |
 |-----------|----------|
 | `regex-engine.test.ts` | Pattern matching, empty input, invalid regex skip, dedup, line calc, language filtering |
-| `patterns.test.ts` | `classifyPattern()` / `classifyAll()` — full enumeration of all real patterns from all three groups in `banned_words.yaml` (`banned`, `directory_rules`, `filename_rules`), every pattern → exactly one category, all 16 categories have >=1 pattern, scope discriminator correct per group |
+| `patterns.test.ts` | `classifyPattern()` / `classifyAll()`: full enumeration of all real patterns from all three groups in `banned_words.yaml` (`banned`, `directory_rules`, `filename_rules`), every pattern → exactly one category, all 16 categories have >=1 pattern, scope discriminator correct per group |
 | `search-index.test.ts` | Index building from mock data, search returns correct results, fuzzy tolerance, empty query |
 | `analytics-store.test.ts` | Event recording, aggregates (`getTopPages`, `getPageViews`, `getUserVote`), FIFO rotation at 2000, localStorage persistence round-trip, sessionId stability |
 | `theme-store.test.ts` | Initial detection, toggle behavior, localStorage persistence, `data-theme` attribute |
@@ -2066,7 +2066,7 @@ Exit codes:
   2 - Infrastructure error
 
 Config:
-  config_file.yaml — what this check reads
+  config_file.yaml: what this check reads
 """
 ```
 
@@ -2086,7 +2086,7 @@ ci_check_name() {
 
 FR-7.3 requires each configuration reference page to render "fields, types,
 defaults, and descriptions." The YAML config files themselves carry no
-field-level schema — they are pure data. To preserve the single-source-of-truth
+field-level schema: they are pure data. To preserve the single-source-of-truth
 principle without hand-maintaining prose that drifts from the configs, the
 wiki derives field documentation from **schema files** co-located with the
 configs.
@@ -2096,7 +2096,7 @@ configs.
 One `config/<name>.schema.yaml` per `config/<name>.yaml`. The schema file is
 the canonical source for field descriptions; the wiki reads it at request
 time and renders it via `ConfigFieldTable` (§10.7). The data config and the
-schema are independent files — the schema describes shape and intent, the
+schema are independent files: the schema describes shape and intent, the
 config holds values.
 
 #### Schema File Shape
@@ -2116,7 +2116,7 @@ A reference implementation exists at `config/banned_words.schema.yaml`.
 Implementation MUST add one schema file per config before the corresponding
 `/config/[name]` page can render field docs. A missing schema file MUST cause
 the config detail page to render the raw YAML only (no field table) and emit
-a build-time warning — never a hard failure, so partial schema coverage is
+a build-time warning: never a hard failure, so partial schema coverage is
 deployable.
 
 #### Validation
@@ -2130,7 +2130,7 @@ build warning, not an error.
 
 FR-11 requires the tooling page to document every workspace script. Scripts
 have no docstrings (they are bash), so the canonical source is
-`scripts/manifest.yaml` — a hand-maintained but structured manifest the wiki
+`scripts/manifest.yaml`: a hand-maintained but structured manifest the wiki
 reads at request time. This mirrors the `required_hooks.yaml` pattern: a
 manifest that is the single source for a documentation surface, validated
 against the actual files it describes.
@@ -2155,14 +2155,14 @@ dogfood loop so the wiki tooling page cannot drift from the scripts on disk.
 |------------|-------------|--------|
 | FR-1: Wiki Shell Layout | 10.1 | Specified |
 | FR-2: Full-Text Search | 14 | Specified |
-| FR-3: Home Page | 9.1, 10.8—10.11 | Specified |
+| FR-3: Home Page | 9.1, 10.8-10.11 | Specified |
 | FR-4: Pattern Library | 9.2, 10.2, 11, 11.1 | Specified |
 | FR-5: Hook Reference | 9.2, 10.1 | Specified |
 | FR-6: Hook Detail Page | 9.1 | Specified |
 | FR-7: Configuration Reference | 9.1, 10.3, 21.4 | Specified |
 | FR-8: Live Pattern Playground | 10.5, 13 | Specified |
 | FR-9: Check Catalog | 9.1, 21 | Specified |
-| FR-10—12: Tiers, Tooling, Integration | 9.1, 21.5 | Specified |
+| FR-10-12: Tiers, Tooling, Integration | 9.1, 21.5 | Specified |
 | FR-13: Page Analytics | 12 | Specified |
 | FR-14: Page-Level Stats | 12.2 | Specified |
 | FR-15: Feedback Mechanism | 10.3, 10.4 | Specified |
@@ -2174,7 +2174,7 @@ dogfood loop so the wiki tooling page cannot drift from the scripts on disk.
 | NFR-5: Accessibility | 17 | Specified |
 | NFR-6: Responsive Design | 10.1 | Specified |
 | NFR-7: Code Quality | 19.2, 20 | Specified |
-| NFR-8: 90% Test Coverage | 20.1—20.3 | Specified |
+| NFR-8: 90% Test Coverage | 20.1-20.3 | Specified |
 
 ---
 
@@ -2191,7 +2191,7 @@ dogfood loop so the wiki tooling page cannot drift from the scripts on disk.
 
 3. **Extraction as pre-commit hook:** `scripts/extract-docs` produces committed
    JSON. Should it also run as a pre-commit hook to fail if docs are stale?
-   RECOMMENDED: Yes — add to `.pre-commit-config.yaml` as a `language: system`
+   RECOMMENDED: Yes: add to `.pre-commit-config.yaml` as a `language: system`
    hook.
 
 4. **Shell doc extraction enforcement:** Should the CI enforce the `# ---`
@@ -2199,7 +2199,7 @@ dogfood loop so the wiki tooling page cannot drift from the scripts on disk.
    `checks_files.sh` that verifies every `ci_*` function has a separator.
 
 5. **CodeMirror theme:** Should CodeMirror follow `data-theme` (dark/light)
-   or use a fixed theme? RECOMMENDED: Follow `data-theme` — use
+   or use a fixed theme? RECOMMENDED: Follow `data-theme`: use
    `@codemirror/theme-one-dark` for dark, default theme for light.
 
 6. **Content watch mode:** Should `next dev` watch `../../config/*.yaml` for
@@ -2207,10 +2207,10 @@ dogfood loop so the wiki tooling page cannot drift from the scripts on disk.
    RECOMMENDED: Configure `next.config.js` `serverExternalPackages` or add
    a `chokidar` watcher in the dev script.
 
-7. **Large YAML files:** `banned_words.yaml` is 290 lines — acceptable for
+7. **Large YAML files:** `banned_words.yaml` is 290 lines: acceptable for
    request-time loading. If YAML files grow significantly, consider file-mtime
    based cache invalidation.
 
 8. **Markdown rendering in FeedbackWidget comments:** Users can submit comments.
-   Should these be rendered as markdown? RECOMMENDED: No — comments are plain
+   Should these be rendered as markdown? RECOMMENDED: No: comments are plain
    text. Sanitize via `textContent` assignment to prevent XSS.

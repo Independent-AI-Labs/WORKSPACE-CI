@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# cleanup-precommit — Remove all traces of the pre-commit Python package.
+# cleanup-precommit: Remove all traces of the pre-commit Python package.
 # Does NOT remove .pre-commit-config.yaml by default (it's our config source).
 #
 # Usage: cleanup-precommit [--remove-config]

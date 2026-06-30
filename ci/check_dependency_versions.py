@@ -195,7 +195,7 @@ def _is_strictly_pinned_or_bounded(dep_str: str) -> bool:
 
 
 def check_and_collect(path: Path, excludes: set[str]) -> DependencyCheckResult:
-    """Check pyproject.toml — returns (loose, outdated, toml_data)."""
+    """Check pyproject.toml: returns (loose, outdated, toml_data)."""
     with open(path, "rb") as f:
         data = tomllib.load(f)
 
@@ -497,12 +497,12 @@ def main() -> int:
     f = _QUERY_RESULTS["failures"]
     s = _QUERY_RESULTS["successes"]
     if f > 0 and s == 0:
-        print("ERROR: All registry queries failed — network may be offline.")
+        print("ERROR: All registry queries failed: network may be offline.")
         print("Fix by running with a working internet connection.")
         return 1
     if f > s:
         msg = f"WARNING: {f} query failures vs {s} successes"
-        print(msg + " — check may be incomplete.")
+        print(msg + ": check may be incomplete.")
 
     print("All dependencies are strictly pinned and up to date.")
     return 0

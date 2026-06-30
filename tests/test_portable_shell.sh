@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Portability tests — verify no process substitution in shell scripts.
+# Portability tests: verify no process substitution in shell scripts.
 # Process substitution (< <(...)) opens /dev/fd/NN by path, which is broken
 # under PRoot, some bwrap/firejail sandboxes, and chroots without /proc.
 # These tests assert the codebase is clean, independent of the host's
 # ability to run procsub.
 #
-# Sourced by run_tests.sh — test_helpers.sh is already loaded. Do NOT
+# Sourced by run_tests.sh: test_helpers.sh is already loaded. Do NOT
 # re-source it here (would reset the global test counters).
 
 # Test 1: No process substitution in lib/*.sh
@@ -126,7 +126,7 @@ foo() {
 SH
     # Source checks.sh from the fake workspace (provides ci_check_portable_shell)
     ( cd "$TEST_TMP/workspace/projects/CI" && source lib/checks.sh )
-    # Run the check — it should find the violation in evil_test.sh
+    # Run the check: it should find the violation in evil_test.sh
     # But ci_check_portable_shell scans the REAL lib dir (via BASH_SOURCE),
     # not the fake one. So test it directly against the fake file instead.
     local _found

@@ -400,9 +400,9 @@ ci_compliance_score() {
     fi
 
     if [[ "$_tier" == "vendored" ]]; then
-        _cs_skip "Q3" "vendored tier — no contract"
+        _cs_skip "Q3" "vendored tier: no contract"
     elif [[ "$_tier" == "poc" ]]; then
-        _cs_skip "Q3" "poc tier — quality_exceptions not required"
+        _cs_skip "Q3" "poc tier: quality_exceptions not required"
     elif [[ -f "$project_dir/quality_exceptions.yaml" ]]; then
         _cs_pass "Q3" "quality_exceptions.yaml present"
     else

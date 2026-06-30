@@ -13,17 +13,17 @@
 
 **Cross-references:**
 
-- [SPEC-WIKI](../specifications/SPEC-WIKI.md) — companion specification (implementation detail)
-- [HOOKS.md](../HOOKS.md) — hook generation and integration guide
-- [`config/required_hooks.yaml`](../../config/required_hooks.yaml) — canonical hook definitions
-- [`config/banned_words.yaml`](../../config/banned_words.yaml) — all banned content patterns
-- [`config/sensitive_files.yaml`](../../config/sensitive_files.yaml) — sensitive file rules
-- [`config/coverage_thresholds.yaml`](../../config/coverage_thresholds.yaml) — coverage minimums
-- [`config/file_length_limits.yaml`](../../config/file_length_limits.yaml) — file length caps
-- [`config/dead_code.yaml`](../../config/dead_code.yaml) — AST analysis config
-- [`config/blocked_commit_patterns.yaml`](../../config/blocked_commit_patterns.yaml) — commit message bans
-- [`ci/*.py`](../../ci/) — Python check modules (canonical docstrings for check catalog)
-- [`lib/*.sh`](../../lib/) — Shell check functions (canonical comments for shell check catalog)
+- [SPEC-WIKI](../specifications/SPEC-WIKI.md): companion specification (implementation detail)
+- [HOOKS.md](../HOOKS.md): hook generation and integration guide
+- [`config/required_hooks.yaml`](../../config/required_hooks.yaml): canonical hook definitions
+- [`config/banned_words.yaml`](../../config/banned_words.yaml): all banned content patterns
+- [`config/sensitive_files.yaml`](../../config/sensitive_files.yaml): sensitive file rules
+- [`config/coverage_thresholds.yaml`](../../config/coverage_thresholds.yaml): coverage minimums
+- [`config/file_length_limits.yaml`](../../config/file_length_limits.yaml): file length caps
+- [`config/dead_code.yaml`](../../config/dead_code.yaml): AST analysis config
+- [`config/blocked_commit_patterns.yaml`](../../config/blocked_commit_patterns.yaml): commit message bans
+- [`ci/*.py`](../../ci/): Python check modules (canonical docstrings for check catalog)
+- [`lib/*.sh`](../../lib/): Shell check functions (canonical comments for shell check catalog)
 
 ---
 
@@ -48,7 +48,7 @@ quality gates workspace-ci enforces.
 - Page-level analytics: views, dwell time, scroll depth, search queries, playground usage
 - A home page with aggregate stats, quick links, and trending content
 - A content pipeline that derives documentation from source code (docstrings, comments,
-  YAML configs, markdown docs) — single source of truth
+  YAML configs, markdown docs): single source of truth
 
 **The wiki DOES NOT:**
 
@@ -57,8 +57,8 @@ quality gates workspace-ci enforces.
 - Require authentication (it is a public documentation surface)
 - Replace or duplicate AMI-PORTAL's shell, tab system, or iframe architecture
 - Serve as a general-purpose documentation viewer for arbitrary files
-- Implement i18n — English only
-- Duplicate content already present in source code — all content MUST derive
+- Implement i18n: English only
+- Duplicate content already present in source code: all content MUST derive
   from canonical sources (docstrings, YAML configs, markdown docs)
 
 ### 1.3 Ownership Split
@@ -138,7 +138,7 @@ into the `web/` tree. See SPEC §9.3 for the loader contract and deployment mode
 |----|-------------|
 | FR-3.1 | The home page MUST display a project overview summary of workspace-ci. |
 | FR-3.2 | A quick-search input MUST be embedded in the hero area. |
-| FR-3.3 | A "trending" section MUST show the top 4—6 most-viewed pages based on local analytics. |
+| FR-3.3 | A "trending" section MUST show the top 4-6 most-viewed pages based on local analytics. |
 | FR-3.4 | Quick-link cards MUST link to the highest-traffic sections. |
 | FR-3.5 | An aggregate stats bar MUST display: total page views, total patterns, total hooks, total configs. |
 | FR-3.6 | The stats bar MUST update reactively as analytics events fire. |
@@ -184,7 +184,7 @@ into the `web/` tree. See SPEC §9.3 for the loader contract and deployment mode
 |----|-------------|
 | FR-7.1 | The config reference MUST list all YAML config files from `config/`. |
 | FR-7.2 | Each config MUST have a dedicated detail page at `/config/<name>`. |
-| FR-7.3 | The detail page MUST render each config's fields, types, defaults, and descriptions, derived from a co-located `config/<name>.schema.yaml` file (single source of truth — no hand-maintained field prose). When no schema file exists, the page MUST render the raw YAML only and emit a build-time warning. |
+| FR-7.3 | The detail page MUST render each config's fields, types, defaults, and descriptions, derived from a co-located `config/<name>.schema.yaml` file (single source of truth: no hand-maintained field prose). When no schema file exists, the page MUST render the raw YAML only and emit a build-time warning. |
 | FR-7.4 | The detail page MUST show the raw YAML content in a syntax-highlighted code block. |
 | FR-7.5 | Each config detail page MUST include the feedback component. |
 
@@ -223,7 +223,7 @@ into the `web/` tree. See SPEC §9.3 for the loader contract and deployment mode
 
 | ID | Requirement |
 |----|-------------|
-| FR-11.1 | A tooling page MUST document all workspace scripts, derived from `scripts/manifest.yaml` (single source of truth — no hand-maintained script prose). Adding a script to `scripts/` MUST be paired with a manifest entry. |
+| FR-11.1 | A tooling page MUST document all workspace scripts, derived from `scripts/manifest.yaml` (single source of truth: no hand-maintained script prose). Adding a script to `scripts/` MUST be paired with a manifest entry. |
 | FR-11.2 | Each tool MUST have its CLI usage, arguments, and output format documented, read from its `scripts/manifest.yaml` entry. |
 
 #### FR-12: Integration Guide
@@ -235,16 +235,16 @@ into the `web/` tree. See SPEC §9.3 for the loader contract and deployment mode
 
 ### 3.3 Content Sourcing
 
-#### FR-16: Single Source of Truth — Content from Source Code
+#### FR-16: Single Source of Truth: Content from Source Code
 
 | ID | Requirement |
 |----|-------------|
-| FR-16.1 | Check catalog entries MUST be derived from Python docstrings in `ci/*.py` — no hardcoded check descriptions. |
-| FR-16.2 | Shell check catalog entries MUST be derived from function comments in `lib/*.sh` — no hardcoded check descriptions. |
-| FR-16.3 | Pattern library entries MUST be derived from `config/banned_words.yaml` — no duplication of pattern rules. |
-| FR-16.4 | Hook reference entries MUST be derived from `config/required_hooks.yaml` — no duplication of hook definitions. |
-| FR-16.5 | Configuration reference pages MUST read YAML configs directly from the filesystem — no copied YAML content. |
-| FR-16.5a | Configuration field documentation (FR-7.3) MUST be derived from co-located `config/<name>.schema.yaml` files — no hand-maintained field prose that can drift from the configs. |
+| FR-16.1 | Check catalog entries MUST be derived from Python docstrings in `ci/*.py`: no hardcoded check descriptions. |
+| FR-16.2 | Shell check catalog entries MUST be derived from function comments in `lib/*.sh`: no hardcoded check descriptions. |
+| FR-16.3 | Pattern library entries MUST be derived from `config/banned_words.yaml`: no duplication of pattern rules. |
+| FR-16.4 | Hook reference entries MUST be derived from `config/required_hooks.yaml`: no duplication of hook definitions. |
+| FR-16.5 | Configuration reference pages MUST read YAML configs directly from the filesystem: no copied YAML content. |
+| FR-16.5a | Configuration field documentation (FR-7.3) MUST be derived from co-located `config/<name>.schema.yaml` files: no hand-maintained field prose that can drift from the configs. |
 | FR-16.6 | A build-time extraction tool MUST produce structured JSON from Python docstrings and shell comments that the wiki consumes at request time. |
 | FR-16.7 | Long-form prose that does not belong in source code (narrative guides, rationale, troubleshooting) MUST live in dedicated markdown files within the `web/` directory. |
 | FR-16.8 | Optional `README.md` files in source directories (`ci/`, `lib/`, `config/`, `scripts/`) MUST be discoverable and rendered on relevant index pages. |
@@ -299,7 +299,7 @@ into the `web/` tree. See SPEC §9.3 for the loader contract and deployment mode
 | NFR-1.3 | Search index building MUST NOT block the main thread perceptibly. |
 | NFR-1.4 | Playground regex matching MUST be debounced to avoid jank during typing. |
 | NFR-1.5 | YAML configs MUST be read and parsed server-side; raw YAML text MUST NOT be sent to the client except when explicitly displayed in a code block. |
-| NFR-1.6 | Content pages MUST render progressively — the shell (sidebar, header) MUST appear before all content data resolves. No page MUST display a blank screen while waiting for data. |
+| NFR-1.6 | Content pages MUST render progressively: the shell (sidebar, header) MUST appear before all content data resolves. No page MUST display a blank screen while waiting for data. |
 | NFR-1.7 | The code editor bundle MUST NOT load on pages that do not use it. |
 
 ### NFR-2: Technology Stack
@@ -320,7 +320,7 @@ into the `web/` tree. See SPEC §9.3 for the loader contract and deployment mode
 
 | ID | Requirement |
 |----|-------------|
-| NFR-3.1 | Theming MUST use CSS custom properties and a data attribute on the root element — NOT media-query-based dark mode classes. |
+| NFR-3.1 | Theming MUST use CSS custom properties and a data attribute on the root element: NOT media-query-based dark mode classes. |
 | NFR-3.2 | Both dark (default) and light themes MUST be supported. |
 | NFR-3.3 | Theme MUST respect OS preference on first load, then persist user choice in browser storage. |
 | NFR-3.4 | A flash-of-wrong-theme prevention mechanism MUST run before first paint. |
@@ -370,12 +370,12 @@ into the `web/` tree. See SPEC §9.3 for the loader contract and deployment mode
 | ID | Requirement |
 |----|-------------|
 | NFR-8.1 | Unit test coverage MUST be at least 90% for `src/lib/`, `src/stores/`, and `src/components/ui/` (lines, functions, statements). |
-| NFR-8.2 | Custom hook test coverage MUST be at least 95% — hooks are pure logic, trivially testable in isolation. |
+| NFR-8.2 | Custom hook test coverage MUST be at least 95%: hooks are pure logic, trivially testable in isolation. |
 | NFR-8.3 | Branch coverage MUST be at least 85% for lib, stores, and ui modules. |
 | NFR-8.4 | Wiki feature components MUST have at least 85% coverage. |
 | NFR-8.5 | Playground components MAY have 80% coverage due to CodeMirror DOM interaction complexity in jsdom. |
 | NFR-8.6 | All coverage thresholds MUST be enforced in CI via the test runner. |
-| NFR-8.7 | The pattern classifier MUST be tested against all real patterns from `banned_words.yaml` — full enumeration of all three rule groups (`banned`, `directory_rules`, `filename_rules`), not sampling. |
+| NFR-8.7 | The pattern classifier MUST be tested against all real patterns from `banned_words.yaml`: full enumeration of all three rule groups (`banned`, `directory_rules`, `filename_rules`), not sampling. |
 
 ---
 
@@ -471,7 +471,7 @@ The wiki consists of three subsystems:
 - [ ] Light/dark theme toggle with persistence
 - [ ] Home page with project overview, quick-search input, stats bar, quick-link cards
 - [ ] Analytics: page view tracking, dwell time, scroll depth
-- [ ] `scripts/extract-docs` — Python AST + regex shell parser → `web/src/data/*.json`
+- [ ] `scripts/extract-docs`: Python AST + regex shell parser → `web/src/data/*.json`
 - [ ] Extraction integrated into `make sync`
 
 ### Phase 2: Content Pages
@@ -527,7 +527,7 @@ The wiki consists of three subsystems:
    all-time view counts? Simple all-time is lower scope and sufficient.
 
 4. Should pattern categories be derived from the YAML config's structure or defined
-   as a wiki-layer taxonomy? The YAML config has no category field — categories
+   as a wiki-layer taxonomy? The YAML config has no category field: categories
    SHOULD be a wiki-layer classification. Must stay in sync with the YAML.
 
 5. Should the feedback widget support emoji reactions in addition to thumbs-up/down?
@@ -544,7 +544,7 @@ The wiki consists of three subsystems:
    `web/` directory does not duplicate YAML configs.
 
 7. Should analytics events include a session ID for correlating events across pages?
-   Yes — a session identifier generated on first page load and persisted.
+   Yes: a session identifier generated on first page load and persisted.
 
 ---
 
@@ -552,32 +552,32 @@ The wiki consists of three subsystems:
 
 | # | Test | Maps to |
 |---|------|---------|
-| 1 | Navigate to `/` — shell layout renders with sidebar, header, theme toggle visible | FR-1.1—1.7 |
-| 2 | Press `/` key — search modal opens, type query — results appear with highlighted matches | FR-2.1—2.4 |
-| 3 | Navigate to `/patterns` — all patterns from `banned`, `directory_rules`, and `filename_rules` listed, grouped by category, filterable; filename-scope patterns show a "filename match" badge | FR-4.1—4.6 |
-| 4 | Click a pattern card — feedback component visible, vote up/down works, comment field appears | FR-15.1—15.9 |
-| 5 | Navigate to `/hooks` — table shows all hooks, filter by stage shows only matching hooks | FR-5.1—5.5 |
-| 6 | Navigate to `/hooks/check-banned-words` — detail page shows full metadata | FR-6.1—6.6 |
-| 7 | Navigate to `/config/banned_words` — fields documented, raw YAML shown | FR-7.1—7.5 |
-| 8 | Navigate to `/playground` — type Python code with `dict[str, Any]` — line highlighted, match in side panel | FR-8.1—8.5 |
-| 9 | Toggle a category off in playground — that category's matches disappear | FR-8.6 |
-| 10 | Switch language to Shell — Python-only patterns stop matching | FR-8.7 |
-| 11 | Navigate to `/tiers` — comparison matrix shows hook coverage per tier | FR-10.1—10.3 |
-| 12 | Home page stats bar shows view count — navigate to another page, return — count incremented | FR-13.1, FR-14.1—14.3 |
-| 13 | Toggle light/dark theme — all surfaces update without flash, choice persists on reload | NFR-3.1—3.4 |
-| 14 | Resize viewport to 400px — sidebar becomes overlay, playground stacks vertically | NFR-6.1—6.3 |
-| 15 | Tab through all interactive elements — focus ring visible on each | NFR-5.1—5.5 |
-| 16 | Enable debug mode — analytics events logged to console | FR-13.7 |
-| 17 | Run type-check in `web/` — zero errors | NFR-7.1 |
-| 18 | Run lint in `web/` — zero warnings | NFR-7.2 |
-| 19 | Run `scripts/extract-docs` — `web/src/data/api-docs.json` and `shell-docs.json` are generated with valid content | FR-16.1—16.6 |
-| 20 | Modify a Python docstring in `ci/`, re-run extraction, rebuild wiki — check detail page reflects new docstring | FR-16.1 |
-| 21 | Modify a YAML config, rebuild wiki — pattern/hook/config page reflects change without manual wiki edits | FR-16.3—16.5 |
-| 22 | Add `ci/README.md` — check catalog index page shows its content | FR-16.8 |
-| 23 | Run `npm run test:coverage` in `web/` — coverage >= 90% for lib, stores, ui; >= 85% for wiki components; >= 80% for playground | NFR-8.1—8.5 |
-| 24 | Pattern classifier test passes against all real patterns from all three groups in `banned_words.yaml` (`banned`, `directory_rules`, `filename_rules`) — every pattern maps to exactly one category | NFR-8.7 |
-| 25 | Navigate to `/patterns` over a slow (10 Mbps) profile — shell (sidebar + header) paints before content sections resolve; no blank screen while YAML loads | NFR-1.6 |
-| 26 | Navigate from `/` to `/hooks` and back — verify the CodeMirror bundle is NOT requested on non-playground routes (check the network tab; no `codemirror` chunks loaded) | NFR-1.7 |
-| 27 | Run `ANALYZE=true npm run build` in `web/` — verify every non-playground route ships < 50KB compressed JS; CI bundle-size gate passes (SPEC §18.3) | NFR-1.7, SPEC §18.3 |
-| 28 | Run `scripts/extract-docs` — verify every `config/*.schema.yaml` parses and each `path` resolves against the corresponding config's top-level keys (build warning, not error) | FR-7.3, FR-16.5a |
-| 29 | Add a script to `scripts/` without a `scripts/manifest.yaml` entry — verify the manifest-completeness check fails | FR-11.1 |
+| 1 | Navigate to `/`: shell layout renders with sidebar, header, theme toggle visible | FR-1.1-1.7 |
+| 2 | Press `/` key: search modal opens, type query: results appear with highlighted matches | FR-2.1-2.4 |
+| 3 | Navigate to `/patterns`: all patterns from `banned`, `directory_rules`, and `filename_rules` listed, grouped by category, filterable; filename-scope patterns show a "filename match" badge | FR-4.1-4.6 |
+| 4 | Click a pattern card: feedback component visible, vote up/down works, comment field appears | FR-15.1-15.9 |
+| 5 | Navigate to `/hooks`: table shows all hooks, filter by stage shows only matching hooks | FR-5.1-5.5 |
+| 6 | Navigate to `/hooks/check-banned-words`: detail page shows full metadata | FR-6.1-6.6 |
+| 7 | Navigate to `/config/banned_words`: fields documented, raw YAML shown | FR-7.1-7.5 |
+| 8 | Navigate to `/playground`: type Python code with `dict[str, Any]`: line highlighted, match in side panel | FR-8.1-8.5 |
+| 9 | Toggle a category off in playground: that category's matches disappear | FR-8.6 |
+| 10 | Switch language to Shell: Python-only patterns stop matching | FR-8.7 |
+| 11 | Navigate to `/tiers`: comparison matrix shows hook coverage per tier | FR-10.1-10.3 |
+| 12 | Home page stats bar shows view count: navigate to another page, return: count incremented | FR-13.1, FR-14.1-14.3 |
+| 13 | Toggle light/dark theme: all surfaces update without flash, choice persists on reload | NFR-3.1-3.4 |
+| 14 | Resize viewport to 400px: sidebar becomes overlay, playground stacks vertically | NFR-6.1-6.3 |
+| 15 | Tab through all interactive elements: focus ring visible on each | NFR-5.1-5.5 |
+| 16 | Enable debug mode: analytics events logged to console | FR-13.7 |
+| 17 | Run type-check in `web/`: zero errors | NFR-7.1 |
+| 18 | Run lint in `web/`: zero warnings | NFR-7.2 |
+| 19 | Run `scripts/extract-docs`: `web/src/data/api-docs.json` and `shell-docs.json` are generated with valid content | FR-16.1-16.6 |
+| 20 | Modify a Python docstring in `ci/`, re-run extraction, rebuild wiki: check detail page reflects new docstring | FR-16.1 |
+| 21 | Modify a YAML config, rebuild wiki: pattern/hook/config page reflects change without manual wiki edits | FR-16.3-16.5 |
+| 22 | Add `ci/README.md`: check catalog index page shows its content | FR-16.8 |
+| 23 | Run `npm run test:coverage` in `web/`: coverage >= 90% for lib, stores, ui; >= 85% for wiki components; >= 80% for playground | NFR-8.1-8.5 |
+| 24 | Pattern classifier test passes against all real patterns from all three groups in `banned_words.yaml` (`banned`, `directory_rules`, `filename_rules`): every pattern maps to exactly one category | NFR-8.7 |
+| 25 | Navigate to `/patterns` over a slow (10 Mbps) profile: shell (sidebar + header) paints before content sections resolve; no blank screen while YAML loads | NFR-1.6 |
+| 26 | Navigate from `/` to `/hooks` and back: verify the CodeMirror bundle is NOT requested on non-playground routes (check the network tab; no `codemirror` chunks loaded) | NFR-1.7 |
+| 27 | Run `ANALYZE=true npm run build` in `web/`: verify every non-playground route ships < 50KB compressed JS; CI bundle-size gate passes (SPEC §18.3) | NFR-1.7, SPEC §18.3 |
+| 28 | Run `scripts/extract-docs`: verify every `config/*.schema.yaml` parses and each `path` resolves against the corresponding config's top-level keys (build warning, not error) | FR-7.3, FR-16.5a |
+| 29 | Add a script to `scripts/` without a `scripts/manifest.yaml` entry: verify the manifest-completeness check fails | FR-11.1 |

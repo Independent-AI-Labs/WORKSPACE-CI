@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bootstrap-gitleaks — fetch the gitleaks binary and place it on PATH.
+# bootstrap-gitleaks: fetch the gitleaks binary and place it on PATH.
 #
 # This project depends on `gitleaks` for the pre-commit secret-content scanner.
 # This script is idempotent: if a compatible binary is already present at the
@@ -14,7 +14,7 @@
 # Override the version with $GITLEAKS_VERSION (default below).
 #
 # CI_PROJECT_ROOT (this repo's own root) is delegated to lib/ci.sh. Per the
-# new contract, this script installs to CI's OWN .boot-linux/ — NOT the
+# new contract, this script installs to CI's OWN .boot-linux/: NOT the
 # workspace root. Sibling repos (e.g. WORKSPACE-GUARD) reach this binary via
 # the boot-path resolver (lib/ci.sh::ci_resolve_boot_path) + inherit:
 # declarations in their config/boot_layout.yaml. See:

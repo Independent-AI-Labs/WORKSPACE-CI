@@ -3,15 +3,15 @@
 
 Validates three invariants for the project from which it's invoked:
 
-1. **Manifest completeness** — every `ci/check_*.py` (non-private) is
+1. **Manifest completeness**: every `ci/check_*.py` (non-private) is
    registered in required_hooks.yaml. Adding a
    check without registering it fails this check (closes the dogfood loop).
 
-2. **`quality_exceptions.yaml` schema** — for strict-tier projects: file
+2. **`quality_exceptions.yaml` schema**: for strict-tier projects: file
    exists, parses, every entry has the required fields, no mandatory hook
    is exempted, paths list is non-empty, reason ≥ 20 chars.
 
-3. **Hooks rendered** — every applicable mandatory hook is present in the
+3. **Hooks rendered**: every applicable mandatory hook is present in the
    rendered `.git/hooks/pre-commit` / `pre-push` (greps the
    `# === Hook: <id> ===` markers emitted by `generate-hooks`).
 
@@ -409,7 +409,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Self-check: {project_name} (tier={tier})")
     if tier == "vendored":
         if not args.quiet:
-            _emit("OK", "vendored tier — wrapper passthrough, no contract")
+            _emit("OK", "vendored tier: wrapper passthrough, no contract")
         return EXIT_OK
 
     issues: list[str] = []
@@ -441,7 +441,7 @@ def main(argv: list[str] | None = None) -> int:
         for issue in issues:
             _emit("FAIL", issue)
         print()
-        print(f"{RED}{len(issues)} violation(s){RESET} — see fix instructions above.")
+        print(f"{RED}{len(issues)} violation(s){RESET}: see fix instructions above.")
         return EXIT_VIOLATION
 
     if not args.quiet:

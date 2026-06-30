@@ -1,4 +1,4 @@
-"""Tests for ci.check_required_hooks_present — auto-enforcement self-check."""
+"""Tests for ci.check_required_hooks_present: auto-enforcement self-check."""
 
 from __future__ import annotations
 
@@ -281,7 +281,7 @@ def test_load_quality_exceptions_parses(tmp_path: Path) -> None:
             project: TEST
             exceptions:
               - hook: check-dead-code
-                reason: "Vendored adapters with dynamic imports — unanalysable."
+                reason: "Vendored adapters with dynamic imports: unanalysable."
                 paths: [vendor/]
                 added_by: dev@example.com
         """),

@@ -121,7 +121,7 @@ YAML
     # pyproject.toml (language detection)
     echo '[project]' > "$pdir/pyproject.toml"
 
-    # quality_exceptions.yaml (Q3 — strict-tier mandatory)
+    # quality_exceptions.yaml (Q3: strict-tier mandatory)
     cat > "$pdir/quality_exceptions.yaml" <<'YAML'
 version: 1
 project: perfect
