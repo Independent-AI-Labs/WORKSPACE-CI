@@ -8,6 +8,16 @@ UV := uv
 RUFF := $(UV) run ruff
 PYTEST := $(UV) run pytest
 
+# .boot-linux/bin/ holds bootstrapped tools (uv, cargo, rustup, gitleaks).
+# After `make install` creates it, prepend to PATH so make targets use
+# bootstrapped tools, not system-installed ones. Parse-time check: if
+# .boot-linux/bin/uv doesn't exist yet (fresh install), PATH is not
+# modified — install-python-deps handles it in its recipe.
+BOOT_BIN := $(CURDIR)/.boot-linux/bin
+ifneq ($(wildcard $(BOOT_BIN)/uv),)
+    export PATH := $(BOOT_BIN):$(PATH)
+endif
+
 # Contract compliance
 -include lib/makefile_contract.mk
 
@@ -42,8 +52,7 @@ init: ## Install all system-level dependencies (apt packages + Rust toolchain)
 	@echo "==> System dependencies installed."
 
 .PHONY: preflight
-preflight: ## Verify environment
-	@command -v uv > /dev/null 2>&1 || { echo "ERROR: uv not found"; exit 1; }
+preflight: ## Verify environment (curl + tar for bootstrapping; uv is bootstrapped by install-boot-tools)
 	@command -v curl > /dev/null 2>&1 || { echo "ERROR: curl not found"; exit 1; }
 	@command -v tar > /dev/null 2>&1 || { echo "ERROR: tar not found"; exit 1; }
 	@bash -c '[ "$${BASH_VERSINFO[0]}" -gt 4 ] || ([ "$${BASH_VERSINFO[0]}" -eq 4 ] && [ "$${BASH_VERSINFO[1]}" -ge 3 ])' \
@@ -59,11 +68,16 @@ install-ci: preflight install-deps ## CI install: deps + bootstrap binaries, no 
 	@:
 
 .PHONY: install-deps
-install-deps: install-python-deps install-gitleaks ## Install python .venv deps + bootstrap binaries
+install-deps: install-boot-tools install-python-deps install-gitleaks ## Install boot tools + python .venv deps + gitleaks
+
+.PHONY: install-boot-tools
+install-boot-tools: ## Bootstrap uv + rust toolchain into .boot-linux/bin/ (idempotent)
+	bash scripts/bootstrap-uv
+	bash scripts/bootstrap-rust
 
 .PHONY: install-python-deps
-install-python-deps: ## uv sync the Python deps (project-level .venv)
-	$(UV) sync --extra dev
+install-python-deps: install-boot-tools ## uv sync the Python deps (project-level .venv)
+	PATH="$(BOOT_BIN):$$PATH" $(UV) sync --extra dev
 
 .PHONY: install-gitleaks
 install-gitleaks: ## Bootstrap the gitleaks binary used by the secret-content scanner
@@ -76,7 +90,7 @@ install-hooks: ## (Re)generate native git hooks
 
 .PHONY: sync
 sync: ## Sync .venv deps + reinstall hooks
-	$(UV) sync --extra dev
+	PATH="$(BOOT_BIN):$$PATH" $(UV) sync --extra dev
 	$(MAKE) install-hooks
 
 # =============================================================================

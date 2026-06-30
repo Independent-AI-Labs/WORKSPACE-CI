@@ -27,6 +27,19 @@ from typing import Any
 import yaml
 
 
+def _merge_exceptions(exc_map: dict[str, list[str]], exc_path: Path) -> None:
+    """Load a banned_words_exceptions.yaml file and merge into exc_map."""
+    if not exc_path.is_file():
+        return
+    with open(exc_path) as f:
+        exc_data: Any = yaml.safe_load(f) or {}
+    for exc in exc_data.get("exceptions") or []:
+        pattern = exc.get("pattern", "")
+        paths = exc.get("paths") or []
+        if pattern and paths:
+            exc_map.setdefault(str(pattern), []).extend(paths)
+
+
 def _load_config(
     config_dir: Path,
 ) -> tuple[
@@ -41,6 +54,13 @@ def _load_config(
     exc_map: pattern -> [path_regex, ...] (universal + project).
     Supports '.*' as a wildcard: if '.*' is a key, its paths
     exempt matching files from ALL patterns.
+
+    Exceptions are loaded from two sources (matching the prior bash
+    implementation's behaviour):
+    1. CI_CONFIG_DIR/banned_words_exceptions.yaml — CI's own exceptions
+    2. config/banned_words_exceptions.yaml relative to CWD — per-project
+       exceptions (each repo has its own). Skipped if it resolves to the
+       same file as #1 (avoids double-loading when running from CI itself).
     """
     bw_path = config_dir / "banned_words.yaml"
     with open(bw_path) as f:
@@ -60,15 +80,12 @@ def _load_config(
         for pattern in exc.get("patterns") or []:
             exc_map.setdefault(str(pattern), []).extend(paths)
 
-    exc_path = config_dir / "banned_words_exceptions.yaml"
-    if exc_path.exists():
-        with open(exc_path) as f:
-            exc_data: Any = yaml.safe_load(f) or {}
-        for exc in exc_data.get("exceptions") or []:
-            pattern = exc.get("pattern", "")
-            paths = exc.get("paths") or []
-            if pattern and paths:
-                exc_map.setdefault(str(pattern), []).extend(paths)
+    ci_exc_path = config_dir / "banned_words_exceptions.yaml"
+    _merge_exceptions(exc_map, ci_exc_path)
+
+    project_exc_path = Path("config") / "banned_words_exceptions.yaml"
+    if project_exc_path.resolve() != ci_exc_path.resolve():
+        _merge_exceptions(exc_map, project_exc_path)
 
     return banned, directory_rules, filename_rules, exc_map
 
