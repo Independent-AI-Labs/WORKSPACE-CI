@@ -265,7 +265,7 @@ elif ! setcap cap_dac_override+ep /usr/bin/true; then
         echo ""
         echo "  • setcap is unavailable: file capabilities cannot be set"
         echo "  • The guard policy engine will still block destructive commands"
-        echo "  • BUT: root users can bypass the guard by running /usr/bin/git.original"
+        echo "  • Root users can bypass the guard (see threat model docs)"
         echo "  • No chattr +i, no dpkg-divert, no apt hook"
         echo ""
         echo "See docs/ROOT-ONLY-MODE.md for the full threat model."
@@ -473,7 +473,7 @@ EOF
             log_info "  /usr/bin/git          (0755 root:root, no caps)"
             log_info "  /usr/bin/git.original (0700 root:root)"
             log_info "  audit log: /var/log/workspace-guard/"
-            log_warn "  root-only mode: root can bypass by running /usr/bin/git.original directly"
+            log_warn "  root-only mode: root can bypass (soft barrier, see threat model docs)"
         else
             log_info "Git guard installation complete."
             log_info "  /usr/bin/git          (0755 root:root, cap_dac_override+ep, immutable)"
