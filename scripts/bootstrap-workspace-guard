@@ -307,15 +307,21 @@ elif ! setcap cap_dac_override+ep /usr/bin/true; then
         esac
     fi
 
-    local git_src=""
-    if divert_is_active && [[ -x /usr/bin/git.distrib ]]; then
-        git_src="/usr/bin/git.distrib"
-    elif [[ -x /usr/bin/git ]]; then
-        git_src="/usr/bin/git"
-    else
-        log_error "System git not found at /usr/bin/git"
-        return 1
-    fi
+    local guard_hash
+    guard_hash=$(sha256sum "$guard_bin" | awk '{print $1}')
+
+    # Guard-aware source selection: never copy the guard itself to
+    # git.original.  On reinstall, /usr/bin/git IS the old guard, so
+    # copying it would create an infinite fork loop (guard execs
+    # git.original which IS the guard, execs git.original again ...).
+    # We verify each candidate by sha256 against the guard's hash.
+    is_real_git() {
+        local candidate="$1"
+        [[ -x "$candidate" ]] || return 1
+        local h
+        h=$(sha256sum "$candidate" | awk '{print $1}')
+        [[ "$h" != "$guard_hash" ]]
+    }
 
     if [[ -f /usr/bin/git.original ]] && command -v chattr >/dev/null; then
         rc=0; chattr -i /usr/bin/git.original || rc=$?
@@ -323,15 +329,46 @@ elif ! setcap cap_dac_override+ep /usr/bin/true; then
             echo "chattr -i /usr/bin/git.original: no-op or failed (rc=$rc)" >&2
         fi
     fi
-    cp "$git_src" /usr/bin/git.original
-    chown root:root /usr/bin/git.original
-    chmod 0700 /usr/bin/git.original
+
+    # If git.original already exists and is NOT the guard, keep it.
+    if [[ -f /usr/bin/git.original ]] && is_real_git /usr/bin/git.original; then
+        log_info "Preserving existing real git at /usr/bin/git.original"
+        git_src="/usr/bin/git.original"
+    else
+        # Find real git: prefer dpkg-divert, then /usr/bin/git (only
+        # if it is NOT the guard), then the apt package binary.
+        git_src=""
+        if divert_is_active && is_real_git /usr/bin/git.distrib; then
+            git_src="/usr/bin/git.distrib"
+        elif is_real_git /usr/bin/git; then
+            git_src="/usr/bin/git"
+        elif is_real_git /usr/lib/git-core/git; then
+            git_src="/usr/lib/git-core/git"
+            log_warn "Using apt package git: /usr/lib/git-core/git"
+        fi
+        if [[ -z "$git_src" ]]; then
+            log_error "Cannot find real git (all candidates are the guard or missing)"
+            log_error "Restore: apt install --reinstall git"
+            return 1
+        fi
+        cp "$git_src" /usr/bin/git.original
+        chown root:root /usr/bin/git.original
+        chmod 0700 /usr/bin/git.original
+    fi
 
     local src_hash copy_hash
     src_hash=$(sha256sum "$git_src" | awk '{print $1}')
     copy_hash=$(sha256sum /usr/bin/git.original | awk '{print $1}')
     if [[ "$src_hash" != "$copy_hash" ]]; then
         log_error "Checksum mismatch: git.original does not match"
+        rm -f /usr/bin/git.original
+        return 1
+    fi
+
+    # Safety net: verify git.original is NOT the guard before proceeding.
+    if [[ "$copy_hash" == "$guard_hash" ]]; then
+        log_error "git.original has the same sha256 as the guard: refusing to install"
+        log_error "This would cause an infinite fork loop. Restore: apt install --reinstall git"
         rm -f /usr/bin/git.original
         return 1
     fi
