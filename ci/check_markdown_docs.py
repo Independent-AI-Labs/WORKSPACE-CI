@@ -25,7 +25,6 @@ import json
 import os
 import subprocess
 import sys
-from http import HTTPStatus
 from pathlib import Path
 
 import httpx
@@ -40,6 +39,7 @@ from ci._md_checkers import (
     RemoteClient,
     check_reference,
 )
+from ci._md_http_client import HttpClient
 from ci._md_refs import ParsedDoc, parse_doc
 
 
@@ -68,10 +68,9 @@ DIM = "\033[2m"
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
-DEFAULT_HTTP_TIMEOUT = 5.0
-HTTP_OK_MIN = HTTPStatus.OK
-HTTP_REDIRECT_MAX = HTTPStatus.BAD_REQUEST  # 400 — first non-success
-HTTP_METHOD_NOT_ALLOWED = HTTPStatus.METHOD_NOT_ALLOWED
+# Fail-fast performance knobs (NO silent swallow — every failure surfaces as
+# a Finding, every timeout / cancellation surfaces as a stderr warning).
+DEFAULT_HTTP_TIMEOUT = 5.0  # per-attempt (each HEAD + GET counts)
 _MD_SUFFIXES = frozenset({".md", ".markdown", ".mdown"})
 
 
@@ -173,56 +172,6 @@ def _iter_md_files(paths: list[Path], ignore: list[str]) -> list[Path]:
     for root in paths:
         out.extend(_expand_root(root, ignore, seen))
     return out
-
-
-class _HttpClient:
-    """Tries HEAD first, retries with GET when the server refuses HEAD.
-
-    Creates a fresh transport per probe to avoid connection-pool pollution
-    (httpx HTTP/2 re-use can return stale status codes after ~30 requests
-    to diverse hosts).  Caches results so repeated URL references are
-    probed once per run.
-    """
-
-    def __init__(self, timeout: float) -> None:
-        self._timeout = timeout
-        self._headers = {"user-agent": "ci-md-validator/0.1"}
-        self._cache: dict[str, tuple[bool, str]] = {}
-
-    def check(self, url: str) -> tuple[bool, str]:
-        if url in self._cache:
-            return self._cache[url]
-        result = self._probe(url)
-        self._cache[url] = result
-        return result
-
-    def _new_client(self) -> httpx.Client:
-        return httpx.Client(
-            timeout=self._timeout,
-            follow_redirects=True,
-            headers=self._headers,
-        )
-
-    def _probe(self, url: str) -> tuple[bool, str]:
-        for method in ("HEAD", "GET"):
-            client = self._new_client()
-            try:
-                r = client.request(method, url)
-            except httpx.RequestError as exc:
-                client.close()
-                return (False, f"{type(exc).__name__}: {exc}")
-            client.close()
-            if HTTP_OK_MIN <= r.status_code < HTTP_REDIRECT_MAX:
-                return (True, f"{r.status_code}")
-            # HEAD may get inconsistent results (e.g. intermittent 404 from
-            # PDF endpoints) — fall through to GET for a definitive answer.
-            if method == "HEAD":
-                continue
-            return (False, f"HTTP {r.status_code}")
-        return (False, "no response")
-
-    def close(self) -> None:
-        pass
 
 
 def _apply_exceptions(
@@ -347,7 +296,7 @@ def _resolve_remote(check_remote: bool, timeout: float) -> RemoteClient | None:
     if not check_remote:
         return None
     try:
-        return _HttpClient(timeout)
+        return HttpClient(timeout)
     except (ImportError, httpx.HTTPError):
         print(
             f"{YELLOW}warning:{RESET} httpx not installed; skipping remote checks",
@@ -360,8 +309,14 @@ def _scan_files(
     files: list[Path],
     remote: RemoteClient | None,
 ) -> list[Finding]:
+    """Two-phase scan: parse all files, prewarm remote URLs in parallel,
+    then run per-ref checkers (HTTP refs served from cache).
+    """
     slug_cache: dict[Path, dict[str, str]] = {}
     findings: list[Finding] = []
+    docs: list[ParsedDoc] = []
+
+    # Phase 1: parse (collect refs + slug cache).
     for path in files:
         try:
             text = path.read_text(encoding="utf-8")
@@ -369,9 +324,26 @@ def _scan_files(
             print(f"{YELLOW}warning:{RESET} cannot read {path}: {exc}", file=sys.stderr)
             continue
         doc: ParsedDoc = parse_doc(path, text)
+        docs.append(doc)
         slug_cache[path.resolve()] = doc.headings
+
+    # Phase 2: prewarm remote URLs in parallel (single dedup, bounded concurrency).
+    if isinstance(remote, HttpClient):
+        unique_urls: set[str] = set()
+        for doc in docs:
+            for ref in doc.references:
+                href = ref.href.strip()
+                if href.lower().startswith(("http://", "https://")):
+                    unique_urls.add(href)
+        # Sort for deterministic probe order (logically warmer URLs first,
+        # but order doesn't affect correctness — just reproducibility).
+        remote.prewarm(sorted(unique_urls))
+
+    # Phase 3: run per-ref checkers (HTTP refs served from prewarmed cache).
+    for doc in docs:
         for ref in doc.references:
             findings.extend(check_reference(ref, doc, slug_cache, remote))
+
     if remote is not None:
         remote.close()
     return findings

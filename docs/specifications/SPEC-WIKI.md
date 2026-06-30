@@ -1,4 +1,4 @@
-# SPEC-WIKI: Interactive Wiki Web UI for AMI-CI — Specification
+# SPEC-WIKI: Interactive Wiki Web UI for workspace-ci — Specification
 
 **Date:** 2026-06-09
 **Status:** DRAFT
@@ -29,7 +29,7 @@
 ## 1. Overview
 
 This specification details a multi-source content pipeline powering an interactive
-wiki web UI for AMI-CI. Content is sourced from four canonical locations, establishing
+wiki web UI for workspace-ci. Content is sourced from four canonical locations, establishing
 a **single source of truth** model:
 
 1. **Python docstrings** (`ci/*.py`) — extracted at build-time via `scripts/extract-docs`
@@ -93,7 +93,7 @@ interpreted as described in RFC 2119.
 | @codemirror/lang-javascript | ^6.x | npm |
 | @codemirror/commands | ^6.x | npm |
 | @codemirror/language | ^6.x | npm |
-| RemixIcon | 4.3.0 | CDN |
+| RemixIcon | 4.3.0 | npm (vendored into web/public, self-hosted) |
 | Montserrat | latest | Google Fonts (next/font) |
 | JetBrains Mono | latest | Google Fonts (next/font) |
 | ESLint | 9.x | npm |
@@ -150,16 +150,57 @@ interpreted as described in RFC 2119.
 | `/patterns/[category]` | `config/banned_words.yaml` (filtered) | `web/content/patterns/` |
 | `/hooks` | `config/required_hooks.yaml` | `docs/HOOKS.md` |
 | `/hooks/[id]` | `config/required_hooks.yaml` (filtered) | `api-docs.json` / `shell-docs.json` |
-| `/config` | directory listing of `config/*.yaml` | `web/content/config/` |
-| `/config/[name]` | single `config/<name>.yaml` | `web/content/config/<name>.md` |
+| `/config` | directory listing of `config/*.yaml` | `config/*.schema.yaml` (field docs) |
+| `/config/[name]` | single `config/<name>.yaml` | `config/<name>.schema.yaml` + `web/content/config/<name>.md` |
 | `/checks` | `api-docs.json` + `shell-docs.json` | module `README.md` files |
 | `/checks/[id]` | single entry from api-docs / shell-docs | source file excerpt |
 | `/playground` | `config/banned_words.yaml` | — |
 | `/tiers` | `config/required_hooks.yaml` (tier matrix) | `web/content/tiers.md` |
-| `/tooling` | hardcoded script manifest | `web/content/tooling/` |
+| `/tooling` | `scripts/manifest.yaml` (canonical script manifest) | `web/content/tooling/` |
 | `/integration` | `docs/HOOKS.md` | `web/content/integration.md` |
 
-### 4.4 Trust Boundaries
+### 4.4 Hook Record Shape
+
+The wiki renders hooks from `config/required_hooks.yaml`. The TypeScript model
+MUST cover every `kind` variant the manifest uses:
+
+```typescript
+// src/types/hooks.ts
+export type HookKind =
+  | 'shell'               // entry = bash function name; args = staged files
+  | 'shell_inline'        // entry = literal bash command string
+  | 'shell_with_arg'      // entry = bash function taking one arg (commit-msg file)
+  | 'python_module'       // entry = dotted module path (run as module)
+  | 'python_module_files' // entry = module path + pass_filenames (files as CLI args)
+  | 'makefile_target'     // entry = make target name
+
+export type HookStage = 'pre-commit' | 'commit-msg' | 'pre-push'
+
+export interface HookRecord {
+  id: string
+  kind: HookKind
+  entry: string
+  stage: HookStage
+  pass_filenames: boolean
+  always_run: boolean
+  files?: string
+  files_types?: string[]      // present on python_module_files hooks
+  mandatory: boolean
+  safety: boolean             // true = runs even at POC tier
+  applicable_to: string[]     // [any] | [python] | [node] | [rust]
+}
+
+export interface RequiredHooksConfig {
+  version: number
+  hooks: HookRecord[]
+}
+```
+
+The tier/stage matrix (FR-5.5) is derived: a hook runs in tier T and stage S
+when `hook.stage === S` and `(T === 'strict') || (T === 'poc' && hook.safety)`
+or `(T === 'vendored' && false)`.
+
+### 4.5 Trust Boundaries
 
 | Zone | Contains | Receives | Mutates |
 |------|----------|----------|---------|
@@ -286,8 +327,8 @@ async function CategoryNavSection() {
 }
 
 async function PatternListSection() {
-  const patterns = await getBannedPatterns()  // cache() returns same promise — no double fetch
-  return <PatternList patterns={classifyPatterns(patterns)} />
+  const config = await getBannedPatterns()  // cache() returns same promise — no double fetch
+  return <PatternList patterns={classifyAll(config)} />  // all three rule groups (§11)
 }
 ```
 
@@ -436,8 +477,13 @@ function PatternListClient({ patterns }: { patterns: ClassifiedPattern[] }) {
 ## 8. Directory Layout
 
 ```
-AMI-CI/
+workspace-ci/
+├── config/                         ← Canonical YAML rules + schema docs
+│   ├── banned_words.yaml
+│   ├── banned_words.schema.yaml    ← Field docs for banned_words.yaml (FR-7.3)
+│   └── ...                         ← one *.schema.yaml per config
 ├── scripts/
+│   ├── manifest.yaml             ← Canonical script manifest (FR-11, single source for /tooling)
 │   └── extract-docs              ← Build-time doc extraction (Python, uses ast)
 │
 ├── web/
@@ -450,7 +496,7 @@ AMI-CI/
 │   ├── vitest.config.ts
 │   │
 │   ├── app/                      ← Next.js App Router
-│   │   ├── layout.tsx            ← Server: fonts, CDN, flash script, data-theme
+│   │   ├── layout.tsx            ← Server: fonts, self-hosted icons, flash script, data-theme
 │   │   ├── page.tsx              ← Home (Server)
 │   │   ├── loading.tsx           ← Root loading fallback
 │   │   ├── error.tsx             ← Root error boundary
@@ -531,8 +577,9 @@ AMI-CI/
 │   │   │   │   ├── ConfigFieldTable.tsx ← Server
 │   │   │   │   ├── TierComparison.tsx   ← Server (static table)
 │   │   │   │   ├── CheckCard.tsx        ← Server
-│   │   │   │   ├── StatsBar.tsx         ← 'use client' (subscribes to analytics store)
-│   │   │   │   ├── QuickLinks.tsx       ← Server
+│   │   │   │   ├── StatsBar.tsx         ← 'use client' (subscribes to analytics store, §10.9)
+│   │   │   │   ├── QuickLinks.tsx       ← Server (§10.10)
+│   │   │   │   ├── TrendingSection.tsx  ← 'use client' (§10.11, useTopPages selector)
 │   │   │   │   ├── FeedbackWidget.tsx   ← 'use client' (vote state)
 │   │   │   │   ├── FeedbackWidget.test.tsx
 │   │   │   │   ├── ContentRenderer.tsx  ← Server (marked rendering)
@@ -587,6 +634,8 @@ AMI-CI/
 │   │   │   ├── search-index.test.ts
 │   │   │   ├── patterns.ts            ← Pattern classifier
 │   │   │   ├── patterns.test.ts
+│   │   │   ├── sanitize.ts            ← DOMPurify wrapper (server-only, §10.7)
+│   │   │   ├── sanitize.test.ts
 │   │   │   └── page-stats.ts          ← Visibility + scroll tracker
 │   │   │
 │   │   ├── types/
@@ -678,23 +727,62 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { load } from 'js-yaml'
 
+// Config root is configurable so the wiki can be pointed at an alternate
+// config tree (e.g. a vendored copy, a CI artifact) without code changes.
+// Default: the parent repo's config/ dir, assuming the wiki is served from
+// a checkout of workspace-ci (web/ lives inside the repo).
+// Override via WORKSPACE_CI_CONFIG_ROOT (absolute path or relative to web/).
+const CONFIG_ROOT = process.env.WORKSPACE_CI_CONFIG_ROOT
+  ?? join(process.cwd(), '..', 'config')
+
+const DOCS_ROOT = process.env.WORKSPACE_CI_DOCS_ROOT
+  ?? join(process.cwd(), '..', 'docs')
+
 // cache() deduplicates calls within a single request.
 // If PatternListSection and CategoryNavSection both call getBannedPatterns(),
 // only one filesystem read occurs.
 export const getBannedPatterns = cache(async (): Promise<BannedWordsConfig> => {
-  const configPath = join(process.cwd(), '..', 'config', 'banned_words.yaml')
-  const raw = readFileSync(configPath, 'utf8')
+  const raw = readFileSync(join(CONFIG_ROOT, 'banned_words.yaml'), 'utf8')
   return load(raw) as BannedWordsConfig
 })
 
 export const getRequiredHooks = cache(async (): Promise<RequiredHooksConfig> => {
-  const configPath = join(process.cwd(), '..', 'config', 'required_hooks.yaml')
-  const raw = readFileSync(configPath, 'utf8')
+  const raw = readFileSync(join(CONFIG_ROOT, 'required_hooks.yaml'), 'utf8')
   return load(raw) as RequiredHooksConfig
+})
+
+// Schema loader (§21.4) — returns null when no schema file exists so the
+// config detail page can fall back to raw-YAML-only rendering.
+export const getConfigSchema = cache(async (name: string): Promise<ConfigSchema | null> => {
+  const p = join(CONFIG_ROOT, `${name}.schema.yaml`)
+  try {
+    return load(readFileSync(p, 'utf8')) as ConfigSchema
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw e
+  }
 })
 
 // ... one cached loader per YAML config
 ```
+
+#### Deployment Model
+
+The wiki is a self-contained Next.js app but has a runtime data dependency on
+the workspace-ci `config/` and `docs/` trees. The supported deployment shapes:
+
+1. **In-tree (default):** `web/` lives inside a workspace-ci checkout;
+   `CONFIG_ROOT` defaults to `../config`. This is the primary mode.
+2. **External config tree:** Set `WORKSPACE_CI_CONFIG_ROOT` to an absolute
+   path (or a path relative to `web/`) pointing at a config tree. Use this
+   to document a forked or vendored config set, or to run the wiki in CI
+   against an artifact.
+
+Missing files at the resolved root MUST surface as a server-render error on
+the affected page (caught by the route's `error.tsx`), not a crash. The
+`/config` index page MUST list only the YAML files actually present at
+`CONFIG_ROOT` (directory listing), so a partial config tree degrades
+gracefully.
 
 ### 9.4 Revalidation
 
@@ -801,7 +889,56 @@ interface PatternCardProps {
 // </article>
 ```
 
-### 10.3 FeedbackWidget
+### 10.3 ConfigFieldTable
+
+```typescript
+// Server Component — renders field/type/default/description for a config.
+// Reads the schema file (§21.4) as the canonical source of field docs.
+// Pure data display, zero client JS.
+
+interface ConfigField {
+  path: string
+  type: string
+  required: boolean
+  default?: unknown
+  description: string
+}
+
+interface ConfigSchema {
+  config: string
+  description: string
+  fields: ConfigField[]
+}
+
+interface ConfigFieldTableProps {
+  schema: ConfigSchema        // parsed from config/<name>.schema.yaml
+  values: Record<string, unknown>  // parsed from config/<name>.yaml (for default-vs-actual display)
+}
+
+// Renders:
+// <section className="config-fields" aria-label="Configuration fields">
+//   <p className="config-fields__desc">{schema.description}</p>
+//   <table className="config-field-table">
+//     <thead>
+//       <tr><th>Path</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+//     </thead>
+//     <tbody>
+//       {schema.fields.map(f => <ConfigFieldRow field={f} value={resolve(values, f.path)} />)}
+//     </tbody>
+//   </table>
+// </section>
+//
+// ConfigFieldRow renders the path as <code>, a RequiredBadge for required:true,
+// the default value (or '—' if none), and the description as prose.
+// Nested paths (foo[].bar) render with indentation reflecting depth.
+```
+
+When `schema` is `null` (no `*.schema.yaml` for this config), the config
+detail page MUST omit the field table and render only the raw YAML block
+(§10.x ContentRenderer / code block). A build-time warning is emitted so
+missing schemas are visible without blocking deploys.
+
+### 10.4 FeedbackWidget
 
 ```typescript
 // 'use client' — interactive leaf
@@ -856,7 +993,7 @@ export function FeedbackWidget({ targetId, targetType }: FeedbackWidgetProps) {
 }
 ```
 
-### 10.4 useFeedback Hook (Headless)
+### 10.5 useFeedback Hook (Headless)
 
 ```typescript
 // src/hooks/useFeedback.ts
@@ -900,14 +1037,17 @@ export function useFeedback(
 // expect(result.current.state).toBe('submitted_up')
 ```
 
-### 10.5 Playground Components
+### 10.6 Playground Components
 
 ```typescript
 // app/playground/page.tsx — Server Component
-// Loads patterns, passes to client
+// Loads patterns, classifies all three groups, then filters to content/directory
+// scope (filename rules don't match editor text — see §11.1).
 export default async function PlaygroundPage() {
-  const patterns = await getBannedPatterns()
-  return <PlaygroundShell patterns={classifyPatterns(patterns.banned)} />
+  const config = await getBannedPatterns()
+  const all = classifyAll(config)
+  const playable = all.filter(p => p.scope !== 'filename')
+  return <PlaygroundShell patterns={playable} />
 }
 ```
 
@@ -965,11 +1105,21 @@ export function PlaygroundShell({ patterns }: { patterns: ClassifiedPattern[] })
 }
 ```
 
-### 10.6 ContentRenderer
+### 10.7 ContentRenderer
 
 ```typescript
 // Server Component — renders markdown from any source
+// marked output is sanitized with DOMPurify before insertion to prevent
+// XSS even though content is repo-authored/trusted (defense in depth).
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
+
+// Server-side DOMPurify requires a DOM shim. Use the isomorphic wrapper:
+// `dompurify` with `jsdom`-provided window in Node (configured in
+// src/lib/sanitize.ts), or `isomorphic-dompurify`. Either way, the
+// sanitize step runs at render time on the server, never in the client
+// bundle (DOMPurify is a server-only import).
+import { sanitizeHtml } from '@/lib/sanitize'
 
 interface ContentRendererProps {
   content: string
@@ -977,10 +1127,11 @@ interface ContentRendererProps {
 }
 
 export function ContentRenderer({ content, className }: ContentRendererProps) {
-  const html = marked(content, {
+  const raw = marked(content, {
     gfm: true,
     breaks: false,
   })
+  const html = sanitizeHtml(raw)  // strips scripts, event handlers, unsafe URLs
 
   return (
     <div
@@ -996,13 +1147,159 @@ labels. Code blocks styled via `_prose.css` with class-based syntax highlighting
 (no shiki/highlight.js needed — the wiki displays pattern regexes and shell
 commands, not complex code).
 
+Sanitization (`src/lib/sanitize.ts`) wraps DOMPurify with a allowlist:
+permitted tags are the GFM subset (headings, p, ul/ol/li, table, pre/code,
+blockquote, a, strong/em, hr, br). `<script>`, inline event handlers
+(`on*`), `javascript:` URLs, and `style` attributes are stripped. The
+allowlist is centralized so all markdown rendering goes through one
+sanitizer. DOMPurify is a server-only import — it MUST NOT appear in a
+client component bundle.
+
+### 10.8 HomePage
+
+```typescript
+// app/page.tsx — Server Component (orchestrator). Fetches overview data
+// in parallel and composes the home sections. The shell renders
+// immediately; sections stream via Suspense (§6).
+import { Suspense } from 'react'
+
+export default async function HomePage() {
+  return (
+    <WikiShell>
+      <Suspense fallback={<HeroSkeleton />}>
+        <HeroSection />          {/* overview + QuickSearch trigger */}
+      </Suspense>
+      <Suspense fallback={<StatsBarSkeleton />}>
+        <StatsBarSection />      {/* aggregate stats (FR-3.5) */}
+      </Suspense>
+      <Suspense fallback={<QuickLinksSkeleton />}>
+        <QuickLinksSection />    {/* highest-traffic section cards (FR-3.4) */}
+      </Suspense>
+      <Suspense fallback={<TrendingSkeleton />}>
+        <TrendingSection />      {/* top 4-6 most-viewed (FR-3.3) */}
+      </Suspense>
+    </WikiShell>
+  )
+}
+```
+
+`HeroSection` reads the project overview from `README.md` (via
+`content-loader`) and renders a QuickSearch trigger that opens the global
+`WikiSearch` modal. `QuickLinksSection` and `TrendingSection` consume the
+analytics store (client) for traffic data but receive their link targets
+as server-fetched props (the set of navigable sections).
+
+### 10.9 StatsBar
+
+```typescript
+// 'use client' — subscribes to the analytics store; updates reactively.
+// Pure presentational read of aggregate selectors (§12.2a).
+
+interface StatsBarProps {
+  counts: { patterns: number; hooks: number; configs: number }  // server-fetched
+}
+
+export function StatsBar({ counts }: StatsBarProps) {
+  const totalViews = useAnalyticsStore((s) => s.totalViews)
+  // totalViews is maintained incrementally (§12.2a) — O(1) selector.
+  return (
+    <section className="stats-bar" aria-label="Workspace stats">
+      <Stat label="Page views" value={totalViews} />
+      <Stat label="Patterns" value={counts.patterns} />
+      <Stat label="Hooks" value={counts.hooks} />
+      <Stat label="Configs" value={counts.configs} />
+    </section>
+  )
+}
+```
+
+`Stat` is a Server-compatible presentational atom (label + value) with no
+client JS. Only `StatsBar` itself is `'use client'` because it subscribes
+to the store. The `counts` prop (pattern/hook/config totals) is computed
+server-side from the YAML manifests so the bar shows accurate content
+counts even before any analytics accumulate.
+
+### 10.10 QuickLinks
+
+```typescript
+// Server Component — static cards linking to highest-traffic sections.
+// Link targets are fixed (the wiki's top-level sections); ordering MAY be
+// informed by analytics but the card set is server-determined.
+
+interface QuickLinkCard { href: string; label: string; description: string; icon: string }
+
+export function QuickLinks({ links }: { links: QuickLinkCard[] }) {
+  return (
+    <nav className="quick-links" aria-label="Quick links">
+      {links.map(l => (
+        <a key={l.href} href={l.href} className="quick-link-card">
+          <i className={l.icon} aria-hidden="true" />
+          <span className="quick-link-card__label">{l.label}</span>
+          <span className="quick-link-card__desc">{l.description}</span>
+        </a>
+      ))}
+    </nav>
+  )
+}
+```
+
+The default link set: `/patterns` (Pattern Library), `/hooks` (Hook
+Reference), `/playground` (Playground), `/config` (Configuration
+Reference), `/checks` (Check Catalog), `/tiers` (Enforcement Tiers).
+Zero client JS — these are plain anchor tags.
+
+### 10.11 TrendingSection
+
+```typescript
+// 'use client' — reads top pages from the analytics store via the
+// memoized useTopPages selector (§12.2a) so it only recomputes when
+// pageViews mutates. Falls back to a server-provided default list when
+// the store has insufficient data (cold start).
+
+interface TrendingSectionProps {
+  fallback: { path: string; title: string }[]  // server-provided default
+}
+
+export function TrendingSection({ fallback }: TrendingSectionProps) {
+  const top = useTopPages(6)
+  const items = top.length >= 4
+    ? top.map(t => ({ path: t.path, title: pageTitle(t.path) }))
+    : fallback
+  return (
+    <section className="trending" aria-label="Trending pages">
+      <h2>Trending</h2>
+      <ol className="trending-list">
+        {items.slice(0, 6).map((it, i) => (
+          <li key={it.path}>
+            <a href={it.path}><span className="trending-rank">{i + 1}</span>{it.title}</a>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+```
+
+Cold-start behavior: when fewer than 4 pages have been viewed, the section
+shows the server-provided `fallback` (a curated default set) so the home
+page is never empty. Once the store has enough data, it switches to
+real analytics-derived trending (simple all-time view counts per REQ Q3).
+
 ---
 
 ## 11. Pattern Classifier
 
-`src/lib/patterns.ts` MUST classify each `BannedPattern` into a category:
+`src/lib/patterns.ts` MUST classify each pattern from `config/banned_words.yaml`
+into a category. The classifier consumes **all three rule groups** in the config:
+`banned` (content patterns), `directory_rules` (directory-scoped content patterns),
+and `filename_rules` (patterns matched against file basenames). Each group has the
+same `{pattern, reason}` shape but different match semantics, so `ClassifiedPattern`
+carries a `scope` discriminator:
 
 ```typescript
+// Match semantics — determines where the pattern is applied.
+export type PatternScope = 'content' | 'filename' | 'directory'
+
 export type PatternCategory =
   | 'linter-suppression'
   | 'lazy-types'
@@ -1021,16 +1318,49 @@ export type PatternCategory =
   | 'filename-rules'
   | 'directory-rules'
 
-export interface ClassifiedPattern extends BannedPattern {
+export interface ClassifiedPattern {
+  pattern: string
+  reason: string
   category: PatternCategory
   categoryLabel: string
+  scope: PatternScope      // 'content' (banned:), 'directory' (directory_rules:), 'filename' (filename_rules:)
+  directory?: string       // present only when scope === 'directory' (the directory_rules key)
 }
 
-export function classifyPattern(pattern: BannedPattern): ClassifiedPattern
+export function classifyPattern(
+  entry: { pattern: string; reason: string },
+  scope: PatternScope,
+  directory?: string,
+): ClassifiedPattern
+
+// Convenience: classify all three groups from a parsed BannedWordsConfig.
+export function classifyAll(config: BannedWordsConfig): ClassifiedPattern[]
 ```
 
-The classifier MUST have 100% coverage — every pattern in `banned_words.yaml`
-MUST map to exactly one category. The test MUST enumerate all real patterns.
+Category assignment rules:
+- Entries under `banned:` map to one of the content categories
+  (`linter-suppression`, `lazy-types`, `silent-errors`, `legacy-fallback`,
+  `suppression`, `unsafe-reflection`, `data-classes`, `test-quality`,
+  `path-safety`, `uuid`, `container-versions`, `deprecated-python`,
+  `self-methods`, `special-chars`) with `scope: 'content'`.
+- Entries under `directory_rules:` map to `directory-rules` with
+  `scope: 'directory'` and `directory` set to the map key.
+- Entries under `filename_rules:` map to `filename-rules` with
+  `scope: 'filename'`.
+
+The classifier MUST have 100% coverage — every pattern across all three
+groups in `banned_words.yaml` MUST map to exactly one category. The test
+MUST enumerate all real patterns from all three groups.
+
+### 11.1 Playground Scope
+
+The live pattern playground (FR-8) matches patterns against editor **content**.
+Only `scope: 'content'` and `scope: 'directory'` patterns are eligible (a
+directory-scoped pattern is still a content match, just with a path guard).
+`scope: 'filename'` patterns MUST be excluded from the playground's match
+engine — they match basenames, not code, and have no meaning against editor
+text. The pattern library page (FR-4) lists all three scopes; filename-rule
+cards MUST display a "filename match" badge so the distinction is visible.
 
 ---
 
@@ -1087,8 +1417,32 @@ interface AnalyticsState {
 }
 ```
 
-Persistence: localStorage key `ami-ci-wiki-analytics`. Rotation: shift oldest 500
+Persistence: localStorage key `workspace-ci-wiki-analytics`. Rotation: shift oldest 500
 when exceeding 2000. Session ID: `crypto.randomUUID()` on first store creation.
+
+### 12.2a Derived Selectors (Memoization)
+
+`getTopPages` and aggregates scan up to 2000 events on every store access.
+To avoid recomputing on every render, the store maintains **derived state**
+updated in the `track`/`addFeedback` actions, not recomputed on read:
+
+```typescript
+// Derived (maintained incrementally, not recomputed on read):
+//   pageViews:      incremented on page_view track
+//   totalViews:     incremented on page_view track
+//   totalFeedback:  incremented on addFeedback
+//   totalSearches:  incremented on search track
+//   topPagesCache:  recomputed lazily only when pageViews mutates,
+//                   memoized by a dirty flag cleared on read.
+```
+
+`getTopPages(limit)` returns a cached sorted slice, recomputed only when
+`pageViews` has changed since the last call (dirty-flag memoization).
+`getPageViews(path)` is an O(1) lookup into `pageViews`. Components consume
+these via `useAnalyticsStore` selectors, which re-render only when the
+selected slice changes (Zustand shallow equality). A `useMemo`-based
+selector hook (`useTopPages(limit)`) is provided so the home page
+trending section does not recompute on unrelated store mutations.
 
 ### 12.3 Page Stats Tracking Hooks
 
@@ -1329,9 +1683,16 @@ Both loaded via `next/font/google` with `display: 'swap'` and CSS variable expor
 
 ### 15.5 Icons
 
-RemixIcon 4.3.0 via CDN `<link>` in `<head>`. Usage: `<i className="ri-home-4-line" />`.
-The `Icon` component wraps this with size variants (`sm`/`md`/`lg`) and
-`aria-hidden="true"`.
+RemixIcon 4.3.0 is **self-hosted**: the icon font CSS and webfont files are
+vendored into `web/public/icons/remixicon/` and loaded via a local `<link>`
+in `<head>` (no render-blocking external CDN request — protects LCP per
+NFR-1.1). Usage: `<i className="ri-home-4-line" />`. The `Icon` component
+wraps this with size variants (`sm`/`md`/`lg`) and `aria-hidden="true"`.
+
+A build-time script (or manual step documented in `web/README.md`) copies
+the pinned RemixIcon release into `web/public/icons/remixicon/`. The
+version is pinned in `web/package.json` via a `remixicon` devDependency so
+the vendored set is reproducible.
 
 ---
 
@@ -1461,7 +1822,7 @@ module.exports = nextConfig
 
 ```json
 {
-  "name": "ami-ci-wiki",
+  "name": "workspace-ci-wiki",
   "private": true,
   "version": "0.1.0",
   "packageManager": "npm@11.6.2",
@@ -1493,7 +1854,8 @@ module.exports = nextConfig
     "@codemirror/lang-python": "^6.2.1",
     "@codemirror/lang-javascript": "^6.2.5",
     "@codemirror/commands": "^6.10.3",
-    "@codemirror/language": "^6.12.3"
+    "@codemirror/language": "^6.12.3",
+    "dompurify": "^3.2.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "3.3.5",
@@ -1513,10 +1875,40 @@ module.exports = nextConfig
     "typescript": "5.9.3",
     "vitest": "^4.1.7",
     "@vitest/coverage-v8": "^4.1.7",
-    "jsdom": "^29.0.0"
+    "jsdom": "^29.0.0",
+    "remixicon": "4.3.0",
+    "@types/dompurify": "^3.0.5"
   }
 }
 ```
+
+### 19.3 Wiki Self-Compliance (Banned-Words Exemptions)
+
+The wiki lives inside the strict-tier workspace-ci repo, so its files are
+scanned by the repo's own `ci_check_banned_words` hook. The wiki's purpose
+is to document and display the banned patterns, so its prose and rendered
+data legitimately contain the very words and regexes the hooks ban
+(`fallback`, `legacy`, `silent`, ` -- `, `python3`, `dict[str, Any]`,
+`# type: ignore`, etc.).
+
+Exemptions are declared in `config/banned_words_exceptions.yaml` under the
+`web/` paths, with two tiers:
+
+1. **Blanket (`pattern: '.*'`)** for `web/src/data/` and `web/content/` —
+   generated JSON and markdown that render patterns and example violations
+   as data, mirroring the existing blanket exemption for
+   `config/banned_words.yaml` itself.
+2. **Prose-term exemptions** for all of `web/` covering documentary words
+   (`silent`, `fallback`, `legacy`, ` -- `, `python3`, `lazy`, `mock`,
+   `stubs`, `compatibility`, `backwards`, `degradation`, `suppress`, etc.)
+   that appear in string literals, category labels, and UI text.
+
+Code-quality patterns (`# type: ignore`, `dict[str, Any]`, `noqa`,
+`eslint-disable`, `getattr`, etc.) remain **enforced** on `web/src/**`
+TS/TSX so the wiki's own source stays clean — only the data/content
+directories are blanket-exempt. This split lets the wiki document the
+patterns without fighting its own gates, while keeping its source code
+held to the same quality bar as the rest of the repo.
 
 ---
 
@@ -1554,7 +1946,7 @@ via `renderHook`, and are the backbone of component behavior.
 | Test file | Coverage |
 |-----------|----------|
 | `regex-engine.test.ts` | Pattern matching, empty input, invalid regex skip, dedup, line calc, language filtering |
-| `patterns.test.ts` | `classifyPattern()` — full enumeration of all real patterns from `banned_words.yaml`, every pattern → exactly one category, all 16 categories have >=1 pattern |
+| `patterns.test.ts` | `classifyPattern()` / `classifyAll()` — full enumeration of all real patterns from all three groups in `banned_words.yaml` (`banned`, `directory_rules`, `filename_rules`), every pattern → exactly one category, all 16 categories have >=1 pattern, scope discriminator correct per group |
 | `search-index.test.ts` | Index building from mock data, search returns correct results, fuzzy tolerance, empty query |
 | `analytics-store.test.ts` | Event recording, aggregates (`getTopPages`, `getPageViews`, `getUserVote`), FIFO rotation at 2000, localStorage persistence round-trip, sessionId stability |
 | `theme-store.test.ts` | Initial detection, toggle behavior, localStorage persistence, `data-theme` attribute |
@@ -1690,6 +2082,71 @@ Shell function comments SHOULD follow:
 ci_check_name() {
 ```
 
+### 21.4 Config Schema Files (Field Documentation Source)
+
+FR-7.3 requires each configuration reference page to render "fields, types,
+defaults, and descriptions." The YAML config files themselves carry no
+field-level schema — they are pure data. To preserve the single-source-of-truth
+principle without hand-maintaining prose that drifts from the configs, the
+wiki derives field documentation from **schema files** co-located with the
+configs.
+
+#### Convention
+
+One `config/<name>.schema.yaml` per `config/<name>.yaml`. The schema file is
+the canonical source for field descriptions; the wiki reads it at request
+time and renders it via `ConfigFieldTable` (§10.7). The data config and the
+schema are independent files — the schema describes shape and intent, the
+config holds values.
+
+#### Schema File Shape
+
+```yaml
+config: <name>            # config file name without .yaml
+description: "<one-line summary>"
+fields:
+  - path: <dotpath>        # [] suffix = list; [].<sub> = item field; <name> = map key placeholder
+    type: <yaml|string|integer|boolean|list|list<T>|map|object>
+    required: <true|false> # defaults to false
+    default: <value>       # omit if none
+    description: "<human-readable field description>"
+```
+
+A reference implementation exists at `config/banned_words.schema.yaml`.
+Implementation MUST add one schema file per config before the corresponding
+`/config/[name]` page can render field docs. A missing schema file MUST cause
+the config detail page to render the raw YAML only (no field table) and emit
+a build-time warning — never a hard failure, so partial schema coverage is
+deployable.
+
+#### Validation
+
+`scripts/extract-docs` (Phase 1) MUST validate that every `*.schema.yaml`
+parses and that every `path` in `fields` resolves against the corresponding
+config's top-level keys. Drift between schema paths and config keys is a
+build warning, not an error.
+
+### 21.5 Scripts Manifest (Tooling Page Source)
+
+FR-11 requires the tooling page to document every workspace script. Scripts
+have no docstrings (they are bash), so the canonical source is
+`scripts/manifest.yaml` — a hand-maintained but structured manifest the wiki
+reads at request time. This mirrors the `required_hooks.yaml` pattern: a
+manifest that is the single source for a documentation surface, validated
+against the actual files it describes.
+
+A reference implementation exists at `scripts/manifest.yaml`. Field shape:
+`id`, `path`, `summary`, `usage`, `category`, optional `args` (list of
+`{name, description}`), `output`, optional `make_target`.
+
+#### Validation
+
+`ci/check_required_hooks_present.py` (or a sibling check) MUST verify that
+every executable file directly under `scripts/` has a manifest entry and
+that every manifest `path` resolves to an existing file. Unregistered scripts
+fail the check; stale manifest entries fail the check. This closes the
+dogfood loop so the wiki tooling page cannot drift from the scripts on disk.
+
 ---
 
 ## 22. Requirement Traceability
@@ -1698,14 +2155,14 @@ ci_check_name() {
 |------------|-------------|--------|
 | FR-1: Wiki Shell Layout | 10.1 | Specified |
 | FR-2: Full-Text Search | 14 | Specified |
-| FR-3: Home Page | 9.1 | Specified |
-| FR-4: Pattern Library | 9.2, 10.2, 11 | Specified |
+| FR-3: Home Page | 9.1, 10.8—10.11 | Specified |
+| FR-4: Pattern Library | 9.2, 10.2, 11, 11.1 | Specified |
 | FR-5: Hook Reference | 9.2, 10.1 | Specified |
 | FR-6: Hook Detail Page | 9.1 | Specified |
-| FR-7: Configuration Reference | 9.1 | Specified |
+| FR-7: Configuration Reference | 9.1, 10.3, 21.4 | Specified |
 | FR-8: Live Pattern Playground | 10.5, 13 | Specified |
 | FR-9: Check Catalog | 9.1, 21 | Specified |
-| FR-10—12: Tiers, Tooling, Integration | 9.1 | Specified |
+| FR-10—12: Tiers, Tooling, Integration | 9.1, 21.5 | Specified |
 | FR-13: Page Analytics | 12 | Specified |
 | FR-14: Page-Level Stats | 12.2 | Specified |
 | FR-15: Feedback Mechanism | 10.3, 10.4 | Specified |
@@ -1750,7 +2207,7 @@ ci_check_name() {
    RECOMMENDED: Configure `next.config.js` `serverExternalPackages` or add
    a `chokidar` watcher in the dev script.
 
-7. **Large YAML files:** `banned_words.yaml` is 291 lines — acceptable for
+7. **Large YAML files:** `banned_words.yaml` is 290 lines — acceptable for
    request-time loading. If YAML files grow significantly, consider file-mtime
    based cache invalidation.
 

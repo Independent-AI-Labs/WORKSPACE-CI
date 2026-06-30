@@ -40,7 +40,7 @@ fi
 # Find every .git directory under projects/, emit the parent path
 # relative to the workspace root. Includes nested repos at any depth.
 cd "$_workspace_root"
-find projects -type d -name .git 2>/dev/null | while IFS= read -r _gitdir; do
+find projects -type d -name .git | while IFS= read -r _gitdir; do
     _repo="$(dirname "$_gitdir")"
     echo "$_repo"
 done

@@ -1,16 +1,16 @@
-# AMI Makefile Contract v1.0
+# workspace-ci Makefile Contract v1.0
 # ──────────────────────────────────────────────────────────────────────────────
 # Include at the top of your Makefile:
 #
 #   CI_DIR := $(shell cd "$$(git rev-parse --show-toplevel 2>/dev/null)/path/to/ci" 2>/dev/null && pwd)
 #   -include $(CI_DIR)/lib/makefile_contract.mk
 #
-# Required targets: install, install-ci, install-hooks, sync, check, lint,
+# Required targets: init, install, install-ci, install-hooks, sync, check, lint,
 #                   type-check, test, clean, preflight
 # ──────────────────────────────────────────────────────────────────────────────
 
 CONTRACT_VERSION := 1.0
-CONTRACT_TARGETS := install install-ci install-hooks sync check lint type-check test clean preflight
+CONTRACT_TARGETS := init install install-ci install-hooks sync check lint type-check test clean preflight
 
 .PHONY: contract-check
 contract-check: ## Verify Makefile implements all required contract targets

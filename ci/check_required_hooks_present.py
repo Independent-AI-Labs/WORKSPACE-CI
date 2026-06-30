@@ -86,10 +86,18 @@ class QualityExceptions(BaseModel):
 
 
 def _find_workspace_root(start: Path) -> Path | None:
-    """Walk up from start looking for workspace markers."""
+    """Walk up from start looking for workspace markers.
+
+    Recognized markers (any one suffices):
+    - ``.boot-linux/`` directory (original workspace layout)
+    - ``config/required_hooks.yaml`` file (flat single-repo layout where
+      the project directory IS the workspace root)
+    """
     cur = start.resolve()
     while cur != cur.parent:
         if (cur / ".boot-linux").is_dir():
+            return cur
+        if (cur / "config" / "required_hooks.yaml").is_file():
             return cur
         cur = cur.parent
     return None
@@ -107,14 +115,15 @@ def _registry_source(workspace_root: Path) -> Path | None:
     live = workspace_root / "workspace" / "config" / "project_enforcement.yaml"
     if live.is_file():
         return live
-    template = (
+    candidates = [
         workspace_root
         / "projects"
         / "CI"
         / "templates"
-        / "project_enforcement.template.yaml"
-    )
-    return template if template.is_file() else None
+        / "project_enforcement.template.yaml",
+        workspace_root / "templates" / "project_enforcement.template.yaml",
+    ]
+    return next((p for p in candidates if p.is_file()), None)
 
 
 def _load_registry(src: Path) -> dict[str, RegistryValue] | None:
@@ -189,8 +198,12 @@ def _resolve_tier(workspace_root: Path, project_rel: str) -> str:
 
 
 def _load_manifest(workspace_root: Path) -> HooksManifest | None:
-    path = workspace_root / "projects" / "CI" / "config" / "required_hooks.yaml"
-    if not path.is_file():
+    candidates = [
+        workspace_root / "projects" / "CI" / "config" / "required_hooks.yaml",
+        workspace_root / "config" / "required_hooks.yaml",
+    ]
+    path = next((p for p in candidates if p.is_file()), None)
+    if path is None:
         return None
     loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     if not isinstance(loaded, dict):
@@ -216,9 +229,13 @@ def _check_manifest_completeness(
     manifest: HooksManifest,
 ) -> list[str]:
     """Every check_*.py in ci/ must be registered in the manifest."""
-    ci_dir = workspace_root / "projects" / "CI" / "ci"
-    if not ci_dir.is_dir():
-        return [f"ci/ directory not found at {ci_dir}"]
+    candidates = [
+        workspace_root / "projects" / "CI" / "ci",
+        workspace_root / "ci",
+    ]
+    ci_dir = next((p for p in candidates if p.is_dir()), None)
+    if ci_dir is None:
+        return [f"ci/ directory not found under {workspace_root}"]
 
     expected_modules = {f"ci.{p.stem}" for p in ci_dir.glob("check_*.py")}
     registered_modules = {

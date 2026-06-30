@@ -49,111 +49,27 @@ ci_check_unstaged() {
 }
 
 # --- ci_check_banned_words [files...] ---
+# Delegates to lib/check_banned_words.py (Python implementation).
+# Replaces the prior bash+AWK implementation that spawned ~33,000
+# subprocesses under PRoot (58 patterns x 96 files x ~6 procs),
+# taking 5+ minutes. The Python version does zero subprocess spawns
+# for pattern matching and completes in <1s.
 ci_check_banned_words() {
     local config="${CI_CONFIG_DIR}/banned_words.yaml"
-    local errors=0
-
     if [[ ! -f "$config" ]]; then
         ci_fail "Config not found: $config"
         return 1
     fi
-
-    local records_file exc_file _grep_tmp
-    records_file="$(mktemp)"
-    exc_file="$(mktemp)"
-    _grep_tmp="$(mktemp)"
-
-    awk -f "$_CHECKS_DIR/parse_banned_words.awk" "$config" > "$records_file"
-    awk -f "$_CHECKS_DIR/parse_exceptions.awk" "$config" > "$exc_file"
-
-    # Load per-project exceptions if present (SPEC: config/banned_words_exceptions.yaml)
-    local project_exc="config/banned_words_exceptions.yaml"
-    if [[ -f "$project_exc" ]]; then
-        awk -f "$_CHECKS_DIR/parse_exceptions.awk" "$project_exc" >> "$exc_file"
-    fi
-
-    # Build exception lookup: pattern -> combined path regex
-    declare -A _exc_map=()
-    while IFS=$'\034' read -r exc_pattern exc_paths; do
-        [[ -z "$exc_pattern" || -z "$exc_paths" ]] && continue
-        if [[ -n "${_exc_map[$exc_pattern]+x}" ]]; then
-            _exc_map[$exc_pattern]="${_exc_map[$exc_pattern]}|${exc_paths}"
-        else
-            _exc_map[$exc_pattern]="$exc_paths"
-        fi
-    done < "$exc_file"
-    rm -f "$exc_file"
-
-    # --- Build file list ---
-    local files=()
-    while IFS= read -r f; do
-        [[ -z "$f" ]] && continue
-        files+=("$f")
-    done < <(ci_file_list "$@" | ci_filter_ext .py .js .ts .rs .toml .sh)
-
-    ci_info "Scanning ${#files[@]} file(s) for banned patterns..."
-
-    # --- Check each file against each record ---
-    while IFS=$'\034' read -r section pattern reason dir_key; do
-        [[ -z "$pattern" ]] && continue
-
-        # Look up exception regex for this pattern
-        local exc="${_exc_map[$pattern]:-}"
-
-        for filepath in "${files[@]}"; do
-            # Skip if exception matches filepath. Use `--` separator so
-            # patterns that happen to start with `-` (e.g. the banned
-            # em-dash rules) are never interpreted as grep options.
-            if [[ -n "$exc" ]] && echo "$filepath" | grep -qE -- "$exc"; then
-                continue
-            fi
-
-            local basename
-            basename="$(basename "$filepath")"
-
-            # filename_rules: check basename only
-            if [[ "$section" == "filename_rules" ]]; then
-                if echo "$basename" | grep -qE -- "$pattern"; then
-                    ci_error "$filepath" "0" "$pattern" "$reason" "$basename"
-                    errors=$((errors + 1))
-                fi
-                continue
-            fi
-
-            # directory_rules: only apply if file is under the specified dir
-            if [[ "$section" == "directory_rules" && -n "$dir_key" ]]; then
-                case "$filepath" in
-                    "$dir_key/"* | *"/$dir_key/"*) ;;
-                    *) continue ;;
-                esac
-            fi
-
-            [[ -f "$filepath" ]] || continue
-
-            # Strip \b from pattern for validation only (word boundary is not a BRE/ERE construct)
-            local validate_pattern="${pattern//\\b/}"
-            if echo "" | grep -nE -- "$validate_pattern" >/dev/null 2>&1; then
-                ci_warn "Skipping invalid pattern: '$pattern' (reason: $reason)"
-                continue
-            fi
-
-            if grep -nE -- "$pattern" "$filepath" > "$_grep_tmp"; then
-                while IFS=: read -r line_num content; do
-                    ci_error "$filepath" "$line_num" "$pattern" "$reason" "$content"
-                    errors=$((errors + 1))
-                done < "$_grep_tmp"
-            fi
-        done
-    done < "$records_file"
-
-    rm -f "$records_file" "$_grep_tmp"
-
-    if [[ $errors -gt 0 ]]; then
-        echo ""
-        ci_fail "$errors banned pattern(s) found."
+    local _ci_py="${CI_PROJECT_ROOT:-}/.venv/bin/python"
+    local script_path="${CI_LIB_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}/check_banned_words.py"
+    if [[ ! -x "$_ci_py" ]]; then
+        ci_fail "Banned-words: CI venv python not found at $_ci_py"
         return 1
     fi
-
-    ci_pass "No banned patterns found."
-    return 0
+    if [[ ! -f "$script_path" ]]; then
+        ci_fail "Banned-words: helper not found at $script_path"
+        return 1
+    fi
+    CI_CONFIG_DIR="$CI_CONFIG_DIR" \
+        "$_ci_py" "$script_path" "$@" </dev/null
 }

@@ -18,12 +18,12 @@ from ci._docker_versions import (
     is_dockerfile,
     upgrade_compose,
 )
+from ci.models import LooseDependency, OutdatedDependency
 
 
 def _tags(*names: str) -> list[DockerHubTag]:
     """Build a list of DockerHubTag from bare tag names — fixture helper."""
     return [DockerHubTag(name=n) for n in names]
-from ci.models import LooseDependency, OutdatedDependency
 
 
 class TestParseDockerImage:

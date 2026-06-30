@@ -1,11 +1,11 @@
 """Shared types and diff parser for silent-swallow detectors."""
 
 import re
-from typing import Iterator
+from collections.abc import Iterator
 
 
 class AddedLine:
-    __slots__ = ("path", "lineno", "text")
+    __slots__ = ("lineno", "path", "text")
 
     def __init__(self, path: str, lineno: int, text: str) -> None:
         self.path = path
@@ -14,6 +14,25 @@ class AddedLine:
 
     def __repr__(self) -> str:
         return f"AddedLine({self.path}:{self.lineno}: {self.text!r})"
+
+
+def _parse_diff_git_header(raw: str) -> str | None:
+    """Extract file path from 'diff --git a/... b/...' line."""
+    marker = " b/"
+    idx = raw.find(marker)
+    if idx == -1:
+        return None
+    return raw[idx + len(marker) :]
+
+
+def _update_current_file(raw: str, current_file: str | None) -> str | None:
+    """Update current_file from '+++ b/path' or '/dev/null' line."""
+    payload = raw[4:]
+    if payload.startswith("b/"):
+        return payload[2:]
+    if payload == "/dev/null":
+        return None
+    return current_file
 
 
 def parse_diff(diff_text: str) -> Iterator[AddedLine]:
@@ -25,16 +44,11 @@ def parse_diff(diff_text: str) -> Iterator[AddedLine]:
 
     for raw in diff_text.splitlines():
         if raw.startswith("diff --git "):
-            parts = raw.split(" b/", 1)
-            current_file = parts[1] if len(parts) == 2 else None
+            current_file = _parse_diff_git_header(raw)
             new_lineno = 0
             continue
         if raw.startswith("+++ "):
-            payload = raw[4:]
-            if payload.startswith("b/"):
-                current_file = payload[2:]
-            elif payload == "/dev/null":
-                current_file = None
+            current_file = _update_current_file(raw, current_file)
             new_lineno = 0
             continue
         if raw.startswith("--- "):

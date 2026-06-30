@@ -24,7 +24,11 @@ set -euo pipefail
 
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=../lib/ci.sh
-source "$_SCRIPT_DIR/../lib/ci.sh"
+_ci_lib="$_SCRIPT_DIR/../lib/ci.sh"
+if ! source "$_ci_lib"; then
+    echo "ERROR: failed to source $_ci_lib" >&2
+    exit 2
+fi
 
 # ---------------------------------------------------------------------------
 # Locate cloc — prefer .boot-linux/.boot-macos, fall back to PATH
@@ -37,14 +41,23 @@ _find_cloc() {
     for _c in "${_cands[@]}"; do
         [[ -x "$_c" ]] && { echo "$_c"; return 0; }
     done
-    if command -v cloc >/dev/null 2>&1; then
+    if command -v cloc >/dev/null; then
         command -v cloc
         return 0
     fi
     return 1
 }
 
-CLOC="$(_find_cloc || echo '')"
+# Resolve cloc; empty string if not found. _find_cloc returns 0/1 only
+# (writes path to stdout on success, no output on failure); no stderr
+# normally. Command substitution's exit status IS the inner command's,
+# so `if CLOC="$(...)"` is rc-capture: enters the if-branch on rc=0.
+CLOC=""
+if CLOC="$(_find_cloc)"; then
+    :
+else
+    CLOC=""
+fi
 if [[ -z "$CLOC" ]]; then
     ci_fail "cloc not found. Install via: bash ami/scripts/bootstrap/bootstrap_cloc.sh"
     exit 1
@@ -94,12 +107,14 @@ else
     if [[ "$_skip_umbrella" -eq 0 && -d "$_root/.git" ]]; then
         _repos+=("$_root")
     fi
-    while IFS= read -r _gitdir; do
+    _gitdirs=()
+    ci_capture_pipe _gitdirs 'find "$1" -name ".git" -type d | sort' "$_root"
+    for _gitdir in "${_gitdirs[@]}"; do
         _repo="$(dirname "$_gitdir")"
         [[ "$_repo" == "$_root" ]] && continue
         echo "$_repo" | grep -qE "$_SKIP_DIRS" && continue
         _repos+=("$_repo")
-    done < <(find "$_root" -name ".git" -type d 2>/dev/null | sort)
+    done
 fi
 
 if [[ ${#_repos[@]} -eq 0 ]]; then
@@ -137,17 +152,30 @@ for _repo in "${_repos[@]}"; do
     fi
 
     _out="$_tmpdir/$(echo "$_rel" | tr '/' '_').json"
-    if ! ( cd "$_repo" && "$CLOC" "${_cloc_args[@]}" --report-file="$_out" . ) >/dev/null 2>&1; then
+    _co_rc=0
+    _co_out="$(mktemp)"; _co_err="$(mktemp)"
+    ( cd "$_repo" && "$CLOC" "${_cloc_args[@]}" --report-file="$_out" . ) \
+        >"$_co_out" 2>"$_co_err" || _co_rc=$?
+    if [[ $_co_rc -ne 0 ]]; then
+        if [[ -s "$_co_err" ]]; then
+            printf '[code-stats] cloc failed on %s (rc=%d): %s\n' \
+                "$_rel" "$_co_rc" "$(head -1 "$_co_err")" >&2
+        else
+            printf '[code-stats] cloc failed on %s (rc=%d, no stderr)\n' \
+                "$_rel" "$_co_rc" >&2
+        fi
+        rm -f "$_co_out" "$_co_err"
         _failed_repos+=("$_rel")
         continue
     fi
+    rm -f "$_co_out" "$_co_err"
     [[ ! -s "$_out" ]] && continue
 
     # Parse JSON output. cloc's JSON shape:
     # { "header": {...}, "<Lang>": {nFiles, blank, comment, code}, ..., "SUM": {...} }
     # Use a small Python helper for robustness (jq isn't always present).
-    local _py_rc=0
-    python3 - "$_out" "$_rel" "$_per_repo" "$_per_repo_lang" <<'PY' || _py_rc=$?
+    _py_rc=0
+    uv run python - "$_out" "$_rel" "$_per_repo" "$_per_repo_lang" <<'PY' || _py_rc=$?
 import json, sys, os
 src, rel, per_repo, per_lang = sys.argv[1:]
 with open(src) as f:
@@ -173,8 +201,8 @@ fi
 # Render
 # ---------------------------------------------------------------------------
 # Use Python for table formatting — awk's number formatting + sort across
-# multiple keys gets ugly fast and we already depend on python3 above.
-python3 - "$_per_repo" "$_per_repo_lang" "$_mode" "$_top_n" "$_json" "$_root" <<'PY'
+# multiple keys gets ugly fast and we already depend on python above.
+uv run python - "$_per_repo" "$_per_repo_lang" "$_mode" "$_top_n" "$_json" "$_root" <<'PY'
 import sys, json, os
 per_repo_path, per_lang_path, mode, top_n, as_json, root = sys.argv[1:]
 top_n = int(top_n)

@@ -23,8 +23,7 @@ _setup_tmpdir() {
     cp "$LIB_DIR"/ci.sh "$TEST_TMP/workspace/projects/CI/lib/"
     cp "$LIB_DIR"/checks.sh "$TEST_TMP/workspace/projects/CI/lib/"
     cp "$LIB_DIR"/checks_*.sh "$TEST_TMP/workspace/projects/CI/lib/"
-    cp "$LIB_DIR"/parse_banned_words.awk "$TEST_TMP/workspace/projects/CI/lib/"
-    cp "$LIB_DIR"/parse_exceptions.awk "$TEST_TMP/workspace/projects/CI/lib/"
+    cp "$LIB_DIR"/check_banned_words.py "$TEST_TMP/workspace/projects/CI/lib/"
     cp "$LIB_DIR"/check_silent_swallow.py "$TEST_TMP/workspace/projects/CI/lib/"
     cp "$LIB_DIR"/check_silent_swallow_base.py "$TEST_TMP/workspace/projects/CI/lib/"
     cp "$LIB_DIR"/check_silent_swallow_python.py "$TEST_TMP/workspace/projects/CI/lib/"
@@ -41,6 +40,9 @@ _setup_tmpdir() {
     # Minimal pyproject.toml at workspace root
     echo '[project]' > "$TEST_TMP/workspace/pyproject.toml"
     echo 'name = "workspace"' >> "$TEST_TMP/workspace/pyproject.toml"
+    # Symlink the real .venv/ so ci_check_silent_swallow's e2e tests can
+    # find bin/python (the classifier requires a working interpreter).
+    ln -s "$PROJECT_DIR/.venv" "$TEST_TMP/workspace/projects/CI/.venv"
 }
 
 _teardown_tmpdir() {

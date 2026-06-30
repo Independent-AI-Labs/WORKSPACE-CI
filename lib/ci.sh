@@ -161,3 +161,139 @@ ci_read_yaml_list() {
         in_key && /^[^ ]/ { exit }
     ' "$file"
 }
+
+# ---------------------------------------------------------------------------
+# Portable output capture (virtualization-safe)
+# ---------------------------------------------------------------------------
+# Process substitution (`< <(cmd)`) opens /dev/fd/NN by path, which is
+# broken under PRoot, some bwrap/firejail sandboxes, and chroots without
+# /proc. The helpers below use temp files (mktemp, 0600) instead — works
+# on every POSIX system and every virtualization layer. Requires bash 4.3+
+# for nameref.
+
+# ci_capture_lines <array-nameref> -- <command...>
+#   Run <command>, capture stdout lines into <array-nameref> (blanks skipped).
+#   Preserves producer exit code. Temp file is 0600 via mktemp, auto-removed.
+#
+#   Example:
+#     local exts=()
+#     ci_capture_lines exts -- ci_read_yaml_list "$config" "extensions"
+ci_capture_lines() {
+    local -n _cl_arr=$1; shift
+    [[ "${1:-}" == "--" ]] && shift
+    local _cl_tmp; _cl_tmp=$(mktemp) || return 1
+    # shellcheck disable=SC2064
+    trap "rm -f '$_cl_tmp'" RETURN INT TERM
+    local _cl_rc=0
+    "$@" > "$_cl_tmp" || _cl_rc=$?
+    _cl_arr=()
+    local _cl_v
+    while IFS= read -r _cl_v; do
+        [[ -n "$_cl_v" ]] && _cl_arr+=("$_cl_v")
+    done < "$_cl_tmp"
+    rm -f "$_cl_tmp"
+    trap - RETURN INT TERM
+    return "$_cl_rc"
+}
+
+# ci_capture_pipe <array-nameref> <snippet> [args...]
+#   Like ci_capture_lines but runs <snippet> via eval in a subshell — for
+#   pipelines (ci_file_list | ci_filter_ext, find | sort, etc.). The
+#   subshell inherits all shell functions and variables from the parent,
+#   so snippet can call ci_file_list, ci_filter_ext, etc. The snippet's
+#   "$@" / "$1".. refer to the args passed after the snippet.
+#
+#   SECURITY: <snippet> is passed to eval — it MUST be a hardcoded string
+#   literal in the calling code, NEVER user input. All current call sites
+#   use single-quoted static snippets.
+#
+#   Example:
+#     local files=()
+#     ci_capture_pipe files 'ci_file_list "$@" | ci_filter_ext .py .sh' "$@"
+ci_capture_pipe() {
+    local -n _cp_arr=$1; shift
+    local _cp_snippet=$1; shift
+    local _cp_tmp; _cp_tmp=$(mktemp) || return 1
+    # shellcheck disable=SC2064
+    trap "rm -f '$_cp_tmp'" RETURN INT TERM
+    local _cp_rc=0
+    ( eval "$_cp_snippet" ) > "$_cp_tmp" || _cp_rc=$?
+    _cp_arr=()
+    local _cp_v
+    while IFS= read -r _cp_v; do
+        [[ -n "$_cp_v" ]] && _cp_arr+=("$_cp_v")
+    done < "$_cp_tmp"
+    rm -f "$_cp_tmp"
+    trap - RETURN INT TERM
+    return "$_cp_rc"
+}
+
+# ---------------------------------------------------------------------------
+# Boot-path resolver (hierarchical .boot-linux/ + .venv/ contract per SPEC-BOOT-LAYOUT)
+# ---------------------------------------------------------------------------
+
+# ci_resolve_boot_path <start-dir>
+#   Pure function. Walks up from <start-dir> to /. At each level that
+#   contains .boot-linux/python-env/bin, prepends it to the accumulator;
+#   at each level that contains .boot-linux/bin, prepends it after the
+#   python-env entry. Returns the accumulated string (colon-separated
+#   entries, no trailing colon — caller prepends ":$PATH").
+#
+#   Then reads config/boot_layout.yaml (if present at <start-dir>) and
+#   prepends each inherit: entry's bin subdir AFTER the walk-up results.
+#   inherit entries are relative to <start-dir> (repo root), NOT CWD.
+#   They are resolved via `cd <start>; cd <entry>; pwd -P` (physical
+#   path, no symlink expansion in intermediate components).
+#
+#   Walk-up produces: child (closer to <start-dir>) prepended leftmost
+#   within the walk-up phase. inherit entries prepend AFTER walk-up, so
+#   inherit entries are LEFTMOST overall = highest precedence. Among
+#   inherit entries, LATER-listed entries are prepended later → they
+#   land leftmost → they win (see §3.3 precedence rule).
+#
+#   Pure: no side effects, no network. The `cd ... && pwd -P` subshells
+#   do not mutate the parent shell's CWD.
+#
+#   NO SILENT ERROR SUPPRESSION. A failed `cd "$entry"` emits its native
+#   `bash: cd: <path>: No such file or directory` to stderr — that IS
+#   the visible signal per FR-BL-3.3. `|| continue` propagates the skip;
+#   the stderr keeps the trace honest. No stderr redirection to the
+#   null device, no exit-code-masking fallbacks.
+ci_resolve_boot_path() {
+    local start="$1" walk accum=""
+    walk="$start"
+    while [[ "$walk" != "/" && "$walk" != "." ]]; do
+        if [[ -d "$walk/.boot-linux/python-env/bin" ]]; then
+            accum="$walk/.boot-linux/python-env/bin:$accum"
+        fi
+        if [[ -d "$walk/.boot-linux/bin" ]]; then
+            accum="$walk/.boot-linux/bin:$accum"
+        fi
+        walk="$(dirname "$walk")"
+    done
+    # Explicit inherit: entries — prepended AFTER walk-up; later-listed = leftmost = wins.
+    # Entries are relative to the repo root (= $start), NOT to CWD. Resolve
+    # them by prefixing $start before the existence check and the accum prepend.
+    # Use `cd "$start" && cd "$entry"` to resolve relative paths portably
+    # (pwd -P avoids symlink expansion in the resolved path; we want the
+    # literal directory, not its symlink target, for PATH-prepend stability).
+    local layout="$start/config/boot_layout.yaml"
+    if [[ -f "$layout" ]]; then
+        local inherited=()
+        if ci_capture_lines inherited -- ci_read_yaml_list "$layout" "inherit"; then
+            local entry resolved
+            for entry in "${inherited[@]}"; do
+                # Strip trailing slash. Entries point at .boot-linux/ dirs.
+                entry="${entry%/}"
+                # Resolve relative to $start (repo root), not CWD.
+                # On failure (non-existent path) cd emits its native stderr
+                # (visible, not swallowed) and || continue propagates the skip.
+                resolved="$(cd "$start" && cd "$entry" && pwd -P)" || continue
+                if [[ -d "$resolved/bin" ]]; then
+                    accum="$resolved/bin:$accum"
+                fi
+            done
+        fi
+    fi
+    printf '%s' "$accum"
+}

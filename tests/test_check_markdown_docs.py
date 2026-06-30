@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+
 from ci._md_checkers import SEVERITY_ERROR, SEVERITY_WARNING, check_reference
 from ci._md_refs import parse_doc
 from ci._md_slug import slugify

@@ -1,0 +1,133 @@
+# workspace-ci scripts manifest.
+#
+# Single source of truth for the wiki tooling page (FR-11). The wiki reads
+# this at request time to render per-script documentation (CLI usage,
+# arguments, output format). Adding a new script to scripts/ MUST be paired
+# with an entry here; `ci/check_required_hooks_present.py` (or a sibling
+# check) validates manifest completeness so the wiki never drifts from the
+# actual scripts on disk.
+#
+# Field reference:
+#   id          — stable script id (basename without extension).
+#   path        — path relative to repo root.
+#   summary     — one-line description.
+#   usage       — CLI usage string (rendered in a code block).
+#   category    — bootstrap | hook-lifecycle | workspace | compliance | history.
+#   args        — optional list of {name, description} for documented flags.
+#   output      — description of what the script emits (stdout/file/exit).
+#   make_target — optional Makefile target that invokes this script.
+
+version: 1
+
+scripts:
+  - id: generate-hooks
+    path: scripts/generate-hooks
+    summary: Generate native git hooks from .pre-commit-config.yaml.
+    usage: generate-hooks [--config PATH] [--output-dir PATH] [--dry-run]
+    category: hook-lifecycle
+    args:
+      - { name: --config, description: "Path to .pre-commit-config.yaml (default: ./.pre-commit-config.yaml)" }
+      - { name: --output-dir, description: "Directory to write hooks into (default: .git/hooks)" }
+      - { name: --dry-run, description: "Print generated hooks to stdout without writing files" }
+    output: "Writes executable bash scripts to .git/hooks/{pre-commit,commit-msg,pre-push}."
+    make_target: install-hooks
+
+  - id: cleanup-precommit
+    path: scripts/cleanup-precommit
+    summary: Remove all traces of the pre-commit Python package (keeps .pre-commit-config.yaml).
+    usage: cleanup-precommit [--remove-config]
+    category: hook-lifecycle
+    args:
+      - { name: --remove-config, description: "Also delete .pre-commit-config.yaml (off by default — it's our config source)" }
+    output: "Deletes pre-commit hooks, virtualenvs, and cache. Exits 0."
+
+  - id: bootstrap-gitleaks
+    path: scripts/bootstrap-gitleaks
+    summary: Fetch the gitleaks binary and place it on PATH (idempotent, validated by SHA256).
+    usage: bootstrap-gitleaks
+    category: bootstrap
+    output: "Installs gitleaks to $CI_PROJECT_ROOT/${boot_dir}/bin (boot_dir read from config/boot_layout.yaml; default .boot-linux) if absent/upgrade-needed; no-op otherwise."
+    make_target: install-gitleaks
+
+  - id: bootstrap-uv
+    path: scripts/bootstrap-uv
+    summary: Fetch the uv binary and place it on PATH (idempotent; SHA256 opt-in via UV_VERIFY_SHA256=1).
+    usage: bootstrap-uv
+    category: bootstrap
+    output: "Installs uv (and uvx if shipped) to $CI_PROJECT_ROOT/${boot_dir}/bin (boot_dir read from config/boot_layout.yaml; default .boot-linux) if absent/upgrade-needed; no-op otherwise. The per-repo .venv/ is created later by `uv sync`, NOT by this script."
+
+  - id: bootstrap-rust
+    path: scripts/bootstrap-rust
+    summary: Bootstrap a $RUST_TOOLCHAIN Rust toolchain into CI's own .boot-linux/rust and symlink binaries into .boot-linux/bin (idempotent, isolated via RUSTUP_HOME/CARGO_HOME).
+    usage: bootstrap-rust
+    category: bootstrap
+    output: "Installs rustc/cargo/rustup into $CI_PROJECT_ROOT/${boot_dir}/rust and symlinks toolchain + llvm-tools-preview binaries into ${boot_dir}/bin (boot_dir read from config/boot_layout.yaml; default .boot-linux). Refreshes symlinks + components and exits 0 if a working toolchain is already present; reinstalls if rustc is present but fails --version. Repo-private — does NOT touch $HOME/.rustup or $HOME/.cargo."
+
+  - id: bootstrap-workspace-guard
+    path: scripts/bootstrap-workspace-guard
+    summary: Build and install the SUID git-guard binary from the sibling WORKSPACE-GUARD repo.
+    usage: bootstrap-workspace-guard [build-only|install-only|uninstall|check]
+    category: bootstrap
+    args:
+      - { name: build-only, description: "Compile the guard without installing (no root needed)" }
+      - { name: install-only, description: "Install a pre-built guard to /usr/bin/git (requires root)" }
+      - { name: uninstall, description: "Remove the guard and restore the original /usr/bin/git" }
+      - { name: check, description: "Report current guard installation status" }
+    output: "Builds/installs/removes the git-guard binary. Status text on stdout."
+    make_target: build-guard
+
+  - id: audit-workspace
+    path: scripts/audit-workspace
+    summary: Discover all git repos under a root and report working-tree, sync, and CI integration status.
+    usage: audit-workspace [ROOT]
+    category: workspace
+    args:
+      - { name: ROOT, description: "Workspace root to scan (default: auto-detected)" }
+    output: "One row per discovered repo with state/sync/CI columns."
+    make_target: audit
+
+  - id: walk-projects
+    path: scripts/walk-projects
+    summary: Emit one nested .git repo path per line, relative to the workspace root.
+    usage: walk-projects
+    category: workspace
+    output: "Repo paths on stdout, one per line. Used by recursive Makefile targets."
+
+  - id: code-stats
+    path: scripts/code-stats
+    summary: Codebase statistics across the workspace via cloc (lines, files, per-repo and per-language breakdown).
+    usage: code-stats
+    category: workspace
+    output: "cloc report on stdout (total + per-repo + per-language)."
+
+  - id: compliance-report
+    path: scripts/compliance-report
+    summary: Run a deep compliance audit of a project (or recursively across the workspace).
+    usage: |
+      compliance-report [PROJECT_DIR]              Audit a single project
+      compliance-report --recursive [ROOT]         Discover all .git roots under ROOT and audit each
+    category: compliance
+    args:
+      - { name: PROJECT_DIR, description: "Project to audit (default: current directory)" }
+      - { name: --recursive, description: "Audit every nested .git repo under ROOT" }
+    output: "Compliance score + violations on stdout. Exits non-zero on violations."
+    make_target: compliance
+
+  - id: rewrite-history
+    path: scripts/rewrite-history
+    summary: Strip blocked patterns from commit messages across git history (dry-run by default).
+    usage: rewrite-history [--execute]
+    category: history
+    args:
+      - { name: --execute, description: "Apply the rewrite (default: dry-run). Always creates a backup ref first." }
+    output: "Planned/affected commits on stdout. Rewrites history only with --execute."
+    make_target: rewrite-history
+
+  - id: check-boot-venv-layout
+    path: ci/check_boot_venv_layout.py
+    summary: Non-blocking audit of boot_layout.yaml + moon.yml + .pre-commit-config.yaml --project refs.
+    usage: python -m ci.check_boot_venv_layout [PROJECT_DIR]
+    category: compliance
+    args:
+      - { name: PROJECT_DIR, description: "Project to audit (default: current directory)" }
+    output: "Score + findings on stdout. Always exits 0 (non-blocking, per FR-BL-7.7)."

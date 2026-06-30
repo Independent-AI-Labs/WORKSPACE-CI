@@ -6,10 +6,19 @@
 # target path, it exits 0 without redownloading.
 #
 # Default install location:
-#   $AMI_ROOT/.boot-linux/bin/gitleaks
+#   $CI_PROJECT_ROOT/${boot_dir}/bin/gitleaks
+# where ${boot_dir} is read from config/boot_layout.yaml (single source of
+# truth per SPEC-BOOT-LAYOUT §4.1; default '.boot-linux/').
 # Override with $GITLEAKS_BIN to drop somewhere else.
 #
 # Override the version with $GITLEAKS_VERSION (default below).
+#
+# CI_PROJECT_ROOT (this repo's own root) is delegated to lib/ci.sh. Per the
+# new contract, this script installs to CI's OWN .boot-linux/ — NOT the
+# workspace root. Sibling repos (e.g. WORKSPACE-GUARD) reach this binary via
+# the boot-path resolver (lib/ci.sh::ci_resolve_boot_path) + inherit:
+# declarations in their config/boot_layout.yaml. See:
+#   docs/specifications/SPEC-BOOT-LAYOUT.md
 
 set -euo pipefail
 
@@ -20,47 +29,56 @@ GITLEAKS_VERSION="${GITLEAKS_VERSION:-8.21.2}"
 GITLEAKS_SHA256_X64="${GITLEAKS_SHA256_X64:-5bc41815076e6ed6ef8fbecc9d9b75bcae31f39029ceb55da08086315316e3ba}"
 GITLEAKS_SHA256_ARM64="${GITLEAKS_SHA256_ARM64:-654c935542c89f565aabe7bf7c6c500830f116c114f0aeb509d2460c1ac2e6da}"
 
-_ami_root() {
-    if [[ -n "${AMI_ROOT:-}" ]]; then
-        echo "$AMI_ROOT"
-        return
-    fi
-    # Walk up from this script's directory looking for the workspace root.
-    local d
-    d="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    while [[ "$d" != "/" ]]; do
-        if [[ -d "$d/.boot-linux" ]]; then
-            echo "$d"
-            return
-        fi
-        d="$(dirname "$d")"
-    done
-    echo "ERROR: could not locate AMI_ROOT — set \$AMI_ROOT or run from inside an AMI workspace." >&2
+_ci_lib="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
+# shellcheck source=lib/ci.sh
+if ! source "$_ci_lib/ci.sh"; then
+    echo "ERROR: failed to source $_ci_lib/ci.sh" >&2
     exit 2
-}
+fi
+if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
+    echo "ERROR: CI_PROJECT_ROOT not set after sourcing ci.sh" >&2
+    exit 2
+fi
 
 _log() { printf '[bootstrap-gitleaks] %s\n' "$*" >&2; }
 
 main() {
-    local ami_root bin target_dir target arch tarball url
-    ami_root="$(_ami_root)"
-    target_dir="${ami_root}/.boot-linux/bin"
+    local target_dir target arch tarball url _boot_dir
+    # Read boot_dir from config/boot_layout.yaml (single source of truth).
+    # Normalize: strip leading "./" and trailing "/".
+    _boot_dir="$(ci_read_yaml "${CI_CONFIG_DIR}/boot_layout.yaml" "boot_dir")" || _boot_dir=".boot-linux"
+    _boot_dir="${_boot_dir#./}"
+    _boot_dir="${_boot_dir%/}"
+    [[ -z "$_boot_dir" ]] && _boot_dir=".boot-linux"
+    target_dir="${CI_PROJECT_ROOT}/${_boot_dir}/bin"
     target="${GITLEAKS_BIN:-${target_dir}/gitleaks}"
 
-    mkdir -p "$(dirname "$target")"
+    if ! mkdir -p "$(dirname "$target")"; then
+        _log "mkdir failed for $(dirname "$target")"
+        return 1
+    fi
 
     if [[ -x "$target" ]]; then
-        local cur
-        if "$target" version >/dev/null 2>&1; then
-            cur="$("$target" version 2>/dev/null | head -1)"
+        local v_out v_err v_rc=0
+        v_out="$(mktemp)"
+        v_err="$(mktemp)"
+        "$target" version >"$v_out" 2>"$v_err" || v_rc=$?
+        if [[ "$v_rc" -eq 0 ]]; then
+            local cur
+            cur="$(head -1 "$v_out")"
+            rm -f "$v_out" "$v_err"
+            if [[ "$cur" == *"$GITLEAKS_VERSION"* ]]; then
+                _log "gitleaks ${GITLEAKS_VERSION} already at $target"
+                return 0
+            fi
+            _log "found existing gitleaks ($cur), upgrading to ${GITLEAKS_VERSION}"
         else
-            cur=""
+            local err_msg
+            err_msg="$(head -1 "$v_err")"
+            rm -f "$v_out" "$v_err"
+            _log "existing binary at $target did not respond to 'version' (rc=$v_rc): $err_msg"
+            _log "re-downloading fresh copy"
         fi
-        if [[ "$cur" == *"$GITLEAKS_VERSION"* ]]; then
-            _log "gitleaks ${GITLEAKS_VERSION} already at $target"
-            return 0
-        fi
-        _log "found existing gitleaks ($cur), upgrading to ${GITLEAKS_VERSION}"
     fi
 
     case "$(uname -m)" in
@@ -80,7 +98,10 @@ main() {
     trap "rm -rf \"\${tmp:-$tmp}\"" EXIT
 
     _log "fetching ${url}"
-    curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/${tarball}" "$url"
+    if ! curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/${tarball}" "$url"; then
+        _log "curl failed for $url"
+        return 1
+    fi
 
     # Mandatory checksum verification (supply-chain safety).
     # Defaults are hard-coded above for the default version; any version bump
@@ -103,10 +124,25 @@ main() {
     fi
     _log "checksum OK ($expected_sha)"
 
-    tar -xzf "${tmp}/${tarball}" -C "$tmp" gitleaks
-    install -m 0755 "${tmp}/gitleaks" "$target"
+    if ! tar -xzf "${tmp}/${tarball}" -C "$tmp" gitleaks; then
+        _log "tar extraction failed"
+        return 1
+    fi
+    if ! install -m 0755 "${tmp}/gitleaks" "$target"; then
+        _log "install (copy) failed to $target"
+        return 1
+    fi
 
-    _log "installed: $("$target" version | head -1) → $target"
+    local v_out2 v_rc2=0
+    v_out2="$(mktemp)"
+    "$target" version >"$v_out2" 2>&1 || v_rc2=$?
+    if [[ "$v_rc2" -ne 0 ]]; then
+        _log "post-install verification failed: '$target version' returned rc=$v_rc2"
+        rm -f "$v_out2"
+        return 1
+    fi
+    _log "installed: $(head -1 "$v_out2") => $target"
+    rm -f "$v_out2"
 }
 
 main "$@"

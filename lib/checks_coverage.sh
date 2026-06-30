@@ -21,10 +21,7 @@ ci_verify_coverage() {
 
     # Parse suites (each has: path, min_coverage, source_path, runner)
     local suites=()
-    while IFS= read -r suite_name; do
-        [[ -z "$suite_name" ]] && continue
-        suites+=("$suite_name")
-    done < <(awk '/^[a-z][a-z_]*:/ { sub(/:.*/, ""); print }' "$config")
+    ci_capture_lines suites -- awk '/^[a-z][a-z_]*:/ { sub(/:.*/, ""); print }' "$config"
 
     if [[ ${#suites[@]} -eq 0 ]]; then
         ci_warn "No test suites found in $config"
@@ -71,7 +68,14 @@ ci_verify_coverage() {
             ci_info "--- Running $suite_label Tests (Threshold: ${min_cov}%) ---"
         fi
 
-        # Build command based on runner
+        # Build command based on runner. The `coverage: false` setting is
+        # honoured by EVERY branch: when coverage is off, no coverage-specific
+        # flags (--min-coverage, --cov-fail-under, --coverage.thresholds, etc.)
+        # are appended, regardless of which branch matched. Only the runner's
+        # own native args + the test path go through. This prevents the
+        # historical bug where the `*)` fallback appended `--min-coverage=N
+        # --source=...` to bare `cargo test` runners, breaking them with
+        # "unexpected argument '--min-coverage'".
         local cmd
         case "$runner" in
             *pytest*)
@@ -82,18 +86,46 @@ ci_verify_coverage() {
                 fi
                 ;;
             *cargo*llvm-cov*)
-                cmd="$runner --manifest-path ${source_path}/Cargo.toml --fail-under-lines $min_cov"
+                if [[ "$coverage" == "false" ]]; then
+                    cmd="$runner --manifest-path ${source_path}/Cargo.toml"
+                else
+                    cmd="$runner --manifest-path ${source_path}/Cargo.toml --fail-under-lines $min_cov"
+                fi
+                ;;
+            *cargo*)
+                # Bare cargo test/build runner (no llvm-cov). `cargo test`
+                # takes neither `--min-coverage` nor `--source`, and the
+                # YAML `path:` field is a pytest-style directory concept
+                # that does NOT map to cargo (cargo filters by test-name
+                # substring, not by directory). When coverage is off, run
+                # the runner verbatim with no appended args so `--workspace`
+                # enumerates every crate (unit + integration tests).
+                # When coverage is on, the `*cargo*llvm-cov*` branch above
+                # handles it via the manifest path.
+                cmd="$runner"
                 ;;
             *vitest*)
-                cmd="cd ${source_path} && ${runner} --coverage --coverage.thresholds.lines=${min_cov} --coverage.thresholds.functions=${min_cov} --coverage.thresholds.branches=${min_cov} --coverage.thresholds.statements=${min_cov}"
+                if [[ "$coverage" == "false" ]]; then
+                    cmd="cd ${source_path} && ${runner}"
+                else
+                    cmd="cd ${source_path} && ${runner} --coverage --coverage.thresholds.lines=${min_cov} --coverage.thresholds.functions=${min_cov} --coverage.thresholds.branches=${min_cov} --coverage.thresholds.statements=${min_cov}"
+                fi
                 ;;
             "npm test"*|"npx tsx"*|"node --test"*)
                 # Node.js runners: no coverage args, just run the command as-is
                 cmd="$runner"
                 ;;
             *)
-                # Generic: just append path and threshold as args
-                cmd="$runner $path --min-coverage=$min_cov --source=$source_path"
+                # Generic fallback. Only append coverage flags when coverage
+                # is explicitly enabled; for `coverage: false` runs, emit
+                # just the runner + path so non-coverage-aware runners
+                # (bare cargo test, go test, etc.) don't choke on flags
+                # they don't understand.
+                if [[ "$coverage" == "false" ]]; then
+                    cmd="$runner $path"
+                else
+                    cmd="$runner $path --min-coverage=$min_cov --source=$source_path"
+                fi
                 ;;
         esac
 

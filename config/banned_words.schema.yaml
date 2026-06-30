@@ -1,0 +1,85 @@
+# Schema for banned_words.yaml — field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+#
+# Field shape:
+#   config:        the config file name (without .yaml)
+#   description:   one-line summary of the config's purpose
+#   fields:        ordered list of field descriptors
+#     path:          dot-notation path; [] suffix denotes a list,
+#                    [].<sub> describes an item field
+#     type:          yaml | string | integer | boolean | list | list<T> | map | object
+#     required:      true | false (defaults to false)
+#     default:       default value when omitted (omit if none)
+#     description:   human-readable description of the field
+config: banned_words
+description: "Universal banned-pattern rules and exceptions; the single source of truth for content bans."
+fields:
+  - path: version
+    type: string
+    required: true
+    description: "Schema version of the banned-words config. Bumped when the YAML shape changes."
+
+  - path: universal_exceptions
+    type: list
+    description: "Path-scoped exemptions applied to every project. Each entry whitelists patterns under specific paths so legitimate uses are not flagged."
+
+  - path: universal_exceptions[].paths
+    type: list<string>
+    required: true
+    description: "Glob/regex paths the exemption block applies to (e.g. 'tests/', '\\.toml$')."
+
+  - path: universal_exceptions[].patterns
+    type: list<string>
+    required: true
+    description: "Banned patterns that are exempted under the matching paths."
+
+  - path: banned
+    type: list
+    description: "The universal banned-pattern list. Every entry is enforced across all projects unless covered by a universal or per-project exception."
+
+  - path: banned[].pattern
+    type: string
+    required: true
+    description: "Regex pattern to match in file contents. Compiled by the banned-words scanner."
+
+  - path: banned[].reason
+    type: string
+    required: true
+    description: "Human-readable explanation of why the pattern is banned; surfaced to the developer on violation and rendered in the wiki pattern library."
+
+  - path: directory_rules
+    type: map
+    description: "Per-directory pattern overrides. Each key is a directory name; the value is a list of {pattern, reason} entries scoped to that directory."
+
+  - path: directory_rules.<dir>[]
+    type: list
+    description: "Banned-pattern entries scoped to the named directory (e.g. 'tests')."
+
+  - path: directory_rules.<dir>[].pattern
+    type: string
+    required: true
+    description: "Regex pattern scoped to the directory."
+
+  - path: directory_rules.<dir>[].reason
+    type: string
+    required: true
+    description: "Reason the directory-scoped pattern is banned."
+
+  - path: filename_rules
+    type: list
+    description: "Patterns matched against file basenames rather than file contents. Catches versioned, backup, and temporary filenames."
+
+  - path: filename_rules[].pattern
+    type: string
+    required: true
+    description: "Regex matched against the file basename (e.g. '_v[0-9]+')."
+
+  - path: filename_rules[].reason
+    type: string
+    required: true
+    description: "Reason the filename pattern is banned."

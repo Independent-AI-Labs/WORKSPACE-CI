@@ -10,7 +10,10 @@ set -euo pipefail
 
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=../lib/checks.sh
-source "$_SCRIPT_DIR/../lib/checks.sh"
+if ! source "$_SCRIPT_DIR/../lib/checks.sh"; then
+    echo "ERROR: failed to source $_SCRIPT_DIR/../lib/checks.sh" >&2
+    exit 2
+fi
 
 # Skip patterns for recursive discovery (mirrors audit-workspace)
 _SKIP_DIRS="tmp|node_modules|\.venv|__pycache__|research|python-ta-reference|\.boot-linux|\.boot-macos|dist|build|target|\.cache|\.local"
@@ -22,11 +25,13 @@ if [[ "${1:-}" == "--recursive" ]]; then
 
     # Discover all .git roots
     _repos=()
-    while IFS= read -r _gitdir; do
+    _gitdirs=()
+    ci_capture_pipe _gitdirs 'find "$1" -name ".git" -type d | sort' "$_root"
+    for _gitdir in "${_gitdirs[@]}"; do
         _repo="$(dirname "$_gitdir")"
         echo "$_repo" | grep -qE "$_SKIP_DIRS" && continue
         _repos+=("$_repo")
-    done < <(find "$_root" -name ".git" -type d 2>/dev/null | sort)
+    done
 
     if [[ ${#_repos[@]} -eq 0 ]]; then
         ci_warn "No git repos found under $_root"

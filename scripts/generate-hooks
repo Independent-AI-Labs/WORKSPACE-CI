@@ -7,11 +7,17 @@ set -euo pipefail
 
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 _CI_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
-source "$_CI_ROOT/lib/ci.sh"
+if ! source "$_CI_ROOT/lib/ci.sh"; then
+    echo "ERROR: failed to source $_CI_ROOT/lib/ci.sh" >&2
+    exit 2
+fi
 # checks_quality.sh provides ci_resolve_tier and ci_autocreate_project_enforcement.
 # Sourced here (not via checks.sh) so generate-hooks can run without the full
 # check-function surface — keeps the bootstrap minimal.
-source "$_CI_ROOT/lib/checks_quality.sh"
+if ! source "$_CI_ROOT/lib/checks_quality.sh"; then
+    echo "ERROR: failed to source $_CI_ROOT/lib/checks_quality.sh" >&2
+    exit 2
+fi
 
 # ── Defaults ──────────────────────────────────────────────────────────────
 _config=".pre-commit-config.yaml"
@@ -38,7 +44,7 @@ done
 
 # ── Paths ─────────────────────────────────────────────────────────────────
 if [[ -z "$_output_dir" ]]; then
-    _git_dir="$(git rev-parse --git-dir 2>/dev/null)" || { ci_fail "Not a git repo"; exit 1; }
+    _git_dir="$(git rev-parse --git-dir)" || { ci_fail "Not a git repo"; exit 1; }
     _output_dir="$_git_dir/hooks"
 fi
 [[ -d "$_output_dir" ]] || mkdir -p "$_output_dir"
@@ -55,7 +61,7 @@ _workspace_root="$(cd "$_CI_ROOT/../.." && pwd)"
 _registry=""
 if [[ -d "$_workspace_root/.boot-linux" ]]; then
     _reg_rc=0
-    _registry="$(ci_autocreate_project_enforcement "$_workspace_root" 2>/dev/null)" || _reg_rc=$?
+    _registry="$(ci_autocreate_project_enforcement "$_workspace_root")" || _reg_rc=$?
 fi
 _repo_rel=""
 if [[ "$_repo_root" == "$_workspace_root"* ]]; then
@@ -100,15 +106,19 @@ set -euo pipefail
 
 _ROOT="\$(git rev-parse --show-toplevel)"
 cd "\$_ROOT"
-source "\${_ROOT}/${_ci_rel}/lib/ci.sh"
-# Prepend the workspace boot venv's python bin BEFORE the .boot-linux/bin
-# convenience symlinks. The .boot-linux/bin/python is a chained symlink
-# (bin/python -> python-env/bin/python -> bare uv-managed cpython) and
-# Python loses the venv prefix when invoked through the double indirection,
-# so site-packages resolves to the externally-managed bare cpython instead
-# of the boot venv. Prepending python-env/bin first makes \`python\` resolve
-# directly to the venv shim, which preserves \`pyvenv.cfg\` discovery.
-export PATH="\${CI_WORKSPACE_ROOT}/.boot-linux/python-env/bin:\${CI_WORKSPACE_ROOT}/.boot-linux/bin:\$PATH"
+if ! source "\${_ROOT}/${_ci_rel}/lib/ci.sh"; then
+    echo "ERROR: failed to source \${_ROOT}/${_ci_rel}/lib/ci.sh" >&2
+    exit 2
+fi
+# Hierarchical .boot-linux/ + .venv/ resolution per SPEC-BOOT-LAYOUT §3.
+# Walks up from \$_ROOT prepending .boot-linux/{python-env/bin,bin} at each
+# ancestor; then prepends inherit: entries from config/boot_layout.yaml
+# (relative to \$_ROOT) — inherit entries land leftmost = highest precedence.
+# Empty accum (no .boot-linux anywhere) → no PATH mutation.
+_boot_path="\$(ci_resolve_boot_path "\$_ROOT")"
+if [[ -n "\$_boot_path" ]]; then
+    export PATH="\${_boot_path}:\$PATH"
+fi
 EOF
 
     # quality_exceptions.yaml preflight — ALWAYS enforced, all tiers.
@@ -259,6 +269,15 @@ and re-run."
         elif [[ $_need_pass -eq 1 ]]; then
             # shellcheck disable=SC2086
             w "${h_cmd} \$_match || { ci_fail \"$h_name\"; exit 1; }"
+
+        elif [[ "$h_id" == "check-boot-venv-layout" ]]; then
+            # Non-blocking check per SPEC-BOOT-LAYOUT §6 / FR-BL-7.7.
+            # rc-capture pattern: failures are surfaced as warnings, never hard-fail.
+            w '_bl_rc=0'
+            w "${h_cmd} || _bl_rc=\$?"
+            w 'if [[ $_bl_rc -ne 0 ]]; then'
+            w "    ci_warn \"${h_name} failed (exit \$_bl_rc) — non-blocking, continuing (FR-BL-7.7)\""
+            w 'fi'
 
         else
             w "${h_cmd} || { ci_fail \"$h_name\"; exit 1; }"

@@ -24,11 +24,30 @@ help: ## Show this help
 # Setup
 # =============================================================================
 
+# sudo is a no-op when already root (containers, CI agents)
+SUDO := $(shell if [ "$$EUID" -eq 0 ]; then echo ""; else echo "sudo"; fi)
+
+.PHONY: init
+init: ## Install all system-level dependencies (apt packages + Rust toolchain)
+	@echo "==> Installing system packages..."
+	$(SUDO) apt-get update -qq
+	$(SUDO) apt-get install -y --no-install-recommends \
+		curl tar ca-certificates \
+		libcap2-bin e2fsprogs file \
+		build-essential pkg-config
+	@echo "==> Installing Rust toolchain (if missing)..."
+	@if ! command -v cargo > /dev/null 2>&1; then \
+		curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal; \
+	fi
+	@echo "==> System dependencies installed."
+
 .PHONY: preflight
 preflight: ## Verify environment
 	@command -v uv > /dev/null 2>&1 || { echo "ERROR: uv not found"; exit 1; }
 	@command -v curl > /dev/null 2>&1 || { echo "ERROR: curl not found"; exit 1; }
 	@command -v tar > /dev/null 2>&1 || { echo "ERROR: tar not found"; exit 1; }
+	@bash -c '[ "$${BASH_VERSINFO[0]}" -gt 4 ] || ([ "$${BASH_VERSINFO[0]}" -eq 4 ] && [ "$${BASH_VERSINFO[1]}" -ge 3 ])' \
+		|| { echo "ERROR: bash 4.3+ required (nameref support for portable I/O helpers)"; exit 1; }
 	@echo "✓ Preflight OK"
 
 .PHONY: install
@@ -40,10 +59,10 @@ install-ci: preflight install-deps ## CI install: deps + bootstrap binaries, no 
 	@:
 
 .PHONY: install-deps
-install-deps: install-python-deps install-gitleaks ## Install python deps + bootstrap external binaries
+install-deps: install-python-deps install-gitleaks ## Install python .venv deps + bootstrap binaries
 
 .PHONY: install-python-deps
-install-python-deps: ## uv sync the Python deps
+install-python-deps: ## uv sync the Python deps (project-level .venv)
 	$(UV) sync --extra dev
 
 .PHONY: install-gitleaks
@@ -52,11 +71,11 @@ install-gitleaks: ## Bootstrap the gitleaks binary used by the secret-content sc
 
 .PHONY: install-hooks
 install-hooks: ## (Re)generate native git hooks
-	bash scripts/cleanup-precommit || echo "[INFO] cleanup-precommit not found, continuing"
+	@if [ -f scripts/cleanup-precommit ]; then bash scripts/cleanup-precommit; else echo "[INFO] cleanup-precommit not found, continuing" >&2; fi
 	bash scripts/generate-hooks
 
 .PHONY: sync
-sync: ## Sync deps + reinstall hooks
+sync: ## Sync .venv deps + reinstall hooks
 	$(UV) sync --extra dev
 	$(MAKE) install-hooks
 
@@ -157,11 +176,11 @@ rewrite-history: ## Strip blocked patterns from git history (dangerous)
 build-guard: ## Build git-guard binary from sibling WORKSPACE-GUARD repo (no root needed)
 	bash scripts/bootstrap-workspace-guard build-only
 
-install-guard: ## Install git-guard to /usr/bin/git (requires sudo, binary must be pre-built)
-	sudo bash scripts/bootstrap-workspace-guard install-only
+install-guard: ## Install git-guard to /usr/bin/git (requires root, binary must be pre-built)
+	$(SUDO) bash scripts/bootstrap-workspace-guard install-only
 
-uninstall-guard: ## Uninstall git-guard, restore original /usr/bin/git (requires sudo)
-	sudo bash scripts/bootstrap-workspace-guard uninstall
+uninstall-guard: ## Uninstall git-guard, restore original /usr/bin/git (requires root)
+	$(SUDO) bash scripts/bootstrap-workspace-guard uninstall
 
 check-guard: ## Check git-guard installation status
 	bash scripts/bootstrap-workspace-guard check

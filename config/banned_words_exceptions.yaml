@@ -1,13 +1,28 @@
 # workspace-ci banned words exceptions.
 # Only the config file that defines patterns and test/lib files.
 exceptions:
-  # The banned_words.yaml file defines the banned patterns — it must contain them
+  # The banned_words.yaml file defines the banned patterns — it must contain them.
+  # The *.schema.yaml files document those patterns in field descriptions, so they
+  # must contain them too (single source of truth for the wiki config reference).
+  # banned_words_exceptions.yaml defines the exception patterns — must contain them.
+  # .pre-commit-config.yaml and required_hooks.yaml contain hook IDs that
+  # reference banned words (ci-check-silent-swallow, check-banned-words, etc.).
+  # docs/HOOKS.md is auto-generated from hook configs — inherits the same IDs.
+  # docs/ and README.md document the banned patterns by name — must reference them.
   - pattern: '.*'
-    paths: ['config/banned_words.yaml']
+    paths:
+      - 'config/banned_words\.yaml'
+      - 'config/.*\.schema\.yaml$'
+      - 'config/banned_words_exceptions\.yaml$'
+      - '\.pre-commit-config\.yaml$'
+      - 'config/required_hooks\.yaml$'
+      - 'docs/'
+      - 'README\.md$'
 
+  # ── Shell lib / tests / scripts (pre-existing) ───────────────────────
   # Shell lib files use these words in check function names and messages.
   - pattern: '\bsilent'
-    paths: ['lib/', 'tests/', 'scripts/']
+    paths: ['lib/', 'tests/', 'scripts/', 'ci/check_markdown_docs\.py$', 'ci/_md_http_client\.py$']
   - pattern: '\.suppress'
     paths: ['lib/', 'tests/']
 
@@ -21,15 +36,25 @@ exceptions:
   - pattern: '\bmock\b'
     paths: ['tests/']
   - pattern: '\blegacy\b'
-    paths: ['tests/', 'scripts/']
+    paths: ['tests/', 'scripts/', 'templates/']
+  # Extensionless shell scripts in scripts/ reference python-ta-reference and
+  # other python-derived directory names in skip-dirs string lists. Mirrors
+  # the universal lib/ + tests/ exemption at banned_words.yaml:76-78.
+  - pattern: '\bpython3?\b'
+    paths: ['scripts/']
   - pattern: '\bstubs?\b'
     paths: ['tests/']
   - pattern: '\bfallback\b'
     paths: ['tests/', 'lib/']
   # check_silent_swallow.py emits the spec'd `<file>:<line>: <pattern> -- <line>`
   # output format and documents diff/regex syntax containing ` -- `.
+  # scripts/ use ` -- ` as section separators in comments (e.g. `# -- Summary --`).
   - pattern: ' -- '
-    paths: ['lib/check_silent_swallow.py', 'lib/checks_silent.sh', 'tests/test_silent_swallow.sh']
+    paths:
+      - 'lib/check_silent_swallow\.py$'
+      - 'lib/checks_silent\.sh$'
+      - 'tests/test_silent_swallow\.sh$'
+      - 'scripts/'
   - pattern: '\bbackwards\b'
     paths: ['tests/']
   - pattern: '\bcompatibility\b'

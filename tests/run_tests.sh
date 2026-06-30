@@ -17,6 +17,7 @@ source "$TESTS_DIR/test_blocked_patterns.sh"
 # source "$TESTS_DIR/test_rewrite_history.sh"
 source "$TESTS_DIR/test_compliance.sh"
 source "$TESTS_DIR/test_silent_swallow.sh"
+source "$TESTS_DIR/test_portable_shell.sh"
 
 # Summary
 echo ""

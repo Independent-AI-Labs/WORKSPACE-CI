@@ -7,7 +7,10 @@ set -euo pipefail
 
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 _CI_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
-source "$_CI_ROOT/lib/ci.sh"
+if ! source "$_CI_ROOT/lib/ci.sh"; then
+    echo "ERROR: failed to source $_CI_ROOT/lib/ci.sh" >&2
+    exit 2
+fi
 
 _remove_config=0
 [[ "${1:-}" == "--remove-config" ]] && _remove_config=1
@@ -27,8 +30,8 @@ if [[ -f ".git/hooks/pre-commit.legacy" ]]; then
 fi
 
 # Uninstall pre-commit package
-pip uninstall -y pre-commit 2>/dev/null && ci_pass "Uninstalled pre-commit (pip)"
-uv pip uninstall pre-commit 2>/dev/null && ci_pass "Uninstalled pre-commit (uv)"
+pip uninstall -y pre-commit && ci_pass "Uninstalled pre-commit (pip)"
+uv pip uninstall pre-commit && ci_pass "Uninstalled pre-commit (uv)"
 
 # Optionally remove config
 if [[ $_remove_config -eq 1 ]]; then

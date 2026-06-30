@@ -1,4 +1,4 @@
-# REQ-WIKI: Interactive Wiki Web UI for AMI-CI
+# REQ-WIKI: Interactive Wiki Web UI for workspace-ci
 
 **Date:** 2026-06-09
 **Status:** DRAFT
@@ -7,7 +7,7 @@
 
 > **Implementation status:** Requirements gathering. No code. The `web/` directory does not
 > exist yet. This document defines the full feature set and acceptance criteria for an
-> interactive, wiki-like web UI that documents every feature of AMI-CI.
+> interactive, wiki-like web UI that documents every feature of workspace-ci.
 
 ---
 
@@ -32,15 +32,15 @@
 ### 1.1 Purpose
 
 Provide a self-documenting, interactive web interface that presents every feature,
-check, pattern, and configuration of AMI-CI in a wiki-like format. The UI enables
+check, pattern, and configuration of workspace-ci in a wiki-like format. The UI enables
 operators and developers to browse, search, understand, and interactively test the
-quality gates AMI-CI enforces.
+quality gates workspace-ci enforces.
 
 ### 1.2 Scope
 
 **The wiki OWNS:**
 
-- Rendering AMI-CI's feature set as structured, navigable wiki pages
+- Rendering workspace-ci's feature set as structured, navigable wiki pages
 - A live pattern-testing playground that runs banned-pattern regexes in-browser
 - Full-text search across all hooks, patterns, checks, and configs
 - Light/dark theme support
@@ -53,7 +53,7 @@ quality gates AMI-CI enforces.
 **The wiki DOES NOT:**
 
 - Execute or spawn Python processes at request time (no `uv run`, no subprocesses)
-- Modify AMI-CI configs, hooks, or source files
+- Modify workspace-ci configs, hooks, or source files
 - Require authentication (it is a public documentation surface)
 - Replace or duplicate AMI-PORTAL's shell, tab system, or iframe architecture
 - Serve as a general-purpose documentation viewer for arbitrary files
@@ -64,12 +64,12 @@ quality gates AMI-CI enforces.
 ### 1.3 Ownership Split
 
 ```
-AMI-CI/
-├── config/          ← AMI-CI owns: canonical YAML rules (read-only by wiki)
-├── lib/             ← AMI-CI owns: shell check functions
-├── ci/              ← AMI-CI owns: Python check modules
-├── scripts/         ← AMI-CI owns: CLI tools
-├── docs/            ← AMI-CI owns: markdown documentation
+workspace-ci/
+├── config/          ← workspace-ci owns: canonical YAML rules (read-only by wiki)
+├── lib/             ← workspace-ci owns: shell check functions
+├── ci/              ← workspace-ci owns: Python check modules
+├── scripts/         ← workspace-ci owns: CLI tools
+├── docs/            ← workspace-ci owns: markdown documentation
 │   ├── requirements/
 │   │   └── REQ-WIKI.md    ← This document
 │   └── specifications/
@@ -77,8 +77,10 @@ AMI-CI/
 └── web/             ← Wiki owns: Next.js application
 ```
 
-The wiki reads AMI-CI configs at server-render time via relative filesystem paths.
-No symlinks. No duplication of YAML configs into the `web/` tree.
+The wiki reads workspace-ci configs at server-render time via filesystem paths
+resolved from a configurable config root (`WORKSPACE_CI_CONFIG_ROOT`, defaulting
+to `../config` relative to `web/`). No symlinks. No duplication of YAML configs
+into the `web/` tree. See SPEC §9.3 for the loader contract and deployment model.
 
 ---
 
@@ -134,7 +136,7 @@ No symlinks. No duplication of YAML configs into the `web/` tree.
 
 | ID | Requirement |
 |----|-------------|
-| FR-3.1 | The home page MUST display a project overview summary of AMI-CI. |
+| FR-3.1 | The home page MUST display a project overview summary of workspace-ci. |
 | FR-3.2 | A quick-search input MUST be embedded in the hero area. |
 | FR-3.3 | A "trending" section MUST show the top 4—6 most-viewed pages based on local analytics. |
 | FR-3.4 | Quick-link cards MUST link to the highest-traffic sections. |
@@ -145,9 +147,9 @@ No symlinks. No duplication of YAML configs into the `web/` tree.
 
 | ID | Requirement |
 |----|-------------|
-| FR-4.1 | The pattern library MUST list all banned patterns from `config/banned_words.yaml`. |
+| FR-4.1 | The pattern library MUST list all banned patterns from `config/banned_words.yaml`, including all three rule groups: `banned` (content patterns), `directory_rules` (directory-scoped content patterns), and `filename_rules` (basename patterns). |
 | FR-4.2 | Patterns MUST be grouped by category (e.g., Linter Suppression, Lazy Types, Unsafe Reflection). |
-| FR-4.3 | Each pattern MUST display: the regex pattern, the reason it is banned, and applicable file types. |
+| FR-4.3 | Each pattern MUST display: the regex pattern, the reason it is banned, the match scope (content / filename / directory), and applicable file types. Filename-scope patterns MUST show a "filename match" badge. |
 | FR-4.4 | A category filter MUST allow toggling individual categories on/off. |
 | FR-4.5 | Each pattern MUST have a unique anchor ID for deep linking. |
 | FR-4.6 | The page MUST show the total count of patterns and how many are currently visible. |
@@ -182,7 +184,7 @@ No symlinks. No duplication of YAML configs into the `web/` tree.
 |----|-------------|
 | FR-7.1 | The config reference MUST list all YAML config files from `config/`. |
 | FR-7.2 | Each config MUST have a dedicated detail page at `/config/<name>`. |
-| FR-7.3 | The detail page MUST render each config's fields, types, defaults, and descriptions. |
+| FR-7.3 | The detail page MUST render each config's fields, types, defaults, and descriptions, derived from a co-located `config/<name>.schema.yaml` file (single source of truth — no hand-maintained field prose). When no schema file exists, the page MUST render the raw YAML only and emit a build-time warning. |
 | FR-7.4 | The detail page MUST show the raw YAML content in a syntax-highlighted code block. |
 | FR-7.5 | Each config detail page MUST include the feedback component. |
 
@@ -221,14 +223,14 @@ No symlinks. No duplication of YAML configs into the `web/` tree.
 
 | ID | Requirement |
 |----|-------------|
-| FR-11.1 | A tooling page MUST document all workspace scripts. |
-| FR-11.2 | Each tool MUST have its CLI usage, arguments, and output format documented. |
+| FR-11.1 | A tooling page MUST document all workspace scripts, derived from `scripts/manifest.yaml` (single source of truth — no hand-maintained script prose). Adding a script to `scripts/` MUST be paired with a manifest entry. |
+| FR-11.2 | Each tool MUST have its CLI usage, arguments, and output format documented, read from its `scripts/manifest.yaml` entry. |
 
 #### FR-12: Integration Guide
 
 | ID | Requirement |
 |----|-------------|
-| FR-12.1 | An integration guide MUST show step-by-step how to wire AMI-CI into a sibling repo. |
+| FR-12.1 | An integration guide MUST show step-by-step how to wire workspace-ci into a sibling repo. |
 | FR-12.2 | The guide MUST cover: Makefile contract, hook generation, tier configuration, exception management. |
 
 ### 3.3 Content Sourcing
@@ -242,6 +244,7 @@ No symlinks. No duplication of YAML configs into the `web/` tree.
 | FR-16.3 | Pattern library entries MUST be derived from `config/banned_words.yaml` — no duplication of pattern rules. |
 | FR-16.4 | Hook reference entries MUST be derived from `config/required_hooks.yaml` — no duplication of hook definitions. |
 | FR-16.5 | Configuration reference pages MUST read YAML configs directly from the filesystem — no copied YAML content. |
+| FR-16.5a | Configuration field documentation (FR-7.3) MUST be derived from co-located `config/<name>.schema.yaml` files — no hand-maintained field prose that can drift from the configs. |
 | FR-16.6 | A build-time extraction tool MUST produce structured JSON from Python docstrings and shell comments that the wiki consumes at request time. |
 | FR-16.7 | Long-form prose that does not belong in source code (narrative guides, rationale, troubleshooting) MUST live in dedicated markdown files within the `web/` directory. |
 | FR-16.8 | Optional `README.md` files in source directories (`ci/`, `lib/`, `config/`, `scripts/`) MUST be discoverable and rendered on relevant index pages. |
@@ -305,13 +308,13 @@ No symlinks. No duplication of YAML configs into the `web/` tree.
 |----|-------------|
 | NFR-2.1 | The wiki MUST be a Next.js application using the App Router. |
 | NFR-2.2 | Styling MUST use CSS utility classes with CSS custom property-based theming. |
-| NFR-2.3 | All UI components MUST be custom-built. No third-party component libraries. |
+| NFR-2.3 | All UI components MUST be custom-built. No third-party UI component libraries (MUI, Chakra, shadcn, etc.). Third-party functional libraries (CodeMirror, fuse.js, zustand) are permitted where named in NFR-2.5/2.6. |
 | NFR-2.4 | Client-side state management MUST use a reactive store. |
 | NFR-2.5 | Full-text search MUST use a client-side fuzzy-search library. |
-| NFR-2.6 | The code editor in the playground MUST use a browser-native editor component. |
+| NFR-2.6 | The code editor in the playground MUST use CodeMirror 6 (a third-party editor library, not a UI component library). It MUST be code-split via `next/dynamic` with `ssr: false` so it loads only on `/playground` (NFR-1.7). |
 | NFR-2.7 | YAML configs MUST be parsed server-side using a YAML parsing library. |
 | NFR-2.8 | No Python packages, `uv`, or Python subprocesses MUST be present in the wiki's dependency tree or runtime. |
-| NFR-2.9 | Fonts MUST be loaded from Google Fonts. Icons MUST be loaded via CDN. |
+| NFR-2.9 | Fonts MUST be loaded via `next/font/google` (self-hosted at build, no runtime CDN request). Icons MUST be self-hosted (no render-blocking CDN `<link>`); RemixIcon is vendored into `web/public/` and served locally to protect LCP (NFR-1.1). |
 
 ### NFR-3: Theme
 
@@ -372,7 +375,7 @@ No symlinks. No duplication of YAML configs into the `web/` tree.
 | NFR-8.4 | Wiki feature components MUST have at least 85% coverage. |
 | NFR-8.5 | Playground components MAY have 80% coverage due to CodeMirror DOM interaction complexity in jsdom. |
 | NFR-8.6 | All coverage thresholds MUST be enforced in CI via the test runner. |
-| NFR-8.7 | The pattern classifier MUST be tested against all real patterns from `banned_words.yaml` — full enumeration, not sampling. |
+| NFR-8.7 | The pattern classifier MUST be tested against all real patterns from `banned_words.yaml` — full enumeration of all three rule groups (`banned`, `directory_rules`, `filename_rules`), not sampling. |
 
 ---
 
@@ -433,7 +436,7 @@ The wiki consists of three subsystems:
 
 ### 5.2 Data Flow
 
-1. **Server render time**: The content subsystem reads AMI-CI YAML configs from
+1. **Server render time**: The content subsystem reads workspace-ci YAML configs from
    `../../config/` relative to the `web/` directory. YAML is parsed into typed
    objects. These objects are serialized as props to client components.
 
@@ -531,7 +534,14 @@ The wiki consists of three subsystems:
    Thumbs + optional comment is the minimum viable feedback. Expandable later.
 
 6. Should the wiki be a standalone project or a monorepo workspace package?
-   Standalone — the `web/` directory is self-contained.
+   Self-contained Next.js app (own `package.json`, own `node_modules`, not a
+   monorepo workspace package), BUT with a runtime data dependency on the
+   parent repo's `config/` and `docs/` trees. Deployment model: the wiki is
+   served from a checkout of the workspace-ci repo (or a checkout that
+   contains the `config/` and `docs/` directories). The config root is
+   configurable via `WORKSPACE_CI_CONFIG_ROOT` (see SPEC §9.3) so the wiki
+   can be pointed at an alternate config tree without code changes. The
+   `web/` directory does not duplicate YAML configs.
 
 7. Should analytics events include a session ID for correlating events across pages?
    Yes — a session identifier generated on first page load and persisted.
@@ -544,7 +554,7 @@ The wiki consists of three subsystems:
 |---|------|---------|
 | 1 | Navigate to `/` — shell layout renders with sidebar, header, theme toggle visible | FR-1.1—1.7 |
 | 2 | Press `/` key — search modal opens, type query — results appear with highlighted matches | FR-2.1—2.4 |
-| 3 | Navigate to `/patterns` — all 50+ patterns listed, grouped by category, filterable | FR-4.1—4.6 |
+| 3 | Navigate to `/patterns` — all patterns from `banned`, `directory_rules`, and `filename_rules` listed, grouped by category, filterable; filename-scope patterns show a "filename match" badge | FR-4.1—4.6 |
 | 4 | Click a pattern card — feedback component visible, vote up/down works, comment field appears | FR-15.1—15.9 |
 | 5 | Navigate to `/hooks` — table shows all hooks, filter by stage shows only matching hooks | FR-5.1—5.5 |
 | 6 | Navigate to `/hooks/check-banned-words` — detail page shows full metadata | FR-6.1—6.6 |
@@ -565,4 +575,9 @@ The wiki consists of three subsystems:
 | 21 | Modify a YAML config, rebuild wiki — pattern/hook/config page reflects change without manual wiki edits | FR-16.3—16.5 |
 | 22 | Add `ci/README.md` — check catalog index page shows its content | FR-16.8 |
 | 23 | Run `npm run test:coverage` in `web/` — coverage >= 90% for lib, stores, ui; >= 85% for wiki components; >= 80% for playground | NFR-8.1—8.5 |
-| 24 | Pattern classifier test passes against all real patterns from `banned_words.yaml` — every pattern maps to exactly one category | NFR-8.6 |
+| 24 | Pattern classifier test passes against all real patterns from all three groups in `banned_words.yaml` (`banned`, `directory_rules`, `filename_rules`) — every pattern maps to exactly one category | NFR-8.7 |
+| 25 | Navigate to `/patterns` over a slow (10 Mbps) profile — shell (sidebar + header) paints before content sections resolve; no blank screen while YAML loads | NFR-1.6 |
+| 26 | Navigate from `/` to `/hooks` and back — verify the CodeMirror bundle is NOT requested on non-playground routes (check the network tab; no `codemirror` chunks loaded) | NFR-1.7 |
+| 27 | Run `ANALYZE=true npm run build` in `web/` — verify every non-playground route ships < 50KB compressed JS; CI bundle-size gate passes (SPEC §18.3) | NFR-1.7, SPEC §18.3 |
+| 28 | Run `scripts/extract-docs` — verify every `config/*.schema.yaml` parses and each `path` resolves against the corresponding config's top-level keys (build warning, not error) | FR-7.3, FR-16.5a |
+| 29 | Add a script to `scripts/` without a `scripts/manifest.yaml` entry — verify the manifest-completeness check fails | FR-11.1 |

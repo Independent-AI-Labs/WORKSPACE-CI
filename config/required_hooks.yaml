@@ -10,8 +10,17 @@
 # Field reference:
 #   id           — stable hook id; matches the # === Hook: <id> === marker in
 #                  generated .git/hooks/* files.
-#   kind         — shell | python_module | makefile_target.
-#   entry        — bash function name | python module path | make target name.
+#   kind         — shell | shell_inline | shell_with_arg | python_module |
+#                  python_module_files | makefile_target.
+#                  shell:          entry is a bash function (args = staged files).
+#                  shell_inline:   entry is a literal bash command string.
+#                  shell_with_arg: entry is a bash function taking one arg
+#                                  (the commit-msg file) — used by commit-msg hooks.
+#                  python_module:        entry is a dotted module path (run as module).
+#                  python_module_files:  entry is a module path + pass_filenames
+#                                        (staged files passed as CLI args).
+#                  makefile_target: entry is a make target name.
+#   entry        — bash function name | python module path | make target name | inline command.
 #   stage        — pre-commit | commit-msg | pre-push.
 #   pass_filenames, always_run — passed through to the rendered hook.
 #   files        — optional path pattern that scopes the hook (pass-through).
@@ -120,6 +129,16 @@ hooks:
     safety: true
     applicable_to: [any]
 
+  - id: check-portable-shell
+    kind: shell
+    entry: ci_check_portable_shell
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    safety: true
+    applicable_to: [any]
+
   # ─────────────────────────────────────────────────────────────────────
   # Strict-tier mandatory hooks (not in safety subset)
   # ─────────────────────────────────────────────────────────────────────
@@ -142,6 +161,19 @@ hooks:
     always_run: true
     mandatory: true
     safety: false
+    applicable_to: [any]
+
+  - id: check-boot-venv-layout
+    kind: python_module
+    entry: ci.check_boot_venv_layout
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    # Advisory + non-blocking (always exits 0). mandatory=false allows per-path
+    # exemption via quality_exceptions.yaml; safety=true runs it even at POC tier
+    # since it never blocks (per FR-BL-7.7).
+    mandatory: false
+    safety: true
     applicable_to: [any]
 
   - id: ci-lint
@@ -228,5 +260,4 @@ hooks:
     files_types: [markdown]
     mandatory: true
     safety: true
-    applicable_to: [any]
     applicable_to: [any]

@@ -239,33 +239,49 @@ ci_compliance_score() {
             [[ -n "$_cfg_max" ]] && _fl_max="$_cfg_max"
         fi
 
-        while IFS= read -r _f; do
-            [[ -z "$_f" || ! -f "$_f" ]] && continue
-            _in_ignored_dir "$_f" && continue
-            local _flines
-            _flines="$(wc -l < "$_f")"
+        local _fl_files=()
+        local _fl_tmp; _fl_tmp=$(mktemp) || {
+            _cs_skip "C3" "File length check (mktemp failed)"
+            _long_files=0
+        }
+        if [[ -n "$_fl_tmp" ]]; then
+            (
+                cd "$project_dir" && git ls-files --cached --others --exclude-standard \
+                    | while IFS= read -r _p; do
+                        for _e in "${_fl_exts[@]}"; do
+                            [[ "$_p" == *"$_e" ]] && echo "$project_dir/$_p" && break
+                        done
+                    done
+            ) > "$_fl_tmp"
+            while IFS= read -r _f; do
+                [[ -n "$_f" ]] && _fl_files+=("$_f")
+            done < "$_fl_tmp"
+            rm -f "$_fl_tmp"
+            for _f in "${_fl_files[@]}"; do
+                [[ -z "$_f" || ! -f "$_f" ]] && continue
+                _in_ignored_dir "$_f" && continue
+                local _flines
+                _flines="$(wc -l < "$_f")"
 
-            local _file_limit=$_fl_max
-            if [[ -f "$_fl_config" ]]; then
-                local _override_limit
-                _override_limit="$(awk -v path="$(
-                    realpath --relative-to="$project_dir" "$_f" || echo "$_f"
-                )" '
-                    /^[[:space:]]*- path:[[:space:]]+/ { gsub(/^[[:space:]]*- path:[[:space:]]+/, ""); gsub(/["'"'"']/, ""); cur_path=$0 }
-                    cur_path == path && /^[[:space:]]+max_lines:[[:space:]]+/ { gsub(/^[[:space:]]+max_lines:[[:space:]]+/, ""); print; exit }
-                ' "$_fl_config")"
-                [[ -n "$_override_limit" ]] && _file_limit=$_override_limit
-            fi
+                local _file_limit=$_fl_max
+                if [[ -f "$_fl_config" ]]; then
+                    local _override_limit _rel_f _rl_rc=0
+                    _rel_f="$(realpath --relative-to="$project_dir" "$_f")" || _rl_rc=$?
+                    if [[ $_rl_rc -ne 0 ]]; then
+                        _rel_f="$_f"
+                    fi
+                    _override_limit="$(awk -v path="$_rel_f" '
+                        /^[[:space:]]*- path:[[:space:]]+/ { gsub(/^[[:space:]]*- path:[[:space:]]+/, ""); gsub(/["'"'"']/, ""); cur_path=$0 }
+                        cur_path == path && /^[[:space:]]+max_lines:[[:space:]]+/ { gsub(/^[[:space:]]+max_lines:[[:space:]]+/, ""); print; exit }
+                    ' "$_fl_config")"
+                    [[ -n "$_override_limit" ]] && _file_limit=$_override_limit
+                fi
 
-            if [[ $_flines -gt $_file_limit ]]; then
-                _long_files=$((_long_files + 1))
-            fi
-        done < <(cd "$project_dir" && git ls-files --cached --others --exclude-standard \
-            | while IFS= read -r _p; do
-                for _e in "${_fl_exts[@]}"; do
-                    [[ "$_p" == *"$_e" ]] && echo "$project_dir/$_p" && break
-                done
-            done)
+                if [[ $_flines -gt $_file_limit ]]; then
+                    _long_files=$((_long_files + 1))
+                fi
+            done
+        fi
     fi
 
     if [[ $_long_files -eq 0 ]]; then
@@ -301,7 +317,15 @@ ci_compliance_score() {
 
     local _bw_rc=0
     if [[ -f "$CI_CONFIG_DIR/banned_words.yaml" ]]; then
-        (cd "$project_dir" && ci_check_banned_words) > /dev/null 2>&1 || _bw_rc=$?
+        local _bw_tmp; _bw_tmp=$(mktemp)
+        (cd "$project_dir" && ci_check_banned_words) \
+            </dev/null >"$_bw_tmp" 2>&1 || _bw_rc=$?
+        if [[ $_bw_rc -ne 0 && -s "$_bw_tmp" ]]; then
+            while IFS= read -r _line; do
+                echo "       $_line"
+            done < "$_bw_tmp"
+        fi
+        rm -f "$_bw_tmp"
         if [[ $_bw_rc -eq 0 ]]; then
             _cs_pass "Q2" "No banned patterns in source"
         else
@@ -368,7 +392,11 @@ ci_compliance_score() {
         [[ ! -f "$_registry" ]] && _registry=""
         _rel="${project_dir#"$_ws_root"/}"
         [[ "$_rel" == "$project_dir" ]] && _rel="."
-        _tier="$(ci_resolve_tier "$_rel" "$_registry" || echo strict)"
+        local _tier_rc=0
+        _tier="$(ci_resolve_tier "$_rel" "$_registry")" || _tier_rc=$?
+        if [[ $_tier_rc -ne 0 ]]; then
+            _tier="strict"
+        fi
     fi
 
     if [[ "$_tier" == "vendored" ]]; then

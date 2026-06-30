@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import textwrap
 from pathlib import Path
 
 import pytest
 import yaml
+
 from ci.check_required_hooks_present import (
     EXIT_INFRA_ERROR,
     EXIT_OK,
@@ -19,18 +19,10 @@ from ci.check_required_hooks_present import (
     _check_hooks_rendered,
     _check_manifest_completeness,
     _check_quality_exceptions,
-    _find_workspace_root,
     _hook_applies,
     _hook_marker,
-    _load_manifest,
-    _load_quality_exceptions,
-    _load_registry,
-    _longest_prefix_tier,
-    _project_path_relative,
     _read_rendered_hooks,
-    _registry_source,
     _resolve_gitdir,
-    _resolve_tier,
     main,
 )
 
@@ -57,12 +49,21 @@ def _write_registry(workspace: Path, content: dict[str, object]) -> None:
 
 
 def _write_template_registry(workspace: Path, content: dict[str, object]) -> None:
-    tpl = workspace / "projects" / "CI" / "templates" / "project_enforcement.template.yaml"
+    tpl = (
+        workspace
+        / "projects"
+        / "CI"
+        / "templates"
+        / "project_enforcement.template.yaml"
+    )
     tpl.write_text(yaml.safe_dump(content))
 
 
 def _make_repo_with_hooks(
-    parent: Path, name: str, *, pre_commit_markers: list[str] | None = None,
+    parent: Path,
+    name: str,
+    *,
+    pre_commit_markers: list[str] | None = None,
     pre_push_markers: list[str] | None = None,
 ) -> Path:
     repo = parent / name
@@ -236,15 +237,23 @@ def test_hook_marker_format() -> None:
 
 def test_hook_applies_skips_non_mandatory() -> None:
     hook = HookEntry(
-        id="x", kind="shell", entry="x", stage="pre-commit", mandatory=False,
+        id="x",
+        kind="shell",
+        entry="x",
+        stage="pre-commit",
+        mandatory=False,
     )
     assert _hook_applies(hook, "strict") is False
 
 
 def test_hook_applies_skips_non_safety_at_poc_tier() -> None:
     hook = HookEntry(
-        id="x", kind="shell", entry="x", stage="pre-commit",
-        mandatory=True, safety=False,
+        id="x",
+        kind="shell",
+        entry="x",
+        stage="pre-commit",
+        mandatory=True,
+        safety=False,
     )
     assert _hook_applies(hook, "strict") is True
     assert _hook_applies(hook, "poc") is False
@@ -252,8 +261,12 @@ def test_hook_applies_skips_non_safety_at_poc_tier() -> None:
 
 def test_hook_applies_includes_safety_at_poc_tier() -> None:
     hook = HookEntry(
-        id="x", kind="shell", entry="x", stage="pre-commit",
-        mandatory=True, safety=True,
+        id="x",
+        kind="shell",
+        entry="x",
+        stage="pre-commit",
+        mandatory=True,
+        safety=True,
     )
     assert _hook_applies(hook, "poc") is True
 
@@ -305,8 +318,11 @@ def test_check_hooks_rendered_finds_present_hooks(tmp_path: Path) -> None:
     manifest = HooksManifest(
         hooks=[
             HookEntry(
-                id="ci-lint", kind="makefile_target", entry="lint",
-                stage="pre-commit", mandatory=True,
+                id="ci-lint",
+                kind="makefile_target",
+                entry="lint",
+                stage="pre-commit",
+                mandatory=True,
             ),
         ],
     )
@@ -318,8 +334,11 @@ def test_check_hooks_rendered_flags_missing(tmp_path: Path) -> None:
     manifest = HooksManifest(
         hooks=[
             HookEntry(
-                id="ci-lint", kind="makefile_target", entry="lint",
-                stage="pre-commit", mandatory=True,
+                id="ci-lint",
+                kind="makefile_target",
+                entry="lint",
+                stage="pre-commit",
+                mandatory=True,
             ),
         ],
     )
@@ -358,12 +377,18 @@ def test_main_passes_for_strict_compliant_project(tmp_path: Path) -> None:
         root,
         [
             {
-                "id": "ci-lint", "kind": "makefile_target", "entry": "lint",
-                "stage": "pre-commit", "mandatory": True,
+                "id": "ci-lint",
+                "kind": "makefile_target",
+                "entry": "lint",
+                "stage": "pre-commit",
+                "mandatory": True,
             },
             {
-                "id": "ci-type-check", "kind": "makefile_target", "entry": "type-check",
-                "stage": "pre-commit", "mandatory": True,
+                "id": "ci-type-check",
+                "kind": "makefile_target",
+                "entry": "type-check",
+                "stage": "pre-commit",
+                "mandatory": True,
             },
         ],
     )
@@ -408,15 +433,19 @@ def test_main_passes_trivially_for_vendored_tier(tmp_path: Path) -> None:
 
 
 def test_main_emits_ok_lines_when_not_quiet(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     root = _make_workspace(tmp_path)
     _write_manifest(
         root,
         [
             {
-                "id": "ci-lint", "kind": "makefile_target", "entry": "lint",
-                "stage": "pre-commit", "mandatory": True,
+                "id": "ci-lint",
+                "kind": "makefile_target",
+                "entry": "lint",
+                "stage": "pre-commit",
+                "mandatory": True,
             },
         ],
     )

@@ -1,0 +1,230 @@
+#!/usr/bin/env bash
+# bootstrap-rust — bootstrap a $RUST_TOOLCHAIN Rust toolchain into CI's own
+# .boot-linux/rust/ and create symlinks in .boot-linux/bin/.
+#
+# This project uses `rustc`/`cargo` for any native-Rust tooling. This script
+# is idempotent: if $CI_PROJECT_ROOT/${boot_dir}/rust/bin/rustc AND cargo
+# are already present and respond to `--version`, it refreshes symlinks and
+# components, then exits 0 without reinstalling. If the existing toolchain
+# is broken (rustc fails to report its version), it is removed and
+# reinstalled from scratch.
+#
+# Default install location:
+#   $CI_PROJECT_ROOT/${boot_dir}/rust/
+# with symlinks in:
+#   $CI_PROJECT_ROOT/${boot_dir}/bin/
+# where ${boot_dir} is read from config/boot_layout.yaml (single source of
+# truth per SPEC-BOOT-LAYOUT §4.1; default '.boot-linux/').
+#
+# Repo-private: does NOT touch $HOME/.rustup or $HOME/.cargo — the toolchain
+# is fully isolated via RUSTUP_HOME / CARGO_HOME env exports pointing at
+# ${boot_dir}/rust. Sibling repos reach these binaries via the boot-path
+# resolver (lib/ci.sh::ci_resolve_boot_path) + inherit: declarations in
+# their config/boot_layout.yaml.
+#
+# Reference spec: docs/specifications/SPEC-BOOT-LAYOUT.md
+#
+# Overrideable env vars:
+#   $RUST_TOOLCHAIN  — rustup toolchain channel to install (default: "stable").
+
+set -euo pipefail
+
+RUST_TOOLCHAIN="${RUST_TOOLCHAIN:-stable}"
+
+_ci_lib="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
+# shellcheck source=lib/ci.sh
+if ! source "$_ci_lib/ci.sh"; then
+    echo "ERROR: failed to source $_ci_lib/ci.sh" >&2
+    exit 2
+fi
+if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
+    echo "ERROR: CI_PROJECT_ROOT not set after sourcing ci.sh" >&2
+    exit 2
+fi
+
+_log() { printf '[bootstrap-rust] %s\n' "$*" >&2; }
+
+# _create_symlinks <boot_dir> <target_dir> <rust_home>
+#   Mirror active-toolchain bin + llvm-tools-preview bin into ${target_dir}
+#   via relative symlinks so the tree is relocatable.
+_create_symlinks() {
+    local _bd="$1" _td="$2" _rh="$3"
+    local tc_out tc_err tc_rc=0
+    tc_out="$(mktemp)"; tc_err="$(mktemp)"
+    "$_rh/bin/rustup" show active-toolchain >"$tc_out" 2>"$tc_err" || tc_rc=$?
+    if [[ $tc_rc -ne 0 ]]; then
+        _log "rustup show active-toolchain failed (rc=$tc_rc):"
+        cat "$tc_err" >&2
+        rm -f "$tc_out" "$tc_err"
+        return 1
+    fi
+    local toolchain_name
+    toolchain_name="$(awk 'NR==1{print $1}' "$tc_out")"
+    rm -f "$tc_out" "$tc_err"
+    if [[ -z "$toolchain_name" ]]; then
+        # Reasonable default: rustup names toolchains <channel>-<host-triple>.
+        toolchain_name="${RUST_TOOLCHAIN}-$(uname -m)-unknown-linux-gnu"
+    fi
+
+    local toolchain_dir toolchain_bin toolchain_llvm_bin host_triple
+    host_triple="$(uname -m)-unknown-linux-gnu"
+    toolchain_dir="rust/toolchains/${toolchain_name}"
+    toolchain_bin="${toolchain_dir}/bin"
+    toolchain_llvm_bin="${toolchain_dir}/lib/rustlib/${host_triple}/bin"
+
+    mkdir -p "$_td"
+    ln -sf "../rust/bin/rustup" "${_td}/rustup"
+
+    local bin
+    for bin in cargo rustc rustfmt cargo-clippy cargo-fmt \
+               clippy-driver rustdoc; do
+        if [[ -x "${CI_PROJECT_ROOT}/${_bd}/${toolchain_bin}/${bin}" ]]; then
+            ln -sf "../${toolchain_bin}/${bin}" "${_td}/${bin}"
+        fi
+    done
+
+    local llvm_dir="${CI_PROJECT_ROOT}/${_bd}/${toolchain_llvm_bin}"
+    if [[ -d "$llvm_dir" ]]; then
+        local entry bin_name
+        for entry in "$llvm_dir"/*; do
+            [[ -d "$entry" ]] && continue
+            [[ -x "$entry" ]] || continue
+            bin_name="$(basename "$entry")"
+            ln -sf "../${toolchain_llvm_bin}/${bin_name}" "${_td}/${bin_name}"
+        done
+        _log "LLVM tool symlinks created"
+    else
+        _log "LLVM tools dir not found at ${toolchain_llvm_bin}; skipping"
+    fi
+    _log "Rust symlinks created in ${_td}"
+}
+
+# _install_components <boot_dir> <target_dir> <rust_home>
+#   Add the extra components the workspace relies on (coverage + source).
+_install_components() {
+    local _bd="$1" _td="$2" _rh="$3"
+    local c_out c_err c_rc=0
+    c_out="$(mktemp)"; c_err="$(mktemp)"
+    "$_rh/bin/rustup" component add llvm-tools-preview rust-src \
+        >"$c_out" 2>"$c_err" || c_rc=$?
+    if [[ $c_rc -ne 0 ]]; then
+        _log "rustup component add failed (rc=$c_rc):"
+        cat "$c_err" >&2
+        rm -f "$c_out" "$c_err"
+        return 1
+    fi
+    rm -f "$c_out" "$c_err"
+    _log "components installed: llvm-tools-preview, rust-src"
+}
+
+main() {
+    local _boot_dir target_dir rust_home
+    # Read boot_dir from config/boot_layout.yaml (single source of truth).
+    # Normalize: strip leading "./" and trailing "/".
+    _boot_dir="$(ci_read_yaml "${CI_CONFIG_DIR}/boot_layout.yaml" \
+        "boot_dir")" || _boot_dir=".boot-linux"
+    _boot_dir="${_boot_dir#./}"
+    _boot_dir="${_boot_dir%/}"
+    [[ -z "$_boot_dir" ]] && _boot_dir=".boot-linux"
+    target_dir="${CI_PROJECT_ROOT}/${_boot_dir}/bin"
+    rust_home="${CI_PROJECT_ROOT}/${_boot_dir}/rust"
+
+    mkdir -p "$target_dir"
+    mkdir -p "$rust_home"
+
+    # Idempotency: existing toolchain must actually respond to --version.
+    if [[ -x "$rust_home/bin/rustc" && -x "$rust_home/bin/cargo" ]]; then
+        local v_out v_err v_rc=0
+        v_out="$(mktemp)"; v_err="$(mktemp)"
+        "$rust_home/bin/rustc" --version >"$v_out" 2>"$v_err" || v_rc=$?
+        if [[ $v_rc -eq 0 ]]; then
+            _log "Rust already installed: $(head -1 "$v_out")"
+            rm -f "$v_out" "$v_err"
+            _create_symlinks "$_boot_dir" "$target_dir" "$rust_home"
+            _install_components "$_boot_dir" "$target_dir" "$rust_home"
+            return 0
+        fi
+        _log "toolchain broken (rc=$v_rc): $(head -1 "$v_err")"
+        _log "removing $rust_home and reinstalling"
+        rm -f "$v_out" "$v_err"
+        rm -rf "$rust_home"
+        mkdir -p "$rust_home"
+    fi
+
+    # Isolate rustup/cargo state inside ${boot_dir}/rust (NOT $HOME).
+    export RUSTUP_HOME="$rust_home"
+    export CARGO_HOME="$rust_home"
+
+    # Rust needs a C linker. Short-circuit AND of absent compilers is the
+    # real check — `command -v` returning nonzero IS the signal, not a swallow.
+    if ! command -v cc && ! command -v gcc && ! command -v clang; then
+        _log "no C compiler (cc/gcc/clang) found — required by Rust toolchain"
+        return 1
+    fi
+
+    local tmp
+    tmp="$(mktemp -d)"
+    # Use ${tmp:-} so the trap is safe under `set -u` once `tmp` (a local)
+    # goes out of scope after main() returns.
+    # shellcheck disable=SC2064
+    trap "rm -rf \"\${tmp:-$tmp}\"" EXIT
+
+    local rustup_url="https://sh.rustup.rs"
+    _log "fetching $rustup_url"
+    local dl_rc=0
+    curl -fsSL --retry 3 --retry-delay 2 \
+        -o "$tmp/rustup-init.sh" "$rustup_url" || dl_rc=$?
+    if [[ $dl_rc -ne 0 ]]; then
+        _log "curl failed (rc=$dl_rc): $rustup_url"
+        return 1
+    fi
+
+    _log "running rustup-init (toolchain=$RUST_TOOLCHAIN)"
+    local ru_out ru_err ru_rc=0
+    ru_out="$(mktemp)"; ru_err="$(mktemp)"
+    bash "$tmp/rustup-init.sh" -y --no-modify-path \
+        --default-toolchain "$RUST_TOOLCHAIN" >"$ru_out" 2>"$ru_err" \
+        || ru_rc=$?
+    if [[ $ru_rc -ne 0 ]]; then
+        _log "rustup-init failed (rc=$ru_rc):"
+        cat "$ru_err" >&2
+        rm -f "$ru_out" "$ru_err"
+        return 1
+    fi
+    rm -f "$ru_out" "$ru_err"
+
+    # Post-install verify: both binaries must exist and answer --version.
+    local p_out p_err p_rc=0
+    p_out="$(mktemp)"; p_err="$(mktemp)"
+    if [[ ! -x "$rust_home/bin/rustc" ]]; then
+        _log "rustc not found after install: $rust_home/bin/rustc"
+        rm -f "$p_out" "$p_err"
+        return 1
+    fi
+    "$rust_home/bin/rustc" --version >"$p_out" 2>"$p_err" || p_rc=$?
+    if [[ $p_rc -ne 0 ]]; then
+        _log "rustc --version failed (rc=$p_rc): $(head -1 "$p_err")"
+        rm -f "$p_out" "$p_err"
+        return 1
+    fi
+    _log "rustc: $(head -1 "$p_out")"
+    : >"$p_out"; p_rc=0
+    if [[ ! -x "$rust_home/bin/cargo" ]]; then
+        _log "cargo not found after install: $rust_home/bin/cargo"
+        rm -f "$p_out" "$p_err"
+        return 1
+    fi
+    "$rust_home/bin/cargo" --version >"$p_out" 2>"$p_err" || p_rc=$?
+    if [[ $p_rc -ne 0 ]]; then
+        _log "cargo --version failed (rc=$p_rc): $(head -1 "$p_err")"
+        rm -f "$p_out" "$p_err"
+        return 1
+    fi
+    _log "cargo: $(head -1 "$p_out")"
+    rm -f "$p_out" "$p_err"
+
+    _create_symlinks "$_boot_dir" "$target_dir" "$rust_home"
+    _install_components "$_boot_dir" "$target_dir" "$rust_home"
+}
+
+main "$@"

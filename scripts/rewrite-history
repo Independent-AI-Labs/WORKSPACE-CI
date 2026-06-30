@@ -15,7 +15,10 @@ set -euo pipefail
 
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 _CI_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
-source "$_CI_ROOT/lib/ci.sh"
+if ! source "$_CI_ROOT/lib/ci.sh"; then
+    echo "ERROR: failed to source $_CI_ROOT/lib/ci.sh" >&2
+    exit 2
+fi
 
 # Use system git directly — this script is an explicitly destructive tool
 # that the user invokes manually. The git-guard blocks --force which
@@ -104,10 +107,10 @@ fi
 _commits=""
 if [[ -n "$_base" ]]; then
     local _log_rc=0
-    _commits="$(git log --format='%H' "$_range" 2>/dev/null)" || _log_rc=$?
+    _commits="$(git log --format='%H' "$_range")" || _log_rc=$?
 else
     _log_rc=0
-    _commits="$(git log --format='%H' HEAD 2>/dev/null)" || _log_rc=$?
+    _commits="$(git log --format='%H' HEAD)" || _log_rc=$?
 fi
 
 if [[ -z "$_commits" ]]; then
@@ -197,16 +200,17 @@ git filter-branch --msg-filter "
 
 # Clean up filter-branch refs
 local _cleanup_rc=0
-git for-each-ref --format='delete %(refname)' refs/original/ | git update-ref --stdin 2>/dev/null || _cleanup_rc=$?
+git for-each-ref --format='delete %(refname)' refs/original/ | git update-ref --stdin || _cleanup_rc=$?
 
 # -- Verify (only HEAD, not --all which includes backup refs) --
 _remaining=0
 _verify_commits=""
 if [[ -n "$_base" ]]; then
-    local _verify_log_rc=0
-    _verify_commits="$(git log --format='%H' "${_base}..HEAD" 2>/dev/null)" || _verify_log_rc=$?
+    _verify_log_rc=0
+    _verify_commits="$(git log --format='%H' "${_base}..HEAD")" || _verify_log_rc=$?
 else
-    _verify_commits="$(git log --format='%H' HEAD 2>/dev/null)"
+    _verify_log_rc=0
+    _verify_commits="$(git log --format='%H' HEAD)" || _verify_log_rc=$?
 fi
 
 while IFS= read -r _sha; do

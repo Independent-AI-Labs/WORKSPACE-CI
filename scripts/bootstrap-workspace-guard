@@ -60,22 +60,45 @@ uninstall_guard() {
 rollback_guard() {
     log_warn "Installation failed — rolling back..."
     if command -v chattr >/dev/null; then
-        test -f /usr/bin/git       && chattr -i /usr/bin/git
-        test -f /usr/bin/git.original && chattr -i /usr/bin/git.original
+        if [[ -f /usr/bin/git ]]; then
+            rc=0; chattr -i /usr/bin/git || rc=$?
+            if [ $rc -ne 0 ]; then
+                echo "chattr -i /usr/bin/git: no-op or failed (rc=$rc)" >&2
+            fi
+        fi
+        if [[ -f /usr/bin/git.original ]]; then
+            rc=0; chattr -i /usr/bin/git.original || rc=$?
+            if [ $rc -ne 0 ]; then
+                echo "chattr -i /usr/bin/git.original: no-op or failed (rc=$rc)" >&2
+            fi
+        fi
     fi
     rm -f /usr/bin/git
     if divert_is_active; then
-        dpkg-divert --rename --remove /usr/bin/git
+        rc=0; dpkg-divert --rename --remove /usr/bin/git || rc=$?
+        if [ $rc -ne 0 ]; then
+            echo "dpkg-divert --remove /usr/bin/git: no-op or failed (rc=$rc)" >&2
+        fi
     fi
     if [[ -f /usr/bin/git.original ]]; then
         if command -v chattr >/dev/null; then
-            chattr -i /usr/bin/git.original
+rc=0; chattr -i /usr/bin/git.original || rc=$?
+            if [ $rc -ne 0 ]; then
+                echo "chattr -i /usr/bin/git.original: no-op or failed (rc=$rc)" >&2
+            fi
         fi
         mv /usr/bin/git.original /usr/bin/git
         chown root:root /usr/bin/git
         chmod 0755 /usr/bin/git
         log_info "Restored /usr/bin/git from git.original"
+    elif [[ -f /usr/bin/git.distrib ]]; then
+        mv /usr/bin/git.distrib /usr/bin/git
+        chown root:root /usr/bin/git
+        chmod 0755 /usr/bin/git
+        log_info "Restored /usr/bin/git from git.distrib"
     fi
+    rm -f /etc/apt/apt.conf.d/99workspace-guard
+    rm -rf /usr/lib/workspace-guard
 }
 
 preflight_check() {
@@ -85,11 +108,15 @@ preflight_check() {
         gowner=$(stat -c '%U:%G' /usr/bin/git.original)
         if [[ "$gmode" == "700" && "$gowner" == "root:root" ]]; then
             if [[ -x /usr/bin/git ]]; then
-                local guard_mode
+                local guard_mode guard_owner
                 guard_mode=$(stat -c '%a' /usr/bin/git)
-                if [[ "$guard_mode" == "4555" ]]; then
-                    log_info "Git guard is already installed."
-                    return 0
+                guard_owner=$(stat -c '%U:%G' /usr/bin/git)
+                if [[ "$guard_owner" == "root:root" ]]; then
+                    # Capability mode: 4555 or 0755 with caps
+                    # Root-only mode: 0755 without caps
+                    if [[ "$guard_mode" == "4555" || "$guard_mode" == "755" ]]; then
+                        return 0
+                    fi
                 fi
             fi
         fi
@@ -119,13 +146,28 @@ build_guard_binary() {
     fi
 
     if command -v rustup >/dev/null; then
-        if ! rustup show active-toolchain >/dev/null 2>&1; then
+        # rc-capture: rustup show active-toolchain prints the active
+        # toolchain name to stdout (we don't need it). On rc!=0 (rustup
+        # broken, or no default toolchain configured), surface stderr
+        # and fall through to the install-stable path.
+        local _at_out _at_err _at_rc=0
+        _at_out="$(mktemp)"; _at_err="$(mktemp)"
+        rustup show active-toolchain >"$_at_out" 2>"$_at_err" || _at_rc=$?
+        if [[ $_at_rc -ne 0 ]]; then
+            if [[ -s "$_at_err" ]]; then
+                log_warn "rustup show active-toolchain failed (rc=$_at_rc): $(head -1 "$_at_err")"
+            else
+                log_warn "rustup show active-toolchain failed (rc=$_at_rc, no stderr)"
+            fi
+            rm -f "$_at_out" "$_at_err"
             log_warn "rustup found but no default toolchain configured — installing stable"
             rustup default stable || {
                 log_error "Failed to set default Rust toolchain"
                 return 1
             }
             log_info "Rust stable toolchain installed"
+        else
+            rm -f "$_at_out" "$_at_err"
         fi
     fi
 
@@ -136,6 +178,18 @@ build_guard_binary() {
     fi
 
     cd "$_guard_dir"
+
+    # Detect root-only mode: if setcap is unavailable or caps don't work,
+    # build with --features root-only
+    local build_features=""
+    if ! command -v setcap >/dev/null; then
+        log_warn "setcap not available — building in root-only mode (soft barrier)"
+        build_features="--no-default-features --features root-only"
+    elif ! setcap cap_dac_override+ep /usr/bin/true; then
+        log_warn "setcap present but non-functional — building in root-only mode (soft barrier)"
+        build_features="--no-default-features --features root-only"
+    fi
+
     local guard_bin=""
     local has_rustup=0
     if command -v rustup >/dev/null; then
@@ -146,16 +200,16 @@ build_guard_binary() {
         installed_targets=$(rustup target list --installed)
         if echo "$installed_targets" | grep -q musl; then
             log_info "Building statically linked binary (musl)..."
-            cargo build --release --target x86_64-unknown-linux-musl
+            cargo build --release --target x86_64-unknown-linux-musl $build_features
             guard_bin="target/x86_64-unknown-linux-musl/release/workspace-guard"
         else
             log_info "Building dynamically linked binary (gnu)..."
-            PATH="/usr/bin:/usr/sbin:/usr/local/bin:$PATH" CC=gcc cargo build --release
+            PATH="/usr/bin:/usr/sbin:/usr/local/bin:$PATH" CC=gcc cargo build --release $build_features
             guard_bin="target/release/workspace-guard"
         fi
     else
         log_info "Building dynamically linked binary (gnu, no rustup)..."
-        PATH="/usr/bin:/usr/sbin:/usr/local/bin:$PATH" CC=gcc cargo build --release
+        PATH="/usr/bin:/usr/sbin:/usr/local/bin:$PATH" CC=gcc cargo build --release $build_features
         guard_bin="target/release/workspace-guard"
     fi
 
@@ -174,6 +228,10 @@ build_guard_binary() {
     log_info "Build successful: $(file "$guard_bin" | cut -d: -f2)"
 
     GUARD_BIN="$guard_bin"
+    GUARD_BUILD_MODE="capability"
+    if [[ -n "$build_features" ]]; then
+        GUARD_BUILD_MODE="root-only"
+    fi
     return 0
 }
 
@@ -181,7 +239,7 @@ install_guard_binary() {
     local guard_bin="${1:-$GUARD_BIN}"
     if [[ ! -f "$guard_bin" ]]; then
         log_error "Guard binary not found at $guard_bin"
-        log_error "Run 'make build-guard' first to build the binary, then: sudo make install-guard"
+        log_error "Run 'make build-guard' first to build the binary, then: make install-guard"
         return 1
     fi
     if ! file "$guard_bin" | grep -q ELF; then
@@ -189,38 +247,56 @@ install_guard_binary() {
         return 1
     fi
 
-    echo ""
-    echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
-    echo -e "${CYAN}${BOLD} Git Guard — File Capability Installation${NC}"
-    echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
-    echo ""
-    echo "The Git Guard is a capability-enabled binary that wraps /usr/bin/git."
-    echo ""
-    echo "WHAT IT DOES:"
-    echo "  • Relocates real git → /usr/bin/git.original (0700, root-only)"
-    echo "  • Installs guard binary → /usr/bin/git (0755, cap_dac_override+ep)"
-    echo "  • Gives users rights to run git ONLY through the guard"
-    echo "  • Blocks: git reset --hard, git checkout --hard, git rebase,"
-    echo "            git commit --amend, git push --force, git reset,"
-    echo "            git checkout (destructive file restoration)"
-    echo "  • Allows: git status, git log, git diff, git add, git commit,"
-    echo "            git pull --ff-only, git fetch, git stash"
-    echo "  • dpkg-divert protects from apt overwrites"
-    echo "  • Immutable attributes (chattr +i) prevent tampering"
-    echo "  • Logs every git invocation to /var/log/workspace-guard/"
-    echo ""
-    echo "WHY IT'S RECOMMENDED:"
-    echo "  • CI agents, AI coding assistants, and automated tooling can"
-    echo "    inadvertently (or adversarially) destroy your repo history."
-    echo "  • The guard provides a PROOF OF CONCEPT that git operations"
-    echo "    can be policed at the OS level — no configuration changes"
-    echo "    in your CI pipeline, IDE, or git config are needed."
-    echo "  • Every blocked command is logged with user, timestamp, and"
-    echo "    the exact git invocation that was attempted."
-    echo ""
-    echo "To uninstall:"
-    echo "  sudo make uninstall-guard"
-    echo ""
+    # Detect installation mode from build mode, or auto-detect if not set
+    local install_mode="${GUARD_BUILD_MODE:-capability}"
+    if ! command -v setcap >/dev/null; then
+        install_mode="root-only"
+elif ! setcap cap_dac_override+ep /usr/bin/true; then
+            install_mode="root-only"
+    fi
+
+    if [[ "$install_mode" == "root-only" ]]; then
+        echo ""
+        echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
+        echo -e "${CYAN}${BOLD} Git Guard — Root-Only Installation (SOFT BARRIER)${NC}"
+        echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo "WARNING: Installing in root-only mode — this is a SOFT BARRIER."
+        echo ""
+        echo "  • setcap is unavailable — file capabilities cannot be set"
+        echo "  • The guard policy engine will still block destructive commands"
+        echo "  • BUT: root users can bypass the guard by running /usr/bin/git.original"
+        echo "  • No chattr +i, no dpkg-divert, no apt hook"
+        echo ""
+        echo "See docs/ROOT-ONLY-MODE.md for the full threat model."
+        echo ""
+        echo "To uninstall: make uninstall-guard"
+        echo ""
+    else
+        echo ""
+        echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
+        echo -e "${CYAN}${BOLD} Git Guard — File Capability Installation${NC}"
+        echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo "The Git Guard is a capability-enabled binary that wraps /usr/bin/git."
+        echo ""
+        echo "WHAT IT DOES:"
+        echo "  • Relocates real git → /usr/bin/git.original (0700, root-only)"
+        echo "  • Installs guard binary → /usr/bin/git (0755, cap_dac_override+ep)"
+        echo "  • Gives users rights to run git ONLY through the guard"
+        echo "  • Blocks: git reset --hard, git checkout --hard, git rebase,"
+        echo "            git commit --amend, git push --force, git reset,"
+        echo "            git checkout (destructive file restoration)"
+        echo "  • Allows: git status, git log, git diff, git add, git commit,"
+        echo "            git pull --ff-only, git fetch, git stash"
+        echo "  • dpkg-divert protects from apt overwrites"
+        echo "  • Immutable attributes (chattr +i) prevent tampering"
+        echo "  • Logs every git invocation to /var/log/workspace-guard/"
+        echo ""
+        echo "To uninstall:"
+        echo "  make uninstall-guard"
+        echo ""
+    fi
 
     if [[ -t 0 ]]; then
         echo -ne "${CYAN}${BOLD}Proceed with git guard installation? [y/N] ${NC}"
@@ -242,7 +318,10 @@ install_guard_binary() {
     fi
 
     if [[ -f /usr/bin/git.original ]] && command -v chattr >/dev/null; then
-        chattr -i /usr/bin/git.original
+        rc=0; chattr -i /usr/bin/git.original || rc=$?
+        if [ $rc -ne 0 ]; then
+            echo "chattr -i /usr/bin/git.original: no-op or failed (rc=$rc)" >&2
+        fi
     fi
     cp "$git_src" /usr/bin/git.original
     chown root:root /usr/bin/git.original
@@ -257,35 +336,70 @@ install_guard_binary() {
         return 1
     fi
 
-    if divert_is_active; then
-        log_warn "dpkg-divert already in place — continuing"
+    if [[ "$install_mode" == "root-only" ]]; then
+        # Root-only: simple copy, no dpkg-divert, no setcap, no chattr
+        if [[ -f /usr/bin/git ]] && command -v chattr >/dev/null; then
+            rc=0; chattr -i /usr/bin/git || rc=$?
+            if [ $rc -ne 0 ]; then
+                echo "chattr -i /usr/bin/git: no-op or failed (rc=$rc)" >&2
+            fi
+        fi
+        cp "$guard_bin" /usr/bin/git
+        chown root:root /usr/bin/git
+        chmod 0755 /usr/bin/git
+        log_info "Installed guard in root-only mode (no caps, no chattr, no dpkg-divert)"
     else
-        dpkg-divert --local --divert /usr/bin/git.distrib --rename --add /usr/bin/git
-    fi
+        # Capability mode: full installation with dpkg-divert, setcap, chattr
+        if divert_is_active; then
+            log_warn "dpkg-divert already in place — continuing"
+        else
+            dpkg-divert --local --divert /usr/bin/git.distrib --rename --add /usr/bin/git
+        fi
+        chmod 0700 /usr/bin/git.distrib
+        chown root:root /usr/bin/git.distrib
+
+        if ! command -v setcap >/dev/null; then
+            log_error "setcap not found — run 'make init' to install system dependencies"
+            return 1
+        fi
+
+        if command -v chattr >/dev/null && [[ -f /usr/bin/git ]]; then
+            rc=0; chattr -i /usr/bin/git || rc=$?
+            if [ $rc -ne 0 ]; then
+                echo "chattr -i /usr/bin/git: no-op or failed (rc=$rc)" >&2
+            fi
+        fi
+        cp "$guard_bin" /usr/bin/git
+        chown root:root /usr/bin/git
+        chmod 0755 /usr/bin/git
+        setcap cap_dac_override+ep /usr/bin/git || {
+            log_error "Failed to set file capabilities on /usr/bin/git"
+            return 1
+        }
+
+        if command -v chattr >/dev/null; then
+            chattr +i /usr/bin/git || log_warn "Could not set immutable on /usr/bin/git"
+            chattr +i /usr/bin/git.original || log_warn "Could not set immutable on /usr/bin/git.original"
+        else
+            log_warn "chattr not available — skipping immutable attributes"
+        fi
+
+        cat > /etc/apt/apt.conf.d/99workspace-guard << 'EOF'
+DPkg::Post-Invoke { "/usr/lib/workspace-guard/apt-check.sh"; };
+EOF
+        mkdir -p /usr/lib/workspace-guard
+        cat > /usr/lib/workspace-guard/apt-check.sh << 'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if dpkg -l git | grep -q '^ii' && [[ ! -f /usr/bin/git.original ]]; then
+    echo '[WARN] Git package changed but workspace guard not detected. Re-run: make install-guard' >&2
+fi
+if [[ -f /usr/bin/git.distrib ]]; then
     chmod 0700 /usr/bin/git.distrib
     chown root:root /usr/bin/git.distrib
-
-    if ! command -v setcap >/dev/null; then
-        log_error "setcap not found — install libcap2-bin (apt install libcap2-bin)"
-        return 1
-    fi
-
-    if command -v chattr >/dev/null && [[ -f /usr/bin/git ]]; then
-        chattr -i /usr/bin/git
-    fi
-    cp "$guard_bin" /usr/bin/git
-    chown root:root /usr/bin/git
-    chmod 0755 /usr/bin/git
-    setcap cap_dac_override+ep /usr/bin/git || {
-        log_error "Failed to set file capabilities on /usr/bin/git"
-        return 1
-    }
-
-    if command -v chattr >/dev/null; then
-        chattr +i /usr/bin/git || log_warn "Could not set immutable on /usr/bin/git"
-        chattr +i /usr/bin/git.original || log_warn "Could not set immutable on /usr/bin/git.original"
-    else
-        log_warn "chattr not available — skipping immutable attributes"
+fi
+EOF
+        chmod 755 /usr/lib/workspace-guard/apt-check.sh
     fi
 
     if [[ -f "$WORKSPACE_ROOT/.boot-linux/bin/git" ]]; then
@@ -296,27 +410,13 @@ install_guard_binary() {
 
     for path in /snap/bin/git /usr/local/bin/git; do
         if [[ -x "$path" ]]; then
-            chmod 000 "$path"
+            rc=0; chmod 000 "$path" || rc=$?
+            if [ $rc -ne 0 ]; then
+                echo "chmod 000 $path: failed (rc=$rc)" >&2
+            fi
             log_info "Restricted $path (bypass vector)"
         fi
     done
-
-    cat > /etc/apt/apt.conf.d/99workspace-guard << 'EOF'
-DPkg::Post-Invoke { "/usr/lib/workspace-guard/apt-check.sh"; };
-EOF
-    mkdir -p /usr/lib/workspace-guard
-    cat > /usr/lib/workspace-guard/apt-check.sh << 'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-if dpkg -l git | grep -q '^ii' && [[ ! -f /usr/bin/git.original ]]; then
-    echo '[WARN] Git package changed but workspace guard not detected. Re-run: sudo make install-guard' >&2
-fi
-if [[ -f /usr/bin/git.distrib ]]; then
-    chmod 0700 /usr/bin/git.distrib
-    chown root:root /usr/bin/git.distrib
-fi
-EOF
-    chmod 755 /usr/lib/workspace-guard/apt-check.sh
 
     mkdir -p /var/log/workspace-guard
     chmod 1777 /var/log/workspace-guard
@@ -332,9 +432,12 @@ EOF
         log_error "Guard binary has wrong permissions: $guard_mode $guard_owner"
         errors=1
     fi
-    if ! getcap /usr/bin/git | grep -q cap_dac_override; then
-        log_error "Guard binary missing cap_dac_override capability"
-        errors=1
+
+    if [[ "$install_mode" == "capability" ]]; then
+        if ! getcap /usr/bin/git | grep -q cap_dac_override; then
+            log_error "Guard binary missing cap_dac_override capability"
+            errors=1
+        fi
     fi
 
     local real_mode real_owner
@@ -345,8 +448,8 @@ EOF
         errors=1
     fi
 
-    if git --version; then
-        log_info "git --version: $(git --version)"
+    if git --version >/dev/null; then
+        log_info "git --version: $(git --version 2>&1)"
     else
         log_error "git --version failed"
         errors=1
@@ -365,12 +468,20 @@ EOF
 
     if [[ $errors -eq 0 ]]; then
         echo ""
-        log_info "Git guard installation complete."
-        log_info "  /usr/bin/git          (0755 root:root, cap_dac_override+ep, immutable)"
-        log_info "  /usr/bin/git.original (0700 root:root, immutable)"
-        log_info "  dpkg-divert configured"
-        log_info "  apt hook registered"
-        log_info "  audit log: /var/log/workspace-guard/"
+        if [[ "$install_mode" == "root-only" ]]; then
+            log_info "Git guard installation complete (root-only mode — SOFT BARRIER)."
+            log_info "  /usr/bin/git          (0755 root:root, no caps)"
+            log_info "  /usr/bin/git.original (0700 root:root)"
+            log_info "  audit log: /var/log/workspace-guard/"
+            log_warn "  root-only mode: root can bypass by running /usr/bin/git.original directly"
+        else
+            log_info "Git guard installation complete."
+            log_info "  /usr/bin/git          (0755 root:root, cap_dac_override+ep, immutable)"
+            log_info "  /usr/bin/git.original (0700 root:root, immutable)"
+            log_info "  dpkg-divert configured"
+            log_info "  apt hook registered"
+            log_info "  audit log: /var/log/workspace-guard/"
+        fi
         echo ""
         log_info "To verify: make check-guard"
     else
@@ -386,7 +497,7 @@ install_guard() {
     if [[ "$MODE" != "reinstall" ]]; then
         if preflight_check; then
             log_info "Git guard is already installed."
-            log_info "To reinstall: make build-guard && sudo make install-guard"
+            log_info "To reinstall: make build-guard && make install-guard"
             return 0
         fi
     fi
@@ -400,6 +511,11 @@ check_guard() {
         log_info "Rust guard status: INSTALLED"
         if [[ -f /usr/bin/git ]]; then
             log_info "  /usr/bin/git: $(stat -c '%a %U:%G' /usr/bin/git)"
+            if command -v getcap >/dev/null && getcap /usr/bin/git | grep -q cap_dac_override; then
+                log_info "  mode: capability (cap_dac_override+ep)"
+            else
+                log_info "  mode: root-only (no caps — soft barrier)"
+            fi
         else
             log_warn "  /usr/bin/git: MISSING"
         fi
@@ -411,25 +527,25 @@ check_guard() {
         if divert_is_active; then
             log_info "  dpkg-divert: ACTIVE"
         else
-            log_warn "  dpkg-divert: MISSING"
+            log_warn "  dpkg-divert: not configured (root-only mode skips this)"
         fi
         if [[ -f /etc/apt/apt.conf.d/99workspace-guard ]]; then
             log_info "  apt hook: INSTALLED"
         else
-            log_warn "  apt hook: MISSING"
+            log_warn "  apt hook: not configured (root-only mode skips this)"
         fi
         if [[ -f /usr/bin/git ]] && command -v lsattr >/dev/null; then
             if lsattr /usr/bin/git | grep -q '^....i'; then
                 log_info "  immutable: YES"
             else
-                log_warn "  immutable: NO"
+                log_warn "  immutable: NO (root-only mode skips this)"
             fi
         else
             log_warn "  immutable: SKIPPED (lsattr unavailable)"
         fi
     else
         log_info "Rust guard status: NOT INSTALLED"
-        log_info "To install: make build-guard && sudo make install-guard"
+        log_info "To install: make build-guard && make install-guard"
     fi
 }
 

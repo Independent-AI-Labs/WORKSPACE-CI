@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import cast
 
 import pytest
+
 from ci.check_dead_code import (
     DEFAULT_CONFIG_PATH,
     DEFAULT_RAW,

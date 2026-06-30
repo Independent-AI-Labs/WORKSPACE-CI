@@ -91,7 +91,16 @@ ci_block_coauthored_history() {
     local _zero="0000000000000000000000000000000000000000"
     local _all_commits=""
 
-    # Read push refs from stdin (git pre-push sends: local_ref local_sha remote_ref remote_sha)
+    # Read ALL push refs from stdin before entering the loop. If we
+    # read line-by-line inside the while-read, the $(git log ...)
+    # command substitutions inherit the pipe's stdin and hold the read
+    # end open. After the loop exits, the pipe is NOT at EOF because
+    # git's subprocess still holds it. The second while-read loop's
+    # $(git log -1 ...) calls then inherit the still-open pipe and
+    # the function hangs indefinitely. Reading stdin into a variable
+    # first and feeding the loop via here-string breaks the chain.
+    local _push_refs
+    _push_refs="$(cat)"
     while read -r _local_ref _local_sha _remote_ref _remote_sha; do
         [[ -z "$_local_sha" ]] && continue
         # Deleted branch, nothing to check
@@ -103,7 +112,7 @@ ci_block_coauthored_history() {
         else
             _all_commits+="$(git log --format=%H "$_local_sha" --not --remotes)"$'\n'
         fi
-    done
+    done <<< "$_push_refs"
 
     local _commits
     _commits="$(echo "$_all_commits" | sort -u | grep -v '^$')"

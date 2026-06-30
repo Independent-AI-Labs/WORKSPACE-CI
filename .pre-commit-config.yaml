@@ -55,14 +55,14 @@ repos:
 
       - id: check-dependency-versions
         name: Check Dependency Versions (strict pinning + latest)
-        entry: bash -c 'uv run python -c "import ci" 2>/dev/null || { echo "FAILED: ci not installed — run: make sync" >&2; exit 1; }; exec uv run python -m ci.check_dependency_versions "$@"' --
+        entry: bash -c 'uv run python -c "import ci" || { echo "FAILED: ci not installed — run: make sync" >&2; exit 1; }; exec uv run python -m ci.check_dependency_versions "$@"' --
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-duplicate-dependencies
         name: Check Duplicate/Redundant Dependencies
-        entry: bash -c 'uv run python -c "import ci" 2>/dev/null || { echo "FAILED: ci not installed — run: make sync" >&2; exit 1; }; exec uv run python -m ci.check_duplicate_dependencies "$@"' --
+        entry: bash -c 'uv run python -c "import ci" || { echo "FAILED: ci not installed — run: make sync" >&2; exit 1; }; exec uv run python -m ci.check_duplicate_dependencies "$@"' --
         language: system
         pass_filenames: false
         always_run: true
@@ -102,6 +102,13 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: check-portable-shell
+        name: Block Process Substitution (not portable across virtualization)
+        entry: "bash -c 'source lib/checks.sh && ci_check_portable_shell'"
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: check-no-dead-imports
         name: Forbid deleting .py modules that are still imported
         entry: "bash -c 'source lib/checks.sh && ci_check_no_dead_imports'"
@@ -127,6 +134,13 @@ repos:
       - id: check-required-hooks-present
         name: CI Self-Check (manifest + exceptions + rendered hooks)
         entry: "uv run python -m ci.check_required_hooks_present --quiet"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-boot-venv-layout
+        name: Boot Layout Audit (non-blocking)
+        entry: "uv run python -m ci.check_boot_venv_layout"
         language: system
         pass_filenames: false
         always_run: true

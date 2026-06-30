@@ -5,34 +5,18 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
-import pytest
 import yaml
+
 from ci.check_required_hooks_present import (
-    EXIT_INFRA_ERROR,
-    EXIT_OK,
-    EXIT_VIOLATION,
-    REASON_MIN_LEN,
-    ExceptionEntry,
-    HookEntry,
-    HooksManifest,
-    QualityExceptions,
-    _check_hooks_rendered,
-    _check_manifest_completeness,
-    _check_quality_exceptions,
     _find_workspace_root,
-    _hook_applies,
-    _hook_marker,
     _load_manifest,
     _load_quality_exceptions,
     _load_registry,
     _longest_prefix_tier,
     _project_path_relative,
-    _read_rendered_hooks,
     _registry_source,
     _resolve_enforcement_mode,
-    _resolve_gitdir,
     _resolve_tier,
-    main,
 )
 
 
@@ -58,12 +42,21 @@ def _write_registry(workspace: Path, content: dict[str, object]) -> None:
 
 
 def _write_template_registry(workspace: Path, content: dict[str, object]) -> None:
-    tpl = workspace / "projects" / "CI" / "templates" / "project_enforcement.template.yaml"
+    tpl = (
+        workspace
+        / "projects"
+        / "CI"
+        / "templates"
+        / "project_enforcement.template.yaml"
+    )
     tpl.write_text(yaml.safe_dump(content))
 
 
 def _make_repo_with_hooks(
-    parent: Path, name: str, *, pre_commit_markers: list[str] | None = None,
+    parent: Path,
+    name: str,
+    *,
+    pre_commit_markers: list[str] | None = None,
     pre_push_markers: list[str] | None = None,
 ) -> Path:
     repo = parent / name
@@ -157,12 +150,17 @@ def test_longest_prefix_tier_picks_most_specific() -> None:
         {"path": "projects/legacy/", "tier": "vendored"},
         {"path": "projects/legacy/specific-project/", "tier": "strict"},
     ]
-    assert _longest_prefix_tier("projects/legacy/specific-project", exemptions) == "strict"
+    assert (
+        _longest_prefix_tier("projects/legacy/specific-project", exemptions) == "strict"
+    )
     assert _longest_prefix_tier("projects/legacy/old", exemptions) == "vendored"
 
 
 def test_longest_prefix_tier_no_match() -> None:
-    assert _longest_prefix_tier("projects/X", [{"path": "projects/Y", "tier": "poc"}]) == ""
+    assert (
+        _longest_prefix_tier("projects/X", [{"path": "projects/Y", "tier": "poc"}])
+        == ""
+    )
 
 
 def test_longest_prefix_tier_handles_non_list() -> None:
@@ -300,5 +298,3 @@ def test_load_quality_exceptions_handles_non_dict(tmp_path: Path) -> None:
     excs = _load_quality_exceptions(tmp_path)
     assert excs is not None
     assert excs.exceptions == []
-
-

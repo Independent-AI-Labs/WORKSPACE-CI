@@ -7,9 +7,33 @@ set -euo pipefail
 
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 _CI_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
-source "$_CI_ROOT/lib/ci.sh"
+if ! source "$_CI_ROOT/lib/ci.sh"; then
+    echo "ERROR: failed to source $_CI_ROOT/lib/ci.sh" >&2
+    exit 2
+fi
 
-_ROOT="${1:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+# Capture stdout of <cmd...>, fall back to <default> string on failure.
+# stderr is captured to a temp file and printed only on failure (real signal,
+# no swallow). Use for UI display strings where a command failure should
+# degrade to a placeholder rather than abort the audit.
+_capture_or_default() {
+    local default="$1"; shift
+    local out err rc=0
+    out="$(mktemp)"; err="$(mktemp)"
+    "$@" >"$out" 2>"$err" || rc=$?
+    if [[ $rc -ne 0 ]]; then
+        if [[ -s "$err" ]]; then
+            printf '[audit-workspace] %s (rc=%d): %s\n' "$*" "$rc" \
+                "$(head -1 "$err")" >&2
+        fi
+        printf '%s' "$default"
+    else
+        cat "$out"
+    fi
+    rm -f "$out" "$err"
+}
+
+_ROOT="${1:-$(git rev-parse --show-toplevel || pwd)}"
 _ROOT="$(cd "$_ROOT" && pwd)"
 
 # Skip patterns for repo discovery
@@ -32,14 +56,17 @@ fi
 
 # -- Discover repos --
 _repos=()
-while IFS= read -r _gitdir; do
+_gitdirs=()
+ci_capture_pipe _gitdirs 'find "$1" -name ".git" -type d | sort' "$_ROOT"
+for _gitdir in "${_gitdirs[@]}"; do
     _repo="$(dirname "$_gitdir")"
     # Skip matches
     if echo "$_repo" | grep -qE "$_SKIP_DIRS"; then
         continue
     fi
     _repos+=("$_repo")
-done < <(find "$_ROOT" -name ".git" -type d 2>/dev/null | sort)
+done
+
 
 if [[ ${#_repos[@]} -eq 0 ]]; then
     ci_warn "No git repos found under $_ROOT"
@@ -75,18 +102,18 @@ for _repo in "${_repos[@]}"; do
     ci_info "=== $_rel ==="
 
     # 1. Identity
-    _branch="$(git -C "$_repo" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")"
-    _last_hash="$(git -C "$_repo" log -1 --format=%h 2>/dev/null || echo "none")"
-    _last_subj="$(git -C "$_repo" log -1 --format=%s 2>/dev/null || echo "")"
-    _last_ts="$(git -C "$_repo" log -1 --format=%at 2>/dev/null || echo "0")"
+    _branch="$(_capture_or_default "detached" git -C "$_repo" rev-parse --abbrev-ref HEAD)"
+    _last_hash="$(_capture_or_default "none" git -C "$_repo" log -1 --format=%h)"
+    _last_subj="$(_capture_or_default "" git -C "$_repo" log -1 --format=%s)"
+    _last_ts="$(_capture_or_default "0" git -C "$_repo" log -1 --format=%at)"
     _last_age="$(_age "$_last_ts")"
     echo "Branch: $_branch | Last: $_last_hash ${_last_subj:0:60} ($_last_age)"
 
     # 2. Working tree
-    _unstaged="$(git -C "$_repo" diff --name-only 2>/dev/null | wc -l | tr -d ' ')"
-    _staged="$(git -C "$_repo" diff --cached --name-only 2>/dev/null | wc -l | tr -d ' ')"
-    _untracked="$(git -C "$_repo" ls-files --others --exclude-standard 2>/dev/null | wc -l | tr -d ' ')"
-    _stash="$(git -C "$_repo" stash list 2>/dev/null | wc -l | tr -d ' ')"
+    _unstaged="$(git -C "$_repo" diff --name-only | wc -l | tr -d ' ')"
+    _staged="$(git -C "$_repo" diff --cached --name-only | wc -l | tr -d ' ')"
+    _untracked="$(git -C "$_repo" ls-files --others --exclude-standard | wc -l | tr -d ' ')"
+    _stash="$(git -C "$_repo" stash list | wc -l | tr -d ' ')"
     if [[ $_unstaged -eq 0 && $_staged -eq 0 && $_untracked -eq 0 ]]; then
         echo "Tree:   clean"
     else
@@ -94,21 +121,21 @@ for _repo in "${_repos[@]}"; do
     fi
 
     # 3. Remote sync
-    local _rc_remotes=0
-    _remotes="$(git -C "$_repo" remote 2>/dev/null)" || _rc_remotes=$?
+    _rc_remotes=0
+    _remotes="$(git -C "$_repo" remote)" || _rc_remotes=$?
     if [[ -z "$_remotes" ]]; then
         echo "Remotes: none"
     else
         echo "Remotes:"
         while IFS= read -r _remote; do
-            _url="$(git -C "$_repo" remote get-url "$_remote" 2>/dev/null || echo "?")"
-            _tracking="$(git -C "$_repo" rev-parse --abbrev-ref "$_branch@{upstream}" 2>/dev/null || echo "")"
+            _url="$(_capture_or_default "?" git -C "$_repo" remote get-url "$_remote")"
+            _tracking="$(_capture_or_default "" git -C "$_repo" rev-parse --abbrev-ref "$_branch@{upstream}")"
             if [[ -z "$_tracking" || "$_tracking" == *"@{upstream}"* ]]; then
                 printf "  %-8s (%s) : no tracking branch\n" "$_remote" "$_url"
                 continue
             fi
-            _ahead="$(git -C "$_repo" rev-list --count "$_tracking..HEAD" 2>/dev/null || echo "?")"
-            _behind="$(git -C "$_repo" rev-list --count "HEAD..$_tracking" 2>/dev/null || echo "?")"
+            _ahead="$(_capture_or_default "?" git -C "$_repo" rev-list --count "$_tracking..HEAD")"
+            _behind="$(_capture_or_default "?" git -C "$_repo" rev-list --count "HEAD..$_tracking")"
             if [[ "$_ahead" == "0" && "$_behind" == "0" ]]; then
                 _sync="up-to-date"
             elif [[ "$_ahead" != "0" && "$_behind" != "0" ]]; then
@@ -137,7 +164,7 @@ for _repo in "${_repos[@]}"; do
     fi
 
     # L1: Native hooks
-    if [[ -f "$_repo/.git/hooks/pre-commit" ]] && grep -q 'generate-hooks\|ci\.sh' "$_repo/.git/hooks/pre-commit" 2>/dev/null; then
+    if [[ -f "$_repo/.git/hooks/pre-commit" ]] && grep -q 'generate-hooks\|ci\.sh' "$_repo/.git/hooks/pre-commit"; then
         _checks+=("[x] L1: Native hooks installed")
         _score=$((_score + 1))
     elif [[ -f "$_repo/.git/hooks/pre-commit" ]]; then
@@ -147,10 +174,10 @@ for _repo in "${_repos[@]}"; do
     fi
 
     # L2: Makefile migrated
-    if [[ -f "$_repo/Makefile" ]] && grep -q 'generate-hooks' "$_repo/Makefile" 2>/dev/null; then
+    if [[ -f "$_repo/Makefile" ]] && grep -q 'generate-hooks' "$_repo/Makefile"; then
         _checks+=("[x] L2: Makefile migrated")
         _score=$((_score + 1))
-    elif [[ -f "$_repo/Makefile" ]] && grep -q 'pre-commit install' "$_repo/Makefile" 2>/dev/null; then
+    elif [[ -f "$_repo/Makefile" ]] && grep -q 'pre-commit install' "$_repo/Makefile"; then
         _checks+=("[ ] L2: Makefile (still uses pre-commit install)")
     elif [[ -f "$_repo/Makefile" ]]; then
         _checks+=("[ ] L2: Makefile (no hooks target)")
@@ -159,7 +186,7 @@ for _repo in "${_repos[@]}"; do
     fi
 
     # L3: Commit msg enforced
-    if [[ -f "$_repo/.pre-commit-config.yaml" ]] && grep -q 'check-commit-message\|ci_check_commit_message' "$_repo/.pre-commit-config.yaml" 2>/dev/null; then
+    if [[ -f "$_repo/.pre-commit-config.yaml" ]] && grep -q 'check-commit-message\|ci_check_commit_message' "$_repo/.pre-commit-config.yaml"; then
         _checks+=("[x] L3: Commit message format enforced")
         _score=$((_score + 1))
     else
@@ -168,8 +195,8 @@ for _repo in "${_repos[@]}"; do
 
     # L4: History clean
     if [[ -n "$_blocked_combined" ]]; then
-        local _rc_blocked=0
-        _violations="$(git -C "$_repo" log --format=%B HEAD 2>/dev/null | grep -ciE "$_blocked_combined")" || _rc_blocked=$?
+        _rc_blocked=0
+        _violations="$(git -C "$_repo" log --format=%B HEAD | grep -ciE "$_blocked_combined")" || _rc_blocked=$?
         if [[ "$_violations" -eq 0 ]]; then
             _checks+=("[x] L4: History clean")
             _score=$((_score + 1))
@@ -181,7 +208,7 @@ for _repo in "${_repos[@]}"; do
     fi
 
     # L5: Pre-push hooks
-    if [[ -f "$_repo/.git/hooks/pre-push" ]] && grep -q 'generate-hooks\|ci\.sh' "$_repo/.git/hooks/pre-push" 2>/dev/null; then
+    if [[ -f "$_repo/.git/hooks/pre-push" ]] && grep -q 'generate-hooks\|ci\.sh' "$_repo/.git/hooks/pre-push"; then
         _checks+=("[x] L5: Pre-push hooks")
         _score=$((_score + 1))
     else
@@ -189,7 +216,7 @@ for _repo in "${_repos[@]}"; do
     fi
 
     # L6: Test suite on push
-    if [[ -f "$_repo/.pre-commit-config.yaml" ]] && grep -q 'run-tests\|verify-coverage' "$_repo/.pre-commit-config.yaml" 2>/dev/null; then
+    if [[ -f "$_repo/.pre-commit-config.yaml" ]] && grep -q 'run-tests\|verify-coverage' "$_repo/.pre-commit-config.yaml"; then
         _checks+=("[x] L6: Test suite on push")
         _score=$((_score + 1))
     else
