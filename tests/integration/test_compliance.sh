@@ -129,12 +129,12 @@ exceptions: []
 YAML
 
     # Stage all files so git ls-files returns them (not the parent repo)
-    git -C "$pdir" add -A 2>/dev/null
+    git -C "$pdir" add -A
     if git -C "$pdir" diff --cached --quiet; then
         :  # nothing staged
     else
         git -C "$pdir" commit -m "feat: init files" -q
-    fi 2>/dev/null
+    fi
 
     local rc=0
     ci_compliance_score "$pdir" || rc=$?
@@ -149,7 +149,7 @@ test_compliance_detects_python() {
     echo '[project]' > "$pdir/pyproject.toml"
 
     local output
-    local _rc=0; output="$(ci_compliance_score "$pdir" 2>&1)" || _rc=$?
+    local _rc=0; output="$(ci_compliance_score "$pdir")" || _rc=$?
     echo "$output" | grep -q "Language: python"
 }
 _run_test "compliance: detects python language" test_compliance_detects_python
@@ -161,7 +161,7 @@ test_compliance_detects_node() {
     echo '{}' > "$pdir/package.json"
 
     local output
-    local _rc=0; output="$(ci_compliance_score "$pdir" 2>&1)" || _rc=$?
+    local _rc=0; output="$(ci_compliance_score "$pdir")" || _rc=$?
     echo "$output" | grep -q "Language: node"
 }
 _run_test "compliance: detects node language" test_compliance_detects_node
@@ -173,7 +173,7 @@ test_compliance_detects_rust() {
     echo '[package]' > "$pdir/Cargo.toml"
 
     local output
-    local _rc=0; output="$(ci_compliance_score "$pdir" 2>&1)" || _rc=$?
+    local _rc=0; output="$(ci_compliance_score "$pdir")" || _rc=$?
     echo "$output" | grep -q "Language: rust"
 }
 _run_test "compliance: detects rust language" test_compliance_detects_rust
@@ -185,7 +185,7 @@ test_compliance_r5_skipped_no_tests() {
     _write_full_precommit "$pdir"
 
     local output
-    local _rc=0; output="$(ci_compliance_score "$pdir" 2>&1)" || _rc=$?
+    local _rc=0; output="$(ci_compliance_score "$pdir")" || _rc=$?
     # R5 should show N/A, not a failure
     echo "$output" | grep -q '\[~\].*R5'
 }
@@ -199,7 +199,7 @@ test_compliance_missing_hooks_fails_h2_h3() {
     # Don't install hooks, H2 and H3 should fail
 
     local output
-    local _rc=0; output="$(ci_compliance_score "$pdir" 2>&1)" || _rc=$?
+    local _rc=0; output="$(ci_compliance_score "$pdir")" || _rc=$?
     echo "$output" | grep -q '\[ \].*H2'
     echo "$output" | grep -q '\[ \].*H3'
 }
@@ -213,7 +213,7 @@ test_compliance_missing_coverage_config() {
     # No config/coverage_thresholds.yaml, C1 should fail
 
     local output
-    local _rc=0; output="$(ci_compliance_score "$pdir" 2>&1)" || _rc=$?
+    local _rc=0; output="$(ci_compliance_score "$pdir")" || _rc=$?
     echo "$output" | grep -q '\[ \].*C1'
 }
 _run_test "compliance: missing coverage config fails C1" test_compliance_missing_coverage_config
@@ -223,10 +223,10 @@ test_compliance_score_in_output() {
     local pdir
     pdir="$(_setup_project scorecheck)"
 
-    local output
-    local _rc=0; output="$(ci_compliance_score "$pdir" 2>&1)" || _rc=$?
-    # Should contain COMPLIANCE: XX% format
-    echo "$output" | grep -qE 'COMPLIANCE: [0-9]+%'
+    local _rc=0
+    ci_compliance_score "$pdir" >"$TEST_TMP/score_out" 2>"$TEST_TMP/score_err" || _rc=$?
+    # ci_fail writes to stderr; ci_pass writes to stdout.  Search both.
+    grep -qE 'COMPLIANCE: [0-9]+%' "$TEST_TMP/score_out" "$TEST_TMP/score_err"
 }
 _run_test "compliance: score percentage in output" test_compliance_score_in_output
 
@@ -235,10 +235,9 @@ test_compliance_tier_in_output() {
     local pdir
     pdir="$(_setup_project tiercheck)"
 
-    local output
-    local _rc=0; output="$(ci_compliance_score "$pdir" 2>&1)" || _rc=$?
-    # Should contain Tier A through Tier F
-    echo "$output" | grep -qE 'Tier [A-F]'
+    local _rc=0
+    ci_compliance_score "$pdir" >"$TEST_TMP/score_out" 2>"$TEST_TMP/score_err" || _rc=$?
+    grep -qE 'Tier [A-F]' "$TEST_TMP/score_out" "$TEST_TMP/score_err"
 }
 _run_test "compliance: tier in output" test_compliance_tier_in_output
 
@@ -247,7 +246,7 @@ _run_test "compliance: tier in output" test_compliance_tier_in_output
 test_enforcement_mode_default_warn_when_missing() {
     _source_lib
     local _out
-    _out="$(ci_resolve_enforcement_mode /tmp/no-such-registry-$$ 2>&1)"
+    _out="$(ci_resolve_enforcement_mode /tmp/no-such-registry-$$)"
     [[ "$_out" == "warn" ]]
 }
 _run_test "enforcement_mode: default 'warn' when registry missing" test_enforcement_mode_default_warn_when_missing

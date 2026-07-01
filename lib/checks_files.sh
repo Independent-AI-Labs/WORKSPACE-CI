@@ -21,7 +21,7 @@ _load_sensitive_config() {
 
     # Merge per-repo exceptions from <repo_root>/config/sensitive_files_exceptions.yaml
     local repo_root
-    repo_root="$(git rev-parse --show-toplevel 2>&1)" || repo_root=""
+    repo_root="$(git rev-parse --show-toplevel)" || repo_root=""
     if [[ -n "$repo_root" ]]; then
         local per_repo="${repo_root}/config/sensitive_files_exceptions.yaml"
         if [[ -f "$per_repo" ]]; then

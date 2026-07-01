@@ -319,7 +319,7 @@ ci_compliance_score() {
     if [[ -f "$CI_CONFIG_DIR/banned_words.yaml" ]]; then
         local _bw_tmp; _bw_tmp=$(mktemp)
         (cd "$project_dir" && ci_check_banned_words) \
-            </dev/null >"$_bw_tmp" 2>&1 || _bw_rc=$?
+            </dev/null >"$_bw_tmp" || _bw_rc=$?
         if [[ $_bw_rc -ne 0 && -s "$_bw_tmp" ]]; then
             while IFS= read -r _line; do
                 echo "       $_line"

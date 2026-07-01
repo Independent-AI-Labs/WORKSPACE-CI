@@ -38,7 +38,7 @@ _test_bp_coauthored() {
     _source_lib
     _write_msg "$(printf 'feat: thing\n\nBody.\n\nCo-Authored-By: X <x@x.com>')"
     local rc=0
-    ci_block_coauthored "$TEST_TMP/msg.txt" > /dev/null 2>&1 || rc=$?
+    ci_block_coauthored "$TEST_TMP/msg.txt" > /dev/null || rc=$?
     _assert_eq "1" "$rc" "should reject co-authored-by"
 }
 _run_test "blocked: co-authored-by caught" _test_bp_coauthored
@@ -48,7 +48,7 @@ _test_bp_anthropic() {
     _source_lib
     _write_msg "$(printf 'feat: thing\n\nFrom noreply@anthropic.com')"
     local rc=0
-    ci_block_coauthored "$TEST_TMP/msg.txt" > /dev/null 2>&1 || rc=$?
+    ci_block_coauthored "$TEST_TMP/msg.txt" > /dev/null || rc=$?
     _assert_eq "1" "$rc" "should reject anthropic email"
 }
 _run_test "blocked: anthropic email caught" _test_bp_anthropic
@@ -58,7 +58,7 @@ _test_bp_claude() {
     _source_lib
     _write_msg "$(printf 'feat: thing\n\nGenerated with Claude Code')"
     local rc=0
-    ci_block_coauthored "$TEST_TMP/msg.txt" > /dev/null 2>&1 || rc=$?
+    ci_block_coauthored "$TEST_TMP/msg.txt" > /dev/null || rc=$?
     _assert_eq "1" "$rc" "should reject claude attribution"
 }
 _run_test "blocked: claude attribution caught" _test_bp_claude
@@ -68,7 +68,7 @@ _test_bp_case() {
     _source_lib
     _write_msg "$(printf 'feat: thing\n\nCO-AUTHORED-BY: X <x@x.com>')"
     local rc=0
-    ci_block_coauthored "$TEST_TMP/msg.txt" > /dev/null 2>&1 || rc=$?
+    ci_block_coauthored "$TEST_TMP/msg.txt" > /dev/null || rc=$?
     _assert_eq "1" "$rc" "should catch uppercase"
 }
 _run_test "blocked: case insensitive" _test_bp_case
@@ -78,7 +78,7 @@ _test_bp_underscore() {
     _source_lib
     _write_msg "$(printf 'feat: thing\n\nCo_Authored_By: X <x@x.com>')"
     local rc=0
-    ci_block_coauthored "$TEST_TMP/msg.txt" > /dev/null 2>&1 || rc=$?
+    ci_block_coauthored "$TEST_TMP/msg.txt" > /dev/null || rc=$?
     _assert_eq "1" "$rc" "should catch underscore variant"
 }
 _run_test "blocked: underscore separator caught" _test_bp_underscore
@@ -101,7 +101,7 @@ _test_bph_clean() {
     local head_sha; head_sha="$(git rev-parse HEAD)"
     source "$PROJECT_DIR/lib/checks.sh"
     local rc=0
-    _push_stdin "$head_sha" | ci_block_coauthored_history > /dev/null 2>&1 || rc=$?
+    _push_stdin "$head_sha" | ci_block_coauthored_history > /dev/null || rc=$?
     _assert_eq "0" "$rc" "clean history should pass"
 }
 _run_test "blocked-history: clean history passes" _test_bph_clean
@@ -117,7 +117,7 @@ _test_bph_violation() {
     local head_sha; head_sha="$(git rev-parse HEAD)"
     source "$PROJECT_DIR/lib/checks.sh"
     local rc=0
-    _push_stdin "$head_sha" "$base_sha" | ci_block_coauthored_history > /dev/null 2>&1 || rc=$?
+    _push_stdin "$head_sha" "$base_sha" | ci_block_coauthored_history > /dev/null || rc=$?
     _assert_eq "1" "$rc" "should catch violation in push range"
 }
 _run_test "blocked-history: catches violation anywhere" _test_bph_violation
@@ -134,7 +134,9 @@ _test_bph_multi() {
     source "$PROJECT_DIR/lib/checks.sh"
     local rc=0
     local output
-    output="$(_push_stdin "$head_sha" "$base_sha" | ci_block_coauthored_history 2>&1)" || rc=$?
+    local _stdout=""
+    _stdout="$(_push_stdin "$head_sha" "$base_sha" | ci_block_coauthored_history 2>"$TEST_TMP/err")" || rc=$?
+    output="${_stdout}$(cat "$TEST_TMP/err")"
     _assert_eq "1" "$rc" "should fail with multiple violations"
     if ! echo "$output" | grep -q '2 commit'; then
         echo "FAIL: should report 2 violations"
@@ -152,7 +154,7 @@ _test_bph_new_branch() {
     local head_sha; head_sha="$(git rev-parse HEAD)"
     source "$PROJECT_DIR/lib/checks.sh"
     local rc=0
-    _push_stdin "$head_sha" | ci_block_coauthored_history > /dev/null 2>&1 || rc=$?
+    _push_stdin "$head_sha" | ci_block_coauthored_history > /dev/null || rc=$?
     _assert_eq "0" "$rc" "clean new branch should pass"
 }
 _run_test "blocked-history: new branch handles null sha" _test_bph_new_branch

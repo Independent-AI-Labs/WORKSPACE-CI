@@ -12,7 +12,7 @@
 test_no_procsub_in_lib() {
     local rc=0
     local found
-    found="$(grep -rnE '< <\(|> >\(' "$LIB_DIR"/*.sh 2>/dev/null \
+    found="$(grep -rnE '< <\(|> >\(' "$LIB_DIR"/*.sh \
         | grep -v '^[^:]*:[0-9]*:[[:space:]]*#' || true)"
     if [[ -n "$found" ]]; then
         echo "  Process substitution found in lib/:"
@@ -27,7 +27,7 @@ test_no_procsub_in_scripts() {
     local rc=0
     local scripts_dir="$PROJECT_DIR/scripts"
     local found
-    found="$(grep -rnE '< <\(|> >\(' "$scripts_dir"/* 2>/dev/null \
+    found="$(grep -rnE '< <\(|> >\(' "$scripts_dir"/* \
         | grep -v '^[^:]*:[0-9]*:[[:space:]]*#' \
         | grep -v '\.yaml:' || true)"
     if [[ -n "$found" ]]; then
@@ -130,7 +130,7 @@ SH
     # But ci_check_portable_shell scans the REAL lib dir (via BASH_SOURCE),
     # not the fake one. So test it directly against the fake file instead.
     local _found
-    _found="$(grep -nE '[<][[:space:]]*[<]\(' "$_fake_lib/evil_test.sh" 2>/dev/null || true)"
+    _found="$(grep -nE '[<][[:space:]]*[<]\(' "$_fake_lib/evil_test.sh" || true)"
     _teardown_tmpdir
     if [[ -z "$_found" ]]; then
         echo "  check regex failed to detect < <(...) in evil_test.sh"
@@ -150,7 +150,7 @@ foo() {
 }
 SH
     local _found
-    _found="$(grep -nE '[[:space:]][<]\([^)]*\)[[:space:]]' "$_fake_lib/evil_standalone.sh" 2>/dev/null || true)"
+    _found="$(grep -nE '[[:space:]][<]\([^)]*\)[[:space:]]' "$_fake_lib/evil_standalone.sh" || true)"
     _teardown_tmpdir
     if [[ -z "$_found" ]]; then
         echo "  check regex failed to detect standalone <(cmd) in evil_standalone.sh"
@@ -163,28 +163,26 @@ SH
 echo ""
 echo "=== portability tests ==="
 
-for t in test_no_procsub_in_lib test_no_procsub_in_scripts; do
+_PORTABLE_OUT="$(mktemp)"
+_PORTABLE_ERR="$(mktemp)"
+
+for t in test_no_procsub_in_lib test_no_procsub_in_scripts \
+         test_ci_capture_lines test_ci_capture_lines_skips_blanks \
+         test_ci_capture_pipe test_ci_capture_lines_exit_code \
+         test_check_catches_procsub test_check_catches_standalone_procsub; do
     _TESTS_RUN=$((_TESTS_RUN + 1))
-    if "$t" > /dev/null 2>&1; then
+    _rc=0
+    "$t" > "$_PORTABLE_OUT" 2>"$_PORTABLE_ERR" || _rc=$?
+    if [[ $_rc -eq 0 ]]; then
         _TESTS_PASSED=$((_TESTS_PASSED + 1))
         echo -e "  \033[32mPASS\033[0m  $t"
     else
         _TESTS_FAILED=$((_TESTS_FAILED + 1))
         _FAILURES+=("$t")
         echo -e "  \033[31mFAIL\033[0m  $t"
-        "$t" 2>&1 | sed 's/^/    | /'
+        sed 's/^/    | /' "$_PORTABLE_OUT"
+        sed 's/^/    | /' "$_PORTABLE_ERR"
     fi
 done
 
-for t in test_ci_capture_lines test_ci_capture_lines_skips_blanks test_ci_capture_pipe test_ci_capture_lines_exit_code test_check_catches_procsub test_check_catches_standalone_procsub; do
-    _TESTS_RUN=$((_TESTS_RUN + 1))
-    if "$t" > /dev/null 2>&1; then
-        _TESTS_PASSED=$((_TESTS_PASSED + 1))
-        echo -e "  \033[32mPASS\033[0m  $t"
-    else
-        _TESTS_FAILED=$((_TESTS_FAILED + 1))
-        _FAILURES+=("$t")
-        echo -e "  \033[31mFAIL\033[0m  $t"
-        "$t" 2>&1 | sed 's/^/    | /'
-    fi
-done
+rm -f "$_PORTABLE_OUT" "$_PORTABLE_ERR"

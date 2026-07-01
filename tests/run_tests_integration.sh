@@ -14,6 +14,7 @@ source "$TESTS_DIR/integration/test_blocked_patterns.sh"
 # SKIP: rewrite tests use git filter-branch which WORKSPACE-GUARD blocks
 # source "$TESTS_DIR/integration/test_rewrite_history.sh"
 source "$TESTS_DIR/integration/test_compliance.sh"
+source "$TESTS_DIR/integration/test_e2e_checks.sh"
 source "$TESTS_DIR/integration/test_silent_swallow.sh"
 
 # Summary

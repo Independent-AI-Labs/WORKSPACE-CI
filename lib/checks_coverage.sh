@@ -223,7 +223,7 @@ ci_check_coverage_thresholds_no_devolution() {
         return 0
     fi
 
-    if ! git rev-parse --git-dir >/dev/null 2>&1; then
+    if ! git rev-parse --git-dir >/dev/null; then
         ci_pass "Not a git repo, skipping."
         return 0
     fi
@@ -237,7 +237,7 @@ ci_check_coverage_thresholds_no_devolution() {
     # Track both min_coverage and path per suite.
     declare -A old_thresholds old_paths
     local _head_output _suite="" _val=""
-    _head_output="$(git show HEAD:"$config" 2>&1)"
+    _head_output="$(git show HEAD:"$config")"
     if [[ $? -eq 0 ]]; then
         while IFS= read -r line; do
             if echo "$line" | grep -qE '^[a-z][a-z_]*:'; then
@@ -260,7 +260,7 @@ ci_check_coverage_thresholds_no_devolution() {
     declare -A new_thresholds new_paths
     local _staged_output
     _suite="" _val=""
-    _staged_output="$(git show :"$config" 2>&1)"
+    _staged_output="$(git show :"$config")"
     if [[ $? -eq 0 ]]; then
         while IFS= read -r line; do
             if echo "$line" | grep -qE '^[a-z][a-z_]*:'; then
