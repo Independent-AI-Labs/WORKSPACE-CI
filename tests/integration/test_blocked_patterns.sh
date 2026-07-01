@@ -10,8 +10,6 @@ _make_bp_repo() {
     mkdir -p "$repo"
     cd "$repo"
     git init -q .
-    git config user.email "test@test.com"
-    git config user.name "Test"
     echo "init" > file.txt
     git add file.txt
     git commit -q -m "$(printf 'feat: initial\n\nSetup.')"

@@ -78,7 +78,7 @@ class HttpClient:
                     asyncio.gather(*tasks, return_exceptions=True),
                     timeout=GLOBAL_BUDGET_SECONDS,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 self._budget_exceeded = True
                 print(
                     f"{YELLOW}warning:{RESET} global URL-probe budget "

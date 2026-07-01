@@ -10,7 +10,7 @@ WORKSPACE_ROOT="$(cd "$_CI_ROOT/../.." && pwd)"
 _guard_dir="$_CI_ROOT/../WORKSPACE-GUARD"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
+CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
 log_info()  { echo -e "${GREEN}[INFO]${NC} $*"; }
 log_warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $*"; }
@@ -179,15 +179,13 @@ build_guard_binary() {
 
     cd "$_guard_dir"
 
-    # Detect root-only mode: if setcap is unavailable or caps don't work,
-    # build with --features root-only
-    local build_features=""
-    if ! command -v setcap >/dev/null; then
-        log_warn "setcap not available: building in root-only mode (soft barrier)"
-        build_features="--no-default-features --features root-only"
-    elif ! setcap cap_dac_override+ep /usr/bin/true; then
-        log_warn "setcap present but non-functional: building in root-only mode (soft barrier)"
-        build_features="--no-default-features --features root-only"
+    local -a build_features=()
+    local build_mode_env="${BUILD_MODE:-}"
+    if [[ "$build_mode_env" == "root-only" ]]; then
+        log_warn "BUILD_MODE=root-only: building root-only (NON-ROOT USERS CANNOT RUN GIT)"
+        build_features=(--no-default-features --features root-only)
+    else
+        log_info "Building capability-mode binary (default; non-root users supported via filecaps)"
     fi
 
     local guard_bin=""
@@ -200,16 +198,16 @@ build_guard_binary() {
         installed_targets=$(rustup target list --installed)
         if echo "$installed_targets" | grep -q musl; then
             log_info "Building statically linked binary (musl)..."
-            cargo build --release --target x86_64-unknown-linux-musl $build_features
+            cargo build --release --target x86_64-unknown-linux-musl "${build_features[@]}"
             guard_bin="target/x86_64-unknown-linux-musl/release/workspace-guard"
         else
             log_info "Building dynamically linked binary (gnu)..."
-            PATH="/usr/bin:/usr/sbin:/usr/local/bin:$PATH" CC=gcc cargo build --release $build_features
+            PATH="/usr/bin:/usr/sbin:/usr/local/bin:$PATH" CC=gcc cargo build --release "${build_features[@]}"
             guard_bin="target/release/workspace-guard"
         fi
     else
         log_info "Building dynamically linked binary (gnu, no rustup)..."
-        PATH="/usr/bin:/usr/sbin:/usr/local/bin:$PATH" CC=gcc cargo build --release $build_features
+        PATH="/usr/bin:/usr/sbin:/usr/local/bin:$PATH" CC=gcc cargo build --release "${build_features[@]}"
         guard_bin="target/release/workspace-guard"
     fi
 
@@ -229,9 +227,11 @@ build_guard_binary() {
 
     GUARD_BIN="$guard_bin"
     GUARD_BUILD_MODE="capability"
-    if [[ -n "$build_features" ]]; then
+    if [[ ${#build_features[@]} -gt 0 ]]; then
         GUARD_BUILD_MODE="root-only"
     fi
+    printf '%s\n' "$GUARD_BUILD_MODE" > "${GUARD_BIN}.mode"
+    log_info "Wrote build-mode marker: ${GUARD_BIN}.mode ($GUARD_BUILD_MODE)"
     return 0
 }
 
@@ -247,13 +247,36 @@ install_guard_binary() {
         return 1
     fi
 
-    # Detect installation mode from build mode, or auto-detect if not set
-    local install_mode="${GUARD_BUILD_MODE:-capability}"
-    if ! command -v setcap >/dev/null; then
-        install_mode="root-only"
-elif ! setcap cap_dac_override+ep /usr/bin/true; then
-            install_mode="root-only"
+    local install_mode="${GUARD_BUILD_MODE:-}"
+    if [[ -z "$install_mode" ]]; then
+        local mode_marker="${guard_bin}.mode"
+        if [[ -f "$mode_marker" ]]; then
+            install_mode="$(cat "$mode_marker")"
+        fi
     fi
+    if [[ -z "$install_mode" ]]; then
+        log_error "No build-mode marker at ${guard_bin}.mode and no in-process build mode."
+        log_error "Binary build mode (capability vs root-only) unknown; refusing to guess."
+        log_error "Build via 'make build-guard' (records mode), then 'make install-guard'."
+        return 1
+    fi
+    if [[ "$install_mode" != "capability" && "$install_mode" != "root-only" ]]; then
+        log_error "Invalid build-mode marker '$install_mode' at ${guard_bin}.mode"
+        return 1
+    fi
+    if [[ "$install_mode" == "capability" ]] && ! command -v setcap >/dev/null; then
+        log_error "Binary is capability-mode but setcap is not installed on this host."
+        log_error "Capability mode requires setcap (libcap2-bin) to grant non-root git access."
+        log_error "Run 'make init', or rebuild root-only: BUILD_MODE=root-only make build-guard"
+        return 1
+    fi
+    if [[ "$install_mode" == "root-only" ]] && command -v setcap >/dev/null; then
+        log_warn "setcap is available here, but the binary was built root-only."
+        log_warn "A capability build would allow non-root users to run git; root-only will NOT."
+    fi
+
+    local nr_count=0
+    nr_count=$(awk -F: '$3>=1000 && $3<65534 && $7 ~ /(bash|sh|zsh|fish)$/{c++} END{print c+0}' /etc/passwd) || nr_count=0
 
     if [[ "$install_mode" == "root-only" ]]; then
         echo ""
@@ -263,11 +286,18 @@ elif ! setcap cap_dac_override+ep /usr/bin/true; then
         echo ""
         echo "WARNING: Installing in root-only mode: this is a SOFT BARRIER."
         echo ""
-        echo "  • setcap is unavailable: file capabilities cannot be set"
+        echo "  • NON-ROOT USERS CANNOT RUN GIT (the guard exits unless euid=0)"
         echo "  • The guard policy engine will still block destructive commands"
         echo "  • Root users can bypass the guard (see threat model docs)"
         echo "  • No chattr +i, no dpkg-divert, no apt hook"
+        if [[ "$nr_count" -gt 0 ]]; then
+            echo ""
+            echo -e "${RED}${BOLD}  !! $nr_count non-root login user(s) detected.${NC}"
+            echo -e "${RED}${BOLD}     Their git will be BROKEN by root-only mode.${NC}"
+            echo -e "${RED}${BOLD}     For non-root users, use: make build-guard && make install-guard${NC}"
+        fi
         echo ""
+        echo "Root-only is intended ONLY for root/PRoot/container environments."
         echo "See docs/ROOT-ONLY-MODE.md for the full threat model."
         echo ""
         echo "To uninstall: make uninstall-guard"
@@ -296,6 +326,16 @@ elif ! setcap cap_dac_override+ep /usr/bin/true; then
         echo "To uninstall:"
         echo "  make uninstall-guard"
         echo ""
+    fi
+
+    if [[ "$install_mode" == "root-only" && "${nr_count:-0}" -gt 0 ]]; then
+        if [[ "${FORCE_ROOT_ONLY:-0}" != "1" ]]; then
+            log_error "Refusing root-only install: ${nr_count} non-root login user(s) would lose git access."
+            log_error "Multi-user host: use capability mode -> make build-guard && make install-guard"
+            log_error "To override (non-root git WILL break): FORCE_ROOT_ONLY=1 make install-guard"
+            return 1
+        fi
+        log_warn "FORCE_ROOT_ONLY=1: proceeding despite ${nr_count} non-root users (their git will break)."
     fi
 
     if [[ -t 0 ]]; then
