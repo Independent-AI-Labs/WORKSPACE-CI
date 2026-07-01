@@ -11,16 +11,87 @@ before they reach your main branch: at native git speed, in any language.
 
 ## Why
 
-The `pre-commit` framework stashes your working tree: files vanish from disk,
-breaking dev servers and confusing your IDE. Standalone linters don't talk to
-each other, so you wire a dozen separate hooks and pray they agree on what's
-staged. And if an agent generates the code, none of them catch the patterns
-that matter: `except: pass`, `dict[str, Any]`, `Co-authored-by: Claude`.
+### Problem 1: Stashing breaks running state
 
-workspace-ci generates **native** `.git/hooks/*` bash scripts from your
-`.pre-commit-config.yaml`. No framework. No stashing. One coordinated set of
-gates that fire at pre-commit, commit-msg, and pre-push: shell-first, with
-Python where shell can't go.
+The `pre-commit` framework runs `git stash push` before hooks and `git stash pop`
+after. Your working tree vanishes during hook execution — file watchers fire
+spurious change events, hot-reload dev servers crash, language servers lose
+their buffer state, and any unsaved IDE work is gone until the stash comes
+back. For a 5-second hook run this is an annoyance; for a 30-second coverage
+run it's a workflow breaker.
+
+workspace-ci never stashes. It determines what changed via
+`git diff --cached --name-only`, then runs checks on the actual files on disk.
+No vanishing tree. No stash pop races. Dev servers keep running.
+
+### Problem 2: Ad-hoc tool wiring has no coordination
+
+Without a hook framework, every linter/formatter/check is wired independently
+in CI or as a separate pre-commit entry. Each has its own config file, its own
+file-list logic, its own exclusion patterns, and no way to express ordering:
+
+- `ruff format` modifies files → `ruff check` re-lints the modified versions
+  without a re-stage, so the second pass sees a dirty tree.
+- A "run tests" pre-commit hook executes before "check file length", even
+  though file-length is cheaper and should gate first.
+- Two linters that both need `git diff --cached` each parse the diff
+  independently, doubling startup cost.
+
+workspace-ci generates a single bash script per stage that sequences every
+check in dependency order: formatters run first and auto-stage their output
+(failing with "re-run: git commit"), cheap gates run before expensive ones,
+file-dependent hooks gate on `_STAGED` with zero wasted file listing, and
+any failure exits immediately. One script, one ordering, one pass.
+
+### Problem 3: Standard tools don't guard against agent artifacts
+
+When AI agents generate pull requests, they routinely leave traces that
+standard linters ignore:
+
+- `Co-authored-by: Claude <claude@anthropic.com>` in commit messages
+- `# type: ignore` or `# noqa` suppressions that silently mask issues
+- `mock` and `Any` types in production code
+- `except: pass` swallow patterns across multiple languages
+- `unsafe { }` blocks without documented justification
+
+Each of these is catchable with enough manual config, but most teams don't
+discover the pattern until after it's been merged. workspace-ci ships 50+
+banned patterns pre-configured across Python, JavaScript, TypeScript, Shell,
+Ansible, and Rust — including agent-attribution blockers at the commit-msg
+stage — so the guardrails are active from day one.
+
+### How it works
+
+workspace-ci reads your `.pre-commit-config.yaml` and generates native
+`.git/hooks/*` bash scripts. No framework runtime, no `pip install` on the
+developer machine beyond the initial workspace bootstrap, no remote hook
+repos to clone.
+
+The execution model is three stages with non-redundant responsibility:
+
+| Stage | What runs | Why it belongs there |
+|-------|-----------|---------------------|
+| pre-commit | Format, lint, secrets, banned patterns, silent-swallow, file length, coverage no-devolution | Fast, content-focused gates that must pass before a commit is recorded |
+| commit-msg | Message format compliance, agent-attribution blocking | Checks only the commit message file, not the working tree |
+| pre-push | Full test suite + coverage thresholds, history scan for blocked patterns | Expensive gates that run only when code leaves the developer's machine |
+
+A separate SUID binary (WORKSPACE-GUARD) wraps `git` and blocks `--no-verify`,
+`--force`, and `rebase` of pushed commits — so the hooks actually run.
+
+Shell handles everything that doesn't need a full programming language: file
+listing, pattern matching, conditional logic, formatter auto-stage. Python
+handles what shell can't: multi-file regex at scale (banned-words was ~33,000
+subprocesses in bash; <1s in Python), AST analysis (dead code), and network
+requests (dependency freshness, markdown link probing).
+
+### What you get
+
+- No stashing, no vanishing tree, no broken dev servers
+- One ordered gate sequence per stage, not N independent tool invocations
+- 50+ agent-artifact patterns blocked from day one
+- Zero runtime dependencies beyond bash and the tools you already use
+- Escape-hatch-proof via WORKSPACE-GUARD
+- Gradual rollout via enforcement tiers (strict/poc/vendored) + warn/enforce mode
 
 ---
 
@@ -44,22 +115,49 @@ For monorepo setups with shared config, see
 
 ## What Gets Checked
 
-| Category | Stage | Examples |
-|----------|-------|----------|
-| Secrets & sensitive files | pre-commit | gitleaks (bundled), `.env`/`*.pem`/`credentials.json` detection |
-| Code quality | pre-commit | 50+ banned patterns (`# type: ignore`, `dict[str, Any]`, `getattr()`, `|| true`), file length caps, ruff format + lint, mypy, init-file discipline |
-| Commit hygiene | commit-msg | message format, `Co-authored-by` blocking, agent attribution patterns |
-| Test coverage | pre-commit, pre-push | no devolution per-commit, threshold enforcement per-push |
-| Deep analysis | pre-push | dead code (AST), dependency freshness (PyPI/npm/Docker Hub), full history scan for blocked patterns, markdown link integrity, hook manifest completeness |
+Every hook's stage is configured in `.pre-commit-config.yaml` and can be moved
+freely. The table below shows the default wiring for the workspace root config.
+Scope describes which files the check scans when triggered.
 
-Checks are config-driven. Every rule lives in a YAML file under
-[`config/`](config/). Add a pattern, tune a threshold, exclude a path -
-no code changes needed.
+| Check | Default stage | Scope |
+|-------|--------------|-------|
+| Secret scanning (gitleaks, 160+ patterns) | pre-commit | staged content |
+| Sensitive filename blocking (`.env`, `*.pem`, `credentials.json`, ...) | pre-commit | all files |
+| Banned patterns (50+, agent attribution, `# type: ignore`, `dict[str, Any]`, `unsafe`, `mock`, ...) | pre-commit | all files |
+| Silent-error swallow (Python `except: pass`, JS `catch {}`, Shell `\|\| true`, Ansible `ignore_errors`, Cron no-log) | pre-commit | staged diff |
+| Code formatting (`ruff format`, auto-stage + re-run) | pre-commit | Python files |
+| Linting (`ruff check`, 900+ rules) | pre-commit | Python files |
+| Type checking (`mypy`) | pre-commit | Python files |
+| File length (max 512 lines, configurable per-file) | pre-commit | source files |
+| `__init__.py` must be empty | pre-commit | `__init__.py` files |
+| `+x` bit forbidden on `.py` modules | pre-commit | tracked `.py` files |
+| Coverage thresholds not lowered | pre-commit | `coverage_thresholds.yaml` |
+| Deleted `.py` still imported elsewhere | pre-commit | staged deletions |
+| Unstaged/untracked files auto-stage guard | pre-commit | full tree |
+| Process substitution banned in shell scripts | pre-commit | shell scripts |
+| Commit message format (`type: description`, body required) | commit-msg | message body |
+| Agent attribution / `Co-authored-by` pattern blocking | commit-msg | message body |
+| Full test suite + coverage enforcement | pre-push | whole project |
+| History scan (blocked patterns in push range) | pre-push | git history |
+| Dead code (Python AST cross-reference graph) | pre-push | Python sources |
+| Dependency freshness (PyPI / npm / Docker Hub) | pre-push | lockfiles |
+| Duplicate / redundant dependency warning | pre-push | `pyproject.toml` |
+| Markdown link integrity (internal anchors + external URLs) | pre-push | doc files |
+| Hook manifest completeness (self-check) | pre-push | `.pre-commit-config.yaml` |
+| Compliance score (15-dimension A-F audit) | pre-push | project config |
+| Boot layout audit (`.boot-linux/` + `.venv/` hierarchy) | pre-push | layout config |
 
-Full rule reference: browse [`config/banned_words.yaml`](config/banned_words.yaml)
-(patterns), [`config/required_hooks.yaml`](config/required_hooks.yaml) (hooks),
-[`config/sensitive_files.yaml`](config/sensitive_files.yaml) (file rules),
-[`config/coverage_thresholds.yaml`](config/coverage_thresholds.yaml) (gates).
+Every check has configurable `always_run` / `files:` / `stages:` / `types_or:`
+gates in `.pre-commit-config.yaml` and an enforcement tier (`strict` / `poc` /
+`vendored`) resolved via `project_enforcement.yaml`. POC tier runs only
+secrets, sensitive files, banned words, and commit hygiene; vendored tier
+installs no hooks.
+
+All rules are config-driven. Patterns live in [`config/banned_words.yaml`](config/banned_words.yaml),
+file rules in [`config/sensitive_files.yaml`](config/sensitive_files.yaml),
+coverage gates in [`config/coverage_thresholds.yaml`](config/coverage_thresholds.yaml),
+and hook registry in [`config/required_hooks.yaml`](config/required_hooks.yaml).
+Add a pattern, tune a threshold, exclude a path — no code changes needed.
 
 ---
 
