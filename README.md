@@ -78,12 +78,47 @@ Flip to `enforce` when gates are clean.
 
 ## How It Compares
 
-| Tool | What it does | What it doesn't |
-|------|-------------|-----------------|
-| pre-commit framework | Runs hooks from a Python runtime | Stashes files, requires Python, pulls hooks from remote git refs |
-| ruff / eslint | Lint one language | Don't coordinate across languages, don't gate commits, don't catch silent errors or banned patterns |
-| gitleaks | Detect secrets | Doesn't know about sensitive filenames, code quality, or commit hygiene |
-| **workspace-ci** | All of the above, coordinated, from bash | Python-only AST analysis (dead code): non-Python projects use their own ecosystem for that |
+These tools serve different roles. The table below maps actual
+capabilities so you can see where workspace-ci fills gaps that
+assembling the other tools alone leaves open.
+
+| Feature | `pre-commit` | `ruff` | `eslint` | `gitleaks` | **workspace-ci** |
+|---|---|---|---|---|---|
+| **Role** | Hook framework (any language) | Python linter + formatter | JS / TS / CSS / JSON / MD linter | Secret scanner (git history + files) | Integrated hook enforcer (any language) |
+| **Hook stages** | pre-commit, commit-msg, pre-push | standalone / CI | standalone / CI | pre-commit, CI | pre-commit, commit-msg, pre-push |
+| **Secrets (built-in)** | via 3rd-party hooks only | — | — | 160+ patterns + Shannon entropy | Bundles gitleaks + filename patterns (`.env`, `*.pem`, `credentials.json`) |
+| **Banned patterns** | via 3rd-party hooks | — | — | — | 50+ patterns built-in (`type: ignore`, `dict[str,Any]`, `Co-authored-by`, `unsafe`, `mock`...) |
+| **Silent-error swallow** | — | — | — | — | Multi-language regex: `except: pass` (Python), `catch {}` (JS), `\| true` (Shell), `ignore_errors` (Ansible), `|| true` (Make) |
+| **Linting** | via 3rd-party hooks (ruff, mypy, etc.) | 900+ rules, AST, auto-fix | Thousands via plugins, AST, auto-fix | — | Orchestrates ruff + mypy for Python; any linter per language via hook config |
+| **Commit message** | via hook scripts | — | — | — | Format enforcement + agent-attribution / `Co-authored-by` blocking |
+| **Coverage gates** | — | — | — | — | Per-commit no-devolution + per-push thresholds (default 90% unit, 50% integration) |
+| **Dead code** | — | — | — | — | Python AST cross-reference graph (imported-but-unused symbols) |
+| **Dependency freshness** | — | — | — | — | Live PyPI / npm / Docker Hub version checks |
+| **Markdown links** | — | — | — | — | URL probing via httpx (internal + external) |
+| **History scan** | — | — | — | full git history | Full history for blocked patterns + agent commits |
+| **Execution model** | Python runtime; stashes working tree; clones remote hook repos | Single Rust binary, no stashing | Node.js binary, no stashing | Single Go binary, no stashing | Native bash scripts (generated from `.pre-commit-config.yaml`); no framework runtime; files stay on disk |
+| **Env isolation** | Per-hook Docker / Node / Ruby / Python envs | n/a | n/a | n/a | PATH-based (tools expected to be in CI or developer environment) |
+| **First-run speed** | Slow (clone repos + build hook environments) | Instant | Instant | Instant | Instant (scripts are generated at install time, no downloads) |
+| **Hook auto-update** | `autoupdate` (pinned SHA refs) | n/a | n/a | n/a | `generate-hooks` from `.pre-commit-config.yaml` |
+| **Enforcement tiers** | — | n/a | n/a | n/a | `strict` / `poc` / `vendored` + `enforce` / `warn` mode per repo |
+| **Blocks escape hatches** | `--no-verify` bypasses all hooks | n/a | n/a | n/a | Via WORKSPACE-GUARD: blocks `--no-verify`, `--force`, rebase, amend of pushed commits |
+| **Language requirement** | Python 3.x | Rust binary | Node.js | Go binary | bash (ubiquitous; no runtime to install) |
+
+### What the matrix tells you
+
+- **pre-commit** is a generic hook *scheduler* with environment isolation. It doesn't
+  detect secrets, ban patterns, enforce coverage, or analyze code on its own — it
+  delegates everything to third-party repos that must be cloned and built on first run.
+  Its killer feature is per-hook environment isolation (Docker, Node, Ruby, Python).
+
+- **ruff**, **eslint**, and **gitleaks** are single-purpose tools. Each does one thing well,
+  but none coordinates with the others, gates commits, or catches cross-language
+  patterns like silent error swallowing.
+
+- **workspace-ci** is an *integrated enforcement system* that fills the gaps none of
+  the individual tools address: banned patterns, silent-error detection, coverage
+  gates, dead code, dependency freshness, and escape-hatch blocking — all coordinated
+  from native bash with no framework runtime and no working-tree stashing.
 
 ---
 
