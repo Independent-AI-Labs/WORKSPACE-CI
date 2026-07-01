@@ -7,6 +7,7 @@ LLMs have severe limitations when it comes to maintaining consistent high-qualit
 <img width="571" height="119" alt="Screenshot 2026-05-24 064144" src="https://github.com/user-attachments/assets/76c5c281-339f-4497-a5d0-c3f0112bf289" />
 
 When confronted about carelessness towards the codebase, an LLM will happily inform you about its inner conflicts and inefficiencies:
+
 <img width="558" height="202" alt="Screenshot 2026-05-24 071239" src="https://github.com/user-attachments/assets/be0a4b41-047f-44bd-ae53-5deb09be4121" />
 
 
