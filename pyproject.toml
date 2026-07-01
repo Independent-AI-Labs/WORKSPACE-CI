@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "workspace-ci"
 version = "0.1.0"
 description = "Shared CI library: shell-native git hooks, code quality checks, and config-driven enforcement"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 dependencies = [
     "PyYAML==6.0.3",
     "markdown-it-py==4.2.0",
