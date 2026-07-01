@@ -177,9 +177,9 @@ repos:
         language: system
         stages: [pre-push]
         pass_filenames: false
-      - id: verify-coverage
-        name: Verify Test Coverage
-        entry: "bash -c 'source ../CI/lib/checks.sh && ci_verify_coverage'"
+      - id: ci-check-push
+        name: Pre-push Quality Gate (lint + type + test + coverage)
+        entry: "bash -c 'make check-push'"
         language: system
         stages: [pre-push]
         pass_filenames: false

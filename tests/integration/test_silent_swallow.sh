@@ -23,7 +23,7 @@ _setup_silent_repo() {
 # Helper: invoke check_silent_swallow.py directly with a synthesised diff
 # (so we can test patterns without needing a real git stage).
 _run_silent_py() {
-    python3 "$LIB_DIR/check_silent_swallow.py"
+    "$PROJECT_DIR/.venv/bin/python" "$LIB_DIR/check_silent_swallow.py"
 }
 
 # ---------------------------------------------------------------------------

@@ -45,7 +45,12 @@ tasks:
     command: 'make _test-impl'
     inputs:
       - 'ci/**/*.py'
-      - 'tests/**/*.py'
+      - 'tests/unit/**/*.py'
+      - 'tests/integration/**/*.py'
+      - 'tests/unit/**/*.sh'
+      - 'tests/integration/**/*.sh'
+      - 'tests/run_tests*.sh'
+      - 'tests/test_helpers.sh'
       - 'scripts/**/*'
       - 'lib/**/*.sh'
       - 'templates/**/*'

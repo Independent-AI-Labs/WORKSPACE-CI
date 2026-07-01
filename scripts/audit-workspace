@@ -216,7 +216,7 @@ for _repo in "${_repos[@]}"; do
     fi
 
     # L6: Test suite on push
-    if [[ -f "$_repo/.pre-commit-config.yaml" ]] && grep -q 'run-tests\|verify-coverage' "$_repo/.pre-commit-config.yaml"; then
+    if [[ -f "$_repo/.pre-commit-config.yaml" ]] && grep -q 'run-tests\|ci-check-push\|verify-coverage' "$_repo/.pre-commit-config.yaml"; then
         _checks+=("[x] L6: Test suite on push")
         _score=$((_score + 1))
     else

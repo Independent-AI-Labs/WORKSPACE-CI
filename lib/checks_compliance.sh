@@ -123,10 +123,10 @@ ci_compliance_score() {
         _cs_fail "R4" "block-coauthored-history not wired" \
             "Create .pre-commit-config.yaml first"
         if [[ $_has_tests -eq 1 ]]; then
-            _cs_fail "R5" "verify-coverage not wired (tests/ exists)" \
+            _cs_fail "R5" "ci-check-push not wired (tests/ exists)" \
                 "Create .pre-commit-config.yaml first"
         else
-            _cs_skip "R5" "verify-coverage (no test directory)"
+            _cs_skip "R5" "ci-check-push (no test directory)"
         fi
     else
         if grep -q 'block-sensitive-files' "$_precommit"; then
@@ -167,14 +167,14 @@ ci_compliance_score() {
         fi
 
         if [[ $_has_tests -eq 1 ]]; then
-            if grep -q 'verify-coverage' "$_precommit"; then
-                _cs_pass "R5" "verify-coverage wired"
+            if grep -q 'ci-check-push' "$_precommit"; then
+                _cs_pass "R5" "ci-check-push wired"
             else
-                _cs_fail "R5" "verify-coverage not wired (tests/ exists)" \
-                    "Add verify-coverage hook to pre-push stage"
+                _cs_fail "R5" "ci-check-push not wired (tests/ exists)" \
+                    "Add ci-check-push hook to pre-push stage"
             fi
         else
-            _cs_skip "R5" "verify-coverage (no test directory)"
+            _cs_skip "R5" "ci-check-push (no test directory)"
         fi
 
         # R6: check-markdown-docs must be wired with --check-remote (all tiers)

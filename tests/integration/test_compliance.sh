@@ -58,8 +58,8 @@ repos:
         entry: "bash -c 'echo ok'"
         language: system
         stages: [pre-push]
-      - id: verify-coverage
-        name: Verify Coverage
+      - id: ci-check-push
+        name: Pre-push Quality Gate
         entry: "bash -c 'echo ok'"
         language: system
         stages: [pre-push]

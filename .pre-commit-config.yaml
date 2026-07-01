@@ -20,14 +20,14 @@ repos:
 
       - id: ruff-format
         name: ruff format
-        entry: uv run ruff format --config ruff.toml ci/
+        entry: .venv/bin/ruff format --config ruff.toml ci/
         language: system
         pass_filenames: false
         always_run: true
 
       - id: ruff
         name: ruff lint
-        entry: uv run ruff check --config ruff.toml --fix --exit-non-zero-on-fix ci/
+        entry: .venv/bin/ruff check --config ruff.toml --fix --exit-non-zero-on-fix ci/
         language: system
         pass_filenames: false
         always_run: true
@@ -55,14 +55,14 @@ repos:
 
       - id: check-dependency-versions
         name: Check Dependency Versions (strict pinning + latest)
-        entry: bash -c 'uv run python -c "import ci" || { echo "FAILED: ci not installed: run: make sync" >&2; exit 1; }; exec uv run python -m ci.check_dependency_versions "$@"' --
+        entry: bash -c '.venv/bin/python -c "import ci" || { echo "FAILED: ci not installed: run: make sync" >&2; exit 1; }; exec .venv/bin/python -m ci.check_dependency_versions "$@"' --
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-duplicate-dependencies
         name: Check Duplicate/Redundant Dependencies
-        entry: bash -c 'uv run python -c "import ci" || { echo "FAILED: ci not installed: run: make sync" >&2; exit 1; }; exec uv run python -m ci.check_duplicate_dependencies "$@"' --
+        entry: bash -c '.venv/bin/python -c "import ci" || { echo "FAILED: ci not installed: run: make sync" >&2; exit 1; }; exec .venv/bin/python -m ci.check_duplicate_dependencies "$@"' --
         language: system
         pass_filenames: false
         always_run: true
@@ -118,7 +118,7 @@ repos:
 
       - id: mypy
         name: mypy
-        entry: uv run python -m mypy
+        entry: .venv/bin/python -m mypy
         language: system
         pass_filenames: false
         always_run: true
@@ -126,21 +126,21 @@ repos:
 
       - id: check-markdown-docs
         name: Check Markdown Documentation References
-        entry: "uv run python -m ci.check_markdown_docs --all-md --check-remote"
+        entry: ".venv/bin/python -m ci.check_markdown_docs --all-md --check-remote"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-required-hooks-present
         name: CI Self-Check (manifest + exceptions + rendered hooks)
-        entry: "uv run python -m ci.check_required_hooks_present --quiet"
+        entry: ".venv/bin/python -m ci.check_required_hooks_present --quiet"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-boot-venv-layout
         name: Boot Layout Audit (non-blocking)
-        entry: "uv run python -m ci.check_boot_venv_layout"
+        entry: ".venv/bin/python -m ci.check_boot_venv_layout"
         language: system
         pass_filenames: false
         always_run: true
@@ -173,12 +173,13 @@ repos:
 
   - repo: local
     hooks:
-      - id: run-tests
-        name: Run CI Test Suite
-        entry: bash tests/run_tests.sh
+      - id: ci-check-push
+        name: Pre-push Quality Gate (lint + type + tests + coverage)
+        entry: "make check-push"
         language: system
         stages: [pre-push]
         pass_filenames: false
+        always_run: true
 
       - id: block-coauthored-history
         name: Block Commits with Blocked Patterns (full history scan)
@@ -186,18 +187,3 @@ repos:
         language: system
         stages: [pre-push]
         pass_filenames: false
-
-      - id: verify-coverage
-        name: Verify Test Coverage
-        entry: "bash -c 'source lib/checks.sh && ci_verify_coverage'"
-        language: system
-        stages: [pre-push]
-        pass_filenames: false
-
-      - id: ci-make-check
-        name: Full Quality Gate (make check)
-        entry: "make check"
-        language: system
-        stages: [pre-push]
-        pass_filenames: false
-        always_run: true

@@ -196,19 +196,9 @@ hooks:
     safety: false
     applicable_to: [any]
 
-  - id: ci-make-check
+  - id: ci-check-push
     kind: makefile_target
-    entry: check
-    stage: pre-push
-    pass_filenames: false
-    always_run: true
-    mandatory: true
-    safety: false
-    applicable_to: [any]
-
-  - id: verify-coverage
-    kind: shell
-    entry: ci_verify_coverage
+    entry: check-push
     stage: pre-push
     pass_filenames: false
     always_run: true

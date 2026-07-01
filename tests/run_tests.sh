@@ -1,39 +1,28 @@
 #!/usr/bin/env bash
 # CI Test Runner
-# Runs all test suites and prints a summary.
+# Runs unit tests first (fast, no git), then integration tests (slower,
+# real git repos). Prints a combined summary.
 #
 # Usage: ./tests/run_tests.sh
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Load framework
-source "$TESTS_DIR/test_helpers.sh"
+# Run unit and integration suites as separate processes so their
+# test counters are independent. Combined summary at the end.
+_unit_rc=0
+_integration_rc=0
 
-# Run test suites
-source "$TESTS_DIR/test_core.sh"
-source "$TESTS_DIR/test_checks.sh"
-source "$TESTS_DIR/test_blocked_patterns.sh"
-# SKIP: rewrite tests use git filter-branch which WORKSPACE-GUARD blocks
-# source "$TESTS_DIR/test_rewrite_history.sh"
-source "$TESTS_DIR/test_compliance.sh"
-source "$TESTS_DIR/test_silent_swallow.sh"
-source "$TESTS_DIR/test_portable_shell.sh"
+bash "$TESTS_DIR/run_tests_unit.sh" || _unit_rc=$?
+bash "$TESTS_DIR/run_tests_integration.sh" || _integration_rc=$?
 
-# Summary
 echo ""
 echo "==========================================="
-echo "  Tests: $_TESTS_RUN  Passed: $_TESTS_PASSED  Failed: $_TESTS_FAILED"
-echo "==========================================="
-
-if [[ $_TESTS_FAILED -gt 0 ]]; then
-    echo ""
-    echo "Failed tests:"
-    for f in "${_FAILURES[@]}"; do
-        echo "  - $f"
-    done
-    exit 1
+if [[ $_unit_rc -eq 0 && $_integration_rc -eq 0 ]]; then
+    echo "  All shell tests passed."
+    echo "==========================================="
+    exit 0
 fi
 
-echo ""
-echo "All tests passed."
-exit 0
+echo "  FAILURES (unit_rc=$_unit_rc, integration_rc=$_integration_rc)"
+echo "==========================================="
+exit 1

@@ -29,8 +29,8 @@ exceptions:
   # The check-tester itself authors heredocs containing the banned
   # "not implemented yet" string as fixture payload; exempt the single
   # file that exercises the directory_rules check.
-  - pattern: 'reason=.*not implemented yet'
-    paths: ['tests/test_checks.sh']
+  - pattern: 'not implemented yet'
+    paths: ['tests/unit/test_checks.sh']
 
   # Tests need these words for test descriptions and mocking
   - pattern: '\bmock\b'
@@ -53,7 +53,7 @@ exceptions:
     paths:
       - 'lib/check_silent_swallow\.py$'
       - 'lib/checks_silent\.sh$'
-      - 'tests/test_silent_swallow\.sh$'
+      - 'tests/integration/test_silent_swallow\.sh$'
       - 'scripts/'
   - pattern: '\bbackwards\b'
     paths: ['tests/']

@@ -4,9 +4,12 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
+# uv is used for dependency installation (uv sync). Verification tools
+# (ruff, pytest, mypy) are invoked directly from .venv/bin per AGENTS.md §4.1.
 UV := uv
-RUFF := $(UV) run ruff
-PYTEST := $(UV) run pytest
+RUFF := .venv/bin/ruff
+PYTEST := .venv/bin/python -m pytest
+MYPY := .venv/bin/mypy
 
 # .boot-linux/bin/ holds bootstrapped tools (uv, cargo, rustup, gitleaks).
 # After `make install` creates it, prepend to PATH so make targets use
@@ -130,12 +133,12 @@ _lint-impl:
 
 .PHONY: _type-check-impl
 _type-check-impl:
-	$(UV) run mypy ci/
+	$(MYPY) ci/
 
 .PHONY: _test-impl
 _test-impl:
 	./tests/run_tests.sh
-	$(PYTEST) tests/ -v --timeout=30
+	$(PYTEST) tests/unit tests/integration -v --timeout=30
 
 # Convenience targets for selective test runs (not part of the moon
 # DAG; call directly when you want to run only one half).
@@ -145,7 +148,26 @@ test-shell: ## Run shell tests only (no moon caching)
 
 .PHONY: test-python
 test-python: ## Run Python tests only (no moon caching)
-	$(PYTEST) tests/ -v --timeout=30
+	$(PYTEST) tests/unit tests/integration -v --timeout=30
+
+# =============================================================================
+# Pre-push Quality Gate
+# =============================================================================
+# Single-pass gate for pre-push hooks: lint + type-check + shell tests +
+# pytest with per-suite coverage. Eliminates the previous redundancy where
+# run_tests.sh, pytest, and make check each ran the same tests 2-3x.
+# The pre-push hook invokes this target directly (see .pre-commit-config.yaml).
+
+.PHONY: check-push
+check-push: ## Pre-push gate: lint + type + tests + coverage (single pass)
+	@$(MAKE) _lint-impl && $(MAKE) _type-check-impl && $(MAKE) _test-push-impl
+
+.PHONY: _test-push-impl
+_test-push-impl:
+	./tests/run_tests_unit.sh
+	./tests/run_tests_integration.sh
+	$(PYTEST) tests/unit --cov=ci --cov-report=term-missing --cov-fail-under=90 --tb=short -q
+	$(PYTEST) tests/integration --cov=ci --cov-report=term-missing --cov-fail-under=5 --tb=short -q
 
 # =============================================================================
 # Cleanup
