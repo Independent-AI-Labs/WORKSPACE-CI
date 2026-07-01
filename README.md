@@ -1,64 +1,14 @@
 # workspace-ci
 
-Catches secrets, banned patterns, silent errors, and commit garbage
-before they reach your main branch: at native git speed, in any language.
+## Practical Guardrails for Coding Agents
 
-![License: MIT](https://img.shields.io/badge/license-MIT-green)
-![Hooks: native bash](https://img.shields.io/badge/hooks-native%20bash-blue)
-![Tiers: strict | poc | vendored](https://img.shields.io/badge/tiers-strict%20%7C%20poc%20%7C%20vendored-orange)
+LLMs have severe limitations when it comes to maintaining consistent high-quality output across complex programming tasks. Negative patterns and poor practices have now been distilled over and over into state-of-the-art models, that are simply incapable of writing "good" code.
 
----
+<img width="571" height="119" alt="Screenshot 2026-05-24 064144" src="https://github.com/user-attachments/assets/76c5c281-339f-4497-a5d0-c3f0112bf289" />
 
-## Why
+When confronted about carelessness towards the codebase, an LLM will happily inform you about its inner conflicts and inefficiencies:
+<img width="558" height="202" alt="Screenshot 2026-05-24 071239" src="https://github.com/user-attachments/assets/be0a4b41-047f-44bd-ae53-5deb09be4121" />
 
-### Problem 1: Stashing breaks running state
-
-The `pre-commit` framework runs `git stash push` before hooks and `git stash pop`
-after. Your working tree vanishes during hook execution — file watchers fire
-spurious change events, hot-reload dev servers crash, language servers lose
-their buffer state, and any unsaved IDE work is gone until the stash comes
-back. For a 5-second hook run this is an annoyance; for a 30-second coverage
-run it's a workflow breaker.
-
-workspace-ci never stashes. It determines what changed via
-`git diff --cached --name-only`, then runs checks on the actual files on disk.
-No vanishing tree. No stash pop races. Dev servers keep running.
-
-### Problem 2: Ad-hoc tool wiring has no coordination
-
-Without a hook framework, every linter/formatter/check is wired independently
-in CI or as a separate pre-commit entry. Each has its own config file, its own
-file-list logic, its own exclusion patterns, and no way to express ordering:
-
-- `ruff format` modifies files → `ruff check` re-lints the modified versions
-  without a re-stage, so the second pass sees a dirty tree.
-- A "run tests" pre-commit hook executes before "check file length", even
-  though file-length is cheaper and should gate first.
-- Two linters that both need `git diff --cached` each parse the diff
-  independently, doubling startup cost.
-
-workspace-ci generates a single bash script per stage that sequences every
-check in dependency order: formatters run first and auto-stage their output
-(failing with "re-run: git commit"), cheap gates run before expensive ones,
-file-dependent hooks gate on `_STAGED` with zero wasted file listing, and
-any failure exits immediately. One script, one ordering, one pass.
-
-### Problem 3: Standard tools don't guard against agent artifacts
-
-When AI agents generate pull requests, they routinely leave traces that
-standard linters ignore:
-
-- `Co-authored-by: Claude <claude@anthropic.com>` in commit messages
-- `# type: ignore` or `# noqa` suppressions that silently mask issues
-- `mock` and `Any` types in production code
-- `except: pass` swallow patterns across multiple languages
-- `unsafe { }` blocks without documented justification
-
-Each of these is catchable with enough manual config, but most teams don't
-discover the pattern until after it's been merged. workspace-ci ships 50+
-banned patterns pre-configured across Python, JavaScript, TypeScript, Shell,
-Ansible, and Rust — including agent-attribution blockers at the commit-msg
-stage — so the guardrails are active from day one.
 
 ### How it works
 
@@ -84,14 +34,6 @@ handles what shell can't: multi-file regex at scale (banned-words was ~33,000
 subprocesses in bash; <1s in Python), AST analysis (dead code), and network
 requests (dependency freshness, markdown link probing).
 
-### What you get
-
-- No stashing, no vanishing tree, no broken dev servers
-- One ordered gate sequence per stage, not N independent tool invocations
-- 50+ agent-artifact patterns blocked from day one
-- Zero runtime dependencies beyond bash and the tools you already use
-- Escape-hatch-proof via WORKSPACE-GUARD
-- Gradual rollout via enforcement tiers (strict/poc/vendored) + warn/enforce mode
 
 ---
 
