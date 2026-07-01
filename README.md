@@ -180,225 +180,204 @@ These tools serve different roles. The table below maps actual
 capabilities so you can see where workspace-ci fills gaps that
 assembling the other tools alone leaves open.
 
-<div style="overflow-x: auto; margin: 1.5em 0;">
-
-<style>
-.cm-table { border-collapse: collapse; width: 100%; min-width: 780px; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,sans-serif; font-size: 13px; line-height: 1.5; }
-.cm-table th, .cm-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
-.cm-table thead th { font-weight: 600; font-size: 14px; background: #f8fafc; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0; z-index: 2; }
-.cm-table thead th:first-child { background: #f8fafc; z-index: 3; left: 0; position: sticky; }
-.cm-table tbody tr:hover { background: #f1f5f9; }
-.cm-table .feature-name { font-weight: 600; color: #0f172a; white-space: nowrap; position: sticky; left: 0; background: #fff; z-index: 1; }
-.cm-table tbody tr:hover .feature-name { background: #f1f5f9; }
-.cm-table .section-row td { background: #f1f5f9; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; padding: 6px 12px; border-bottom: 1px solid #cbd5e1; }
-.cm-table .section-row:hover td { background: #e2e8f0; }
-.cm-table .ws-col { border-left: 3px solid #6366f1; background: #fafaff; }
-.cm-table thead .ws-col { background: #eef2ff; border-left: 3px solid #6366f1; color: #4338ca; }
-.cm-table tbody tr:hover .ws-col { background: #eef2ff; }
-.cm-table .yes { color: #16a34a; font-weight: 700; font-size: 15px; }
-.cm-table .partial { color: #d97706; font-weight: 700; font-size: 15px; }
-.cm-table .no { color: #94a3b8; font-size: 15px; }
-.cm-table .cell-text { color: #334155; }
-.cm-table .highlight { color: #4338ca; font-weight: 500; }
-</style>
-
-<table class="cm-table">
+<table>
 <thead>
 <tr>
-  <th style="min-width:170px">Feature</th>
-  <th style="min-width:120px">pre-commit</th>
-  <th style="min-width:100px">ruff</th>
-  <th style="min-width:100px">eslint</th>
-  <th style="min-width:110px">gitleaks</th>
-  <th class="ws-col" style="min-width:160px">workspace-ci</th>
+  <th>Feature</th>
+  <th>pre-commit</th>
+  <th>ruff</th>
+  <th>eslint</th>
+  <th>gitleaks</th>
+  <th>workspace-ci</th>
 </tr>
 </thead>
 <tbody>
 
-<!-- ─────────────── GUARDRAILS ─────────────── -->
-<tr class="section-row"><td colspan="6">Guardrails</td></tr>
-
 <tr>
-  <td class="feature-name">Secrets (built-in)</td>
-  <td><span class="partial">◆</span> <span class="cell-text">via 3rd-party hooks</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="yes">✓</span> <span class="cell-text">160+ patterns + Shannon entropy</span></td>
-  <td class="ws-col"><span class="yes">✓</span> <span class="cell-text">Bundles gitleaks + <code>.env</code>/<code>*.pem</code>/<code>credentials.json</code> blocking</span></td>
+  <td colspan="6" bgcolor="#E2E8F0"><b>GUARDRAILS</b></td>
 </tr>
 
 <tr>
-  <td class="feature-name">Banned patterns</td>
-  <td><span class="partial">◆</span> <span class="cell-text">via 3rd-party hooks</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td class="ws-col"><span class="yes">✓</span> <span class="cell-text">50+ patterns: <code># type: ignore</code>, <code>dict[str,Any]</code>, <code>Co-authored-by</code>, <code>unsafe</code>, <code>mock</code>...</span></td>
+  <td><b>Secrets (built-in)</b></td>
+  <td>◆ via 3rd-party hooks</td>
+  <td>—</td>
+  <td>—</td>
+  <td>✓ 160+ patterns + Shannon entropy</td>
+  <td bgcolor="#F4F4FF">✓ Bundles gitleaks + <code>.env</code>/<code>*.pem</code>/<code>credentials.json</code> blocking</td>
 </tr>
 
 <tr>
-  <td class="feature-name">Silent-error swallow</td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td class="ws-col"><span class="yes">✓</span> <span class="cell-text">Multi-language: <code>except: pass</code>, <code>catch {}</code>, <code>|| true</code>, <code>ignore_errors</code>, cron no-log</span></td>
+  <td><b>Banned patterns</b></td>
+  <td>◆ via 3rd-party hooks</td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td bgcolor="#F4F4FF">✓ 50+ patterns: <code># type: ignore</code>, <code>dict[str,Any]</code>, <code>Co-authored-by</code>, <code>unsafe</code>, <code>mock</code>...</td>
 </tr>
 
 <tr>
-  <td class="feature-name">Blocks escape hatches</td>
-  <td><span class="partial">◆</span> <span class="cell-text"><code>--no-verify</code> bypasses all hooks</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td class="ws-col"><span class="yes">✓</span> <span class="cell-text">WORKSPACE-GUARD blocks <code>--no-verify</code>, <code>--force</code>, rebase, amend</span></td>
-</tr>
-
-<!-- ─────────────── ANALYSIS ─────────────── -->
-<tr class="section-row"><td colspan="6">Analysis</td></tr>
-
-<tr>
-  <td class="feature-name">Linting</td>
-  <td><span class="partial">◆</span> <span class="cell-text">via 3rd-party hooks</span></td>
-  <td><span class="yes">✓</span> <span class="cell-text">900+ rules, AST, auto-fix</span></td>
-  <td><span class="yes">✓</span> <span class="cell-text">Thousands via plugins, AST, auto-fix</span></td>
-  <td><span class="no">—</span></td>
-  <td class="ws-col"><span class="yes">✓</span> <span class="cell-text">Orchestrates ruff + mypy; any linter per language via config</span></td>
+  <td><b>Silent-error swallow</b></td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td bgcolor="#F4F4FF">✓ Multi-language: <code>except: pass</code>, <code>catch {}</code>, <code>|| true</code>, <code>ignore_errors</code>, cron no-log</td>
 </tr>
 
 <tr>
-  <td class="feature-name">Dead code</td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td class="ws-col"><span class="yes">✓</span> <span class="cell-text">Python AST cross-reference graph</span></td>
+  <td><b>Blocks escape hatches</b></td>
+  <td>◆ <code>--no-verify</code> bypasses all hooks</td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td bgcolor="#F4F4FF">✓ WORKSPACE-GUARD blocks <code>--no-verify</code>, <code>--force</code>, rebase, amend</td>
 </tr>
 
 <tr>
-  <td class="feature-name">Coverage gates</td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td class="ws-col"><span class="yes">✓</span> <span class="cell-text">Per-commit no-devolution + per-push thresholds</span></td>
+  <td colspan="6" bgcolor="#E2E8F0"><b>ANALYSIS</b></td>
 </tr>
 
 <tr>
-  <td class="feature-name">Commit message</td>
-  <td><span class="partial">◆</span> <span class="cell-text">via hook scripts</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td class="ws-col"><span class="yes">✓</span> <span class="cell-text">Format enforcement + agent-attribution / <code>Co-authored-by</code> blocking</span></td>
+  <td><b>Linting</b></td>
+  <td>◆ via 3rd-party hooks</td>
+  <td>✓ 900+ rules, AST, auto-fix</td>
+  <td>✓ Thousands via plugins, AST, auto-fix</td>
+  <td>—</td>
+  <td bgcolor="#F4F4FF">✓ Orchestrates ruff + mypy; any linter per language via config</td>
 </tr>
 
 <tr>
-  <td class="feature-name">History scan</td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="partial">◆</span> <span class="cell-text">full git history</span></td>
-  <td class="ws-col"><span class="yes">✓</span> <span class="cell-text">Full history for blocked patterns + agent commits</span></td>
+  <td><b>Dead code</b></td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td bgcolor="#F4F4FF">✓ Python AST cross-reference graph</td>
 </tr>
 
 <tr>
-  <td class="feature-name">Markdown links</td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td class="ws-col"><span class="yes">✓</span> <span class="cell-text">URL probing via httpx (internal + external)</span></td>
+  <td><b>Coverage gates</b></td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td bgcolor="#F4F4FF">✓ Per-commit no-devolution + per-push thresholds</td>
 </tr>
 
 <tr>
-  <td class="feature-name">Dependency freshness</td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td class="ws-col"><span class="yes">✓</span> <span class="cell-text">Live PyPI / npm / Docker Hub version checks</span></td>
-</tr>
-
-<!-- ─────────────── PLATFORM ─────────────── -->
-<tr class="section-row"><td colspan="6">Platform</td></tr>
-
-<tr>
-  <td class="feature-name">Role</td>
-  <td><span class="cell-text">Hook framework (any language)</span></td>
-  <td><span class="cell-text">Python linter + formatter</span></td>
-  <td><span class="cell-text">JS/TS/CSS/JSON/MD linter</span></td>
-  <td><span class="cell-text">Secret scanner (git + files)</span></td>
-  <td class="ws-col"><span class="highlight">Integrated hook enforcer (any language)</span></td>
+  <td><b>Commit message</b></td>
+  <td>◆ via hook scripts</td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td bgcolor="#F4F4FF">✓ Format enforcement + agent-attribution / <code>Co-authored-by</code> blocking</td>
 </tr>
 
 <tr>
-  <td class="feature-name">Hook stages</td>
-  <td><span class="cell-text">pre-commit, commit-msg, pre-push</span></td>
-  <td><span class="cell-text">standalone / CI</span></td>
-  <td><span class="cell-text">standalone / CI</span></td>
-  <td><span class="cell-text">pre-commit, CI</span></td>
-  <td class="ws-col"><span class="highlight">pre-commit, commit-msg, pre-push</span></td>
+  <td><b>History scan</b></td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td>◆ full git history</td>
+  <td bgcolor="#F4F4FF">✓ Full history for blocked patterns + agent commits</td>
 </tr>
 
 <tr>
-  <td class="feature-name">Execution model</td>
-  <td><span class="cell-text">Python runtime; stashes tree; clones remote repos</span></td>
-  <td><span class="cell-text">Single Rust binary, no stashing</span></td>
-  <td><span class="cell-text">Node.js binary, no stashing</span></td>
-  <td><span class="cell-text">Single Go binary, no stashing</span></td>
-  <td class="ws-col"><span class="highlight">Native bash scripts; no framework runtime; files stay on disk</span></td>
+  <td><b>Markdown links</b></td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td bgcolor="#F4F4FF">✓ URL probing via httpx (internal + external)</td>
 </tr>
 
 <tr>
-  <td class="feature-name">Env isolation</td>
-  <td><span class="yes">✓</span> <span class="cell-text">Per-hook Docker/Node/Ruby/Python</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td class="ws-col"><span class="partial">◆</span> <span class="cell-text">PATH-based (tools in CI or dev environment)</span></td>
+  <td><b>Dependency freshness</b></td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td bgcolor="#F4F4FF">✓ Live PyPI / npm / Docker Hub version checks</td>
 </tr>
 
 <tr>
-  <td class="feature-name">First-run speed</td>
-  <td><span class="partial">◆</span> <span class="cell-text">Slow (clone repos + build envs)</span></td>
-  <td><span class="yes">✓</span> <span class="cell-text">Instant</span></td>
-  <td><span class="yes">✓</span> <span class="cell-text">Instant</span></td>
-  <td><span class="yes">✓</span> <span class="cell-text">Instant</span></td>
-  <td class="ws-col"><span class="yes">✓</span> <span class="highlight">Instant (scripts generated at install time)</span></td>
+  <td colspan="6" bgcolor="#E2E8F0"><b>PLATFORM</b></td>
 </tr>
 
 <tr>
-  <td class="feature-name">Hook auto-update</td>
-  <td><span class="yes">✓</span> <span class="cell-text"><code>autoupdate</code> (pinned SHA refs)</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td class="ws-col"><span class="yes">✓</span> <span class="cell-text"><code>generate-hooks</code> from <code>.pre-commit-config.yaml</code></span></td>
+  <td><b>Role</b></td>
+  <td>Hook framework (any language)</td>
+  <td>Python linter + formatter</td>
+  <td>JS/TS/CSS/JSON/MD linter</td>
+  <td>Secret scanner (git + files)</td>
+  <td bgcolor="#F4F4FF"><b>Integrated hook enforcer (any language)</b></td>
 </tr>
 
 <tr>
-  <td class="feature-name">Enforcement tiers</td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td><span class="no">—</span></td>
-  <td class="ws-col"><span class="yes">✓</span> <span class="cell-text"><code>strict</code> / <code>poc</code> / <code>vendored</code> + <code>enforce</code> / <code>warn</code></span></td>
+  <td><b>Hook stages</b></td>
+  <td>pre-commit, commit-msg, pre-push</td>
+  <td>standalone / CI</td>
+  <td>standalone / CI</td>
+  <td>pre-commit, CI</td>
+  <td bgcolor="#F4F4FF"><b>pre-commit, commit-msg, pre-push</b></td>
 </tr>
 
 <tr>
-  <td class="feature-name">Language requirement</td>
-  <td><span class="cell-text">Python 3.x</span></td>
-  <td><span class="cell-text">Rust binary</span></td>
-  <td><span class="cell-text">Node.js</span></td>
-  <td><span class="cell-text">Go binary</span></td>
-  <td class="ws-col"><span class="highlight">bash (ubiquitous; zero runtime to install)</span></td>
+  <td><b>Execution model</b></td>
+  <td>Python runtime; stashes tree; clones remote repos</td>
+  <td>Single Rust binary, no stashing</td>
+  <td>Node.js binary, no stashing</td>
+  <td>Single Go binary, no stashing</td>
+  <td bgcolor="#F4F4FF"><b>Native bash scripts; no framework runtime; files stay on disk</b></td>
+</tr>
+
+<tr>
+  <td><b>Env isolation</b></td>
+  <td>✓ Per-hook Docker/Node/Ruby/Python</td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td bgcolor="#F4F4FF">◆ PATH-based (tools in CI or dev environment)</td>
+</tr>
+
+<tr>
+  <td><b>First-run speed</b></td>
+  <td>◆ Slow (clone repos + build envs)</td>
+  <td>✓ Instant</td>
+  <td>✓ Instant</td>
+  <td>✓ Instant</td>
+  <td bgcolor="#F4F4FF">✓ <b>Instant (scripts generated at install time)</b></td>
+</tr>
+
+<tr>
+  <td><b>Hook auto-update</b></td>
+  <td>✓ <code>autoupdate</code> (pinned SHA refs)</td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td bgcolor="#F4F4FF">✓ <code>generate-hooks</code> from <code>.pre-commit-config.yaml</code></td>
+</tr>
+
+<tr>
+  <td><b>Enforcement tiers</b></td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td bgcolor="#F4F4FF">✓ <code>strict</code> / <code>poc</code> / <code>vendored</code> + <code>enforce</code> / <code>warn</code></td>
+</tr>
+
+<tr>
+  <td><b>Language requirement</b></td>
+  <td>Python 3.x</td>
+  <td>Rust binary</td>
+  <td>Node.js</td>
+  <td>Go binary</td>
+  <td bgcolor="#F4F4FF"><b>bash (ubiquitous; zero runtime to install)</b></td>
 </tr>
 
 </tbody>
 </table>
-
-</div>
 
 ### What the matrix tells you
 
