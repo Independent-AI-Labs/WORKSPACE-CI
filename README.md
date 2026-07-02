@@ -94,7 +94,7 @@ Scope describes which files the check scans when triggered.
 | Markdown link integrity (internal anchors + external URLs) | pre-push | doc files |
 | Hook manifest completeness (self-check) | pre-push | `.pre-commit-config.yaml` |
 | Compliance score (15-dimension A-F audit) | pre-push | project config |
-| Boot layout audit (`.boot-linux/` + `.venv/` hierarchy) | pre-push | layout config |
+| `.venv` hierarchy tracking for monorepos (`.boot-linux/` + `.venv/` alignment) | pre-push | layout config |
 
 Every check has configurable `always_run` / `files:` / `stages:` / `types_or:`
 gates in `.pre-commit-config.yaml` and an enforcement tier (`strict` / `poc` /
