@@ -123,52 +123,35 @@ Flip to `enforce` when gates are clean.
 
 ---
 
-## How It Compares
+## What workspace-ci adds beyond the tools it wraps
 
-These tools serve different roles. The table below maps actual
-capabilities so you can see where workspace-ci fills gaps that
-assembling the other tools alone leaves open.
+workspace-ci calls ruff, gitleaks, and mypy as subprocesses. It is not a
+replacement for them. The real question is what you get beyond wiring those
+same tools into pre-commit yourself.
 
-| Feature | pre-commit | ruff | eslint | gitleaks | workspace-ci |
-| ------- | ---------- | ---- | ------ | -------- | ------------ |
-| **GUARDRAILS** | | | | | |
-| Secrets (built-in) | Partial | No | No | Yes | Yes |
-| Banned patterns | Partial | No | No | No | Yes |
-| Error-swallow detection | No | No | No | No | Yes |
-| Blocks escape hatches | Partial | No | No | No | Yes |
-| **ANALYSIS** | | | | | |
-| Linting | Partial | Yes | Yes | No | Yes |
-| Dead code | No | No | No | No | Yes |
-| Coverage gates | No | No | No | No | Yes |
-| Commit message | Partial | No | No | No | Yes |
-| History scan | No | No | No | Partial | Yes |
-| Markdown links | No | No | No | No | Yes |
-| Dependency freshness | No | No | No | No | Yes |
-| **PLATFORM** | | | | | |
-| Role | Hook framework | Python linter and formatter | JS/TS/CSS/JSON/MD linter | Secret scanner | Integrated hook enforcer |
-| Hook stages | pre-commit, commit-msg, pre-push | standalone / CI | standalone / CI | pre-commit, CI | pre-commit, commit-msg, pre-push |
-| Execution model | Python runtime; stashes tree; clones remote repos | Single Rust binary | Node.js binary | Single Go binary | Native bash scripts; files stay on disk |
-| Env isolation | Yes | No | No | No | Partial |
-| First-run speed | Partial | Yes | Yes | Yes | Yes |
-| Hook auto-update | Yes | No | No | No | Yes |
-| Enforcement tiers | No | No | No | No | Yes |
-| Language requirement | Python 3.x | Rust binary | Node.js | Go binary | bash |
+### The floor: DIY pre-commit + ruff + gitleaks + mypy
 
-### What the matrix tells you
+You get format, lint, type-check, and secret scanning. You also get a
+Python runtime dependency for every hook run, working-tree stashing on
+each commit, and remote repo cloning on first run. That is the cost of
+admission for pre-commit's hook scheduling.
 
-- **pre-commit** is a generic hook scheduler with environment isolation. It does not
-  detect secrets, ban patterns, enforce coverage, or analyze code on its own; it
-  delegates everything to third-party repos that must be cloned and built on first run.
-  Its killer feature is per-hook environment isolation (Docker, Node, Ruby, Python).
+### The ceiling: what workspace-ci adds on top of those same tools
 
-- **ruff**, **eslint**, and **gitleaks** are single-purpose tools. Each does one thing well,
-  but none coordinates with the others, gates commits, or catches cross-language
-  error-swallow patterns.
+| What is added | Why no off-the-shelf tool does this |
+| ------------- | ----------------------------------- |
+| Banned patterns (58 semantic prohibitions) | No linter bans `fallback`, `getattr`, `@dataclass`, or `self.get(`. These are architectural policy decisions, not style rules. |
+| Error-swallow detection (Python, JS, Shell, Ansible, Cron) | No tool spans five languages looking for silent-error patterns in unified diffs. Each language's linter only sees its own syntax. |
+| Coverage no-devolution | Thresholds can only raise, never lower. No linter or test runner tracks config history. |
+| Dead code after file deletion | Detects imports of deleted `.py` modules before the commit lands. Pre-commit has no cross-file deletion awareness. |
+| Dependency freshness | Flags stale pinned versions, not just unpinned ones. `pip-audit` checks vulnerabilities; this checks rot. |
+| History scan on push | Catches violations snuck in via rebase or amend that slipped past pre-commit. No hook framework scans push ranges. |
+| Enforcement tiers (strict / poc / vendored) | Per-project gate profiles. Pre-commit has no tier concept; every repo gets the same hooks or none. |
+| Escape-hatch blocking | [WORKSPACE-GUARD](https://github.com/Independent-AI-Labs/WORKSPACE-GUARD) intercepts `--no-verify`, force-push, `git reset`, and `git commit --amend` at the syscall level. No hook framework can do this; hooks are bypassable by definition. |
+| Native bash execution | No Python runtime for hooks, no tree stashing, no remote repo cloning. Hooks are generated bash scripts in `.git/hooks/*`. |
 
-- **workspace-ci** is an integrated enforcement system that fills the gaps none of
-  the individual tools address: banned patterns, error-swallow detection, coverage
-  gates, dead code, dependency freshness, and escape-hatch blocking, all coordinated
-  from native bash with no framework runtime and no working-tree stashing.
+The tools workspace-ci wraps are the floor, not the ceiling. The value is
+the enforcement layer above them.
 
 ---
 

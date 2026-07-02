@@ -19,13 +19,13 @@ exceptions:
   - pattern: '\bpython3?\b'
     paths: ['docs/']
   - pattern: '\bfallback\b'
-    paths: ['docs/']
+    paths: ['docs/', 'README\.md$']
   - pattern: '\blegacy\b'
     paths: ['docs/']
   - pattern: '\bmock\b'
     paths: ['docs/']
   - pattern: '\bsilent'
-    paths: ['docs/']
+    paths: ['docs/', 'README\.md$']
   - pattern: '\bskeleton\b'
     paths: ['docs/']
   - pattern: '\blazy\b'
@@ -42,6 +42,10 @@ exceptions:
     paths: ['docs/']
   - pattern: 'eslint-disable'
     paths: ['docs/']
+  - pattern: '@dataclass'
+    paths: ['docs/', 'README\.md$']
+  - pattern: 'self\.get\('
+    paths: ['docs/', 'README\.md$']
 
 
   # ── Shell lib / tests / scripts (pre-existing) ───────────────────────
