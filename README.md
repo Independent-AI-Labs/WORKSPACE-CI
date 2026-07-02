@@ -27,8 +27,13 @@ The execution model is three stages with non-redundant responsibility:
 | commit-msg | Message format compliance, agent-attribution blocking | Checks only the commit message file, not the working tree |
 | pre-push | Full test suite + coverage thresholds, history scan for blocked patterns | Expensive gates that run only when code leaves the developer's machine |
 
-A separate SUID binary (WORKSPACE-GUARD) wraps `git` and blocks `--no-verify`,
-`--force`, and `rebase` of pushed commits, so the hooks actually run.
+A separate capability-based binary (WORKSPACE-GUARD) wraps `git` via dpkg-divert
+and enforces guardrails at the syscall boundary: blocks `--no-verify`, `--force`
+pushes, `git reset`, `git checkout --hard`, `git commit --amend`, standalone
+`git rebase`, `git stash drop`, dangerous config keys (`core.hookspath`,
+`core.sshcommand`, `alias.*`, etc.), and sanitizes the child environment to an
+allow-list. Identity and editor config keys are sudo-gated. This ensures hooks
+actually run and history cannot be rewritten.
 
 Shell handles everything that doesn't need a full programming language: file
 listing, pattern matching, conditional logic, formatter auto-stage. Python

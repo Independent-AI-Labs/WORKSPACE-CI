@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bootstrap: Build and install SUID workspace guard (git PoC)
+# Bootstrap: Build and install capability-based workspace guard (git)
 # Called from CI Makefile: lives in the CI repo, builds from sibling WORKSPACE-GUARD.
 set -euo pipefail
 

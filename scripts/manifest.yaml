@@ -65,7 +65,7 @@ scripts:
 
   - id: bootstrap-workspace-guard
     path: scripts/bootstrap-workspace-guard
-    summary: Build and install the SUID git-guard binary from the sibling WORKSPACE-GUARD repo.
+    summary: Build and install the capability-based git guard binary from the sibling WORKSPACE-GUARD repo.
     usage: bootstrap-workspace-guard [build-only|install-only|uninstall|check]
     category: bootstrap
     args:
