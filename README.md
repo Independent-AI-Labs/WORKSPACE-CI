@@ -70,7 +70,7 @@ Scope describes which files the check scans when triggered.
 
 | Check | Default stage | Scope |
 |-------|--------------|-------|
-| Secret scanning (gitleaks, 160+ patterns) | pre-commit | staged content |
+| Secret scanning (gitleaks, 160+ patterns, all non-gitignored files) | pre-commit | all files |
 | Sensitive filename blocking (`.env`, `*.pem`, `credentials.json`, ...) | pre-commit | all files |
 | Banned patterns (50+ including type suppressions, unsafe code, fake objects, Co-authored-by) | pre-commit | all files |
 | Silent-error swallow (Python `except: pass`, JS `catch {}`, Shell `\|\| true`, Ansible `ignore_errors`, Cron no-log) | pre-commit | staged diff |

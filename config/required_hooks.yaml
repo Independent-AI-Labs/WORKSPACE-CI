@@ -60,8 +60,8 @@ hooks:
     applicable_to: [any]
 
   - id: gitleaks
-    kind: shell_inline
-    entry: "gitleaks protect --staged --redact --no-banner --verbose"
+    kind: shell
+    entry: ci_scan_secrets
     stage: pre-commit
     pass_filenames: false
     always_run: true
