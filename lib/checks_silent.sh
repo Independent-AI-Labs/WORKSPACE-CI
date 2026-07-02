@@ -48,11 +48,13 @@ ci_check_silent_swallow() {
         return 1
     fi
 
-    # Build file list: ALL staged files. Pathspec filtering is delegated to
-    # the Python classifier (lib/check_silent_swallow_system.py::is_shell_file)
-    # so extensionless scripts (scripts/bootstrap-uv, scripts/audit-workspace,
-    # etc.) are scanned per the §3.7 "hooks scan ALL files: no exceptions" rule.
-    git diff --cached --name-only > "$files_tmp"
+    # Build file list: ALL tracked files (not just staged). Every swallowed
+    # error is a bug, regardless of which file triggered the commit.
+    # Pathspec filtering is delegated to the Python classifier
+    # (lib/check_silent_swallow_system.py::is_shell_file) so extensionless
+    # scripts (scripts/bootstrap-uv, scripts/audit-workspace, etc.) are
+    # scanned per the §3.7 "hooks scan ALL files: no exceptions" rule.
+    git ls-files --cached --others --exclude-standard > "$files_tmp"
 
     if [[ ! -s "$files_tmp" ]]; then
         ci_pass "Silent-swallow: no scannable files found."
@@ -60,16 +62,40 @@ ci_check_silent_swallow() {
         return 0
     fi
 
+    # Read per-project exceptions from config/silent_swallow_exceptions.yaml.
+    # Format mirrors banned_words_exceptions.yaml:
+    #   exceptions:
+    #     - paths: ['public/vendor/', 'other/path']
+    local -a _exc_paths=()
+    local _exc_cfg="config/silent_swallow_exceptions.yaml"
+    if [[ -f "$_exc_cfg" ]]; then
+        local _exc_tmp
+        _exc_tmp="$(mktemp)"
+        sed -n "s/^\s*-\s*['\"]\(.*[^'\"]\)['\"]\s*$/\1/p" "$_exc_cfg" > "$_exc_tmp"
+        while IFS= read -r _pat; do
+            [[ -n "$_pat" ]] && _exc_paths+=("$_pat")
+        done < "$_exc_tmp"
+        rm -f "$_exc_tmp"
+    fi
+
     local rc=0 errors=0 file
     while IFS= read -r file; do
         [[ -z "$file" || ! -f "$file" ]] && continue
-        # Exempt files where detector produces known false positives.
-        # These should be customized per-project via config, not hardcoded.
-        # TODO: read exceptions from a per-project silent_swallow_exceptions.yaml
+        # Default exemptions: tests may contain deliberate error patterns;
+        # compose.yml has pre-existing patterns fixed incrementally.
         case "$file" in
-            tests/*) continue ;;  # Tests may contain deliberate error patterns
-            res/ansible/compose.yml) continue ;;  # Pre-existing patterns: fix incremental
+            tests/*) continue ;;
+            res/ansible/compose.yml) continue ;;
         esac
+        # Per-project exemptions from config/silent_swallow_exceptions.yaml
+        local _excluded=0
+        for _pat in "${_exc_paths[@]}"; do
+            if [[ "$file" == "$_pat"* ]]; then
+                _excluded=1
+                break
+            fi
+        done
+        [[ $_excluded -eq 1 ]] && continue
         {
             echo "--- a/$file"
             echo "+++ b/$file"
