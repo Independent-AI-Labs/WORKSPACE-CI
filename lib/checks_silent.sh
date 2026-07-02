@@ -81,6 +81,10 @@ ci_check_silent_swallow() {
     local rc=0 errors=0 file
     while IFS= read -r file; do
         [[ -z "$file" || ! -f "$file" ]] && continue
+        # Skip binary files (prevents UnicodeDecodeError in Python checker)
+        local _enc
+        _enc="$(file --mime-encoding -b "$file")" || { echo "[silent-swallow] file --mime-encoding failed on $file" >&2; continue; }
+        [[ "$_enc" == "binary" ]] && continue
         # Default exemptions: tests may contain deliberate error patterns;
         # compose.yml has pre-existing patterns fixed incrementally.
         case "$file" in
