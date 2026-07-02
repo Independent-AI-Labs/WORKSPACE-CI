@@ -1,15 +1,18 @@
 # SPEC-BOOT-LAYOUT: Hierarchical `.boot-linux/` and `.venv/` Toolchain Implementation
 
 **Date:** 2026-06-26
-**Status:** DRAFT
+**Status:** IMPLEMENTED
 **Type:** Specification
 **Requirements:** [REQ-BOOT-LAYOUT](../requirements/REQ-BOOT-LAYOUT.md)
 
-> **Implementation status:** Specification. Code changes are scoped and
-> sequenced in §11 (Phased Implementation). This document specifies the
-> concrete files, functions, schema, and algorithms that satisfy
-> REQ-BOOT-LAYOUT. It DOES NOT include code listings; the implementation
-> phase will produce the actual edits.
+> **Implementation status:** Complete (Phases 1-3 and Phase 5). Code changes
+> scoped and sequenced in §11 (Phased Implementation) have been implemented:
+> `ci_resolve_boot_path()` lives in `lib/ci.sh`, `generate-hooks` uses it,
+> `config/boot_layout.yaml` is shipped, `ci/check_boot_venv_layout.py` exists,
+> `scripts/bootstrap-python-env` is deleted, `bootstrap-gitleaks` installs to
+> CI's own `.boot-linux/bin/`, and `scripts/bootstrap-uv` + `scripts/bootstrap-rust`
+> exist for Phase 5. Phase 4 (VM-side alignment) is a separate concern owned
+> by WORKSPACE-VM.
 
 ---
 
@@ -44,9 +47,8 @@ This SPEC implements the boot-layout contract from REQ-BOOT-LAYOUT. It introduce
 6. GUARD's `.pre-commit-config.yaml::check-markdown-docs.entry` changes from
    bare `python -m ...` to `uv run --project ../CI --no-sync python -m ...`.
 
-This SPEC deliberately does NOT introduce a new `bootstrap-uv` or
-`bootstrap-rust` script in WORKSPACE-CI (those stay as "host provides X"
-for Phase 1; a future Phase 3 may add them).
+Phase 5 added `scripts/bootstrap-uv` and `scripts/bootstrap-rust` to
+WORKSPACE-CI for Rust toolchain self-sufficiency (see §11 Phase 5).
 
 ---
 
@@ -273,7 +275,10 @@ list. `moon.yml::project.bootDir`/`project.parentBoot` are DESCRIPTIVE
 
 ## 5. `scripts/generate-hooks`: Modification Spec
 
-### 5.1 Before (current implementation, lines 104-111)
+### 5.1 Before (previous implementation, now removed)
+
+The following hardcoded PATH-prepend previously lived in `generate-hooks`
+(lines 104-111) and has been replaced by `ci_resolve_boot_path()`:
 
 ```bash
 # Prepend the workspace boot venv's python bin BEFORE the .boot-linux/bin
@@ -406,6 +411,8 @@ In WORKSPACE-CI's own `.pre-commit-config.yaml`:
 
 ### 7.1 Files to delete entirely
 
+> **Status: DONE.** All three deletions are complete.
+
 | Path | Reason |
 |---|---|
 | `/root/WORKSPACE-CI/scripts/bootstrap-python-env` | Duplicates VM's `bootstrap_python.sh`; no repo needs `.boot-linux/python-env/` under the new model (FR-BL-8.3). |
@@ -413,6 +420,10 @@ In WORKSPACE-CI's own `.pre-commit-config.yaml`:
 | `/root/.boot-linux/bin/python` (symlink) | Session pollution; created by deleted `bootstrap-python-env` (FR-BL-8.10). |
 
 ### 7.2 Files to revert (2026-06-25 session edits)
+
+> **Status: DONE.** All reversions are complete. `uv run` is preserved in all
+> hook entries, and `2>/dev/null` swallows have been replaced with explicit
+> `|| { echo ... >&2; exit 1; }` patterns.
 
 Two distinct operations apply to CI's hook entries simultaneously:
 
@@ -435,6 +446,9 @@ Both operations apply to L58/L65 (which need BOTH `uv run` restored AND swallow 
 | `WORKSPACE-CI/lib/checks_compliance.sh` L192 | Diagnostic string changed to remove `uv run` | Restore the `uv run python -m ci.check_markdown_docs --check-remote` reference in the diagnostic message |
 
 ### 7.3 Files to add or modify
+
+> **Status: DONE (CI-side).** All WORKSPACE-CI entries are complete.
+> WORKSPACE-GUARD and WORKSPACE-VM entries are owned by those repos.
 
 | File | Action |
 |---|---|
@@ -599,30 +613,39 @@ Each generated hook does exactly one `export PATH="${_BOOT_PATH}:$PATH"` per she
 
 ### Phase 1: Reversions and cleanup (single PR after this SPEC is approved)
 
-- [ ] Delete `/root/.boot-linux/python-env/` + `/root/.boot-linux/bin/python` symlink.
-- [ ] Delete `/root/WORKSPACE-CI/scripts/bootstrap-python-env`.
-- [ ] Remove `bootstrap-python-env` from `scripts/manifest.yaml`.
-- [ ] Remove `install-python-env` target from WORKSPACE-CI Makefile; remove its prereq from `install-deps` and `sync`.
-- [ ] Revert `WORKSPACE-CI/.pre-commit-config.yaml` per §7.2 (restore `uv run` everywhere; eradicate `2>/dev/null` swallows in L58/L65).
-- [ ] Revert `config/coverage_thresholds.yaml`, `lib/checks_coverage.sh`, `lib/checks_compliance.sh` per §7.2.
+> **Status: DONE (CI-side).** All CI-side items complete. GUARD-side item
+> (L52 change) is owned by WORKSPACE-GUARD.
+
+- [x] Delete `/root/.boot-linux/python-env/` + `/root/.boot-linux/bin/python` symlink.
+- [x] Delete `/root/WORKSPACE-CI/scripts/bootstrap-python-env`.
+- [x] Remove `bootstrap-python-env` from `scripts/manifest.yaml`.
+- [x] Remove `install-python-env` target from WORKSPACE-CI Makefile; remove its prereq from `install-deps` and `sync`.
+- [x] Revert `WORKSPACE-CI/.pre-commit-config.yaml` per §7.2 (restore `uv run` everywhere; eradicate `2>/dev/null` swallows in L58/L65).
+- [x] Revert `config/coverage_thresholds.yaml`, `lib/checks_coverage.sh`, `lib/checks_compliance.sh` per §7.2.
 - [ ] Change `WORKSPACE-GUARD/.pre-commit-config.yaml` L52 to `uv run --project ../CI --no-sync python -m ci.check_markdown_docs --all-md --check-remote` per §7.3.
 
 ### Phase 2: New contract (after Phase 1 lands)
 
-- [ ] Add `ci_resolve_boot_path()` to `lib/ci.sh` per §3.1.
-- [ ] Replace `generate-hooks` hardcoded PATH-prepend with `ci_resolve_boot_path()` invocation per §5.
-- [ ] Rewrite `bootstrap-gitleaks` to install to `${CI_PROJECT_ROOT}/.boot-linux/bin/gitleaks` via `config/boot_layout.yaml::boot_dir`; eradicate `2>/dev/null` swallows per the silent-swallow canon.
-- [ ] Add `config/boot_layout.yaml` to WORKSPACE-CI: `boot_dir: .boot-linux/`, `venv_dir: .venv/`, `inherit: []`.
+> **Status: DONE (CI-side).** All CI-side items complete. GUARD-side items
+> are owned by WORKSPACE-GUARD.
+
+- [x] Add `ci_resolve_boot_path()` to `lib/ci.sh` per §3.1.
+- [x] Replace `generate-hooks` hardcoded PATH-prepend with `ci_resolve_boot_path()` invocation per §5.
+- [x] Rewrite `bootstrap-gitleaks` to install to `${CI_PROJECT_ROOT}/.boot-linux/bin/gitleaks` via `config/boot_layout.yaml::boot_dir`; eradicate `2>/dev/null` swallows per the silent-swallow canon.
+- [x] Add `config/boot_layout.yaml` to WORKSPACE-CI: `boot_dir: .boot-linux/`, `venv_dir: .venv/`, `inherit: []`.
 - [ ] Add `config/boot_layout.yaml` to WORKSPACE-GUARD: `boot_dir: .boot-linux/`, `venv_dir: null`, `inherit: [../WORKSPACE-CI/.boot-linux]`.
 - [ ] Verify WORKSPACE-GUARD's `moon.yml::dependsOn` includes `ci` (add if missing).
 
 ### Phase 3: Compliance check (after Phase 2 lands)
 
-- [ ] Add `ci/check_boot_venv_layout.py` per §6.
-- [ ] Register in `scripts/manifest.yaml` per §6.5.
-- [ ] Add to `config/required_hooks.yaml` as `tier: poc`.
-- [ ] Add `check-boot-venv-layout` hook entry to WORKSPACE-CI's `.pre-commit-config.yaml` per §6.5.
-- [ ] Add `project.bootDir` / `project.parentBoot` custom metadata to WORKSPACE-CI's `moon.yml` mirroring `boot_layout.yaml`.
+> **Status: DONE (CI-side).** All CI-side items complete. GUARD-side item
+> is owned by WORKSPACE-GUARD.
+
+- [x] Add `ci/check_boot_venv_layout.py` per §6.
+- [x] Register in `scripts/manifest.yaml` per §6.5.
+- [x] Add to `config/required_hooks.yaml` as `tier: poc`.
+- [x] Add `check-boot-venv-layout` hook entry to WORKSPACE-CI's `.pre-commit-config.yaml` per §6.5.
+- [x] Add `project.bootDir` / `project.parentBoot` custom metadata to WORKSPACE-CI's `moon.yml` mirroring `boot_layout.yaml`.
 - [ ] Add `project.bootDir` / `project.parentBoot` custom metadata to WORKSPACE-GUARD's `moon.yml` mirroring `boot_layout.yaml`.
 
 ### Phase 4: VM-side alignment (separate PR, separate commit)
@@ -634,8 +657,12 @@ Each generated hook does exactly one `export PATH="${_BOOT_PATH}:$PATH"` per she
 
 ### Phase 5 (deferred): Rust toolchain self-sufficiency
 
-- [ ] Author `scripts/bootstrap-uv` to install uv into `${CI_PROJECT_ROOT}/.boot-linux/bin/uv` hermetically (SHA256-pinned download like `bootstrap-gitleaks`).
-- [ ] Author `scripts/bootstrap-rust` to install rustup + components (cargo, rustc, clippy-driver, rustfmt) into `${CI_PROJECT_ROOT}/.boot-linux/` (with RUSTUP_HOME + CARGO_HOME redirected).
+> **Status: PARTIAL.** `bootstrap-uv` and `bootstrap-rust` scripts exist.
+> Integration into `bootstrap-workspace-guard` and preflight checks are
+> still pending.
+
+- [x] Author `scripts/bootstrap-uv` to install uv into `${CI_PROJECT_ROOT}/.boot-linux/bin/uv` hermetically (SHA256-pinned download like `bootstrap-gitleaks`).
+- [x] Author `scripts/bootstrap-rust` to install rustup + components (cargo, rustc, clippy-driver, rustfmt) into `${CI_PROJECT_ROOT}/.boot-linux/` (with RUSTUP_HOME + CARGO_HOME redirected).
 - [ ] Update `bootstrap-workspace-guard` to source CI's `bootstrap-rust` instead of shelling out to VM's `bootstrap_rust.sh`.
 - [ ] Add `preflight` check verifying `cargo`/`rustfmt`/`clippy` exist before hooks run (host-provides-X check, fail-closed).
 

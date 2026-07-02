@@ -1,17 +1,21 @@
 # REQ-BOOT-LAYOUT: Hierarchical `.boot-linux/` and `.venv/` Toolchain Layout
 
 **Date:** 2026-06-26
-**Status:** DRAFT
+**Status:** IMPLEMENTED
 **Type:** Requirements
 **Specification:** [SPEC-BOOT-LAYOUT](../specifications/SPEC-BOOT-LAYOUT.md)
 
-> **Implementation status:** Requirements gathering. The walk-up function, the
-> `config/boot_layout.yaml` schema, and the `check_boot_venv_layout` compliance
-> check do not exist yet. Some existing repositories carry leaked dependencies
-> on WORKSPACE-VM's `.boot-linux/` (e.g. the `generate-hooks` PATH-prepend
-> template hardcodes `${CI_WORKSPACE_ROOT}/.boot-linux/python-env/bin`): those
-> leaks MUST be eliminated as part of the implementation phase. This document
-> defines the requirements and acceptance criteria for the corrected layout.
+> **Implementation status:** Complete (Phases 1-3 and Phase 5). The walk-up
+> function `ci_resolve_boot_path()` lives in `lib/ci.sh` (lines 262-299), the
+> `config/boot_layout.yaml` schema is shipped, and the
+> `check_boot_venv_layout` compliance check exists at
+> `ci/check_boot_venv_layout.py` (447 lines, all 10 checks from SPEC §6.3).
+> Leaked dependencies on WORKSPACE-VM's `.boot-linux/` have been eliminated:
+> `generate-hooks` uses `ci_resolve_boot_path()` instead of hardcoded paths,
+> `bootstrap-gitleaks` installs to CI's own `.boot-linux/bin/`, and
+> `scripts/bootstrap-python-env` has been deleted. Phase 4 (VM-side alignment)
+> is a separate concern owned by WORKSPACE-VM. This document defines the
+> requirements and acceptance criteria for the layout contract.
 
 ---
 

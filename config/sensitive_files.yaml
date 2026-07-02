@@ -56,9 +56,7 @@ safe_exceptions:
   - banned_words.yaml
   - sensitive_files.yaml
   - dependency_excludes.yaml
-  - commit_checks.yaml
   - dead_code.yaml
-  - config_exclusion_patterns.yaml
 
 # Filename prefixes that are always safe (e.g. "tsconfig" matches tsconfig.json,
 # tsconfig.app.json, tsconfig.node.json, etc.)

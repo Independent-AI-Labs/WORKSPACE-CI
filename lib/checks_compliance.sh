@@ -4,7 +4,7 @@
 
 # --- ci_compliance_score [PROJECT_DIR] ---
 # Deep compliance audit of a single project directory.
-# Checks 15 dimensions across 5 categories, produces a percentage score
+# Checks 17 dimensions across 6 categories, produces a percentage score
 # with actionable violation details.
 ci_compliance_score() {
     local project_dir="${1:-.}"

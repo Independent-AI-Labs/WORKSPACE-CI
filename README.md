@@ -72,8 +72,8 @@ Scope describes which files the check scans when triggered.
 |-------|--------------|-------|
 | Secret scanning (gitleaks, 160+ patterns, all non-gitignored files) | pre-commit | all files |
 | Sensitive filename blocking (`.env`, `*.pem`, `credentials.json`, ...) | pre-commit | all files |
-| Banned patterns (50+ including type suppressions, unsafe code, fake objects, Co-authored-by) | pre-commit | all files |
-| Silent-error swallow (Python `except: pass`, JS `catch {}`, Shell `\|\| true`, Ansible `ignore_errors`, Cron no-log) | pre-commit | staged diff |
+| Banned patterns (60 including type suppressions, unsafe code, fake objects) | pre-commit | all files |
+| Silent-error swallow (Python `except: pass`, JS `catch {}`, Shell `\|\| true`, Ansible `ignore_errors`, Cron no-log) | pre-commit | all tracked files |
 | Code formatting (`ruff format`, auto-stage + re-run) | pre-commit | Python files |
 | Linting (`ruff check`, 900+ rules) | pre-commit | Python files |
 | Type checking (`mypy`) | pre-commit | Python files |
@@ -90,11 +90,11 @@ Scope describes which files the check scans when triggered.
 | History scan (blocked patterns in push range) | pre-push | git history |
 | Dead code (Python AST cross-reference graph) | pre-push | Python sources |
 | Dependency freshness (PyPI / npm / Docker Hub) | pre-push | lockfiles |
-| Duplicate / redundant dependency warning | pre-push | `pyproject.toml` |
-| Markdown link integrity (internal anchors + external URLs) | pre-push | doc files |
-| Hook manifest completeness (self-check) | pre-push | `.pre-commit-config.yaml` |
-| Compliance score (15-dimension A-F audit) | pre-push | project config |
-| `.venv` hierarchy tracking for monorepos (`.boot-linux/` + `.venv/` alignment) | pre-push | layout config |
+| Duplicate / redundant dependency warning | pre-commit | `pyproject.toml` |
+| Markdown link integrity (internal anchors + external URLs) | pre-commit | doc files |
+| Hook manifest completeness (self-check) | pre-commit | `.pre-commit-config.yaml` |
+| Compliance score (17-dimension A-F audit) | pre-commit | project config |
+| `.venv` hierarchy tracking for monorepos (`.boot-linux/` + `.venv/` alignment) | pre-commit | layout config |
 
 Every check has configurable `always_run` / `files:` / `stages:` / `types_or:`
 gates in `.pre-commit-config.yaml` and an enforcement tier (`strict` / `poc` /
@@ -102,10 +102,17 @@ gates in `.pre-commit-config.yaml` and an enforcement tier (`strict` / `poc` /
 secrets, sensitive files, banned words, and commit hygiene; vendored tier
 installs no hooks.
 
-All rules are config-driven. Patterns live in [`config/banned_words.yaml`](config/banned_words.yaml),
+All rules are config-driven. Patterns live in [`config/banned_words.yaml`](config/banned_words.yaml)
+(with per-project overrides in [`banned_words_exceptions.yaml`](config/banned_words_exceptions.yaml)),
 file rules in [`config/sensitive_files.yaml`](config/sensitive_files.yaml),
 coverage gates in [`config/coverage_thresholds.yaml`](config/coverage_thresholds.yaml),
-and hook registry in [`config/required_hooks.yaml`](config/required_hooks.yaml).
+hook registry in [`config/required_hooks.yaml`](config/required_hooks.yaml),
+boot layout in [`config/boot_layout.yaml`](config/boot_layout.yaml),
+file length limits in [`config/file_length_limits.yaml`](config/file_length_limits.yaml),
+dead code rules in [`config/dead_code.yaml`](config/dead_code.yaml),
+markdown doc targets in [`config/markdown_docs.yaml`](config/markdown_docs.yaml),
+blocked commit patterns in [`config/blocked_commit_patterns.yaml`](config/blocked_commit_patterns.yaml),
+and dependency excludes in [`config/dependency_excludes.yaml`](config/dependency_excludes.yaml).
 Add a pattern, tune a threshold, exclude a path: no code changes needed.
 
 ---
@@ -140,7 +147,7 @@ admission for pre-commit's hook scheduling.
 
 | What is added | Why no off-the-shelf tool does this |
 | ------------- | ----------------------------------- |
-| Banned patterns (58 semantic prohibitions) | No linter bans `fallback`, `getattr`, `@dataclass`, or `self.get(`. These are architectural policy decisions, not style rules. |
+| Banned patterns (60 semantic prohibitions) | No linter bans `fallback`, `getattr`, `@dataclass`, or `self.get(`. These are architectural policy decisions, not style rules. |
 | Error-swallow detection (Python, JS, Shell, Ansible, Cron) | No tool spans five languages looking for silent-error patterns in unified diffs. Each language's linter only sees its own syntax. |
 | Coverage no-devolution | Thresholds can only raise, never lower. No linter or test runner tracks config history. |
 | Dead code after file deletion | Detects imports of deleted `.py` modules before the commit lands. Pre-commit has no cross-file deletion awareness. |
@@ -160,6 +167,7 @@ the enforcement layer above them.
 | Doc | What's in it |
 |-----|-------------|
 | [`docs/HOOKS.md`](docs/HOOKS.md) | Hook generation, configuration, migration from pre-commit |
+| [`docs/PORTABILITY.md`](docs/PORTABILITY.md) | Shell portability contract: process-substitution ban, temp-file capture helpers |
 | [`docs/requirements/REQ-BOOT-LAYOUT.md`](docs/requirements/REQ-BOOT-LAYOUT.md) | Hierarchical `.boot-linux/` and `.venv/` toolchain layout requirements |
 | [`docs/specifications/SPEC-BOOT-LAYOUT.md`](docs/specifications/SPEC-BOOT-LAYOUT.md) | Boot layout implementation: walk-up PATH resolution, config schema, compliance check |
 | [`docs/requirements/REQ-WIKI.md`](docs/requirements/REQ-WIKI.md) | Interactive wiki UI requirements |
@@ -183,7 +191,7 @@ ref pulls.
 Yes. The shell layer: secrets, banned patterns, file length, error-swallow patterns,
 commit hygiene, coverage gates: treats every language the same. The error-swallow
 detector spans Python (`except: pass`), JavaScript/TypeScript (`catch {}`),
-Rust (`unwrap()` abuse), Shell (`|| true`), and more via regex. The Python layer
+Shell (`|| true`), Ansible `ignore_errors`, and more via regex. The Python layer
 (dead code AST, dependency version checks, markdown refs) is Python-only.
 
 ### Can agents bypass it?

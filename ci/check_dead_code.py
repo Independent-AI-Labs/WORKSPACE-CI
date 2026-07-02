@@ -3,7 +3,7 @@
 AST-based dead code detection.
 
 Scans Python modules for unreferenced definitions using AST analysis.
-Configuration: res/config/dead_code.yaml
+Configuration: config/dead_code.yaml
 """
 
 import argparse

@@ -83,10 +83,12 @@ The `.pre-commit-config.yaml` format is a subset of the pre-commit spec. Only `r
 | `files` | `""` | Regex filter -- only run when staged files match |
 | `exclude` | `""` | Regex exclude -- skip files matching this pattern |
 | `args` | `[]` | Extra arguments appended to `entry` |
+| `types_or` | `[]` | File type filters (e.g. `[python, rust]`) converted to extension regex by `generate-hooks` |
+| `types` | `[]` | File type filter (e.g. `[python]`) converted to extension regex by `generate-hooks` |
 
 ### Unsupported Fields (ignored)
 
-`types`, `types_or`, `verbose`, `require_serial`, `additional_dependencies`, `minimum_pre_commit_version`, `repo` (anything other than `local`).
+`verbose`, `require_serial`, `additional_dependencies`, `minimum_pre_commit_version`, `repo` (anything other than `local`).
 
 ## Complete Example
 

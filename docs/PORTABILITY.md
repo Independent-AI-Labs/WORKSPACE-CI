@@ -80,7 +80,7 @@ Scans `lib/*.sh` and `scripts/*` for process substitution patterns
 `config/required_hooks.yaml` as `check-portable-shell` (mandatory, safety,
 pre-commit).
 
-### `tests/test_portable_shell.sh`
+### `tests/unit/test_portable_shell.sh`
 
 Asserts no process substitution in `lib/` or `scripts/`, and validates
 `ci_capture_lines` / `ci_capture_pipe` work correctly (array population,
