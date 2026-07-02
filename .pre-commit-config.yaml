@@ -46,8 +46,8 @@ repos:
         pass_filenames: false
         always_run: true
 
-      - id: ci-check-silent-swallow
-        name: Block silent error-swallow patterns
+      - id: ci-check-error-swallow
+        name: Block error-swallow patterns
         entry: "bash -c 'source lib/checks.sh && ci_check_silent_swallow'"
         language: system
         pass_filenames: false

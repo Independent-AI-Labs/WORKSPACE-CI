@@ -69,7 +69,7 @@ hooks:
     safety: true
     applicable_to: [any]
 
-  - id: ci-check-silent-swallow
+  - id: ci-check-error-swallow
     kind: shell
     entry: ci_check_silent_swallow
     stage: pre-commit

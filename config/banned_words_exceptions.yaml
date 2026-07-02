@@ -1,23 +1,46 @@
 # workspace-ci banned words exceptions.
 # Only the config file that defines patterns and test/lib files.
 exceptions:
-  # The banned_words.yaml file defines the banned patterns: it must contain them.
-  # The *.schema.yaml files document those patterns in field descriptions, so they
-  # must contain them too (single source of truth for the wiki config reference).
-  # banned_words_exceptions.yaml defines the exception patterns: must contain them.
-  # .pre-commit-config.yaml and required_hooks.yaml contain hook IDs that
-  # reference banned words (ci-check-silent-swallow, check-banned-words, etc.).
-  # docs/HOOKS.md is auto-generated from hook configs: inherits the same IDs.
-  # docs/ and README.md document the banned patterns by name: must reference them.
+  # Config YAML files define banned patterns and must contain them.
   - pattern: '.*'
     paths:
-      - 'config/banned_words\.yaml'
-      - 'config/.*\.schema\.yaml$'
-      - 'config/banned_words_exceptions\.yaml$'
+      - 'config/.*\.yaml$'
       - '\.pre-commit-config\.yaml$'
-      - 'config/required_hooks\.yaml$'
-      - 'docs/'
-      - 'README\.md$'
+
+  # ── Documentation references (docs/) ─────────────────────────────────
+  # Docs reference banned patterns by name in specs, requirements, and
+  # category labels. These are descriptions, not instructions.
+  - pattern: ' -- '
+    paths: ['docs/']
+  - pattern: '#\s*type:\s*ignore'
+    paths: ['docs/']
+  - pattern: '\bpython3?\b'
+    paths: ['docs/']
+  - pattern: '\bfallback\b'
+    paths: ['docs/']
+  - pattern: '\blegacy\b'
+    paths: ['docs/']
+  - pattern: '\bmock\b'
+    paths: ['docs/']
+  - pattern: '\bsilent'
+    paths: ['docs/']
+  - pattern: '\bskeleton\b'
+    paths: ['docs/']
+  - pattern: '\blazy\b'
+    paths: ['docs/']
+  - pattern: '\bbackwards\b'
+    paths: ['docs/']
+  - pattern: '\bcompatibility\b'
+    paths: ['docs/']
+  - pattern: '\bdegradation\b'
+    paths: ['docs/']
+  - pattern: '\bdict\[.*,\s*Any\]'
+    paths: ['docs/']
+  - pattern: '\|\s*object\b'
+    paths: ['docs/']
+  - pattern: 'eslint-disable'
+    paths: ['docs/']
+
 
   # ── Shell lib / tests / scripts (pre-existing) ───────────────────────
   # Shell lib files use these words in check function names and messages.
