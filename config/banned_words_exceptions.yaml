@@ -2,10 +2,12 @@
 # Only the config file that defines patterns and test/lib files.
 exceptions:
   # Config YAML files define banned patterns and must contain them.
+  # AGENTS.md is the policy file that documents all banned patterns.
   - pattern: '.*'
     paths:
       - 'config/.*\.yaml$'
       - '\.pre-commit-config\.yaml$'
+      - 'AGENTS\.md$'
 
   # ── Documentation references (docs/) ─────────────────────────────────
   # Docs reference banned patterns by name in specs, requirements, and
