@@ -6,10 +6,11 @@ LLMs have severe limitations when it comes to maintaining consistent high-qualit
 
 <img width="571" height="119" alt="Screenshot 2026-05-24 064144" src="https://github.com/user-attachments/assets/76c5c281-339f-4497-a5d0-c3f0112bf289" />
 
-When confronted about carelessness towards the codebase, an LLM will happily inform you about its inner conflicts and inefficiencies:
+When confronted about carelessness towards the codebase, an LLM will happily fabricate a theory about its own inefficiencies instead of actually focusing on the CI tasks at hand:
 
 <img width="558" height="202" alt="Screenshot 2026-05-24 071239" src="https://github.com/user-attachments/assets/be0a4b41-047f-44bd-ae53-5deb09be4121" />
 
+WORKSPACE-CI offers tools for enforcing strict code quality, continuous integration, and testing guardrails for non-deterministically generated code.
 
 ### How it works
 
