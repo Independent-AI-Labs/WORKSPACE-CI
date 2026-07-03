@@ -208,67 +208,68 @@ custom_detectors:
 
 multiline_detectors:
   # ── Python multiline (9 patterns from detect_python_multiline) ──────
-  # source_function points to the specific helper that classifies each
-  # pattern, not the top-level detect_python_multiline dispatcher.
+  # source_function points to the specific per-pattern check function,
+  # not the top-level detect_python_multiline dispatcher or the
+  # _classify_except_body dispatcher.
   - id: py-except-pass
     detector: detect_python_multiline
-    source_function: _classify_except_body
+    source_function: _check_except_pass
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block that swallows errors with a bare pass statement.'
 
   - id: py-except-continue
     detector: detect_python_multiline
-    source_function: _classify_except_body
+    source_function: _check_except_continue
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block that swallows errors with a bare continue statement.'
 
   - id: py-except-ellipsis
     detector: detect_python_multiline
-    source_function: _classify_except_body
+    source_function: _check_except_ellipsis
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block that swallows errors with Ellipsis (...).'
 
   - id: py-except-return-none
     detector: detect_python_multiline
-    source_function: _classify_except_body
+    source_function: _check_except_return_none
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block returns None, hiding the exception from the caller.'
 
   - id: py-except-empty-body
     detector: detect_python_multiline
-    source_function: _resolve_next_line
+    source_function: _check_except_empty_body
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block with an empty body; no error handling at all.'
 
   - id: py-except-debug-only
     detector: detect_python_multiline
-    source_function: _classify_except_body
+    source_function: _check_except_debug_only
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block only logs at debug level; the error is not surfaced.'
 
   - id: py-except-raise-no-from
     detector: detect_python_multiline
-    source_function: _classify_except_body
+    source_function: _check_except_raise_no_from
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block raises a new exception without chaining (no from clause).'
 
   - id: py-except-silent-exit
     detector: detect_python_multiline
-    source_function: _classify_except_body
+    source_function: _check_except_silent_exit
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block calls sys.exit(0), terminating with success on error.'
 
   - id: py-except-print
     detector: detect_python_multiline
-    source_function: _classify_except_body
+    source_function: _check_except_print
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block only prints the error; no logging, re-raise, or recovery.'
@@ -284,18 +285,21 @@ multiline_detectors:
   # ── Ansible multiline (3 patterns from 2 detectors) ─────────────────
   - id: ansible-shell-no-register
     detector: detect_ansible_tasks
+    source_function: _check_ansible_shell_no_register
     source_file: lib/check_silent_swallow_ansible.py
     language: ansible
     description: 'Ansible shell/command task with changed_when:false but no register or failed_when.'
 
   - id: ansible-shell-no-guard
     detector: detect_ansible_tasks
+    source_function: _check_ansible_shell_no_guard
     source_file: lib/check_silent_swallow_ansible.py
     language: ansible
     description: 'Ansible shell/command task without register or failed_when guard.'
 
   - id: ansible-register-output-swallowed
     detector: detect_registered_output_swallow
+    source_function: _check_ansible_register_output_swallowed
     source_file: lib/check_silent_swallow_ansible.py
     language: ansible
     description: 'Ansible task registers output but only displays it on failure; success output is discarded.'

@@ -5,7 +5,7 @@ export default function Loading() {
     <WikiShell>
       <div className="loading-line h-8 w-48" />
       <div className="loading-line h-4 w-72" />
-      <div className="project-grid">
+      <div className="wiki-card-grid">
         <div className="loading-line h-40 w-full" />
         <div className="loading-line h-40 w-full" />
       </div>

@@ -9,14 +9,10 @@
    ============================================================ */
 
 @layer components {
-   /* ---- .card: panel + 1px border + radius + padding ----
-      Collapses .pattern-card, .tooling-card, .check-card, .config-card. */
-   .card,
-   .pattern-card,
-   .tooling-card,
-   .check-card,
-   .config-card,
-   .guard-card {
+    /* ---- .card: panel + 1px border + radius + padding ----
+       Base for .wiki-card and any future panel component. */
+    .card,
+    .wiki-card {
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
@@ -57,16 +53,14 @@
   /* ---- .badge: compact uppercase label ----
      Provides the missing base block for .badge--* modifiers
      and collapses .hook-badge, .pattern-card__badge. */
-  .badge,
-  .badge--green,
-  .badge--blue,
-  .badge--orange,
-  .badge--teal,
-  .badge--purple,
-  .badge--gray,
-  .hook-badge,
-  .pattern-card__badge,
-  .check-card__source {
+    .badge,
+    .badge--green,
+    .badge--blue,
+    .badge--orange,
+    .badge--teal,
+    .badge--purple,
+    .badge--gray,
+    .hook-badge {
     display: inline-flex;
     align-items: center;
     font-size: var(--text-xs);

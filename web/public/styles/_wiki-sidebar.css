@@ -19,8 +19,14 @@
 }
 
 .wiki-sidebar__logo {
-  font-size: 1.5rem;
-  color: var(--accent);
+  width: 32px;
+  height: 30px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+[data-theme='light'] .wiki-sidebar__logo {
+  filter: invert(1);
 }
 
 .wiki-sidebar__title {
@@ -66,4 +72,16 @@
 
 .wiki-sidebar__link i {
   font-size: 1.125rem;
+}
+
+.wiki-sidebar__nav-logo {
+  display: inline-block;
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  mask-image: url('/LOGO.png');
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  background-color: currentColor;
 }

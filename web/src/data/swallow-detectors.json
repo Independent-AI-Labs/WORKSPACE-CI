@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-03T15:33:07.149703+00:00",
+  "generated_at": "2026-07-03T18:32:06.652330+00:00",
   "source_version": "",
   "detectors": [
     {
@@ -9,34 +9,82 @@
       "source": "def _check_cron_inline(\n    a: AddedLine,\n    text: str,\n) -> tuple[str, int, str, str] | None:\n    stripped = text.rstrip()\n    if not stripped:\n        return None\n    if CRON_SHEBANG_OR_COMMENT.match(stripped):\n        return None\n    if CRON_ENV.match(stripped):\n        return None\n    if not CRON_LINE.match(stripped):\n        return None\n    if not CRON_OK.search(stripped):\n        return (a.path, a.lineno, \"cron-no-log-redirect\", stripped)\n    return None"
     },
     {
-      "name": "_classify_except_body",
+      "name": "_check_except_pass",
       "source_file": "lib/check_silent_swallow_python.py",
-      "docstring": "Classify the body of an except block.\n\nReturns the pattern_id if a violation is found, None otherwise.",
-      "source": "def _classify_except_body(\n    nxt: AddedLine,\n    lines: dict[int, AddedLine],\n    lineno: int,\n    header_indent: int,\n) -> str | None:\n    \"\"\"Classify the body of an except block.\n\n    Returns the pattern_id if a violation is found, None otherwise.\n    \"\"\"\n    bm = _BODY_RE.match(nxt.text)\n    if bm:\n        body_indent = len(bm.group(\"indent\"))\n        if body_indent <= header_indent:\n            return None\n        stmt = bm.group(2)\n        if stmt.startswith(\"return\"):\n            return \"py-except-return-none\"\n        return _BODY_MAP.get(stmt, \"py-except-return-none\")\n\n    for rgx, pid in _NON_SILENT_CHECKS:\n        match = rgx.match(nxt.text)\n        if not match:\n            continue\n        body_indent = len(match.group(\"indent\"))\n        if body_indent > header_indent and not _is_follow_up_blocked(\n            lines, lineno, body_indent\n        ):\n            return pid\n        break\n    return None"
+      "docstring": "Detect except block that swallows errors with a bare pass statement.",
+      "source": "def _check_except_pass(\n    nxt: AddedLine,\n    lines: dict[int, AddedLine],\n    lineno: int,\n    header_indent: int,\n) -> str | None:\n    \"\"\"Detect except block that swallows errors with a bare pass statement.\"\"\"\n    match = _BODY_RE.match(nxt.text)\n    if not match:\n        return None\n    body_indent = len(match.group(\"indent\"))\n    if body_indent <= header_indent:\n        return None\n    if match.group(2) == \"pass\":\n        return \"py-except-pass\"\n    return None"
     },
     {
-      "name": "_resolve_next_line",
+      "name": "_check_except_continue",
       "source_file": "lib/check_silent_swallow_python.py",
-      "docstring": "Resolve the body line after an except header.\n\nHandles comment-line skip logic.\nReturns (body_line, violation_pid).",
-      "source": "def _resolve_next_line(\n    lines: dict[int, AddedLine],\n    lineno: int,\n    header_indent: int,\n) -> tuple[AddedLine | None, str | None]:\n    \"\"\"Resolve the body line after an except header.\n\n    Handles comment-line skip logic.\n    Returns (body_line, violation_pid).\n    \"\"\"\n    nxt = lines.get(lineno + 1)\n    if nxt is None:\n        return None, \"py-except-empty-body\"\n    next_indent = len(re.match(r\"^(\\s*)\", nxt.text).group(1))\n    if re.match(r\"^\\s*#\", nxt.text):\n        nxt2 = lines.get(lineno + 2)\n        if nxt2 is None:\n            return None, \"py-except-empty-body\"\n        next_indent2 = len(re.match(r\"^(\\s*)\", nxt2.text).group(1))\n        if next_indent2 <= header_indent:\n            return None, \"py-except-empty-body\"\n        nxt = nxt2\n    if next_indent <= header_indent:\n        return None, \"py-except-empty-body\"\n    return nxt, None"
+      "docstring": "Detect except block that swallows errors with a bare continue statement.",
+      "source": "def _check_except_continue(\n    nxt: AddedLine,\n    lines: dict[int, AddedLine],\n    lineno: int,\n    header_indent: int,\n) -> str | None:\n    \"\"\"Detect except block that swallows errors with a bare continue statement.\"\"\"\n    match = _BODY_RE.match(nxt.text)\n    if not match:\n        return None\n    body_indent = len(match.group(\"indent\"))\n    if body_indent <= header_indent:\n        return None\n    if match.group(2) == \"continue\":\n        return \"py-except-continue\"\n    return None"
+    },
+    {
+      "name": "_check_except_ellipsis",
+      "source_file": "lib/check_silent_swallow_python.py",
+      "docstring": "Detect except block that swallows errors with Ellipsis (...).",
+      "source": "def _check_except_ellipsis(\n    nxt: AddedLine,\n    lines: dict[int, AddedLine],\n    lineno: int,\n    header_indent: int,\n) -> str | None:\n    \"\"\"Detect except block that swallows errors with Ellipsis (...).\"\"\"\n    match = _BODY_RE.match(nxt.text)\n    if not match:\n        return None\n    body_indent = len(match.group(\"indent\"))\n    if body_indent <= header_indent:\n        return None\n    if match.group(2) == \"...\":\n        return \"py-except-ellipsis\"\n    return None"
+    },
+    {
+      "name": "_check_except_return_none",
+      "source_file": "lib/check_silent_swallow_python.py",
+      "docstring": "Detect except block returning None, hiding the exception from the caller.",
+      "source": "def _check_except_return_none(\n    nxt: AddedLine,\n    lines: dict[int, AddedLine],\n    lineno: int,\n    header_indent: int,\n) -> str | None:\n    \"\"\"Detect except block returning None, hiding the exception from the caller.\"\"\"\n    match = _BODY_RE.match(nxt.text)\n    if not match:\n        return None\n    body_indent = len(match.group(\"indent\"))\n    if body_indent <= header_indent:\n        return None\n    if match.group(2).startswith(\"return\"):\n        return \"py-except-return-none\"\n    return None"
+    },
+    {
+      "name": "_check_except_empty_body",
+      "source_file": "lib/check_silent_swallow_python.py",
+      "docstring": "Detect except block with an empty body; no error handling at all.",
+      "source": "def _check_except_empty_body(\n    lines: dict[int, AddedLine],\n    lineno: int,\n    header_indent: int,\n) -> str | None:\n    \"\"\"Detect except block with an empty body; no error handling at all.\"\"\"\n    if _resolve_body_line(lines, lineno, header_indent) is None:\n        return \"py-except-empty-body\"\n    return None"
+    },
+    {
+      "name": "_check_except_debug_only",
+      "source_file": "lib/check_silent_swallow_python.py",
+      "docstring": "Detect except block that only logs at debug level; the error is not surfaced.",
+      "source": "def _check_except_debug_only(\n    nxt: AddedLine,\n    lines: dict[int, AddedLine],\n    lineno: int,\n    header_indent: int,\n) -> str | None:\n    \"\"\"Detect except block that only logs at debug level; the error is not surfaced.\"\"\"\n    match = _DEBUG_LOG_RE.match(nxt.text)\n    if not match:\n        return None\n    body_indent = len(match.group(\"indent\"))\n    if body_indent <= header_indent:\n        return None\n    if _is_follow_up_blocked(lines, lineno, body_indent):\n        return None\n    return \"py-except-debug-only\""
+    },
+    {
+      "name": "_check_except_raise_no_from",
+      "source_file": "lib/check_silent_swallow_python.py",
+      "docstring": "Detect except block raising a new exception without chaining (no from clause).",
+      "source": "def _check_except_raise_no_from(\n    nxt: AddedLine,\n    lines: dict[int, AddedLine],\n    lineno: int,\n    header_indent: int,\n) -> str | None:\n    \"\"\"Detect except block raising a new exception without chaining (no from clause).\"\"\"\n    match = _RAISE_NEW_RE.match(nxt.text)\n    if not match:\n        return None\n    body_indent = len(match.group(\"indent\"))\n    if body_indent <= header_indent:\n        return None\n    if _is_follow_up_blocked(lines, lineno, body_indent):\n        return None\n    return \"py-except-raise-no-from\""
+    },
+    {
+      "name": "_check_except_silent_exit",
+      "source_file": "lib/check_silent_swallow_python.py",
+      "docstring": "Detect except block calling sys.exit(0), terminating with success on error.",
+      "source": "def _check_except_silent_exit(\n    nxt: AddedLine,\n    lines: dict[int, AddedLine],\n    lineno: int,\n    header_indent: int,\n) -> str | None:\n    \"\"\"Detect except block calling sys.exit(0), terminating with success on error.\"\"\"\n    match = _SILENT_EXIT_RE.match(nxt.text)\n    if not match:\n        return None\n    body_indent = len(match.group(\"indent\"))\n    if body_indent <= header_indent:\n        return None\n    if _is_follow_up_blocked(lines, lineno, body_indent):\n        return None\n    return \"py-except-silent-exit\""
+    },
+    {
+      "name": "_check_except_print",
+      "source_file": "lib/check_silent_swallow_python.py",
+      "docstring": "Detect except block that only prints the error; no logging, re-raise, or recovery.",
+      "source": "def _check_except_print(\n    nxt: AddedLine,\n    lines: dict[int, AddedLine],\n    lineno: int,\n    header_indent: int,\n) -> str | None:\n    \"\"\"Detect except block that only prints the error; no logging, re-raise, or recovery.\"\"\"\n    match = _PRINT_RE.match(nxt.text)\n    if not match:\n        return None\n    body_indent = len(match.group(\"indent\"))\n    if body_indent <= header_indent:\n        return None\n    if _is_follow_up_blocked(lines, lineno, body_indent):\n        return None\n    return \"py-except-print\""
     },
     {
       "name": "_check_catch_body",
       "source_file": "lib/check_silent_swallow_js.py",
-      "docstring": "Check lines after a catch header for silent return.\n\nReturns True if a silent-return violation is found.",
-      "source": "def _check_catch_body(\n    lines: dict[int, AddedLine],\n    lineno: int,\n    header_indent: int,\n) -> bool:\n    \"\"\"Check lines after a catch header for silent return.\n\n    Returns True if a silent-return violation is found.\n    \"\"\"\n    for offset in range(1, 4):\n        body = lines.get(lineno + offset)\n        if body is None:\n            continue\n        if body.text.strip() == \"}\":\n            return False\n        if JS_CONSOLE_LOG.search(body.text) or JS_THROW.search(body.text):\n            return False\n        rm = JS_SILENT_RETURN.match(body.text)\n        if rm:\n            body_indent = len(rm.group(\"indent\"))\n            if body_indent <= header_indent:\n                continue\n            return True\n        if body.text.strip() and not body.text.strip().startswith(\"//\"):\n            return False\n    return False"
+      "docstring": "Check lines after a catch header for a silent return.\n\nReturns \"js-catch-silent-return-multi\" if a silent-return violation\nis found, None otherwise.",
+      "source": "def _check_catch_body(\n    lines: dict[int, AddedLine],\n    lineno: int,\n    header_indent: int,\n) -> str | None:\n    \"\"\"Check lines after a catch header for a silent return.\n\n    Returns \"js-catch-silent-return-multi\" if a silent-return violation\n    is found, None otherwise.\n    \"\"\"\n    for offset in range(1, 4):\n        body = lines.get(lineno + offset)\n        if body is None:\n            continue\n        if body.text.strip() == \"}\":\n            return None\n        if JS_CONSOLE_LOG.search(body.text) or JS_THROW.search(body.text):\n            return None\n        rm = JS_SILENT_RETURN.match(body.text)\n        if rm:\n            body_indent = len(rm.group(\"indent\"))\n            if body_indent <= header_indent:\n                continue\n            return \"js-catch-silent-return-multi\"\n        if body.text.strip() and not body.text.strip().startswith(\"//\"):\n            return None\n    return None"
     },
     {
-      "name": "detect_ansible_tasks",
+      "name": "_check_ansible_shell_no_register",
       "source_file": "lib/check_silent_swallow_ansible.py",
-      "docstring": "Multi-line detector: find shell/command tasks without register:.\n\nReturns list of (header_addedline, pattern_id).",
-      "source": "def detect_ansible_tasks(added_lines):\n    \"\"\"Multi-line detector: find shell/command tasks without register:.\n\n    Returns list of (header_addedline, pattern_id).\n    \"\"\"\n    violations = []\n    lines = added_lines\n    i = 0\n    while i < len(lines):\n        line = lines[i]\n        text = line.text\n\n        if _SHELL_RE.search(text) or _COMMAND_RE.search(text):\n            has_register, has_failed_when = _scan_task_flags(lines, i)\n            if not has_register and not has_failed_when:\n                if _check_changed_when_false(lines, i):\n                    violations.append((line, \"ansible-shell-no-register\"))\n                else:\n                    violations.append((line, \"ansible-shell-no-guard\"))\n\n        i += 1\n\n    return violations"
+      "docstring": "Detect shell/command task with changed_when:false but no register or failed_when.",
+      "source": "def _check_ansible_shell_no_register(\n    lines: list,\n    i: int,\n) -> str | None:\n    \"\"\"Detect shell/command task with changed_when:false but no register or failed_when.\"\"\"\n    has_register, has_failed_when = _scan_task_flags(lines, i)\n    if has_register or has_failed_when:\n        return None\n    if not _check_changed_when_false(lines, i):\n        return None\n    return \"ansible-shell-no-register\""
     },
     {
-      "name": "detect_registered_output_swallow",
+      "name": "_check_ansible_shell_no_guard",
       "source_file": "lib/check_silent_swallow_ansible.py",
-      "docstring": "Find shell/command tasks that register output but only display it\nconditionally on failure: the output is silently discarded on success.\n\nReturns list of (header_addedline, pattern_id).",
-      "source": "def detect_registered_output_swallow(added_lines):\n    \"\"\"Find shell/command tasks that register output but only display it\n    conditionally on failure: the output is silently discarded on success.\n\n    Returns list of (header_addedline, pattern_id).\n    \"\"\"\n    violations = []\n    lines = added_lines\n    i = 0\n    while i < len(lines):\n        text = lines[i].text\n\n        if not (_SHELL_RE.search(text) or _COMMAND_RE.search(text)):\n            i += 1\n            continue\n\n        reg_var, has_tolerant = _find_registered_var(lines, i)\n\n        if not reg_var or reg_var in _REG_VAR_BLOCKLIST:\n            i += 1\n            continue\n        if has_tolerant:\n            i += 1\n            continue\n\n        if not _has_unconditional_display(lines, i, reg_var):\n            violations.append((lines[i], \"ansible-register-output-swallowed\"))\n\n        i += 1\n\n    return violations"
+      "docstring": "Detect shell/command task without register, failed_when, or changed_when guard.",
+      "source": "def _check_ansible_shell_no_guard(\n    lines: list,\n    i: int,\n) -> str | None:\n    \"\"\"Detect shell/command task without register, failed_when, or changed_when guard.\"\"\"\n    has_register, has_failed_when = _scan_task_flags(lines, i)\n    if has_register or has_failed_when:\n        return None\n    if _check_changed_when_false(lines, i):\n        return None\n    return \"ansible-shell-no-guard\""
+    },
+    {
+      "name": "_check_ansible_register_output_swallowed",
+      "source_file": "lib/check_silent_swallow_ansible.py",
+      "docstring": "Detect task that registers output but only displays it on failure.\n\nThe output is silently discarded on success.",
+      "source": "def _check_ansible_register_output_swallowed(\n    lines: list,\n    i: int,\n) -> str | None:\n    \"\"\"Detect task that registers output but only displays it on failure.\n\n    The output is silently discarded on success.\n    \"\"\"\n    reg_var, has_tolerant = _find_registered_var(lines, i)\n    if not reg_var or reg_var in _REG_VAR_BLOCKLIST:\n        return None\n    if has_tolerant:\n        return None\n    if not _has_unconditional_display(lines, i, reg_var):\n        return \"ansible-register-output-swallowed\"\n    return None"
     }
   ]
 }

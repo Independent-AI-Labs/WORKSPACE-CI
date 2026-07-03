@@ -4,6 +4,10 @@ Inline Ansible patterns are now defined in
 config/silent_swallow_patterns.yaml and loaded at runtime by
 check_silent_swallow.py. This module retains file-type detection
 and the multi-line task/output detectors.
+
+Each pattern has its own dedicated check function so the wiki can
+display the exact detection logic per pattern via source_function
+references in the YAML config.
 """
 
 import re
@@ -71,6 +75,32 @@ def _check_changed_when_false(
     return False
 
 
+def _check_ansible_shell_no_register(
+    lines: list,
+    i: int,
+) -> str | None:
+    """Detect shell/command task with changed_when:false but no register or failed_when."""
+    has_register, has_failed_when = _scan_task_flags(lines, i)
+    if has_register or has_failed_when:
+        return None
+    if not _check_changed_when_false(lines, i):
+        return None
+    return "ansible-shell-no-register"
+
+
+def _check_ansible_shell_no_guard(
+    lines: list,
+    i: int,
+) -> str | None:
+    """Detect shell/command task without register, failed_when, or changed_when guard."""
+    has_register, has_failed_when = _scan_task_flags(lines, i)
+    if has_register or has_failed_when:
+        return None
+    if _check_changed_when_false(lines, i):
+        return None
+    return "ansible-shell-no-guard"
+
+
 def detect_ansible_tasks(added_lines):
     """Multi-line detector: find shell/command tasks without register:.
 
@@ -84,12 +114,11 @@ def detect_ansible_tasks(added_lines):
         text = line.text
 
         if _SHELL_RE.search(text) or _COMMAND_RE.search(text):
-            has_register, has_failed_when = _scan_task_flags(lines, i)
-            if not has_register and not has_failed_when:
-                if _check_changed_when_false(lines, i):
-                    violations.append((line, "ansible-shell-no-register"))
-                else:
-                    violations.append((line, "ansible-shell-no-guard"))
+            pid = _check_ansible_shell_no_register(lines, i)
+            if pid is None:
+                pid = _check_ansible_shell_no_guard(lines, i)
+            if pid is not None:
+                violations.append((line, pid))
 
         i += 1
 
@@ -158,6 +187,24 @@ def _has_unconditional_display(
     return False
 
 
+def _check_ansible_register_output_swallowed(
+    lines: list,
+    i: int,
+) -> str | None:
+    """Detect task that registers output but only displays it on failure.
+
+    The output is silently discarded on success.
+    """
+    reg_var, has_tolerant = _find_registered_var(lines, i)
+    if not reg_var or reg_var in _REG_VAR_BLOCKLIST:
+        return None
+    if has_tolerant:
+        return None
+    if not _has_unconditional_display(lines, i, reg_var):
+        return "ansible-register-output-swallowed"
+    return None
+
+
 def detect_registered_output_swallow(added_lines):
     """Find shell/command tasks that register output but only display it
     conditionally on failure: the output is silently discarded on success.
@@ -174,17 +221,9 @@ def detect_registered_output_swallow(added_lines):
             i += 1
             continue
 
-        reg_var, has_tolerant = _find_registered_var(lines, i)
-
-        if not reg_var or reg_var in _REG_VAR_BLOCKLIST:
-            i += 1
-            continue
-        if has_tolerant:
-            i += 1
-            continue
-
-        if not _has_unconditional_display(lines, i, reg_var):
-            violations.append((lines[i], "ansible-register-output-swallowed"))
+        pid = _check_ansible_register_output_swallowed(lines, i)
+        if pid is not None:
+            violations.append((lines[i], pid))
 
         i += 1
 

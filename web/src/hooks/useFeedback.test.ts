@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useAnalyticsStore } from '@/stores/analytics-store'
 import { useFeedback } from '@/hooks/useFeedback'
@@ -20,6 +20,14 @@ describe('useFeedback', () => {
     if (typeof localStorage !== 'undefined') {
       localStorage.clear()
     }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ upvotes: 1, downvotes: 0 }),
+    }))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('starts in idle state', () => {
@@ -48,29 +56,35 @@ describe('useFeedback', () => {
     expect(state.totalFeedback).toBe(0)
   })
 
-  it('transitions to submitted_up on submit up', () => {
+  it('transitions to submitted_up on submit up', async () => {
     const { result } = renderHook(() =>
       useFeedback('test-id', 'pattern'),
     )
-    act(() => result.current.submit('up'))
+    await act(async () => {
+      await result.current.submit('up')
+    })
     expect(result.current.state).toBe('submitted_up')
     expect(result.current.vote).toBe('up')
   })
 
-  it('transitions to submitted_down on submit down', () => {
+  it('transitions to submitted_down on submit down', async () => {
     const { result } = renderHook(() =>
       useFeedback('test-id', 'pattern'),
     )
-    act(() => result.current.submit('down'))
+    await act(async () => {
+      await result.current.submit('down')
+    })
     expect(result.current.state).toBe('submitted_down')
     expect(result.current.vote).toBe('down')
   })
 
-  it('emits analytics event on submit', () => {
+  it('emits analytics event on submit', async () => {
     const { result } = renderHook(() =>
       useFeedback('test-id', 'pattern'),
     )
-    act(() => result.current.submit('up'))
+    await act(async () => {
+      await result.current.submit('up')
+    })
     const state = useAnalyticsStore.getState()
     expect(state.totalFeedback).toBe(1)
     expect(state.feedback['test-id']).toHaveLength(1)
@@ -85,16 +99,36 @@ describe('useFeedback', () => {
     expect(result.current.comment).toBe('great work')
   })
 
-  it('remembers saved vote on re-render', () => {
+  it('remembers saved vote on re-render', async () => {
     const { result: first } = renderHook(() =>
       useFeedback('persist-id', 'pattern'),
     )
-    act(() => first.current.submit('up'))
+    await act(async () => {
+      await first.current.submit('up')
+    })
 
     const { result: second } = renderHook(() =>
       useFeedback('persist-id', 'pattern'),
     )
     expect(second.current.vote).toBe('up')
     expect(second.current.state).toBe('submitted_up')
+  })
+
+  it('initializes counts from props', () => {
+    const { result } = renderHook(() =>
+      useFeedback('test-id', 'pattern', 5, 2),
+    )
+    expect(result.current.upCount).toBe(5)
+    expect(result.current.downCount).toBe(2)
+  })
+
+  it('increments upCount on submit up', async () => {
+    const { result } = renderHook(() =>
+      useFeedback('test-id', 'pattern', 0, 0),
+    )
+    await act(async () => {
+      await result.current.submit('up')
+    })
+    expect(result.current.upCount).toBe(1)
   })
 })

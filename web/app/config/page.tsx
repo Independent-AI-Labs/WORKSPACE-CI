@@ -1,9 +1,14 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
-import { ConfigCard } from '@/components/wiki/ConfigCard'
+import { WikiCard } from '@/components/wiki/WikiCard'
+import { FeedbackWidget } from '@/components/wiki/FeedbackWidget'
+import { configAdapter } from '@/lib/card-adapters'
 import { getConfigIndex } from '@/lib/yaml-loader'
+import { getAllFeedbackCounts } from '@/lib/feedback-loader'
 
 export default async function ConfigPage() {
   const configs = await getConfigIndex()
+  const items = configAdapter(configs)
+  const feedbackCounts = getAllFeedbackCounts('config')
 
   return (
     <WikiShell>
@@ -13,16 +18,26 @@ export default async function ConfigPage() {
         Each config may have an associated schema that documents required
         and optional fields.
       </p>
-      {configs.length === 0 ? (
+      {items.length === 0 ? (
         <p className="empty-state">
           No configuration files found. Check that the config directory is
           accessible at WORKSPACE_CI_CONFIG_ROOT.
         </p>
       ) : (
-        <div className="config-grid">
-          {configs.map((config) => (
-            <ConfigCard key={config.name} config={config} />
-          ))}
+        <div className="wiki-card-grid">
+          {items.map((item) => {
+            const counts = feedbackCounts[item.id] ?? { upvotes: 0, downvotes: 0 }
+            return (
+              <WikiCard key={item.id} item={item}>
+                <FeedbackWidget
+                  targetId={item.id}
+                  targetType="config"
+                  upCount={counts.upvotes}
+                  downCount={counts.downvotes}
+                />
+              </WikiCard>
+            )
+          })}
         </div>
       )}
     </WikiShell>

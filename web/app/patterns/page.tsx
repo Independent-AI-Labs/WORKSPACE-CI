@@ -3,6 +3,7 @@ import { PatternList } from '@/components/wiki/PatternList'
 import { getBannedPatterns, getSwallowPatterns } from '@/lib/yaml-loader'
 import { loadSwallowDetectors } from '@/lib/docs-loader'
 import { classifyAll, classifySwallowPatterns } from '@/lib/patterns'
+import { getAllFeedbackCounts } from '@/lib/feedback-loader'
 
 export default async function PatternsPage() {
   const [config, swallowConfig] = await Promise.all([
@@ -13,6 +14,7 @@ export default async function PatternsPage() {
   const bannedPatterns = classifyAll(config)
   const swallowPatterns = classifySwallowPatterns(swallowConfig, detectorData)
   const allPatterns = [...bannedPatterns, ...swallowPatterns]
+  const feedbackCounts = getAllFeedbackCounts('pattern')
 
   return (
     <WikiShell>
@@ -28,7 +30,7 @@ export default async function PatternsPage() {
           WORKSPACE_CI_CONFIG_ROOT.
         </p>
       ) : (
-        <PatternList patterns={allPatterns} />
+        <PatternList patterns={allPatterns} feedbackCounts={feedbackCounts} />
       )}
     </WikiShell>
   )

@@ -1,10 +1,12 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
-import { CheckListLoadingState } from '@/components/loading-states/CheckListLoadingState'
 
 export default function ChecksLoading() {
   return (
     <WikiShell>
-      <CheckListLoadingState />
+      <div className="coming-soon">
+        <i className="ri-hammer-line coming-soon__icon" aria-hidden="true" />
+        <h1>Loading…</h1>
+      </div>
     </WikiShell>
   )
 }

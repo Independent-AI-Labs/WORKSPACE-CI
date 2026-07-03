@@ -8,11 +8,12 @@ interface NavItem {
   href: string
   label: string
   icon: string
+  logo?: boolean
 }
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Home', icon: 'ri-home-4-line' },
-  { href: '/patterns', label: 'Code Anti-Patterns', icon: 'ri-shield-line' },
+  { href: '/patterns', label: 'Code Anti-Patterns', icon: '', logo: true },
   { href: '/hooks', label: 'Git Hooks', icon: 'ri-link-m' },
   { href: '/config', label: 'Config Files', icon: 'ri-settings-3-line' },
   { href: '/guard', label: 'Workspace Guard', icon: 'ri-shield-keyhole-line' },
@@ -32,7 +33,7 @@ export function WikiSidebar() {
   return (
     <nav id="wiki-sidebar" className="wiki-sidebar" role="navigation" aria-label="Wiki navigation">
       <div className="wiki-sidebar__header">
-        <i className="ri-terminal-box-line wiki-sidebar__logo" aria-hidden="true" />
+        <img src="/LOGO.png" className="wiki-sidebar__logo" alt="digitalguardrails logo" width="32" height="30" />
         <span className="wiki-sidebar__title">
           <span className="wiki-sidebar__title-thin">digital</span>guardrails
         </span>
@@ -47,7 +48,11 @@ export function WikiSidebar() {
                 className={clsx('wiki-sidebar__link', isActive && 'is-active')}
                 aria-current={isActive ? 'page' : undefined}
               >
-                <i className={item.icon} aria-hidden="true" />
+                {item.logo ? (
+                  <span className="wiki-sidebar__nav-logo" aria-hidden="true" />
+                ) : (
+                  <i className={item.icon} aria-hidden="true" />
+                )}
                 <span>{item.label}</span>
               </Link>
             </li>

@@ -12,8 +12,10 @@ interface UseFeedbackReturn {
   comment: string
   setComment: (c: string) => void
   selectVote: (v: 'up' | 'down') => void
-  submit: (vote: 'up' | 'down') => void
+  submit: (v: 'up' | 'down') => Promise<void>
   dismiss: () => void
+  upCount: number
+  downCount: number
 }
 
 function deriveState(vote: 'up' | 'down' | null, submitted: boolean): FeedbackState {
@@ -27,6 +29,8 @@ function deriveState(vote: 'up' | 'down' | null, submitted: boolean): FeedbackSt
 export function useFeedback(
   targetId: string,
   targetType: FeedbackEvent['targetType'],
+  initialUpCount: number = 0,
+  initialDownCount: number = 0,
 ): UseFeedbackReturn {
   const addFeedback = useAnalyticsStore((s) => s.addFeedback)
   const savedVote = useAnalyticsStore((s) => {
@@ -38,6 +42,8 @@ export function useFeedback(
   const [vote, setVote] = useState<'up' | 'down' | null>(savedVote)
   const [comment, setComment] = useState('')
   const [submitted, setSubmitted] = useState(savedVote !== null)
+  const [upCount, setUpCount] = useState(initialUpCount)
+  const [downCount, setDownCount] = useState(initialDownCount)
 
   const state = deriveState(vote, submitted)
 
@@ -46,7 +52,12 @@ export function useFeedback(
   }, [])
 
   const submit = useCallback(
-    (v: 'up' | 'down') => {
+    async (v: 'up' | 'down') => {
+      if (vote === 'up') setUpCount((c) => Math.max(0, c - 1))
+      if (vote === 'down') setDownCount((c) => Math.max(0, c - 1))
+      if (v === 'up') setUpCount((c) => c + 1)
+      if (v === 'down') setDownCount((c) => c + 1)
+
       setVote(v)
       setSubmitted(true)
       addFeedback({
@@ -58,8 +69,28 @@ export function useFeedback(
         timestamp: Date.now(),
         sessionId: useAnalyticsStore.getState().sessionId,
       })
+
+      try {
+        const res = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetType,
+            targetId,
+            vote: v,
+            comment: comment || undefined,
+          }),
+        })
+        if (res.ok) {
+          const counts = await res.json()
+          setUpCount(counts.upvotes)
+          setDownCount(counts.downvotes)
+        }
+      } catch (err) {
+        console.error('Failed to submit feedback to server:', err)
+      }
     },
-    [targetId, targetType, comment, addFeedback],
+    [targetId, targetType, comment, addFeedback, vote],
   )
 
   const dismiss = useCallback(() => {
@@ -68,5 +99,15 @@ export function useFeedback(
     setComment('')
   }, [])
 
-  return { state, vote, comment, setComment, selectVote, submit, dismiss }
+  return {
+    state,
+    vote,
+    comment,
+    setComment,
+    selectVote,
+    submit,
+    dismiss,
+    upCount,
+    downCount,
+  }
 }

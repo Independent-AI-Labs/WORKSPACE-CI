@@ -27,7 +27,7 @@ export interface SearchEvent {
 export interface FeedbackEvent {
   type: 'feedback'
   targetId: string
-  targetType: 'pattern' | 'hook' | 'config' | 'guard' | 'check' | 'page'
+  targetType: 'pattern' | 'hook' | 'config' | 'guard' | 'check' | 'page' | 'tooling' | 'project'
   vote: 'up' | 'down'
   comment?: string
   timestamp: number

@@ -1,11 +1,4 @@
-/* .tooling-card base provided by .card in _components.css */
 @layer components {
-  .tooling-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: var(--space-4);
-  }
-
   .tooling-card__usage {
     background: var(--code-bg);
     border: 1px solid var(--border);

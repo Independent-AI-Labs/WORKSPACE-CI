@@ -93,6 +93,10 @@ exceptions:
   - pattern: '\bxfail\b'
     paths: ['config/banned_words.yaml', 'tests/']
 
+  # Audit documents reference all banned patterns by name.
+  - pattern: '.*'
+    paths: ['docs/AUDIT-.*\.md$']
+
   # ── Wiki web UI (web/) ───────────────────────────────────────────────
   # The wiki's pattern-detection module and its tests must contain the
   # exact banned-word strings to test detection logic. The word "python"
@@ -143,6 +147,7 @@ exceptions:
     paths:
       - 'web/src/components/wiki/WikiSidebar\.test\.tsx$'
       - 'web/src/components/wiki/WikiSearch\.test\.tsx$'
+      - 'web/src/components/wiki/ComingSoon\.test\.tsx$'
       - 'web/src/hooks/useSearch\.test\.ts$'
   - pattern: '\bbackwards\b'
     paths: ['web/src/lib/patterns\.ts$']

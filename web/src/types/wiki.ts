@@ -1,7 +1,7 @@
 import type { ClassifiedPattern } from './patterns'
 import type { HookRecord } from './hooks'
 import type { ConfigSchema, ConfigEntry, GuardConfigEntry, ConfigField } from './content'
-import type { AnalyticsEvent } from './analytics'
+import type { FeedbackEvent } from './analytics'
 import type { BannedWordsConfig } from './patterns'
 import type { RequiredHooksConfig } from './hooks'
 
@@ -92,9 +92,7 @@ export interface ScriptManifest {
   scripts: ScriptManifestEntry[]
 }
 
-export type FeedbackTargetType = AnalyticsEvent extends { targetType: infer T }
-  ? T
-  : 'pattern' | 'hook' | 'config' | 'guard' | 'check' | 'page'
+export type FeedbackTargetType = FeedbackEvent['targetType']
 
 export type {
   ClassifiedPattern,
