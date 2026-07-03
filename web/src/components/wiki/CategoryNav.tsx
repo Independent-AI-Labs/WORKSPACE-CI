@@ -1,18 +1,29 @@
 'use client'
 
-import { usePatternFilter } from '@/hooks/usePatternFilter'
 import type { ClassifiedPattern } from '@/types/patterns'
+import type { PatternCategory } from '@/types/patterns'
 import { PATTERN_CATEGORIES } from '@/types/patterns'
 import clsx from 'clsx'
 
 interface CategoryNavProps {
   patterns: ClassifiedPattern[]
+  activeCategories: Set<PatternCategory>
+  toggleCategory: (category: PatternCategory) => void
+  selectAll: () => void
+  deselectAll: () => void
+  visibleCount: number
+  totalCount: number
 }
 
-export function CategoryNav({ patterns }: CategoryNavProps) {
-  const { activeCategories, toggleCategory, selectAll, deselectAll, visibleCount, totalCount } =
-    usePatternFilter(patterns)
-
+export function CategoryNav({
+  patterns,
+  activeCategories,
+  toggleCategory,
+  selectAll,
+  deselectAll,
+  visibleCount,
+  totalCount,
+}: CategoryNavProps) {
   const categoryCounts = PATTERN_CATEGORIES.map((cat) => ({
     ...cat,
     count: patterns.filter((p) => p.category === cat.id).length,

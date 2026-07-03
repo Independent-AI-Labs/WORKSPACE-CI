@@ -1,7 +1,8 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
 import { PatternList } from '@/components/wiki/PatternList'
-import { getBannedPatterns } from '@/lib/yaml-loader'
-import { classifyAll } from '@/lib/patterns'
+import { getBannedPatterns, getSwallowPatterns } from '@/lib/yaml-loader'
+import { loadSwallowDetectors } from '@/lib/docs-loader'
+import { classifyAll, classifySwallowPatterns } from '@/lib/patterns'
 import type { PatternCategory } from '@/types/patterns'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
@@ -23,6 +24,7 @@ const VALID_CATEGORIES: PatternCategory[] = [
   'special-chars',
   'filename-rules',
   'directory-rules',
+  'error-swallowing',
 ]
 
 export async function generateMetadata({
@@ -47,8 +49,14 @@ export default async function PatternCategoryPage({
     notFound()
   }
 
-  const config = await getBannedPatterns()
-  const allPatterns = classifyAll(config)
+  const [config, swallowConfig] = await Promise.all([
+    getBannedPatterns(),
+    getSwallowPatterns(),
+  ])
+  const detectorData = loadSwallowDetectors()
+  const bannedPatterns = classifyAll(config)
+  const swallowPatterns = classifySwallowPatterns(swallowConfig, detectorData)
+  const allPatterns = [...bannedPatterns, ...swallowPatterns]
   const filtered = allPatterns.filter((p) => p.category === category)
 
   return (

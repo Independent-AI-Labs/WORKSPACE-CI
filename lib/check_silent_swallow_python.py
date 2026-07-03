@@ -1,4 +1,11 @@
-"""Python silent-swallow patterns: inline and multi-line except detection."""
+"""Python multi-line except-block detection for the error-swallowing
+detector.
+
+Inline Python patterns are now defined in
+config/silent_swallow_patterns.yaml and loaded at runtime by
+check_silent_swallow.py. This module retains file-type detection
+and the multi-line except-body classifier.
+"""
 
 import re
 from collections.abc import Iterator
@@ -9,49 +16,6 @@ from check_silent_swallow_base import AddedLine
 def is_python_file(path: str) -> bool:
     return path.endswith(".py")
 
-
-PY_INLINE = [
-    (
-        "py-except-inline-pass",
-        re.compile(r"^\s*except\b[^:]*:\s*pass\s*(#.*)?$"),
-    ),
-    (
-        "py-except-inline-continue",
-        re.compile(r"^\s*except\b[^:]*:\s*continue\s*(#.*)?$"),
-    ),
-    (
-        "py-except-inline-return-none",
-        re.compile(r"^\s*except\b[^:]*:\s*return(\s+None)?\s*(#.*)?$"),
-    ),
-    (
-        "py-except-inline-ellipsis",
-        re.compile(r"^\s*except\b[^:]*:\s*\.\.\.\s*(#.*)?$"),
-    ),
-    (
-        "py-contextlib-suppress",
-        re.compile(r"\bcontextlib\.suppress\("),
-    ),
-    (
-        "py-import-suppress",
-        re.compile(r"^\s*from\s+contextlib\s+import\s+[^#\n]*\bsuppress\b"),
-    ),
-    (
-        "py-subprocess-check-false",
-        re.compile(r"\bsubprocess\.(?:run|call)\s*\([^)]*\bcheck\s*=\s*False"),
-    ),
-    (
-        "py-subprocess-check-false-multiline",
-        re.compile(r"^\s*check\s*=\s*False\s*,?\s*(?:#.*)?$"),
-    ),
-    (
-        "py-detect-path-fallback",
-        re.compile(r"if\s+not\s+\w+\s+and\s+(?:component\.)?detect_path\b"),
-    ),
-    (
-        "py-result-or-literal",
-        re.compile(r"\.strip\(\)\s*or\s*\"[^\"]*\"(?!\s*raise)"),
-    ),
-]
 
 PY_EXCEPT_HEADER = re.compile(r"^(?P<indent>\s*)except\b[^:]*:\s*(#.*)?$")
 

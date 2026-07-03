@@ -1,34 +1,38 @@
 #!/usr/bin/env python3
-"""workspace-ci silent-error-swallow detector: reads unified diff on stdin.
+"""workspace-ci error-swallowing detector: reads unified diff on stdin.
 
 Emits one violation per line:
   <file>:<line>: <pattern_id> -- <line content>
 
 Exits 0 if no violations, 1 otherwise.
 
-This script is self-contained: stdlib only. Invoked from
-lib/checks_silent.sh.
+Pattern definitions are loaded from config/silent_swallow_patterns.yaml.
+Inline patterns are pure regex applied per line. Custom and multiline
+detectors are named Python functions dispatched by config reference.
 
-Patterns are organised by language in sibling modules:
+Sibling modules provide file-type detection and multi-line detector logic:
   check_silent_swallow_base.py   : diff parsing + AddedLine
-  check_silent_swallow_python.py : Python inline + multi-line except
-  check_silent_swallow_js.py     : JS/TS inline + multi-line catch
-  check_silent_swallow_system.py : Shell + cron patterns
+  check_silent_swallow_python.py : Python multi-line except detection
+  check_silent_swallow_js.py     : JS/TS multi-line catch detection
+  check_silent_swallow_system.py : Shell + cron file-type detection
+  check_silent_swallow_ansible.py: Ansible multi-line task detection
 """
 
+import os
 import re
 import sys
+from pathlib import Path
+
+import yaml
 
 from check_silent_swallow_ansible import (
-    ANSIBLE_INLINE,
     detect_ansible_tasks,
     detect_registered_output_swallow,
     is_ansible_file,
 )
 from check_silent_swallow_base import AddedLine, parse_diff
-from check_silent_swallow_js import JS_INLINE, detect_js_multiline, is_js_file
+from check_silent_swallow_js import detect_js_multiline, is_js_file
 from check_silent_swallow_python import (
-    PY_INLINE,
     detect_python_multiline,
     is_python_file,
 )
@@ -37,12 +41,47 @@ from check_silent_swallow_system import (
     CRON_LINE,
     CRON_OK,
     CRON_SHEBANG_OR_COMMENT,
-    SH_MASK,
     is_cron_file,
     is_shell_file,
 )
 
 _SNIPPET_MAX = 200
+
+_CONFIG_PATH = (
+    Path(os.environ.get("CI_CONFIG_DIR", "config"))
+    / "silent_swallow_patterns.yaml"
+)
+
+_LANGUAGE_CHECKERS: list[tuple[str, object]] = [
+    ("python", is_python_file),
+    ("js_ts", is_js_file),
+    ("shell", is_shell_file),
+    ("ansible", is_ansible_file),
+    ("cron", is_cron_file),
+]
+
+
+def _load_config() -> dict:
+    with open(_CONFIG_PATH, encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+def _build_inline_by_language(
+    config: dict,
+) -> dict[str, list[tuple[str, re.Pattern[str]]]]:
+    result: dict[str, list[tuple[str, re.Pattern[str]]]] = {}
+    for p in config.get("inline_patterns", []):
+        lang = p["language"]
+        result.setdefault(lang, []).append((p["id"], re.compile(p["regex"])))
+    return result
+
+
+def _build_custom_by_language(config: dict) -> dict[str, list[str]]:
+    result: dict[str, list[str]] = {}
+    for d in config.get("custom_detectors", []):
+        lang = d["language"]
+        result.setdefault(lang, []).append(d["detector"])
+    return result
 
 
 def _match_inline(
@@ -50,7 +89,6 @@ def _match_inline(
     text: str,
     patterns: list[tuple[str, re.Pattern[str]]],
 ) -> tuple[str, int, str, str] | None:
-    """Match inline patterns against a line."""
     for pid, rgx in patterns:
         if rgx.search(text):
             return (a.path, a.lineno, pid, text.rstrip())
@@ -61,7 +99,6 @@ def _check_cron_inline(
     a: AddedLine,
     text: str,
 ) -> tuple[str, int, str, str] | None:
-    """Check a cron line for missing log redirect."""
     stripped = text.rstrip()
     if not stripped:
         return None
@@ -78,57 +115,82 @@ def _check_cron_inline(
 
 def _check_inline(
     a: AddedLine,
+    inline_by_lang: dict[str, list[tuple[str, re.Pattern[str]]]],
+    custom_by_lang: dict[str, list[str]],
 ) -> tuple[str, int, str, str] | None:
-    """Check a line for inline violations across all languages."""
     text = a.text
 
-    if is_python_file(a.path):
-        if not re.match(r"^\s*#", text):
-            return _match_inline(a, text, PY_INLINE)
-    elif is_js_file(a.path):
-        return _match_inline(a, text, JS_INLINE)
-    elif is_shell_file(a.path):
-        return _match_inline(a, text, SH_MASK)
-    elif is_ansible_file(a.path):
-        return _match_inline(a, text, ANSIBLE_INLINE)
-    elif is_cron_file(a.path):
-        return _check_cron_inline(a, text)
+    for lang, checker in _LANGUAGE_CHECKERS:
+        if not checker(a.path):
+            continue
+
+        patterns = inline_by_lang.get(lang)
+        if patterns:
+            if lang == "python" and re.match(r"^\s*#", text):
+                return None
+            return _match_inline(a, text, patterns)
+
+        for det_name in custom_by_lang.get(lang, []):
+            if det_name == "_check_cron_inline":
+                v = _check_cron_inline(a, text)
+                if v is not None:
+                    return v
+        return None
 
     return None
 
 
 def _collect_multiline_violations(
     added: list[AddedLine],
+    config: dict,
 ) -> list[tuple[str, int, str, str]]:
-    """Collect all multiline violations from language-specific detectors."""
     violations: list[tuple[str, int, str, str]] = []
 
-    for header, pid in detect_python_multiline(added):
-        violations.append((header.path, header.lineno, pid, header.text.rstrip()))
-    for header, pid in detect_js_multiline(added):
-        violations.append((header.path, header.lineno, pid, header.text.rstrip()))
-    for header, pid in detect_ansible_tasks(added):
-        if is_ansible_file(header.path):
-            violations.append((header.path, header.lineno, pid, header.text.rstrip()))
-    for header, pid in detect_registered_output_swallow(added):
-        if is_ansible_file(header.path):
-            violations.append((header.path, header.lineno, pid, header.text.rstrip()))
+    detector_map = {
+        "detect_python_multiline": detect_python_multiline,
+        "detect_js_multiline": detect_js_multiline,
+        "detect_ansible_tasks": detect_ansible_tasks,
+        "detect_registered_output_swallow": detect_registered_output_swallow,
+    }
+
+    lang_checker = dict(_LANGUAGE_CHECKERS)
+
+    seen: set[str] = set()
+    for entry in config.get("multiline_detectors", []):
+        det_name = entry["detector"]
+        if det_name in seen:
+            continue
+        seen.add(det_name)
+
+        det = detector_map.get(det_name)
+        if det is None:
+            continue
+
+        lang = entry.get("language", "")
+        checker = lang_checker.get(lang)
+
+        for header, pid in det(added):
+            if checker is not None and not checker(header.path):
+                continue
+            violations.append(
+                (header.path, header.lineno, pid, header.text.rstrip())
+            )
+
     return violations
 
 
 def _emit_violations(
     violations: list[tuple[str, int, str, str]],
 ) -> int:
-    """Deduplicate, sort, and emit violations. Returns exit code."""
     if not violations:
         return 0
     violations.sort(key=lambda v: (v[0], v[1]))
-    seen: set[tuple[str, int, str]] = set()
+    seen_keys: set[tuple[str, int, str]] = set()
     for path, lineno, pid, text in violations:
         key = (path, lineno, pid)
-        if key in seen:
+        if key in seen_keys:
             continue
-        seen.add(key)
+        seen_keys.add(key)
         snippet = (
             text if len(text) <= _SNIPPET_MAX else text[: _SNIPPET_MAX - 3] + "..."
         )
@@ -137,17 +199,22 @@ def _emit_violations(
 
 
 def main() -> int:
+    config = _load_config()
+
+    inline_by_lang = _build_inline_by_language(config)
+    custom_by_lang = _build_custom_by_language(config)
+
     diff_text = sys.stdin.read()
     added = list(parse_diff(diff_text))
 
     violations: list[tuple[str, int, str, str]] = []
 
     for a in added:
-        v = _check_inline(a)
+        v = _check_inline(a, inline_by_lang, custom_by_lang)
         if v is not None:
             violations.append(v)
 
-    violations.extend(_collect_multiline_violations(added))
+    violations.extend(_collect_multiline_violations(added, config))
 
     return _emit_violations(violations)
 

@@ -3,9 +3,9 @@ import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { load } from 'js-yaml'
 import type { SearchIndexEntry } from '@/types/wiki'
-import type { BannedWordsConfig } from '@/types/patterns'
+import type { BannedWordsConfig, SwallowPatternConfig } from '@/types/patterns'
 import type { RequiredHooksConfig } from '@/types/hooks'
-import { classifyAll } from '@/lib/patterns'
+import { classifyAll, classifySwallowPatterns } from '@/lib/patterns'
 import {
   buildSearchIndexFromPatterns,
   buildSearchIndexFromHooks,
@@ -15,16 +15,32 @@ import {
   getGuardConfigRoot,
   getGuardConfigEntries,
 } from '@/lib/yaml-loader'
+import { loadSwallowDetectors } from '@/lib/docs-loader'
 import { PROJECTS } from '@/lib/project-registry'
 
 function loadPatterns(): SearchIndexEntry[] {
   try {
-    const raw = readFileSync(
+    const bannedRaw = readFileSync(
       join(getConfigRoot(), 'banned_words.yaml'),
       'utf8',
     )
-    const config = load(raw) as BannedWordsConfig
-    return buildSearchIndexFromPatterns(classifyAll(config))
+    const bannedConfig = load(bannedRaw) as BannedWordsConfig
+    const bannedPatterns = classifyAll(bannedConfig)
+
+    let swallowPatterns: ReturnType<typeof classifySwallowPatterns> = []
+    try {
+      const swallowRaw = readFileSync(
+        join(getConfigRoot(), 'silent_swallow_patterns.yaml'),
+        'utf8',
+      )
+      const swallowConfig = load(swallowRaw) as SwallowPatternConfig
+      const detectorData = loadSwallowDetectors()
+      swallowPatterns = classifySwallowPatterns(swallowConfig, detectorData)
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+    }
+
+    return buildSearchIndexFromPatterns([...bannedPatterns, ...swallowPatterns])
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') return []
     throw e

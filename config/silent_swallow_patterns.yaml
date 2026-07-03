@@ -1,0 +1,289 @@
+# Error-swallowing detection patterns configuration.
+#
+# Single source of truth for all patterns detected by the
+# silent-error-swallow checker (lib/check_silent_swallow.py).
+#
+# This file is loaded at check time by the Python checker AND at request
+# time by the wiki UI (web/src/lib/yaml-loader.ts) for display on the
+# /patterns page under the "Error Swallowing" category.
+#
+# Pattern types:
+#   inline_patterns:     pure regex applied via re.search() per line
+#   custom_detectors:    named Python function with custom inline logic
+#   multiline_detectors: named Python function with multi-line stateful logic
+#
+# For custom/multiline detectors, the `detector` field names the Python
+# function that implements the check. The `source_file` field tells the
+# wiki where to find the source code for the function-code dialog.
+# The extract-swallow-source.py script reads these fields to generate
+# web/src/data/swallow-detectors.json with docstrings + source extracts.
+#
+# Exemptions: config/*.yaml is blanket-exempted from banned-words.
+
+version: 1
+
+file_types:
+  shell:
+    extensions: ['.sh', '.bash', '.zsh']
+    filenames: ['Makefile', 'shell-setup']
+    shebang: '#!\s*/(?:usr/bin/)?(?:env\s+)?(?:ba|da|z)?sh\b'
+  python:
+    extensions: ['.py']
+  js_ts:
+    extensions: ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs']
+  ansible:
+    extensions: ['.yml', '.yaml']
+    path_includes: ['ansible']
+    filenames: ['dev.yml', 'compose.yml', 'site.yml', 'playbook.yml']
+  cron:
+    filenames: ['crontab']
+    extensions: ['.cron', '.crontab']
+
+inline_patterns:
+  # ── Shell patterns (11) ─────────────────────────────────────────────
+  - id: sh-pipe-true
+    regex: '\|\|\s*true\b'
+    language: shell
+    description: 'Pipe-to-true masks command failure; the exit code is discarded.'
+
+  - id: sh-pipe-colon
+    regex: '\|\|\s*:\s*$'
+    language: shell
+    description: 'Pipe-to-colon (no-op) masks command failure silently.'
+
+  - id: sh-pipe-true-continuation
+    regex: '\|\|\s*\\\s*$'
+    language: shell
+    description: 'Line-continuation after || hides the true command on the next line.'
+
+  - id: sh-pipefail-mask
+    regex: '\|\s*(?:tail|head|cat|true|:)\b[^|]*$'
+    language: shell
+    description: 'Piping through tail/head/cat/true masks the upstream exit code.'
+
+  - id: sh-devnull-silent
+    regex: '2>\s*/dev/null'
+    language: shell
+    description: 'Redirects stderr to /dev/null, hiding error output from the operator.'
+
+  - id: sh-set-plus-e
+    regex: '^\s*set\s+\+[eE]\b'
+    language: shell
+    description: 'Disables errexit (set +e), allowing failures to propagate silently.'
+
+  - id: sh-trap-err-noop
+    regex: '^\s*trap\s+(''''?|:\\|:\s*''?)\s+ERR\b'
+    language: shell
+    description: 'ERR trap set to a no-op (:), swallowing trap-based error reporting.'
+
+  - id: sh-background-no-wait
+    regex: '^\s*[^#\s&]+\s*&(?:\s*#.*)?$'
+    language: shell
+    description: 'Background process launched without wait; failure is never observed.'
+
+  - id: sh-suppress-stderr
+    regex: '2>\s*/dev/stderr\s*$'
+    language: shell
+    description: 'Redirects stderr to /dev/stderr in a context that suppresses real output.'
+
+  - id: sh-bare-source
+    regex: '^\s*(?:\.|source)\s+\S(?!.*\|\|\s*(?:exit|return))'
+    language: shell
+    description: 'Sources a file without guarding against failure; sourced errors vanish.'
+
+  - id: sh-fallback-echo
+    regex: '\|\|\s*(?:echo|printf)\b'
+    language: shell
+    description: 'Echo on failure replaces proper error handling; the exit code is lost.'
+
+  # ── JS/TS patterns (6) ──────────────────────────────────────────────
+  - id: js-empty-catch
+    regex: '\}\s*catch\s*\([^)]*\)\s*\{\s*\}'
+    language: js_ts
+    description: 'Empty catch block swallows the error with no logging or re-throw.'
+
+  - id: js-empty-catch-noparam
+    regex: '\}\s*catch\s*\{\s*(?:/\*[^*]*\*/\s*)?\}'
+    language: js_ts
+    description: 'Parameterless empty catch block silently discards all exceptions.'
+
+  - id: js-comment-only-catch
+    regex: '\}\s*catch\s*\([^)]*\)\s*\{\s*/\*[^*]*\*/\s*\}'
+    language: js_ts
+    description: 'Catch block contains only a comment; no error handling logic.'
+
+  - id: js-empty-arrow-catch
+    regex: '\.catch\(\s*\(\s*[A-Za-z_$]?[\w$]*\s*\)\s*=>\s*\{?\s*\}?\s*\)'
+    language: js_ts
+    description: 'Arrow-function .catch() with empty body swallows promise rejections.'
+
+  - id: js-empty-function-catch
+    regex: '\.catch\(\s*function\s*\([^)]*\)\s*\{\s*\}\s*\)'
+    language: js_ts
+    description: 'Function .catch() with empty body swallows promise rejections.'
+
+  - id: js-catch-returns-nullish
+    regex: '\.catch\(\s*(?:\(\s*[A-Za-z_$][\w$]*\s*\)|\s*[A-Za-z_$][\w$]*\s*|\(\s*\))\s*=>\s*(?:null|undefined|void\s+0)\s*\)'
+    language: js_ts
+    description: 'Catch returns null/undefined/void 0, hiding the original error.'
+
+  # ── Python patterns (10) ────────────────────────────────────────────
+  - id: py-except-inline-pass
+    regex: '^\s*except\b[^:]*:\s*pass\s*(#.*)?$'
+    language: python
+    description: 'Inline except: pass swallows the exception with no handling.'
+
+  - id: py-except-inline-continue
+    regex: '^\s*except\b[^:]*:\s*continue\s*(#.*)?$'
+    language: python
+    description: 'Inline except: continue skips the iteration on error, hiding failures.'
+
+  - id: py-except-inline-return-none
+    regex: '^\s*except\b[^:]*:\s*return(\s+None)?\s*(#.*)?$'
+    language: python
+    description: 'Inline except: return None hides the exception from the caller.'
+
+  - id: py-except-inline-ellipsis
+    regex: '^\s*except\b[^:]*:\s*\.\.\.\s*(#.*)?$'
+    language: python
+    description: 'Inline except: ... (Ellipsis) is a no-op that swallows the error.'
+
+  - id: py-contextlib-suppress
+    regex: '\bcontextlib\.suppress\('
+    language: python
+    description: 'contextlib.suppress() explicitly silences exceptions by type.'
+
+  - id: py-import-suppress
+    regex: '^\s*from\s+contextlib\s+import\s+[^#\n]*\bsuppress\b'
+    language: python
+    description: 'Importing suppress from contextlib signals intent to silence errors.'
+
+  - id: py-subprocess-check-false
+    regex: '\bsubprocess\.(?:run|call)\s*\([^)]*\bcheck\s*=\s*False'
+    language: python
+    description: 'subprocess with check=False ignores non-zero exit codes.'
+
+  - id: py-subprocess-check-false-multiline
+    regex: '^\s*check\s*=\s*False\s*,?\s*(?:#.*)?$'
+    language: python
+    description: 'Multiline subprocess call with check=False on its own line.'
+
+  - id: py-detect-path-fallback
+    regex: 'if\s+not\s+\w+\s+and\s+(?:component\.)?detect_path\b'
+    language: python
+    description: 'Conditional path detection that hides the reason a path was missing.'
+
+  - id: py-result-or-literal
+    regex: '\.strip\(\)\s*or\s*\"[^\"]*\"(?!\s*raise)'
+    language: python
+    description: 'strip() or literal hides parse failures by returning a default value.'
+
+  # ── Ansible patterns (4) ────────────────────────────────────────────
+  - id: ansible-shell-or-true
+    regex: '\|\|\s*true\b'
+    language: ansible
+    description: 'Ansible shell command pipes to true, masking task failure.'
+
+  - id: ansible-shell-or-colon
+    regex: '\|\|\s*:\s*$'
+    language: ansible
+    description: 'Ansible shell command pipes to colon (no-op), masking task failure.'
+
+  - id: ansible-ignore-errors
+    regex: '^\s*ignore_errors:\s*yes\b'
+    language: ansible
+    description: 'ignore_errors: yes lets a failed task pass without interruption.'
+
+  - id: ansible-devnull-stderr
+    regex: '2>\s*/dev/null(?!\s*\|\|\s*(?:echo|printf)\b)'
+    language: ansible
+    description: 'Ansible shell redirects stderr to /dev/null without a log redirect.'
+
+custom_detectors:
+  - id: cron-no-log-redirect
+    detector: _check_cron_inline
+    source_file: lib/check_silent_swallow.py
+    language: cron
+    description: 'Cron job without a log redirect; output and errors are lost to the void.'
+
+multiline_detectors:
+  # ── Python multiline (9 patterns from detect_python_multiline) ──────
+  - id: py-except-pass
+    detector: detect_python_multiline
+    source_file: lib/check_silent_swallow_python.py
+    language: python
+    description: 'Except block that swallows errors with a bare pass statement.'
+
+  - id: py-except-continue
+    detector: detect_python_multiline
+    source_file: lib/check_silent_swallow_python.py
+    language: python
+    description: 'Except block that swallows errors with a bare continue statement.'
+
+  - id: py-except-ellipsis
+    detector: detect_python_multiline
+    source_file: lib/check_silent_swallow_python.py
+    language: python
+    description: 'Except block that swallows errors with Ellipsis (...).'
+
+  - id: py-except-return-none
+    detector: detect_python_multiline
+    source_file: lib/check_silent_swallow_python.py
+    language: python
+    description: 'Except block returns None, hiding the exception from the caller.'
+
+  - id: py-except-empty-body
+    detector: detect_python_multiline
+    source_file: lib/check_silent_swallow_python.py
+    language: python
+    description: 'Except block with an empty body; no error handling at all.'
+
+  - id: py-except-debug-only
+    detector: detect_python_multiline
+    source_file: lib/check_silent_swallow_python.py
+    language: python
+    description: 'Except block only logs at debug level; the error is not surfaced.'
+
+  - id: py-except-raise-no-from
+    detector: detect_python_multiline
+    source_file: lib/check_silent_swallow_python.py
+    language: python
+    description: 'Except block raises a new exception without chaining (no from clause).'
+
+  - id: py-except-silent-exit
+    detector: detect_python_multiline
+    source_file: lib/check_silent_swallow_python.py
+    language: python
+    description: 'Except block calls sys.exit(0), terminating with success on error.'
+
+  - id: py-except-print
+    detector: detect_python_multiline
+    source_file: lib/check_silent_swallow_python.py
+    language: python
+    description: 'Except block only prints the error; no logging, re-raise, or recovery.'
+
+  # ── JS/TS multiline (1 pattern from detect_js_multiline) ────────────
+  - id: js-catch-silent-return-multi
+    detector: detect_js_multiline
+    source_file: lib/check_silent_swallow_js.py
+    language: js_ts
+    description: 'Multi-line catch block that returns a nullish value, hiding the error.'
+
+  # ── Ansible multiline (3 patterns from 2 detectors) ─────────────────
+  - id: ansible-shell-no-register
+    detector: detect_ansible_tasks
+    source_file: lib/check_silent_swallow_ansible.py
+    language: ansible
+    description: 'Ansible shell/command task with changed_when:false but no register or failed_when.'
+
+  - id: ansible-shell-no-guard
+    detector: detect_ansible_tasks
+    source_file: lib/check_silent_swallow_ansible.py
+    language: ansible
+    description: 'Ansible shell/command task without register or failed_when guard.'
+
+  - id: ansible-register-output-swallowed
+    detector: detect_registered_output_swallow
+    source_file: lib/check_silent_swallow_ansible.py
+    language: ansible
+    description: 'Ansible task registers output but only displays it on failure; success output is discarded.'

@@ -1,0 +1,36 @@
+{
+  "generated_at": "2026-07-03T14:49:29.731751+00:00",
+  "source_version": "",
+  "detectors": [
+    {
+      "name": "_check_cron_inline",
+      "source_file": "lib/check_silent_swallow.py",
+      "docstring": "Check a cron line for missing log redirect.",
+      "source": "def _check_cron_inline(\n    a: AddedLine,\n    text: str,\n) -> tuple[str, int, str, str] | None:\n    \"\"\"Check a cron line for missing log redirect.\"\"\"\n    stripped = text.rstrip()\n    if not stripped:\n        return None\n    if CRON_SHEBANG_OR_COMMENT.match(stripped):\n        return None\n    if CRON_ENV.match(stripped):\n        return None\n    if not CRON_LINE.match(stripped):\n        return None\n    if not CRON_OK.search(stripped):\n        return (a.path, a.lineno, \"cron-no-log-redirect\", stripped)\n    return None"
+    },
+    {
+      "name": "detect_python_multiline",
+      "source_file": "lib/check_silent_swallow_python.py",
+      "docstring": "Detect except-header followed by sole-statement body in added lines.",
+      "source": "def detect_python_multiline(\n    added: list[AddedLine],\n) -> Iterator[tuple[AddedLine, str]]:\n    \"\"\"Detect except-header followed by sole-statement body in added lines.\"\"\"\n\n    by_file: dict[str, dict[int, AddedLine]] = {}\n    for a in added:\n        if not is_python_file(a.path):\n            continue\n        by_file.setdefault(a.path, {})[a.lineno] = a\n\n    for lines in by_file.values():\n        for lineno, header in sorted(lines.items()):\n            m = PY_EXCEPT_HEADER.match(header.text)\n            if not m:\n                continue\n            if \"KeyboardInterrupt\" in header.text:\n                continue\n            header_indent = len(m.group(\"indent\"))\n            nxt, pid = _resolve_next_line(lines, lineno, header_indent)\n            if pid is not None:\n                yield header, pid\n                continue\n            if nxt is None:\n                continue\n            pid = _classify_except_body(nxt, lines, lineno, header_indent)\n            if pid is None:\n                continue\n            yield header, pid"
+    },
+    {
+      "name": "detect_js_multiline",
+      "source_file": "lib/check_silent_swallow_js.py",
+      "docstring": "Detect catch-header followed by silent return in added lines.",
+      "source": "def detect_js_multiline(\n    added: list[AddedLine],\n) -> Iterator[tuple[AddedLine, str]]:\n    \"\"\"Detect catch-header followed by silent return in added lines.\"\"\"\n\n    by_file: dict[str, dict[int, AddedLine]] = {}\n    for a in added:\n        if not is_js_file(a.path):\n            continue\n        by_file.setdefault(a.path, {})[a.lineno] = a\n\n    for lines in by_file.values():\n        for lineno, header in sorted(lines.items()):\n            m = JS_CATCH_HEADER.match(header.text)\n            if not m:\n                continue\n            header_indent = len(m.group(\"indent\"))\n            if _check_catch_body(lines, lineno, header_indent):\n                yield header, \"js-catch-silent-return-multi\""
+    },
+    {
+      "name": "detect_ansible_tasks",
+      "source_file": "lib/check_silent_swallow_ansible.py",
+      "docstring": "Multi-line detector: find shell/command tasks without register:.\n\nReturns list of (header_addedline, pattern_id).",
+      "source": "def detect_ansible_tasks(added_lines):\n    \"\"\"Multi-line detector: find shell/command tasks without register:.\n\n    Returns list of (header_addedline, pattern_id).\n    \"\"\"\n    violations = []\n    lines = added_lines\n    i = 0\n    while i < len(lines):\n        line = lines[i]\n        text = line.text\n\n        if _SHELL_RE.search(text) or _COMMAND_RE.search(text):\n            has_register, has_failed_when = _scan_task_flags(lines, i)\n            if not has_register and not has_failed_when:\n                if _check_changed_when_false(lines, i):\n                    violations.append((line, \"ansible-shell-no-register\"))\n                else:\n                    violations.append((line, \"ansible-shell-no-guard\"))\n\n        i += 1\n\n    return violations"
+    },
+    {
+      "name": "detect_registered_output_swallow",
+      "source_file": "lib/check_silent_swallow_ansible.py",
+      "docstring": "Find shell/command tasks that register output but only display it\nconditionally on failure: the output is silently discarded on success.\n\nReturns list of (header_addedline, pattern_id).",
+      "source": "def detect_registered_output_swallow(added_lines):\n    \"\"\"Find shell/command tasks that register output but only display it\n    conditionally on failure: the output is silently discarded on success.\n\n    Returns list of (header_addedline, pattern_id).\n    \"\"\"\n    violations = []\n    lines = added_lines\n    i = 0\n    while i < len(lines):\n        text = lines[i].text\n\n        if not (_SHELL_RE.search(text) or _COMMAND_RE.search(text)):\n            i += 1\n            continue\n\n        reg_var, has_tolerant = _find_registered_var(lines, i)\n\n        if not reg_var or reg_var in _REG_VAR_BLOCKLIST:\n            i += 1\n            continue\n        if has_tolerant:\n            i += 1\n            continue\n\n        if not _has_unconditional_display(lines, i, reg_var):\n            violations.append((lines[i], \"ansible-register-output-swallowed\"))\n\n        i += 1\n\n    return violations"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { classifyPattern, classifyAll } from '@/lib/patterns'
-import type { BannedWordsConfig } from '@/types/patterns'
+import { classifyPattern, classifyAll, classifySwallowPatterns } from '@/lib/patterns'
+import type { BannedWordsConfig, SwallowPatternConfig, SwallowDetectorData } from '@/types/patterns'
 
 describe('classifyPattern', () => {
   it('classifies a linter suppression pattern', () => {
@@ -173,6 +173,137 @@ describe('classifyAll', () => {
       version: '4.0.0',
       banned: [],
     })
+    expect(results).toHaveLength(0)
+  })
+})
+
+describe('classifySwallowPatterns', () => {
+  const swallowConfig: SwallowPatternConfig = {
+    version: 1,
+    file_types: {
+      shell: { extensions: ['.sh', '.bash'] },
+      python: { extensions: ['.py'] },
+      js_ts: { extensions: ['.js', '.ts'] },
+      ansible: { extensions: ['.yml'] },
+      cron: { filenames: ['crontab'] },
+    },
+    inline_patterns: [
+      {
+        id: 'sh-pipe-true',
+        regex: '\\|\\|\\s*true\\b',
+        language: 'shell',
+        description: 'Pipe-to-true masks command failure.',
+      },
+      {
+        id: 'js-empty-catch',
+        regex: '\\}\\s*catch\\s*\\([^)]*\\)\\s*\\{\\s*\\}',
+        language: 'js_ts',
+        description: 'Empty catch block swallows the error.',
+      },
+    ],
+    custom_detectors: [
+      {
+        id: 'cron-no-log-redirect',
+        detector: '_check_cron_inline',
+        source_file: 'lib/check_silent_swallow.py',
+        language: 'cron',
+        description: 'Cron job without a log redirect.',
+      },
+    ],
+    multiline_detectors: [
+      {
+        id: 'py-except-pass',
+        detector: 'detect_python_multiline',
+        source_file: 'lib/check_silent_swallow_python.py',
+        language: 'python',
+        description: 'Except block with bare pass.',
+      },
+      {
+        id: 'py-except-continue',
+        detector: 'detect_python_multiline',
+        source_file: 'lib/check_silent_swallow_python.py',
+        language: 'python',
+        description: 'Except block with bare continue.',
+      },
+    ],
+  }
+
+  const detectorData: SwallowDetectorData = {
+    generated_at: '2026-01-01T00:00:00Z',
+    source_version: 'abc123',
+    detectors: [
+      {
+        name: '_check_cron_inline',
+        source_file: 'lib/check_silent_swallow.py',
+        docstring: 'Check a cron line for missing log redirect.',
+        source: 'def _check_cron_inline(): pass',
+      },
+      {
+        name: 'detect_python_multiline',
+        source_file: 'lib/check_silent_swallow_python.py',
+        docstring: 'Detect except-header followed by sole-statement body.',
+        source: 'def detect_python_multiline(): pass',
+      },
+    ],
+  }
+
+  it('classifies inline patterns as error-swallowing', () => {
+    const results = classifySwallowPatterns(swallowConfig, detectorData)
+    const inline = results.find((p) => p.pattern === '\\|\\|\\s*true\\b')
+    expect(inline).toBeDefined()
+    expect(inline!.category).toBe('error-swallowing')
+    expect(inline!.categoryLabel).toBe('Error Swallowing')
+    expect(inline!.detectionType).toBe('inline')
+    expect(inline!.languages).toEqual(['shell'])
+    expect(inline!.extensions).toEqual(['.sh', '.bash'])
+    expect(inline!.detectorFunction).toBeUndefined()
+  })
+
+  it('classifies custom detector patterns with detector info', () => {
+    const results = classifySwallowPatterns(swallowConfig, detectorData)
+    const custom = results.find((p) => p.pattern === 'cron-no-log-redirect')
+    expect(custom).toBeDefined()
+    expect(custom!.detectionType).toBe('custom')
+    expect(custom!.detectorFunction).toBe('_check_cron_inline')
+    expect(custom!.detectorSource).toBe('def _check_cron_inline(): pass')
+    expect(custom!.detectorDocstring).toBe(
+      'Check a cron line for missing log redirect.',
+    )
+    expect(custom!.detectorSourceFile).toBe('lib/check_silent_swallow.py')
+    expect(custom!.languages).toEqual(['cron'])
+  })
+
+  it('classifies multiline detector patterns with detector info', () => {
+    const results = classifySwallowPatterns(swallowConfig, detectorData)
+    const multiline = results.filter(
+      (p) => p.detectionType === 'multiline',
+    )
+    expect(multiline).toHaveLength(2)
+    expect(multiline[0].detectorFunction).toBe('detect_python_multiline')
+    expect(multiline[0].detectorSource).toBe(
+      'def detect_python_multiline(): pass',
+    )
+  })
+
+  it('merges all pattern types', () => {
+    const results = classifySwallowPatterns(swallowConfig, detectorData)
+    expect(results).toHaveLength(5)
+    expect(results.every((p) => p.category === 'error-swallowing')).toBe(true)
+  })
+
+  it('handles missing detector data gracefully', () => {
+    const results = classifySwallowPatterns(swallowConfig, null)
+    const custom = results.find((p) => p.pattern === 'cron-no-log-redirect')
+    expect(custom).toBeDefined()
+    expect(custom!.detectorSource).toBeUndefined()
+    expect(custom!.detectorDocstring).toBeUndefined()
+  })
+
+  it('handles empty config', () => {
+    const results = classifySwallowPatterns(
+      { version: 1, file_types: {}, inline_patterns: [] },
+      null,
+    )
     expect(results).toHaveLength(0)
   })
 })

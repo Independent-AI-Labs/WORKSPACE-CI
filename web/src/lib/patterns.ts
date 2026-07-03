@@ -4,6 +4,11 @@ import type {
   PatternEntry,
   PatternCategory,
   PatternScope,
+  SwallowPatternConfig,
+  SwallowDetectorData,
+  SwallowDetectorEntry,
+  SwallowLanguage,
+  DetectionType,
 } from '@/types/patterns'
 import { getCategoryLabel } from '@/types/patterns'
 
@@ -106,6 +111,84 @@ export function classifyAll(config: BannedWordsConfig): ClassifiedPattern[] {
     for (const entry of config.filename_rules) {
       results.push(classifyPattern(entry, 'filename'))
     }
+  }
+
+  return results
+}
+
+function buildDetectorMap(
+  data: SwallowDetectorData | null,
+): Record<string, SwallowDetectorEntry> {
+  if (!data) return {}
+  const map: Record<string, SwallowDetectorEntry> = {}
+  for (const d of data.detectors) {
+    map[d.name] = d
+  }
+  return map
+}
+
+function getExtensions(
+  config: SwallowPatternConfig,
+  language: SwallowLanguage,
+): string[] {
+  const ft = config.file_types[language]
+  return ft?.extensions ?? []
+}
+
+export function classifySwallowPatterns(
+  config: SwallowPatternConfig,
+  detectorData: SwallowDetectorData | null,
+): ClassifiedPattern[] {
+  const results: ClassifiedPattern[] = []
+  const detectorMap = buildDetectorMap(detectorData)
+
+  for (const p of config.inline_patterns ?? []) {
+    results.push({
+      pattern: p.regex,
+      reason: p.description,
+      category: 'error-swallowing',
+      categoryLabel: getCategoryLabel('error-swallowing'),
+      scope: 'content',
+      languages: [p.language],
+      extensions: getExtensions(config, p.language),
+      detectionType: 'inline' as DetectionType,
+    })
+  }
+
+  for (const p of config.custom_detectors ?? []) {
+    const det = detectorMap[p.detector]
+    results.push({
+      pattern: p.id,
+      reason: p.description,
+      category: 'error-swallowing',
+      categoryLabel: getCategoryLabel('error-swallowing'),
+      scope: 'content',
+      languages: [p.language],
+      extensions: getExtensions(config, p.language),
+      detectionType: 'custom' as DetectionType,
+      detectorFunction: p.detector,
+      detectorSourceFile: det?.source_file,
+      detectorSource: det?.source,
+      detectorDocstring: det?.docstring ?? undefined,
+    })
+  }
+
+  for (const p of config.multiline_detectors ?? []) {
+    const det = detectorMap[p.detector]
+    results.push({
+      pattern: p.id,
+      reason: p.description,
+      category: 'error-swallowing',
+      categoryLabel: getCategoryLabel('error-swallowing'),
+      scope: 'content',
+      languages: [p.language],
+      extensions: getExtensions(config, p.language),
+      detectionType: 'multiline' as DetectionType,
+      detectorFunction: p.detector,
+      detectorSourceFile: det?.source_file,
+      detectorSource: det?.source,
+      detectorDocstring: det?.docstring ?? undefined,
+    })
   }
 
   return results

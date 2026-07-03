@@ -1,4 +1,10 @@
-"""Ansible playbook silent-swallow patterns."""
+"""Ansible multi-line task detection for the error-swallowing detector.
+
+Inline Ansible patterns are now defined in
+config/silent_swallow_patterns.yaml and loaded at runtime by
+check_silent_swallow.py. This module retains file-type detection
+and the multi-line task/output detectors.
+"""
 
 import re
 
@@ -25,25 +31,6 @@ def is_ansible_file(path: str) -> bool:
         "playbook.yml",
     )
 
-
-ANSIBLE_INLINE = [
-    (
-        "ansible-shell-or-true",
-        re.compile(r"\|\|\s*true\b"),
-    ),
-    (
-        "ansible-shell-or-colon",
-        re.compile(r"\|\|\s*:\s*$"),
-    ),
-    (
-        "ansible-ignore-errors",
-        re.compile(r"^\s*ignore_errors:\s*yes\b"),
-    ),
-    (
-        "ansible-devnull-stderr",
-        re.compile(r"2>\s*/dev/null(?!\s*\|\|\s*(?:echo|printf)\b)"),
-    ),
-]
 
 _SCAN_WINDOW = 30
 

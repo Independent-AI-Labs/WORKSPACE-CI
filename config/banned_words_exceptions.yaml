@@ -102,6 +102,7 @@ exceptions:
     paths:
       - 'web/src/types/patterns\.ts$'
       - 'web/src/components/wiki/CheckCard\.tsx$'
+      - 'web/src/components/wiki/PatternCard\.tsx$'
       - 'web/src/components/wiki/playground/CodeEditor\.tsx$'
       - 'web/src/components/wiki/playground/LanguageSelector\.tsx$'
       - 'web/src/hooks/usePlayground\.ts$'
@@ -163,3 +164,8 @@ exceptions:
   # CollapsibleSection uses "hidden" to describe WAI-ARIA disclosure state.
   - pattern: '\bsilent'
     paths: ['web/src/components/ui/ErrorBoundary\.test\.tsx$']
+
+  # swallow-detectors.json is generated data containing Python source code
+  # extracts from lib/check_silent_swallow*.py (which are already exempted).
+  - pattern: '\bsilent'
+    paths: ['web/src/data/swallow-detectors\.json$']

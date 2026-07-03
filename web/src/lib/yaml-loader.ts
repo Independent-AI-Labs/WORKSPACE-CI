@@ -2,7 +2,7 @@ import { cache } from 'react'
 import { readFileSync, readdirSync, existsSync } from 'fs'
 import { join } from 'path'
 import { load } from 'js-yaml'
-import type { BannedWordsConfig } from '@/types/patterns'
+import type { BannedWordsConfig, SwallowPatternConfig } from '@/types/patterns'
 import type { RequiredHooksConfig } from '@/types/hooks'
 import type { ConfigSchema, ConfigEntry, GuardConfigEntry } from '@/types/content'
 import type { ScriptManifest } from '@/types/wiki'
@@ -34,6 +34,14 @@ export function getGuardConfigRoot(): string {
 export const getBannedPatterns = cache(async (): Promise<BannedWordsConfig> => {
   const raw = readFileSync(join(CONFIG_ROOT, 'banned_words.yaml'), 'utf8')
   return load(raw) as BannedWordsConfig
+})
+
+export const getSwallowPatterns = cache(async (): Promise<SwallowPatternConfig> => {
+  const raw = readFileSync(
+    join(CONFIG_ROOT, 'silent_swallow_patterns.yaml'),
+    'utf8',
+  )
+  return load(raw) as SwallowPatternConfig
 })
 
 export const getRequiredHooks = cache(async (): Promise<RequiredHooksConfig> => {

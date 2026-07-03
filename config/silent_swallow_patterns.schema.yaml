@@ -1,0 +1,118 @@
+# Schema for silent_swallow_patterns.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: silent_swallow_patterns
+description: "Error-swallowing detection patterns: the single source of truth for all patterns checked by the silent-error-swallow detector."
+fields:
+  - path: version
+    type: integer
+    required: true
+    description: "Schema version of the swallow-patterns config. Bumped when the YAML shape changes."
+
+  - path: file_types
+    type: map
+    required: true
+    description: "Language-to-file-matching rules. Each key is a language identifier used by inline_patterns and multiline_detectors."
+
+  - path: file_types.<lang>.extensions
+    type: list<string>
+    description: "File extensions that identify this language (e.g. ['.py', '.sh'])."
+
+  - path: file_types.<lang>.filenames
+    type: list<string>
+    description: "Exact filenames that identify this language (e.g. ['Makefile'])."
+
+  - path: file_types.<lang>.shebang
+    type: string
+    description: "Regex matched against the first line of extensionless files to detect this language."
+
+  - path: file_types.<lang>.path_includes
+    type: list<string>
+    description: "Substring matches against the full path to identify this language (e.g. ['ansible'])."
+
+  - path: inline_patterns
+    type: list
+    required: true
+    description: "Pure regex patterns applied via re.search() per added line. No multi-line state or custom logic."
+
+  - path: inline_patterns[].id
+    type: string
+    required: true
+    description: "Stable pattern identifier emitted in violation output (e.g. 'sh-devnull-silent')."
+
+  - path: inline_patterns[].regex
+    type: string
+    required: true
+    description: "Python regex pattern compiled and applied via re.search() against each added line."
+
+  - path: inline_patterns[].language
+    type: string
+    required: true
+    description: "Language key from file_types that scopes this pattern (e.g. 'shell', 'python')."
+
+  - path: inline_patterns[].description
+    type: string
+    required: true
+    description: "Human-readable explanation of what the pattern detects; rendered on the wiki pattern card."
+
+  - path: custom_detectors
+    type: list
+    description: "Named Python functions with custom inline logic that cannot be expressed as a single regex (e.g. the cron multi-regex check)."
+
+  - path: custom_detectors[].id
+    type: string
+    required: true
+    description: "Stable pattern identifier emitted in violation output."
+
+  - path: custom_detectors[].detector
+    type: string
+    required: true
+    description: "Python function name that implements the check. Called with an AddedLine; returns a violation tuple or None."
+
+  - path: custom_detectors[].source_file
+    type: string
+    required: true
+    description: "Path to the Python source file containing the detector function; used by the wiki for source-code extraction."
+
+  - path: custom_detectors[].language
+    type: string
+    required: true
+    description: "Language key from file_types that scopes this detector."
+
+  - path: custom_detectors[].description
+    type: string
+    required: true
+    description: "Human-readable explanation of what the detector checks; rendered on the wiki pattern card."
+
+  - path: multiline_detectors
+    type: list
+    description: "Named Python functions with multi-line stateful detection logic. Each function scans across multiple added lines to find violations."
+
+  - path: multiline_detectors[].id
+    type: string
+    required: true
+    description: "Stable pattern identifier emitted in violation output (e.g. 'py-except-pass')."
+
+  - path: multiline_detectors[].detector
+    type: string
+    required: true
+    description: "Python function name that implements the multi-line check. Receives the full list of added lines; yields (AddedLine, pattern_id) tuples."
+
+  - path: multiline_detectors[].source_file
+    type: string
+    required: true
+    description: "Path to the Python source file containing the detector function; used by the wiki for source-code extraction."
+
+  - path: multiline_detectors[].language
+    type: string
+    required: true
+    description: "Language key from file_types that scopes this detector."
+
+  - path: multiline_detectors[].description
+    type: string
+    required: true
+    description: "Human-readable explanation of what the multi-line detector finds; rendered on the wiki pattern card."

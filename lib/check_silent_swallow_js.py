@@ -1,6 +1,10 @@
-"""JavaScript/TypeScript silent-swallow patterns.
+"""JavaScript/TypeScript multi-line catch detection for the
+error-swallowing detector.
 
-Inline and multi-line catch detection.
+Inline JS/TS patterns are now defined in
+config/silent_swallow_patterns.yaml and loaded at runtime by
+check_silent_swallow.py. This module retains file-type detection
+and the multi-line catch-body detector.
 """
 
 import re
@@ -12,37 +16,6 @@ from check_silent_swallow_base import AddedLine
 def is_js_file(path: str) -> bool:
     return path.endswith((".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"))
 
-
-JS_INLINE = [
-    (
-        "js-empty-catch",
-        re.compile(r"\}\s*catch\s*\([^)]*\)\s*\{\s*\}"),
-    ),
-    (
-        "js-empty-catch-noparam",
-        re.compile(r"\}\s*catch\s*\{\s*(?:/\*[^*]*\*/\s*)?\}"),
-    ),
-    (
-        "js-comment-only-catch",
-        re.compile(r"\}\s*catch\s*\([^)]*\)\s*\{\s*/\*[^*]*\*/\s*\}"),
-    ),
-    (
-        "js-empty-arrow-catch",
-        re.compile(r"\.catch\(\s*\(\s*[A-Za-z_$]?[\w$]*\s*\)\s*=>\s*\{?\s*\}?\s*\)"),
-    ),
-    (
-        "js-empty-function-catch",
-        re.compile(r"\.catch\(\s*function\s*\([^)]*\)\s*\{\s*\}\s*\)"),
-    ),
-    (
-        "js-catch-returns-nullish",
-        re.compile(
-            r"\.catch\(\s*"
-            r"(?:\(\s*[A-Za-z_$][\w$]*\s*\)|\s*[A-Za-z_$][\w$]*\s*|\(\s*\))"
-            r"\s*=>\s*(?:null|undefined|void\s+0)\s*\)"
-        ),
-    ),
-]
 
 JS_CATCH_HEADER = re.compile(r"^(?P<indent>\s*)\}\s*catch\s*(?:\([^)]*\))?\s*\{")
 JS_SILENT_RETURN = re.compile(
