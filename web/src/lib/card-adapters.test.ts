@@ -117,15 +117,6 @@ describe('patternAdapter', () => {
       { label: 'Scope', value: 'Filename match' },
     ])
   })
-
-  it('includes detector meta when detectorFunction is set', () => {
-    const [item] = patternAdapter([
-      { ...pattern, detectorFunction: '_check_except_pass' },
-    ])
-    expect(item.meta).toEqual([
-      { label: 'Detector', value: '_check_except_pass' },
-    ])
-  })
 })
 
 describe('scriptAdapter', () => {

@@ -81,10 +81,6 @@ export function patternAdapter(patterns: ClassifiedPattern[]): CardItem[] {
           p.scope === 'filename' ? 'Filename match' : `Directory: ${p.directory}`,
       })
     }
-    if (p.detectorFunction) {
-      meta.push({ label: 'Detector', value: p.detectorFunction })
-    }
-
     return {
       id: slugify(p.pattern),
       title: p.pattern,
