@@ -33,8 +33,6 @@ export function configAdapter(configs: ConfigEntry[]): CardItem[] {
     href: c.link,
     icon: 'ri-settings-3-line',
     monoTitle: true,
-    status: c.hasSchema ? 'ok' : 'warn',
-    statusLabel: c.hasSchema ? 'has schema' : 'no schema',
     meta:
       c.fieldCount !== undefined
         ? [{ label: 'Fields', value: String(c.fieldCount) }]
@@ -50,8 +48,6 @@ export function guardConfigAdapter(entries: GuardConfigEntry[]): CardItem[] {
     href: e.link,
     icon: 'ri-shield-keyhole-line',
     monoTitle: true,
-    status: e.hasSchema ? 'ok' : 'warn',
-    statusLabel: e.hasSchema ? 'has schema' : 'no schema',
     meta:
       e.fieldCount !== undefined
         ? [{ label: 'Fields', value: String(e.fieldCount) }]

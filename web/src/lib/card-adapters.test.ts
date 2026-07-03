@@ -43,22 +43,14 @@ describe('configAdapter', () => {
     fieldCount: 5,
   }
 
-  it('converts config to CardItem with mono title and status', () => {
+  it('converts config to CardItem with mono title', () => {
     const [item] = configAdapter([config])
     expect(item.id).toBe('banned_words')
     expect(item.title).toBe('banned_words')
     expect(item.monoTitle).toBe(true)
     expect(item.href).toBe('/config/banned_words')
     expect(item.icon).toBe('ri-settings-3-line')
-    expect(item.status).toBe('ok')
-    expect(item.statusLabel).toBe('has schema')
     expect(item.meta).toEqual([{ label: 'Fields', value: '5' }])
-  })
-
-  it('sets warn status when no schema', () => {
-    const [item] = configAdapter([{ ...config, hasSchema: false }])
-    expect(item.status).toBe('warn')
-    expect(item.statusLabel).toBe('no schema')
   })
 
   it('omits meta when fieldCount is undefined', () => {
@@ -83,8 +75,6 @@ describe('guardConfigAdapter', () => {
     expect(item.title).toBe('guard_paths')
     expect(item.monoTitle).toBe(true)
     expect(item.icon).toBe('ri-shield-keyhole-line')
-    expect(item.status).toBe('ok')
-    expect(item.statusLabel).toBe('has schema')
     expect(item.meta).toEqual([{ label: 'Fields', value: '3' }])
   })
 })

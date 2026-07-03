@@ -51,26 +51,6 @@ describe('WikiCard', () => {
     expect(screen.getByText('A subtitle')).toBeInTheDocument()
   })
 
-  it('renders status badge when status and statusLabel are provided', () => {
-    render(
-      <WikiCard
-        item={makeItem({ status: 'ok', statusLabel: 'has schema' })}
-      />,
-    )
-    const badge = screen.getByText('has schema')
-    expect(badge).toHaveClass('badge--green')
-  })
-
-  it('renders warn status badge', () => {
-    render(
-      <WikiCard
-        item={makeItem({ status: 'warn', statusLabel: 'no schema' })}
-      />,
-    )
-    const badge = screen.getByText('no schema')
-    expect(badge).toHaveClass('badge--orange')
-  })
-
   it('renders tags with correct badge classes', () => {
     const { container } = render(
       <WikiCard
