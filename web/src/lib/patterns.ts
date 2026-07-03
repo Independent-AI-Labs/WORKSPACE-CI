@@ -174,7 +174,8 @@ export function classifySwallowPatterns(
   }
 
   for (const p of config.multiline_detectors ?? []) {
-    const det = detectorMap[p.detector]
+    const fnName = p.source_function ?? p.detector
+    const det = detectorMap[fnName]
     results.push({
       pattern: p.id,
       reason: p.description,
@@ -184,7 +185,7 @@ export function classifySwallowPatterns(
       languages: [p.language],
       extensions: getExtensions(config, p.language),
       detectionType: 'multiline' as DetectionType,
-      detectorFunction: p.detector,
+      detectorFunction: fnName,
       detectorSourceFile: det?.source_file,
       detectorSource: det?.source,
       detectorDocstring: det?.docstring ?? undefined,

@@ -67,6 +67,7 @@ export interface SwallowInlinePattern {
 export interface SwallowDetectorPattern {
   id: string
   detector: string
+  source_function?: string
   source_file: string
   language: SwallowLanguage
   description: string

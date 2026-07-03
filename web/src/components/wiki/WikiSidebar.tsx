@@ -12,15 +12,14 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Home', icon: 'ri-home-4-line' },
-  { href: '/patterns', label: 'Patterns', icon: 'ri-shield-line' },
-  { href: '/hooks', label: 'Hooks', icon: 'ri-link-m' },
-  { href: '/config', label: 'Config', icon: 'ri-settings-3-line' },
-  { href: '/guard', label: 'Guard', icon: 'ri-shield-keyhole-line' },
-  { href: '/checks', label: 'Checks', icon: 'ri-check-double-line' },
+  { href: '/patterns', label: 'Code Anti-Patterns', icon: 'ri-shield-line' },
+  { href: '/hooks', label: 'Git Hooks', icon: 'ri-link-m' },
+  { href: '/config', label: 'Config Files', icon: 'ri-settings-3-line' },
+  { href: '/guard', label: 'Workspace Guard', icon: 'ri-shield-keyhole-line' },
+  { href: '/checks', label: 'Static Analysis', icon: 'ri-check-double-line' },
   { href: '/playground', label: 'Playground', icon: 'ri-code-box-line' },
-  { href: '/tiers', label: 'Tiers', icon: 'ri-stack-line' },
-  { href: '/tooling', label: 'Tooling', icon: 'ri-tools-line' },
-  { href: '/integration', label: 'Integration', icon: 'ri-plug-line' },
+  { href: '/tooling', label: 'Tools & Scripts', icon: 'ri-tools-line' },
+  { href: '/integration', label: 'Integration Guide', icon: 'ri-plug-line' },
 ]
 
 function isPathActive(pathname: string, href: string): boolean {

@@ -128,7 +128,7 @@ const staticPages: SearchIndexEntry[] = [
   },
   {
     id: 'page-patterns',
-    title: 'Patterns',
+    title: 'Code Anti-Patterns',
     section: 'Pages',
     content: 'Banned words and patterns reference',
     href: '/patterns',
@@ -137,7 +137,7 @@ const staticPages: SearchIndexEntry[] = [
   },
   {
     id: 'page-hooks',
-    title: 'Hooks',
+    title: 'Git Hooks',
     section: 'Pages',
     content: 'Required git hooks reference',
     href: '/hooks',
@@ -146,7 +146,7 @@ const staticPages: SearchIndexEntry[] = [
   },
   {
     id: 'page-config',
-    title: 'Config',
+    title: 'Config Files',
     section: 'Pages',
     content: 'Configuration files reference',
     href: '/config',
@@ -155,7 +155,7 @@ const staticPages: SearchIndexEntry[] = [
   },
   {
     id: 'page-guard',
-    title: 'Guard',
+    title: 'Workspace Guard',
     section: 'Pages',
     content: 'Guard configurations reference',
     href: '/guard',
@@ -164,7 +164,7 @@ const staticPages: SearchIndexEntry[] = [
   },
   {
     id: 'page-checks',
-    title: 'Checks',
+    title: 'Static Analysis',
     section: 'Pages',
     content: 'CI checks reference',
     href: '/checks',
@@ -172,17 +172,8 @@ const staticPages: SearchIndexEntry[] = [
     keywords: ['checks', 'ci'],
   },
   {
-    id: 'page-tiers',
-    title: 'Tiers',
-    section: 'Pages',
-    content: 'Hook tier comparison (strict vs poc)',
-    href: '/tiers',
-    type: 'page',
-    keywords: ['tiers', 'strict', 'poc'],
-  },
-  {
     id: 'page-tooling',
-    title: 'Tooling',
+    title: 'Tools & Scripts',
     section: 'Pages',
     content: 'Tooling and scripts reference',
     href: '/tooling',
@@ -191,7 +182,7 @@ const staticPages: SearchIndexEntry[] = [
   },
   {
     id: 'page-integration',
-    title: 'Integration',
+    title: 'Integration Guide',
     section: 'Pages',
     content: 'Integration guide',
     href: '/integration',

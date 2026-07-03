@@ -208,56 +208,67 @@ custom_detectors:
 
 multiline_detectors:
   # ── Python multiline (9 patterns from detect_python_multiline) ──────
+  # source_function points to the specific helper that classifies each
+  # pattern, not the top-level detect_python_multiline dispatcher.
   - id: py-except-pass
     detector: detect_python_multiline
+    source_function: _classify_except_body
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block that swallows errors with a bare pass statement.'
 
   - id: py-except-continue
     detector: detect_python_multiline
+    source_function: _classify_except_body
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block that swallows errors with a bare continue statement.'
 
   - id: py-except-ellipsis
     detector: detect_python_multiline
+    source_function: _classify_except_body
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block that swallows errors with Ellipsis (...).'
 
   - id: py-except-return-none
     detector: detect_python_multiline
+    source_function: _classify_except_body
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block returns None, hiding the exception from the caller.'
 
   - id: py-except-empty-body
     detector: detect_python_multiline
+    source_function: _resolve_next_line
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block with an empty body; no error handling at all.'
 
   - id: py-except-debug-only
     detector: detect_python_multiline
+    source_function: _classify_except_body
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block only logs at debug level; the error is not surfaced.'
 
   - id: py-except-raise-no-from
     detector: detect_python_multiline
+    source_function: _classify_except_body
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block raises a new exception without chaining (no from clause).'
 
   - id: py-except-silent-exit
     detector: detect_python_multiline
+    source_function: _classify_except_body
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block calls sys.exit(0), terminating with success on error.'
 
   - id: py-except-print
     detector: detect_python_multiline
+    source_function: _classify_except_body
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'Except block only prints the error; no logging, re-raise, or recovery.'
@@ -265,6 +276,7 @@ multiline_detectors:
   # ── JS/TS multiline (1 pattern from detect_js_multiline) ────────────
   - id: js-catch-silent-return-multi
     detector: detect_js_multiline
+    source_function: _check_catch_body
     source_file: lib/check_silent_swallow_js.py
     language: js_ts
     description: 'Multi-line catch block that returns a nullish value, hiding the error.'

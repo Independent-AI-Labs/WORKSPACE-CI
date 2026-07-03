@@ -82,15 +82,15 @@ def main() -> int:
 
     for section in ("custom_detectors", "multiline_detectors"):
         for entry in config.get(section, []):
-            detector = entry.get("detector")
+            source_func = entry.get("source_function") or entry.get("detector")
             source_file = entry.get("source_file")
-            if not detector or not source_file:
+            if not source_func or not source_file:
                 continue
-            if detector in detector_names:
+            if source_func in detector_names:
                 continue
-            detector_names.add(detector)
+            detector_names.add(source_func)
 
-            result = extract_function_source(source_file, detector)
+            result = extract_function_source(source_file, source_func)
             if result is not None:
                 entries.append(result)
 

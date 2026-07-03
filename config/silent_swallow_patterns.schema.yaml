@@ -100,7 +100,11 @@ fields:
   - path: multiline_detectors[].detector
     type: string
     required: true
-    description: "Python function name that implements the multi-line check. Receives the full list of added lines; yields (AddedLine, pattern_id) tuples."
+    description: "Python function name that implements the multi-line check. Receives the full list of added lines; yields (AddedLine, pattern_id) tuples. Used for runtime dispatch in check_silent_swallow.py."
+
+  - path: multiline_detectors[].source_function
+    type: string
+    description: "Specific helper function that classifies this particular pattern. Overrides detector for wiki source-code extraction when the detector is a top-level dispatcher (e.g. detect_python_multiline dispatches to _classify_except_body and _resolve_next_line). Falls back to detector when absent."
 
   - path: multiline_detectors[].source_file
     type: string

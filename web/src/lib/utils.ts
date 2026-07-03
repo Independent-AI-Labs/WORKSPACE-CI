@@ -36,14 +36,13 @@ export function formatValue(value: unknown): string {
 export function pageTitle(path: string): string {
   const map: Record<string, string> = {
     '/': 'Home',
-    '/patterns': 'Pattern Library',
-    '/hooks': 'Hook Reference',
-    '/config': 'Configuration Reference',
-    '/guard': 'Guard Policy Reference',
-    '/checks': 'Check Catalog',
+    '/patterns': 'Code Anti-Patterns',
+    '/hooks': 'Git Hooks',
+    '/config': 'Config Files',
+    '/guard': 'Workspace Guard',
+    '/checks': 'Static Analysis',
     '/playground': 'Playground',
-    '/tiers': 'Enforcement Tiers',
-    '/tooling': 'Tooling',
+    '/tooling': 'Tools & Scripts',
     '/integration': 'Integration Guide',
   }
   return map[path] ?? path
