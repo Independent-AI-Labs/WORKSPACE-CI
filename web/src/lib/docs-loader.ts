@@ -2,6 +2,7 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { ApiDocsOutput, ShellDocsOutput } from '@/types/wiki'
 import type { SwallowDetectorData } from '@/types/patterns'
+import type { HookDescriptionData } from '@/types/hooks'
 
 function loadJson<T>(filePath: string): T | null {
   try {
@@ -28,5 +29,11 @@ export function loadShellDocs(): ShellDocsOutput | null {
 export function loadSwallowDetectors(): SwallowDetectorData | null {
   return loadJson<SwallowDetectorData>(
     join(process.cwd(), 'src', 'data', 'swallow-detectors.json'),
+  )
+}
+
+export function loadHookDescriptions(): HookDescriptionData | null {
+  return loadJson<HookDescriptionData>(
+    join(process.cwd(), 'src', 'data', 'hook-descriptions.json'),
   )
 }

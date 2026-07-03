@@ -1,21 +1,20 @@
 'use client'
 
-import { useHookFilter } from '@/hooks/useHookFilter'
-import type { HookRecord } from '@/types/hooks'
+import type { HookTier } from '@/types/hooks'
 import clsx from 'clsx'
 
 interface TierFilterProps {
-  hooks: HookRecord[]
+  activeTiers: Set<HookTier>
+  toggleTier: (tier: HookTier) => void
+  tierCounts: Record<string, number>
 }
 
-const TIERS: { id: 'strict' | 'poc'; label: string }[] = [
+const TIERS: { id: HookTier; label: string }[] = [
   { id: 'strict', label: 'Strict' },
   { id: 'poc', label: 'POC (safety)' },
 ]
 
-export function TierFilter({ hooks }: TierFilterProps) {
-  const { activeTiers, toggleTier, tierCounts } = useHookFilter(hooks)
-
+export function TierFilter({ activeTiers, toggleTier, tierCounts }: TierFilterProps) {
   return (
     <div className="tier-filter">
       {TIERS.map((tier) => (

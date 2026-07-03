@@ -1,9 +1,14 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
-import { HookTable } from '@/components/wiki/HookTable'
+import { HookList } from '@/components/wiki/HookList'
 import { getRequiredHooks } from '@/lib/yaml-loader'
+import { loadHookDescriptions } from '@/lib/docs-loader'
+import { getAllFeedbackCounts } from '@/lib/feedback-loader'
 
 export default async function HooksPage() {
   const manifest = await getRequiredHooks()
+  const descData = loadHookDescriptions()
+  const descriptions = descData?.descriptions ?? {}
+  const feedbackCounts = getAllFeedbackCounts('hook')
 
   return (
     <WikiShell>
@@ -18,7 +23,11 @@ export default async function HooksPage() {
           accessible at WORKSPACE_CI_CONFIG_ROOT.
         </p>
       ) : (
-        <HookTable hooks={manifest.hooks} />
+        <HookList
+          hooks={manifest.hooks}
+          descriptions={descriptions}
+          feedbackCounts={feedbackCounts}
+        />
       )}
     </WikiShell>
   )

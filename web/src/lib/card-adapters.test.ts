@@ -5,11 +5,13 @@ import {
   guardConfigAdapter,
   patternAdapter,
   scriptAdapter,
+  hookAdapter,
 } from '@/lib/card-adapters'
 import type { ProjectSummary } from '@/types/projects'
 import type { ConfigEntry, GuardConfigEntry } from '@/types/content'
 import type { ClassifiedPattern } from '@/types/patterns'
 import type { ScriptManifestEntry } from '@/types/wiki'
+import type { HookRecord } from '@/types/hooks'
 
 describe('projectAdapter', () => {
   const project: ProjectSummary = {
@@ -148,5 +150,75 @@ describe('scriptAdapter', () => {
   it('omits meta when make_target is undefined', () => {
     const [item] = scriptAdapter([{ ...script, make_target: undefined }])
     expect(item.meta).toBeUndefined()
+  })
+})
+
+describe('hookAdapter', () => {
+  const hook: HookRecord = {
+    id: 'check-unstaged',
+    kind: 'shell',
+    entry: 'ci_check_unstaged',
+    stage: 'pre-commit',
+    pass_filenames: false,
+    always_run: true,
+    mandatory: true,
+    safety: true,
+    applicable_to: ['any'],
+  }
+  const descriptions: Record<string, string> = {
+    'check-unstaged': 'Fails the commit if there are unstaged files.',
+  }
+
+  it('converts hook to CardItem with description, href, and mono title', () => {
+    const [item] = hookAdapter([hook], descriptions)
+    expect(item.id).toBe('check-unstaged')
+    expect(item.title).toBe('check-unstaged')
+    expect(item.monoTitle).toBe(true)
+    expect(item.href).toBe('/hooks/check-unstaged')
+    expect(item.icon).toBe('ri-terminal-line')
+    expect(item.description).toBe('Fails the commit if there are unstaged files.')
+  })
+
+  it('creates stage, kind, and tier tags', () => {
+    const [item] = hookAdapter([hook], descriptions)
+    expect(item.tags).toEqual([
+      { label: 'Pre-commit', variant: 'accent' },
+      { label: 'Shell', variant: 'muted' },
+      { label: 'Safety tier', variant: 'ok' },
+    ])
+  })
+
+  it('uses warn variant for strict-only hooks', () => {
+    const [item] = hookAdapter([{ ...hook, safety: false }], descriptions)
+    expect(item.tags![2]).toEqual({ label: 'Strict only', variant: 'warn' })
+  })
+
+  it('includes entry and applicable_to in meta', () => {
+    const [item] = hookAdapter([hook], descriptions)
+    expect(item.meta).toEqual([
+      { label: 'Entry', value: 'ci_check_unstaged' },
+      { label: 'Applicable to', value: 'any' },
+    ])
+  })
+
+  it('uses entry as description when no description is available', () => {
+    const [item] = hookAdapter([hook], {})
+    expect(item.description).toBe('ci_check_unstaged')
+  })
+
+  it('uses correct icon for python_module kind', () => {
+    const [item] = hookAdapter(
+      [{ ...hook, kind: 'python_module' }],
+      descriptions,
+    )
+    expect(item.icon).toBe('ri-code-line')
+  })
+
+  it('uses correct icon for makefile_target kind', () => {
+    const [item] = hookAdapter(
+      [{ ...hook, kind: 'makefile_target' }],
+      descriptions,
+    )
+    expect(item.icon).toBe('ri-tools-line')
   })
 })

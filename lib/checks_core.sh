@@ -28,6 +28,8 @@ _in_ignored_dir() {
 }
 
 # --- ci_check_unstaged ---
+# Fails the commit if there are unstaged or untracked files, auto-staging
+# all changes so the developer can re-commit without losing work.
 ci_check_unstaged() {
     local untracked
     untracked=$(git ls-files --others --exclude-standard)

@@ -1,22 +1,21 @@
 'use client'
 
-import { useHookFilter } from '@/hooks/useHookFilter'
-import type { HookRecord } from '@/types/hooks'
+import type { HookStage } from '@/types/hooks'
 import clsx from 'clsx'
 
 interface StageFilterProps {
-  hooks: HookRecord[]
+  activeStages: Set<HookStage>
+  toggleStage: (stage: HookStage) => void
+  stageCounts: Record<string, number>
 }
 
-const STAGES: { id: 'pre-commit' | 'commit-msg' | 'pre-push'; label: string }[] = [
+const STAGES: { id: HookStage; label: string }[] = [
   { id: 'pre-commit', label: 'Pre-commit' },
   { id: 'commit-msg', label: 'Commit-msg' },
   { id: 'pre-push', label: 'Pre-push' },
 ]
 
-export function StageFilter({ hooks }: StageFilterProps) {
-  const { activeStages, toggleStage, stageCounts } = useHookFilter(hooks)
-
+export function StageFilter({ activeStages, toggleStage, stageCounts }: StageFilterProps) {
   return (
     <div className="stage-filter">
       {STAGES.map((stage) => (

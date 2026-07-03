@@ -1,0 +1,25 @@
+{
+  "generated_at": "2026-07-03T19:45:43.955496+00:00",
+  "descriptions": {
+    "check-unstaged": "Fails the commit if there are unstaged or untracked files, auto-staging all changes so the developer can re-commit without losing work.",
+    "block-sensitive-files": "Blocks commit if any staged file matches sensitive extensions or keywords from config/sensitive_files.yaml. Prevents accidental secret leakage by enforcing an allowlist of safe file types.",
+    "gitleaks": "Exits 0 if no secrets found, 1 otherwise.",
+    "ci-check-error-swallow": "Exits 0 if no violations, 1 otherwise.",
+    "check-coverage-no-devolution": "Compares the staged coverage_thresholds.yaml against HEAD.  Fails the commit if any suite's min_coverage value is being lowered.  Thresholds are earned: they may only stay the same or increase. Exception: when a suite's path changes, the threshold comparison is skipped because the suite is testing a different set of tests. A threshold of 50% against tests/ is not comparable to 5% against tests/integration/, the latter being a genuinely smaller, focused set.",
+    "check-banned-words": "Delegates to lib/check_banned_words.py (Python implementation). Replaces the prior bash+AWK implementation that spawned ~33,000 subprocesses under PRoot (58 patterns x 96 files x ~6 procs), taking 5+ minutes. The Python version does zero subprocess spawns for pattern matching and completes in <1s.",
+    "check-commit-message": "Enforces: \"type: description\" on first line, blank second line (if multi-line). Valid types: feat fix refactor docs test chore ci perf style build revert",
+    "block-coauthored": "Commit-msg stage: check the message being committed.",
+    "block-coauthored-history": "Pre-push stage: scan commits in the ACTUAL push range for blocked patterns. Reads push refs from stdin (git pre-push protocol).",
+    "check-portable-shell": "Enforce: no process substitution (< <(...), > >(...), <(...), >(...)) in shell scripts. Process substitution opens /dev/fd/NN by path, which is broken under PRoot, some bwrap/firejail sandboxes, and chroots without /proc. Use ci_capture_lines / ci_capture_pipe (lib/ci.sh) instead. Scans lib/*.sh and scripts/* (all extensionless scripts + *.sh). Skips comment lines and string literals where the pattern appears as prose. Exit: 0 if pass, 1 if violation found.",
+    "check-file-length": "Fails the commit if any source file exceeds the line limit defined in config/file_length_limits.yaml. Default limit is 512 lines; per-file overrides are supported.",
+    "check-required-hooks-present": "Self-check: every check_*.py is registered, hooks are wired, exceptions valid.",
+    "check-boot-venv-layout": "Non-blocking audit of the hierarchical `.boot-linux/` + `.venv/` contract.",
+    "ci-lint": "Run ruff format + lint on ci/",
+    "ci-type-check": "Run mypy on ci/",
+    "ci-check-push": "Pre-push gate: lint + type + tests + coverage (single pass)",
+    "check-dead-code": "AST-based dead code detection.",
+    "check-dependency-versions": "Dependency version checker (PyPI + npm + Docker).",
+    "check-duplicate-dependencies": "Duplicate and redundant dependency checker for uv workspaces.",
+    "check-markdown-docs": "Markdown documentation reference validator."
+  }
+}

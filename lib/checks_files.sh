@@ -3,6 +3,9 @@
 # Sourced by checks.sh. Requires ci.sh and checks_core.sh to be loaded first.
 
 # --- ci_block_sensitive_files [files...] ---
+# Blocks commit if any staged file matches sensitive extensions or keywords
+# from config/sensitive_files.yaml. Prevents accidental secret leakage by
+# enforcing an allowlist of safe file types.
 _load_sensitive_config() {
     local config="${CI_CONFIG_DIR}/sensitive_files.yaml"
     [[ -f "$config" ]] || return 1
@@ -109,6 +112,9 @@ ci_block_sensitive_files() {
 }
 
 # --- ci_check_file_length [files...] ---
+# Fails the commit if any source file exceeds the line limit defined in
+# config/file_length_limits.yaml. Default limit is 512 lines; per-file
+# overrides are supported.
 ci_check_file_length() {
     local config="./config/file_length_limits.yaml"
     if [[ ! -f "$config" ]]; then

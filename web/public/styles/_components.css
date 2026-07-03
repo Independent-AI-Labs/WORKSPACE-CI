@@ -20,10 +20,9 @@
   }
 
   /* ---- .table: full-width collapsed border grid ----
-     Collapses .hook-table__table, .config-field-table,
-     .prose table (previously 3 verbatim copies). */
+     Collapses .config-field-table,
+     .prose table (previously verbatim copies). */
   .table,
-  .hook-table__table,
   .config-field-table,
   .prose table {
     width: 100%;
@@ -32,8 +31,6 @@
 
   .table th,
   .table td,
-  .hook-table__table th,
-  .hook-table__table td,
   .config-field-table th,
   .config-field-table td,
   .prose th,
@@ -44,7 +41,6 @@
   }
 
   .table th,
-  .hook-table__table th,
   .config-field-table th,
   .prose th {
     background: var(--surface-1);

@@ -3,6 +3,7 @@ import type { ProjectSummary } from '@/types/projects'
 import type { ConfigEntry, GuardConfigEntry } from '@/types/content'
 import type { ClassifiedPattern, SwallowLanguage } from '@/types/patterns'
 import type { ScriptManifestEntry } from '@/types/wiki'
+import type { HookRecord, HookKind } from '@/types/hooks'
 import { slugify } from '@/lib/utils'
 
 const LANGUAGE_LABELS: Record<SwallowLanguage, string> = {
@@ -11,6 +12,30 @@ const LANGUAGE_LABELS: Record<SwallowLanguage, string> = {
   js_ts: 'JS/TS',
   ansible: 'Ansible',
   cron: 'Cron',
+}
+
+const HOOK_KIND_ICONS: Record<HookKind, string> = {
+  shell: 'ri-terminal-line',
+  shell_inline: 'ri-terminal-line',
+  shell_with_arg: 'ri-terminal-line',
+  python_module: 'ri-code-line',
+  python_module_files: 'ri-code-line',
+  makefile_target: 'ri-tools-line',
+}
+
+const HOOK_KIND_LABELS: Record<HookKind, string> = {
+  shell: 'Shell',
+  shell_inline: 'Shell (inline)',
+  shell_with_arg: 'Shell (with arg)',
+  python_module: 'Python module',
+  python_module_files: 'Python module (files)',
+  makefile_target: 'Makefile target',
+}
+
+const HOOK_STAGE_LABELS: Record<string, string> = {
+  'pre-commit': 'Pre-commit',
+  'commit-msg': 'Commit-msg',
+  'pre-push': 'Pre-push',
 }
 
 export function projectAdapter(projects: ProjectSummary[]): CardItem[] {
@@ -104,4 +129,42 @@ export function scriptAdapter(scripts: ScriptManifestEntry[]): CardItem[] {
       ? [{ label: 'Make target', value: s.make_target }]
       : undefined,
   }))
+}
+
+export function hookAdapter(
+  hooks: HookRecord[],
+  descriptions: Record<string, string>,
+): CardItem[] {
+  return hooks.map((h) => {
+    const tags: CardItem['tags'] = [
+      {
+        label: HOOK_STAGE_LABELS[h.stage] ?? h.stage,
+        variant: 'accent',
+      },
+      {
+        label: HOOK_KIND_LABELS[h.kind] ?? h.kind,
+        variant: 'muted',
+      },
+      {
+        label: h.safety ? 'Safety tier' : 'Strict only',
+        variant: h.safety ? 'ok' : 'warn',
+      },
+    ]
+
+    const meta: CardItem['meta'] = [
+      { label: 'Entry', value: h.entry },
+      { label: 'Applicable to', value: h.applicable_to.join(', ') },
+    ]
+
+    return {
+      id: h.id,
+      title: h.id,
+      description: descriptions[h.id] ?? h.entry,
+      href: `/hooks/${h.id}`,
+      icon: HOOK_KIND_ICONS[h.kind] ?? 'ri-tools-line',
+      monoTitle: true,
+      tags,
+      meta,
+    }
+  })
 }
