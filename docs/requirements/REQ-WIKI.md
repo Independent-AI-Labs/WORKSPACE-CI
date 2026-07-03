@@ -25,6 +25,15 @@
 - [`ci/*.py`](../../ci/): Python check modules (canonical docstrings for check catalog)
 - [`lib/*.sh`](../../lib/): Shell check functions (canonical comments for shell check catalog)
 
+**Sibling-repo guard policy configs (cross-repo source, §9.3 guard root):**
+
+- [`WORKSPACE-GUARD/config/guard_subcommands.yaml`](../../../WORKSPACE-GUARD/config/guard_subcommands.yaml): blocked / partial / contract-check git subcommands
+- [`WORKSPACE-GUARD/config/guard_config_keys.yaml`](../../../WORKSPACE-GUARD/config/guard_config_keys.yaml): dangerous git-config key glob patterns; sudo-gated keys
+- [`WORKSPACE-GUARD/config/guard_protected_branches.yaml`](../../../WORKSPACE-GUARD/config/guard_protected_branches.yaml): protected branch names + prefixes
+- [`WORKSPACE-GUARD/config/guard_environment.yaml`](../../../WORKSPACE-GUARD/config/guard_environment.yaml): allowed / sudo-gated / blocked env vars
+- [`WORKSPACE-GUARD/config/guard_resource_limits.yaml`](../../../WORKSPACE-GUARD/config/guard_resource_limits.yaml): rlimit thresholds
+- [`WORKSPACE-GUARD/config/guard_paths.yaml`](../../../WORKSPACE-GUARD/config/guard_paths.yaml): guard log/contract/enforcement/markers paths
+
 ---
 
 ## 1. Purpose & Scope
@@ -49,6 +58,9 @@ quality gates workspace-ci enforces.
 - A home page with aggregate stats, quick links, and trending content
 - A content pipeline that derives documentation from source code (docstrings, comments,
   YAML configs, markdown docs): single source of truth
+- A read-only **guard policy reference** that surfaces the sibling
+  `workspace-guard` repo's compiled policy YAMLs (cross-repo source; the wiki
+  holds no guard config of its own)
 
 **The wiki DOES NOT:**
 
@@ -58,6 +70,8 @@ quality gates workspace-ci enforces.
 - Replace or duplicate AMI-PORTAL's shell, tab system, or iframe architecture
 - Serve as a general-purpose documentation viewer for arbitrary files
 - Implement i18n: English only
+- Modify or re-compile the guard binary, its build-time `build.rs` embed, or
+  the sibling `WORKSPACE-GUARD` policy configs (read-only cross-repo display)
 - Duplicate content already present in source code: all content MUST derive
   from canonical sources (docstrings, YAML configs, markdown docs)
 
@@ -122,7 +136,7 @@ into the `web/` tree. See SPEC §9.3 for the loader contract and deployment mode
 
 | ID | Requirement |
 |----|-------------|
-| FR-2.1 | Search MUST index all patterns, hooks, checks, config fields, and wiki page text. |
+| FR-2.1 | Search MUST index all patterns, hooks, checks, config fields, guard policy configs, and wiki page text. |
 | FR-2.2 | Search results MUST display in a modal overlay with keyboard navigation. |
 | FR-2.3 | Each result MUST link directly to the relevant page and anchor. |
 | FR-2.4 | Results MUST highlight matching text and show the parent section name. |
@@ -148,7 +162,7 @@ into the `web/` tree. See SPEC §9.3 for the loader contract and deployment mode
 | ID | Requirement |
 |----|-------------|
 | FR-4.1 | The pattern library MUST list all banned patterns from `config/banned_words.yaml`, including all three rule groups: `banned` (content patterns), `directory_rules` (directory-scoped content patterns), and `filename_rules` (basename patterns). |
-| FR-4.2 | Patterns MUST be grouped by category (e.g., Linter Suppression, Lazy Types, Unsafe Reflection). |
+| FR-4.2 | Patterns MUST be grouped by category (e.g., Linter Suppression, Deferred Types, Unsafe Reflection). |
 | FR-4.3 | Each pattern MUST display: the regex pattern, the reason it is banned, the match scope (content / filename / directory), and applicable file types. Filename-scope patterns MUST show a "filename match" badge. |
 | FR-4.4 | A category filter MUST allow toggling individual categories on/off. |
 | FR-4.5 | Each pattern MUST have a unique anchor ID for deep linking. |
@@ -249,6 +263,22 @@ into the `web/` tree. See SPEC §9.3 for the loader contract and deployment mode
 | FR-16.7 | Long-form prose that does not belong in source code (narrative guides, rationale, troubleshooting) MUST live in dedicated markdown files within the `web/` directory. |
 | FR-16.8 | Optional `README.md` files in source directories (`ci/`, `lib/`, `config/`, `scripts/`) MUST be discoverable and rendered on relevant index pages. |
 
+#### FR-17: Guard Policy Reference
+
+The wiki surfaces the sibling `workspace-guard` repo's compiled policy configs
+as a read-only reference section, mirroring the existing configuration
+reference (FR-7) but sourced from a separately-configurable cross-repo root.
+
+| ID | Requirement |
+|----|-------------|
+| FR-17.1 | The wiki MUST list all guard policy configs from the sibling `WORKSPACE-GUARD/config/` tree at a dedicated `/guard` route. |
+| FR-17.2 | Each guard config MUST have a dedicated detail page at `/guard/<name>`. |
+| FR-17.3 | Guard detail pages MUST render schema-derived field documentation reusing the co-located `guard_<name>.schema.yaml` convention (FR-7.3 / §21.4) and the raw YAML in a syntax-highlighted code block. |
+| FR-17.4 | When the `WORKSPACE-GUARD/config/` tree is absent at the resolved root, `/guard` MUST render an empty-state ("No guard policy configs found"), never crash, and `/config` MUST remain fully functional. |
+| FR-17.5 | The guard config root MUST be configurable via `WORKSPACE_GUARD_CONFIG_ROOT`, mirroring the `WORKSPACE_CI_CONFIG_ROOT` mechanism (SPEC §9.3). Default: `../../WORKSPACE-GUARD/config` relative to `web/`. |
+| FR-17.6 | Each guard config detail page MUST include the feedback component (FR-15) with `targetType: 'guard'`. |
+| FR-17.7 | Guard policy configs MUST be read-only through the wiki: no mutation, no write to the sibling repo (mirrors NFR-4.2 for the CI config tree). |
+
 ### 3.4 Analytics and Feedback
 
 #### FR-13: Page Analytics and Stats Tracking
@@ -282,7 +312,7 @@ into the `web/` tree. See SPEC §9.3 for the loader contract and deployment mode
 | FR-15.5 | The component MUST accept a type prop categorizing the feedback source (pattern, hook, config, check, page). |
 | FR-15.6 | Submitting feedback MUST emit an analytics event recording: identifier, type, vote, optional comment, timestamp. |
 | FR-15.7 | The component MUST remember a user's vote on a specific target across navigations. |
-| FR-15.8 | The component MUST be accessible: ARIA labels, keyboard-operable, screen-reader compatible. |
+| FR-15.8 | The component MUST be accessible: ARIA labels, keyboard-operable, screen-reader friendly. |
 | FR-15.9 | The component MUST adapt to light and dark themes. |
 | FR-15.10 | A page-level feedback aggregate (e.g., "3 of 5 patterns on this page rated helpful") MUST be available for pages embedding multiple feedback components. |
 
@@ -463,7 +493,7 @@ The wiki consists of three subsystems:
 
 ## 6. Phased Implementation
 
-### Phase 1: Skeleton, Home Page, and Extraction Pipeline
+### Phase 1: Shell, Home Page, and Extraction Pipeline
 
 **Capabilities delivered:**
 - [ ] Wiki shell layout with sidebar, header, and content area
@@ -481,6 +511,7 @@ The wiki consists of three subsystems:
 - [ ] Hook reference: all hooks listed, filterable by stage and tier, comparison matrix
 - [ ] Hook detail pages: per-hook metadata, stage/tier placement, function signatures
 - [ ] Configuration reference: all configs listed with field documentation and raw YAML
+- [ ] Guard policy reference: all sibling `WORKSPACE-GUARD` policy configs listed at `/guard` with field docs and raw YAML (soft-dependency empty-state when the guard tree is absent)
 - [ ] Check catalog: shell and Python checks with detail pages
 - [ ] Tier documentation with comparison matrix
 - [ ] Tooling documentation page
@@ -581,3 +612,8 @@ The wiki consists of three subsystems:
 | 27 | Run `ANALYZE=true npm run build` in `web/`: verify every non-playground route ships < 50KB compressed JS; CI bundle-size gate passes (SPEC §18.3) | NFR-1.7, SPEC §18.3 |
 | 28 | Run `scripts/extract-docs`: verify every `config/*.schema.yaml` parses and each `path` resolves against the corresponding config's top-level keys (build warning, not error) | FR-7.3, FR-16.5a |
 | 29 | Add a script to `scripts/` without a `scripts/manifest.yaml` entry: verify the manifest-completeness check fails | FR-11.1 |
+| 30 | Navigate to `/guard`: all six guard policy configs (`guard_subcommands`, `guard_config_keys`, `guard_protected_branches`, `guard_environment`, `guard_resource_limits`, `guard_paths`) are listed and link to `/guard/<name>` | FR-17.1 |
+| 31 | Navigate to `/guard/guard_subcommands`: schema-derived field table (blocked / partial / contract_check) renders from `guard_subcommands.schema.yaml`, and the raw YAML is shown in a code block; feedback widget is present with `targetType: 'guard'` | FR-17.2, FR-17.3, FR-17.6 |
+| 32 | Set `WORKSPACE_GUARD_CONFIG_ROOT` to a non-existent absolute path, restart the wiki, navigate to `/guard`: an empty-state renders ("No guard policy configs found"), no crash, and `/config` still lists all CI configs normally | FR-17.4, FR-17.5 |
+| 33 | Set `WORKSPACE_GUARD_CONFIG_ROOT` to a vendored copy of the guard config tree (e.g. a CI artifact dir); confirm `/guard` lists its configs without code changes | FR-17.5 |
+| 34 | From `/guard/guard_config_keys`, verify the page is read-only: no edit/submit controls for the YAML or schema beyond the feedback widget | FR-17.7, NFR-4.2 |

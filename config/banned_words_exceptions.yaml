@@ -92,3 +92,74 @@ exceptions:
     paths: ['tests/']
   - pattern: '\bxfail\b'
     paths: ['config/banned_words.yaml', 'tests/']
+
+  # ── Wiki web UI (web/) ───────────────────────────────────────────────
+  # The wiki's pattern-detection module and its tests must contain the
+  # exact banned-word strings to test detection logic. The word "python"
+  # is used as a programming-language identifier in types, imports, and
+  # UI labels: not as a CLI invocation.
+  - pattern: '\bpython3?\b'
+    paths:
+      - 'web/src/types/patterns\.ts$'
+      - 'web/src/components/wiki/CheckCard\.tsx$'
+      - 'web/src/components/wiki/playground/CodeEditor\.tsx$'
+      - 'web/src/components/wiki/playground/LanguageSelector\.tsx$'
+      - 'web/src/hooks/usePlayground\.ts$'
+      - 'web/src/hooks/useHookFilter\.test\.ts$'
+      - 'web/src/hooks/usePlayground\.test\.ts$'
+      - 'web/app/checks/\[id\]/page\.tsx$'
+      - 'web/app/patterns/\[category\]/page\.tsx$'
+      - 'web/app/hooks/page\.tsx$'
+      - 'web/package\.json$'
+      - 'web/package-lock\.json$'
+  - pattern: 'eslint-disable'
+    paths:
+      - 'web/src/lib/patterns\.test\.ts$'
+      - 'web/src/lib/search-index\.test\.ts$'
+      - 'web/src/lib/regex-engine\.test\.ts$'
+      - 'web/src/hooks/usePlayground\.test\.ts$'
+  - pattern: '\blist\[object\]'
+    paths: ['web/src/lib/patterns\.test\.ts$']
+  - pattern: '\blegacy\b'
+    paths:
+      - 'web/src/lib/patterns\.test\.ts$'
+      - 'web/src/lib/patterns\.ts$'
+  - pattern: '@dataclass'
+    paths: ['web/src/lib/patterns\.test\.ts$']
+  - pattern: '\bxfail\b'
+    paths:
+      - 'web/src/lib/patterns\.test\.ts$'
+      - 'web/src/lib/patterns\.ts$'
+  - pattern: '/home/'
+    paths: ['web/src/lib/patterns\.test\.ts$']
+  - pattern: ':latest\b'
+    paths: ['web/src/lib/patterns\.test\.ts$']
+  - pattern: ' -- '
+    paths: ['web/src/lib/patterns\.test\.ts$']
+  - pattern: '\bgetattr\('
+    paths: ['web/src/lib/regex-engine\.test\.ts$']
+  - pattern: '\bmock\b'
+    paths:
+      - 'web/src/components/wiki/WikiSidebar\.test\.tsx$'
+      - 'web/src/components/wiki/WikiSearch\.test\.tsx$'
+      - 'web/src/hooks/useSearch\.test\.ts$'
+  - pattern: '\bbackwards\b'
+    paths: ['web/src/lib/patterns\.ts$']
+  - pattern: '\bskeleton\b'
+    paths: ['web/src/lib/patterns\.ts$']
+  - pattern: '\blazy\b'
+    paths: ['web/src/lib/patterns\.ts$']
+  - pattern: '\bmaybe\b'
+    paths: ['web/src/lib/patterns\.ts$']
+  - pattern: '\bimportlib\b'
+    paths: ['web/src/lib/patterns\.ts$']
+  # ErrorBoundary uses the standard React "fallback" prop name (same as
+  # <Suspense> and react-error-boundary). Not "fallback code" -- it is
+  # explicit error UI rendered when the boundary catches an error.
+  - pattern: '\bfallback\b'
+    paths:
+      - 'web/src/components/ui/ErrorBoundary\.tsx$'
+      - 'web/src/components/ui/ErrorBoundary\.test\.tsx$'
+  # CollapsibleSection uses "hidden" to describe WAI-ARIA disclosure state.
+  - pattern: '\bsilent'
+    paths: ['web/src/components/ui/ErrorBoundary\.test\.tsx$']

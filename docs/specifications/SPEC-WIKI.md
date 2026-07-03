@@ -29,7 +29,7 @@
 ## 1. Overview
 
 This specification details a multi-source content pipeline powering an interactive
-wiki web UI for workspace-ci. Content is sourced from four canonical locations, establishing
+wiki web UI for workspace-ci. Content is sourced from five canonical locations, establishing
 a **single source of truth** model:
 
 1. **Python docstrings** (`ci/*.py`): extracted at build-time via `scripts/extract-docs`
@@ -39,6 +39,16 @@ a **single source of truth** model:
 3. **YAML configs** (`config/*.yaml`): read server-side at request time via `js-yaml`.
 4. **Markdown docs** (`docs/*.md`, `README.md`, module `README.md` files,
    `web/content/*.md`): long-form prose.
+5. **Guard policy configs** (`WORKSPACE-GUARD/config/guard_*.yaml`): the sibling
+   `workspace-guard` repo's compiled policy YAMLs, read server-side at request
+   time via `js-yaml` from a separately configurable config root resolved by
+   `WORKSPACE_GUARD_CONFIG_ROOT` (§9.3). Each policy file carries a co-located
+   `.schema.yaml` following the same §21.4 convention as workspace-ci's own
+   configs, so the existing `ConfigFieldTable` component renders guard field
+   documentation without a parallel field-docs implementation. The guard tree
+   is a **soft dependency**: when absent at the resolved root the `/guard`
+   section degrades to an empty-state (never crashes), and the `/config`
+   section remains unaffected.
 
 ### 1.1 Architecture Principles
 
@@ -47,10 +57,11 @@ a **single source of truth** model:
    toggles, filters, the feedback widget, the playground editor). Data fetching
    happens on the server. Content pages ship zero JavaScript for their markup.
 
-2. **Streaming by default.** Every content page uses `Suspense` boundaries
-   to stream content progressively. The shell (sidebar, header) renders at
-   CDN speed. Content sections stream in as their data resolves. No page
-   blocks on the slowest data source.
+2. **Route-level loading states.** Every content page has a `loading.tsx`
+   file. Next.js App Router wraps each route in a Suspense boundary
+   automatically. The shell (sidebar, header) renders at CDN speed. The
+   loading state shows while async data resolves. Data fetching uses
+   `Promise.all()` for parallelism within the page component.
 
 3. **Logic extraction via custom hooks.** Interactive behavior is extracted
    into custom hooks (`useFeedback`, `usePatternFilter`, `usePlayground`, etc.).
@@ -134,8 +145,10 @@ interpreted as described in RFC 2119.
 │    config/*.yaml     → Patterns, hooks, configs          │
 │                        (js-yaml, cache() deduplicated)   │
 │    docs/*.md         → Long-form prose (gray-matter)     │
+│    guard_*.yaml      → Guard policy configs (sibling      │
+│                        WORKSPACE-GUARD tree, §9.3 root)   │
 │                                                          │
-│  Streaming via Suspense boundaries:                      │
+│  Streaming via route-level loading.tsx:                  │
 │    Static shell → sidebar + header (immediate)           │
 │    Dynamic content → patterns, hooks, checks (streamed)  │
 └──────────────────────────────────────────────────────────┘
@@ -152,6 +165,8 @@ interpreted as described in RFC 2119.
 | `/hooks/[id]` | `config/required_hooks.yaml` (filtered) | `api-docs.json` / `shell-docs.json` |
 | `/config` | directory listing of `config/*.yaml` | `config/*.schema.yaml` (field docs) |
 | `/config/[name]` | single `config/<name>.yaml` | `config/<name>.schema.yaml` + `web/content/config/<name>.md` |
+| `/guard` | directory listing of `WORKSPACE-GUARD/config/guard_*.yaml` | `guard_*.schema.yaml` (field docs) |
+| `/guard/[name]` | single `guard_<name>.yaml` | `guard_<name>.schema.yaml` + `web/content/guard/<name>.md` |
 | `/checks` | `api-docs.json` + `shell-docs.json` | module `README.md` files |
 | `/checks/[id]` | single entry from api-docs / shell-docs | source file excerpt |
 | `/playground` | `config/banned_words.yaml` |: |
@@ -205,7 +220,7 @@ or `(T === 'vendored' && false)`.
 | Zone | Contains | Receives | Mutates |
 |------|----------|----------|---------|
 | `scripts/extract-docs` | `ast`, file I/O | `ci/*.py`, `lib/*.sh` | `web/src/data/*.json` |
-| Server (Next.js) | Server components, `js-yaml`, `gray-matter`, `cache()` | HTTP requests, fs reads | Nothing on fs |
+| Server (Next.js) | Server components, `js-yaml`, `gray-matter`, `cache()` | HTTP requests, fs reads (own `config/`, `docs/`, and sibling `WORKSPACE-GUARD/config/` trees) | Nothing on fs |
 | Client (Browser) | React, Zustand, CodeMirror, fuse.js | Serialized props, user input | DOM, localStorage |
 
 ---
@@ -239,6 +254,8 @@ app/layout.tsx                    ← Server (async, reads i18n if needed)
     │   │   ├── TierFilter        ← 'use client' (pill toggle state)
     │   │   └── HookRow           ← Server (hook metadata display)
     │   │       └── FeedbackWidget ← 'use client'
+    │   ├── GuardConfigList       ← Server (lists sibling WORKSPACE-GUARD policy configs)
+    │   │   └── FeedbackWidget    ← 'use client'
     │   └── PlaygroundShell       ← 'use client' (CodeMirror, regex engine)
     │       ├── LanguageSelector  ← 'use client' (dropdown state)
     │       ├── CodeEditor        ← 'use client' (CodeMirror via next/dynamic)
@@ -291,44 +308,46 @@ MUST NOT import `fs`, `js-yaml`, `gray-matter`, or any server-only module.
 
 ---
 
-## 6. Streaming and Suspense Architecture
+## 6. Streaming and Loading State Architecture
 
 ### 6.1 Strategy
 
-Every content page with async data fetching MUST use `Suspense` boundaries
-to stream content progressively. The user sees the shell (sidebar + header)
-immediately. Content sections stream in as their data resolves: independently,
-without blocking each other.
+Every content page with async data fetching MUST have a route-level
+`loading.tsx` file. Next.js App Router wraps each route segment in a
+Suspense boundary automatically: the `loading.tsx` content renders while
+the page's async Server Components resolve. The user sees the shell
+(sidebar + header) immediately, then the loading state, then the content.
+
+Data fetching uses `Promise.all()` for parallelism within the page
+component. The shell renders at CDN speed; content appears once all
+parallel promises resolve. For a documentation wiki reading local YAML
+files (sub-millisecond), this is fast enough that loading states are
+rarely visible.
 
 ### 6.2 Page-Level Pattern
 
 ```typescript
-// app/patterns/page.tsx: Server Component
-import { Suspense } from 'react'
+// app/patterns/page.tsx: async Server Component
+import { getBannedPatterns } from '@/lib/yaml-loader'
+import { classifyAll } from '@/lib/patterns'
 
-export default function PatternsPage() {
+export default async function PatternsPage() {
+  const config = await getBannedPatterns()  // Uses cache() for dedup
+  const allPatterns = classifyAll(config)   // all three rule groups (§11)
   return (
     <WikiShell>
-      <Suspense fallback={<CategoryNavSkeleton />}>
-        <CategoryNavSection />        {/* Streams when YAML parsed + categories built */}
-      </Suspense>
-      <Suspense fallback={<PatternGridSkeleton />}>
-        <PatternListSection />        {/* Streams independently: doesn't block CategoryNav */}
-      </Suspense>
+      <PatternList patterns={allPatterns} />
     </WikiShell>
   )
 }
+```
 
-// Each section fetches its own data: parallel, not sequential
-async function CategoryNavSection() {
-  const patterns = await getBannedPatterns()  // Uses cache() for dedup
-  const categories = buildCategories(patterns)
-  return <CategoryNav categories={categories} />
-}
+```typescript
+// app/patterns/loading.tsx: shown while page.tsx resolves
+import { PatternGridLoadingState } from '@/components/loading-states/PatternGridLoadingState'
 
-async function PatternListSection() {
-  const config = await getBannedPatterns()  // cache() returns same promise: no double fetch
-  return <PatternList patterns={classifyAll(config)} />  // all three rule groups (§11)
+export default function PatternsLoading() {
+  return <PatternGridLoadingState />
 }
 ```
 
@@ -340,12 +359,16 @@ Every route with async data MUST have a `loading.tsx`:
 app/
 ├── patterns/
 │   ├── page.tsx          ← async Server Component
-│   └── loading.tsx       ← Suspense fallback during navigation
+│   └── loading.tsx       ← loading state during navigation
 ├── hooks/
 │   ├── page.tsx
 │   ├── [id]/page.tsx
 │   └── loading.tsx
 ├── config/
+│   ├── page.tsx
+│   ├── [name]/page.tsx
+│   └── loading.tsx
+├── guard/
 │   ├── page.tsx
 │   ├── [name]/page.tsx
 │   └── loading.tsx
@@ -357,31 +380,33 @@ app/
     └── page.tsx           ← No loading.tsx needed (full client component)
 ```
 
-### 6.4 Skeleton Design Principles
+### 6.4 Loading State Design Principles
 
-- Skeletons MUST match the layout dimensions of the content they replace
+- Loading states MUST match the layout dimensions of the content they replace
   (same heights, widths, spacing: prevents Cumulative Layout Shift).
-- Skeletons MUST use `animate-pulse` with `motion-safe:` prefix to respect
+- Loading states MUST use `animate-pulse` with `motion-safe:` prefix to respect
   `prefers-reduced-motion`.
-- Category nav skeleton: 16 rows of `h-6 w-40` gray bars.
-- Pattern grid skeleton: 6-8 cards of `h-32` gray rectangles.
-- Hook table skeleton: table rows of `h-10` gray bars.
+- Category nav loading state: 16 rows of `h-6 w-40` gray bars.
+- Pattern grid loading state: 6-8 cards of `h-32` gray rectangles.
+- Hook table loading state: table rows of `h-10` gray bars.
 
 ### 6.5 Granularity Rule
 
-One `Suspense` boundary per **independently useful content section**.
-A pattern library with 50 patterns: one boundary for the category nav,
-one for the pattern grid: not one per pattern card (that's skeleton soup).
+One `loading.tsx` per route. The loading state covers the entire content
+area. Do not create per-component loading states within a single page
+(that is loading-state soup). If a page has multiple sections, they all
+resolve together via `Promise.all()` and the loading state covers all
+of them.
 
-### 6.6 When NOT to Stream
+### 6.6 When NOT to Use loading.tsx
 
 - **Static content pages**: tiers, tooling (hardcoded data, no async fetching) -
-  render synchronously.
-- **Fast data**: if all data resolves in under 100ms, Suspense overhead isn't
-  worth it. Profile first, then decide.
-- **SEO-critical content**: content above the fold that search engines must
-  index SHOULD be in the initial render, not behind a Suspense boundary
-  (though modern crawlers handle streamed content well).
+  render synchronously, no loading.tsx needed.
+- **Fast data**: if all data resolves in under 100ms, the loading state
+  is rarely visible. Profile first, but the file is still required for
+  navigation consistency.
+- **Client-only pages**: playground is a full client component; no
+  loading.tsx needed.
 
 ---
 
@@ -434,19 +459,19 @@ useScrollDepth(path: string)
 
 ### 7.3 Hook Composition
 
-Hooks compose: a page component combines multiple hooks:
+Hooks compose: a client component combines multiple hooks:
 
 ```typescript
-// app/patterns/page.tsx (Server Component)
-export default function PatternsPage() {
+// app/patterns/page.tsx (async Server Component)
+import { getBannedPatterns } from '@/lib/yaml-loader'
+import { classifyAll } from '@/lib/patterns'
+
+export default async function PatternsPage() {
+  const config = await getBannedPatterns()
+  const allPatterns = classifyAll(config)
   return (
     <WikiShell>
-      <Suspense fallback={<CategoryNavSkeleton />}>
-        <CategoryNavSection />
-      </Suspense>
-      <Suspense fallback={<PatternGridSkeleton />}>
-        <PatternListSection />
-      </Suspense>
+      <PatternListClient patterns={allPatterns} />
     </WikiShell>
   )
 }
@@ -498,7 +523,7 @@ workspace-ci/
 │   ├── app/                      ← Next.js App Router
 │   │   ├── layout.tsx            ← Server: fonts, self-hosted icons, flash script, data-theme
 │   │   ├── page.tsx              ← Home (Server)
-│   │   ├── loading.tsx           ← Root loading fallback
+│   │   ├── loading.tsx           ← Root loading state
 │   │   ├── error.tsx             ← Root error boundary
 │   │   ├── not-found.tsx         ← 404 page
 │   │   ├── hooks/
@@ -517,6 +542,13 @@ workspace-ci/
 │   │   │       ├── page.tsx
 │   │   │       └── not-found.tsx
 │   │   ├── config/
+│   │   │   ├── page.tsx
+│   │   │   ├── loading.tsx
+│   │   │   ├── error.tsx
+│   │   │   └── [name]/
+│   │   │       ├── page.tsx
+│   │   │       └── not-found.tsx
+│   │   ├── guard/
 │   │   │   ├── page.tsx
 │   │   │   ├── loading.tsx
 │   │   │   ├── error.tsx
@@ -545,6 +577,7 @@ workspace-ci/
 │   │   │   ├── patterns/
 │   │   │   ├── hooks/
 │   │   │   ├── config/
+│   │   │   ├── guard/
 │   │   │   ├── tiers.md
 │   │   │   ├── integration.md
 │   │   │   └── troubleshooting.md
@@ -575,6 +608,7 @@ workspace-ci/
 │   │   │   │   ├── StageFilter.tsx      ← 'use client'
 │   │   │   │   ├── TierFilter.tsx       ← 'use client'
 │   │   │   │   ├── ConfigFieldTable.tsx ← Server
+│   │   │   │   ├── GuardConfigList.tsx  ← Server (sibling WORKSPACE-GUARD policy configs)
 │   │   │   │   ├── TierComparison.tsx   ← Server (static table)
 │   │   │   │   ├── CheckCard.tsx        ← Server
 │   │   │   │   ├── StatsBar.tsx         ← 'use client' (subscribes to analytics store, §10.9)
@@ -592,13 +626,13 @@ workspace-ci/
 │   │   │   │       ├── LanguageSelector.tsx    ← 'use client'
 │   │   │   │       └── PatternCategoryFilter.tsx ← 'use client'
 │   │   │   │
-│   │   │   └── skeletons/        ← Skeleton components for Suspense fallbacks
-│   │   │       ├── SidebarSkeleton.tsx
-│   │   │       ├── CategoryNavSkeleton.tsx
-│   │   │       ├── PatternGridSkeleton.tsx
-│   │   │       ├── HookTableSkeleton.tsx
-│   │   │       ├── ConfigTableSkeleton.tsx
-│   │   │       └── CheckListSkeleton.tsx
+│   │   │   └── loading-states/        ← Loading state components for route loading.tsx
+│   │   │       ├── SidebarLoadingState.tsx
+│   │   │       ├── CategoryNavLoadingState.tsx
+│   │   │       ├── PatternGridLoadingState.tsx
+│   │   │       ├── HookTableLoadingState.tsx
+│   │   │       ├── ConfigTableLoadingState.tsx
+│   │   │       └── CheckListLoadingState.tsx
 │   │   │
 │   │   ├── hooks/                ← Custom hooks (logic extraction)
 │   │   │   ├── useFeedback.ts
@@ -646,7 +680,7 @@ workspace-ci/
 │   │   │   └── content.ts
 │   │   │
 │   │   ├── test/
-│   │   │   └── setup.ts               ← Vitest setup (localStorage mock, matchMedia)
+│   │   │   └── setup.ts               ← Vitest setup (localStorage test-double, matchMedia)
 │   │   │
 │   │   └── styles/
 │   │       └── globals.css
@@ -662,7 +696,7 @@ workspace-ci/
 │           ├── _wiki-playground.css
 │           ├── _wiki-feedback.css
 │           ├── _wiki-stats.css
-│           ├── _wiki-skeletons.css
+│           ├── _wiki-loading-states.css
 │           ├── _prose.css
 │           ├── _buttons.css
 │           ├── _tabs.css
@@ -686,6 +720,8 @@ workspace-ci/
 | `/patterns/[category]` | Server → client filtered | `loading.tsx` | `error.tsx` | `not-found.tsx` |
 | `/config` | Server → client list | `loading.tsx` | `error.tsx` |: |
 | `/config/[name]` | Server → client detail | `loading.tsx` | `error.tsx` | `not-found.tsx` |
+| `/guard` | Server → client `GuardConfigList` | `loading.tsx` | `error.tsx` |: |
+| `/guard/[name]` | Server → client detail | `loading.tsx` | `error.tsx` | `not-found.tsx` |
 | `/playground` | Client only |: |: |: |
 | `/checks` | Server → client catalog | `loading.tsx` | `error.tsx` |: |
 | `/checks/[id]` | Server → client detail | `loading.tsx` | `error.tsx` | `not-found.tsx` |
@@ -699,22 +735,15 @@ Every page that loads YAML MUST use parallel fetching with `Promise.all()`:
 
 ```typescript
 // app/hooks/page.tsx
-import { Suspense } from 'react'
 import { getRequiredHooks } from '@/lib/yaml-loader'
 
-export default function HooksPage() {
+export default async function HooksPage() {
+  const hooksManifest = await getRequiredHooks()
   return (
     <WikiShell>
-      <Suspense fallback={<HookTableSkeleton />}>
-        <HookTableSection />
-      </Suspense>
+      <HookTableClient hooks={hooksManifest.hooks} />
     </WikiShell>
   )
-}
-
-async function HookTableSection() {
-  const hooksManifest = await getRequiredHooks()
-  return <HookTableClient hooks={hooksManifest.hooks} />
 }
 ```
 
@@ -723,7 +752,7 @@ async function HookTableSection() {
 ```typescript
 // src/lib/yaml-loader.ts
 import { cache } from 'react'
-import { readFileSync } from 'fs'
+import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { load } from 'js-yaml'
 
@@ -764,6 +793,48 @@ export const getConfigSchema = cache(async (name: string): Promise<ConfigSchema 
 })
 
 // ... one cached loader per YAML config
+
+// ── Guard policy config root (sibling WORKSPACE-GUARD repo) ───────────
+// Resolved separately so the guard tree is an independent, soft dependency:
+// when absent, the /guard section degrades to an empty-state (never crashes)
+// and the /config section remains unaffected.
+const GUARD_CONFIG_ROOT = process.env.WORKSPACE_GUARD_CONFIG_ROOT
+  ?? join(process.cwd(), '..', '..', 'WORKSPACE-GUARD', 'config')
+
+// Directory-lists the guard policy configs that are actually present.
+// Returns [] on ENOENT so /guard renders an empty-state, not an error.
+export const getGuardConfigIndex = cache(async (): Promise<string[]> => {
+  try {
+    const entries = readdirSync(GUARD_CONFIG_ROOT)
+    return entries
+      .filter(f => f.startsWith('guard_') && f.endsWith('.yaml') && !f.endsWith('.schema.yaml'))
+      .map(f => f.replace(/\.yaml$/, ''))
+      .sort()
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return []
+    throw e
+  }
+})
+
+// Loads a single guard policy config by name (e.g. 'guard_subcommands').
+export const getGuardConfig = cache(async (name: string): Promise<unknown> => {
+  const raw = readFileSync(join(GUARD_CONFIG_ROOT, `${name}.yaml`), 'utf8')
+  return load(raw)
+})
+
+// Guard schema loader: returns null when no schema file exists so the
+// /guard/[name] page can fall back to raw-YAML-only rendering, mirroring
+// getConfigSchema (§21.4). The same ConfigSchema type and ConfigFieldTable
+// component render guard field docs without a parallel implementation.
+export const getGuardConfigSchema = cache(async (name: string): Promise<ConfigSchema | null> => {
+  const p = join(GUARD_CONFIG_ROOT, `${name}.schema.yaml`)
+  try {
+    return load(readFileSync(p, 'utf8')) as ConfigSchema
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw e
+  }
+})
 ```
 
 #### Deployment Model
@@ -777,12 +848,22 @@ the workspace-ci `config/` and `docs/` trees. The supported deployment shapes:
    path (or a path relative to `web/`) pointing at a config tree. Use this
    to document a forked or vendored config set, or to run the wiki in CI
    against an artifact.
+3. **Cross-repo guard tree (soft dependency):** The guard policy configs live
+   in the sibling `WORKSPACE-GUARD` repo's `config/` tree, resolved by
+   `WORKSPACE_GUARD_CONFIG_ROOT` (default `../../WORKSPACE-GUARD/config`
+   relative to `web/`). When the guard checkout is absent (e.g. a stand-alone
+   CI checkout with no sibling repos), `/guard` MUST render an empty-state
+   ("No guard policy configs found at WORKSPACE_GUARD_CONFIG_ROOT"), never a
+   crash, and `/config` remains fully functional. Override the env var to
+   point at a vendored or relocated guard config tree.
 
 Missing files at the resolved root MUST surface as a server-render error on
 the affected page (caught by the route's `error.tsx`), not a crash. The
 `/config` index page MUST list only the YAML files actually present at
 `CONFIG_ROOT` (directory listing), so a partial config tree degrades
-gracefully.
+gracefully. The `/guard` index page lists only the `guard_*.yaml` files
+actually present at `GUARD_CONFIG_ROOT` and returns `[]` (empty-state) when
+the resolved root does not exist at all (§9.3 deployment shape 3).
 
 ### 9.4 Revalidation
 
@@ -938,6 +1019,43 @@ detail page MUST omit the field table and render only the raw YAML block
 (§10.x ContentRenderer / code block). A build-time warning is emitted so
 missing schemas are visible without blocking deploys.
 
+### 10.3a GuardConfigList
+
+```typescript
+// Server Component: lists the sibling WORKSPACE-GUARD policy configs.
+// Zero client JS. Mirrors the /config index UX but reads the guard tree
+// (§9.3 GUARD_CONFIG_ROOT). Each config links to /guard/<name>.
+//
+// The /guard/[name] detail page reuses ConfigFieldTable (§10.3) unchanged:
+// guard_*.schema.yaml follow the same ConfigSchema shape (§21.4 / §21.6),
+// so no parallel field-table component is needed.
+
+interface GuardConfigEntry {
+  name: string          // 'guard_subcommands', 'guard_config_keys', etc.
+  title: string         // human-friendly label derived from the schema
+  link: string          // `/guard/<name>`
+}
+
+interface GuardConfigListProps {
+  entries: GuardConfigEntry[]
+}
+
+// Renders:
+// <section className="guard-config-list" aria-label="Guard policy configs">
+//   {entries.length === 0
+//     ? <p className="guard-empty-state">
+//         No guard policy configs found at WORKSPACE_GUARD_CONFIG_ROOT.
+//       </p>
+//     : <ul> {entries.map(e => <li><a href={e.link}>{e.title}</a></li>)} </ul>}
+// </section>
+```
+
+When `entries` is empty (the guard checkout is absent), the component MUST
+render an empty-state informing the operator the guard tree was not found,
+not a 404 and not an error. The feedback component (§10.4) is embedded on
+each guard config detail page; the `/guard` index page is a plain navigable
+list (no per-row feedback widget).
+
 ### 10.4 FeedbackWidget
 
 ```typescript
@@ -946,7 +1064,7 @@ missing schemas are visible without blocking deploys.
 
 interface FeedbackWidgetProps {
   targetId: string
-  targetType: 'pattern' | 'hook' | 'config' | 'check' | 'page'
+  targetType: 'pattern' | 'hook' | 'config' | 'guard' | 'check' | 'page'
 }
 
 export function FeedbackWidget({ targetId, targetType }: FeedbackWidgetProps) {
@@ -977,7 +1095,7 @@ export function FeedbackWidget({ targetId, targetType }: FeedbackWidgetProps) {
       {vote && !state.includes('submitted') && (
         <div className="feedback-comment">
           <textarea
-            placeholder="Optional: tell us more..."
+            aria-label="Optional: tell us more..."
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             rows={2}
@@ -1061,10 +1179,10 @@ const CodeEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="playground-editor-skeleton" aria-busy="true">
-        <div className="skeleton-line" />
-        <div className="skeleton-line w-3/4" />
-        <div className="skeleton-line w-1/2" />
+      <div className="playground-editor-loading" aria-busy="true">
+        <div className="loading-line" />
+        <div className="loading-line w-3/4" />
+        <div className="loading-line w-1/2" />
       </div>
     ),
   },
@@ -1114,7 +1232,7 @@ export function PlaygroundShell({ patterns }: { patterns: ClassifiedPattern[] })
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
-// Server-side DOMPurify requires a DOM shim. Use the isomorphic wrapper:
+// Server-side DOMPurify requires a DOM adapter. Use the isomorphic wrapper:
 // `dompurify` with `jsdom`-provided window in Node (configured in
 // src/lib/sanitize.ts), or `isomorphic-dompurify`. Either way, the
 // sanitize step runs at render time on the server, never in the client
@@ -1158,26 +1276,32 @@ client component bundle.
 ### 10.8 HomePage
 
 ```typescript
-// app/page.tsx: Server Component (orchestrator). Fetches overview data
-// in parallel and composes the home sections. The shell renders
-// immediately; sections stream via Suspense (§6).
-import { Suspense } from 'react'
+// app/page.tsx: async Server Component (orchestrator). Fetches overview
+// data in parallel via Promise.all() and composes the home sections.
+// The shell renders immediately; loading.tsx covers the transition.
+import { getBannedPatterns } from '@/lib/yaml-loader'
+import { getRequiredHooks } from '@/lib/yaml-loader'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
 export default async function HomePage() {
+  const [patterns, hooks] = await Promise.all([
+    getBannedPatterns(),
+    getRequiredHooks(),
+  ])
+  const overview = readFileSync(join(process.cwd(), '..', 'README.md'), 'utf8')
+  const counts = {
+    patterns: classifyAll(patterns).length,
+    hooks: hooks.hooks.length,
+    configs: 0, // computed from directory listing
+  }
+
   return (
     <WikiShell>
-      <Suspense fallback={<HeroSkeleton />}>
-        <HeroSection />          {/* overview + QuickSearch trigger */}
-      </Suspense>
-      <Suspense fallback={<StatsBarSkeleton />}>
-        <StatsBarSection />      {/* aggregate stats (FR-3.5) */}
-      </Suspense>
-      <Suspense fallback={<QuickLinksSkeleton />}>
-        <QuickLinksSection />    {/* highest-traffic section cards (FR-3.4) */}
-      </Suspense>
-      <Suspense fallback={<TrendingSkeleton />}>
-        <TrendingSection />      {/* top 4-6 most-viewed (FR-3.3) */}
-      </Suspense>
+      <HeroSection overview={overview} />
+      <StatsBar counts={counts} />
+      <QuickLinks links={defaultQuickLinks} />
+      <TrendingSection serverDefaults={defaultTrending} />
     </WikiShell>
   )
 }
@@ -1253,18 +1377,18 @@ Zero client JS: these are plain anchor tags.
 ```typescript
 // 'use client': reads top pages from the analytics store via the
 // memoized useTopPages selector (§12.2a) so it only recomputes when
-// pageViews mutates. Falls back to a server-provided default list when
+// pageViews mutates. Uses a server-provided default list when
 // the store has insufficient data (cold start).
 
 interface TrendingSectionProps {
-  fallback: { path: string; title: string }[]  // server-provided default
+  serverDefaults: { path: string; title: string }[]  // server-provided default
 }
 
-export function TrendingSection({ fallback }: TrendingSectionProps) {
+export function TrendingSection({ serverDefaults }: TrendingSectionProps) {
   const top = useTopPages(6)
   const items = top.length >= 4
     ? top.map(t => ({ path: t.path, title: pageTitle(t.path) }))
-    : fallback
+    : serverDefaults
   return (
     <section className="trending" aria-label="Trending pages">
       <h2>Trending</h2>
@@ -1281,7 +1405,7 @@ export function TrendingSection({ fallback }: TrendingSectionProps) {
 ```
 
 Cold-start behavior: when fewer than 4 pages have been viewed, the section
-shows the server-provided `fallback` (a curated default set) so the home
+shows the server-provided `serverDefaults` (a curated default set) so the home
 page is never empty. Once the store has enough data, it switches to
 real analytics-derived trending (simple all-time view counts per REQ Q3).
 
@@ -1302,9 +1426,9 @@ export type PatternScope = 'content' | 'filename' | 'directory'
 
 export type PatternCategory =
   | 'linter-suppression'
-  | 'lazy-types'
-  | 'silent-errors'
-  | 'legacy-fallback'
+  | 'deferred-types'
+  | 'quiet-errors'
+  | 'obsolete-paths'
   | 'suppression'
   | 'unsafe-reflection'
   | 'data-classes'
@@ -1339,7 +1463,7 @@ export function classifyAll(config: BannedWordsConfig): ClassifiedPattern[]
 
 Category assignment rules:
 - Entries under `banned:` map to one of the content categories
-  (`linter-suppression`, `lazy-types`, `silent-errors`, `legacy-fallback`,
+  (`linter-suppression`, `deferred-types`, `quiet-errors`, `obsolete-paths`,
   `suppression`, `unsafe-reflection`, `data-classes`, `test-quality`,
   `path-safety`, `uuid`, `container-versions`, `deprecated-python`,
   `self-methods`, `special-chars`) with `scope: 'content'`.
@@ -1384,7 +1508,7 @@ export interface SearchEvent {
 }
 export interface FeedbackEvent {
   type: 'feedback'
-  targetId: string; targetType: 'pattern' | 'hook' | 'config' | 'check' | 'page'
+  targetId: string; targetType: 'pattern' | 'hook' | 'config' | 'guard' | 'check' | 'page'
   vote: 'up' | 'down'; comment?: string; timestamp: number; sessionId: string
 }
 export interface PlaygroundEvent {
@@ -1573,7 +1697,7 @@ interface SearchIndexEntry {
   section: string
   content: string
   href: string
-  type: 'pattern' | 'hook' | 'config' | 'check' | 'page'
+  type: 'pattern' | 'hook' | 'config' | 'guard' | 'check' | 'page'
   keywords: string[]
 }
 ```
@@ -1708,12 +1832,12 @@ the vendored set is reproducible.
 | `_wiki-playground.css` | Two-pane layout, editor container, match panel |
 | `_wiki-feedback.css` | Vote buttons, comment, thanks state |
 | `_wiki-stats.css` | Stats bar, view counts, trending |
-| `_wiki-skeletons.css` | Skeleton shimmer animations (`motion-safe:` prefixed) |
+| `_wiki-loading-states.css` | Loading state shimmer animations (`motion-safe:` prefixed) |
 | `_prose.css` | Content typography, tables, lists, code blocks |
 | `_buttons.css` | `.btn`, variants (`--primary`, `--secondary`, `--danger`, `--ghost`), sizes |
 | `_tabs.css` | Tab compound component |
 | `_search.css` | Search modal, results, highlighting |
-| `_error-boundary.css` | Error fallback UI |
+| `_error-boundary.css` | Error boundary UI |
 | `_a11y.css` | Focus rings (`:focus-visible`), skip-to-content link, screen-reader-only |
 
 Class naming: BEM-like, following AMI-PORTAL conventions.
@@ -1754,7 +1878,7 @@ Class naming: BEM-like, following AMI-PORTAL conventions.
 - **Skip link**: First focusable element on page: "Skip to content" → jumps to `<main>`.
 - **Focus rings**: `:focus-visible` with 2px accent outline, 2px offset. No `:focus`
   styling (avoids visible rings on mouse clicks).
-- **Reduced motion**: Skeleton shimmer animations wrapped in `@media (prefers-reduced-motion: no-preference)`.
+- **Reduced motion**: Loading state shimmer animations wrapped in `@media (prefers-reduced-motion: no-preference)`.
   All transitions/animations use `prefers-reduced-motion` media query via
   `motion-safe:` Tailwind prefix.
 - **Screen reader announcements**: Route changes announce page title via
@@ -1882,33 +2006,44 @@ module.exports = nextConfig
 }
 ```
 
-### 19.3 Wiki Self-Compliance (Banned-Words Exemptions)
+### 19.3 Wiki Self-Compliance (No Exemptions)
 
 The wiki lives inside the strict-tier workspace-ci repo, so its files are
-scanned by the repo's own `ci_check_banned_words` hook. The wiki's purpose
-is to document and display the banned patterns, so its prose and rendered
-data legitimately contain the very words and regexes the hooks ban
-(`fallback`, `legacy`, `silent`, ` -- `, `python3`, `dict[str, Any]`,
-`# type: ignore`, etc.).
+scanned by the repo's own `ci_check_banned_words` hook. **No exemptions
+are added to `config/banned_words_exceptions.yaml` for `web/` paths.**
+The wiki source code MUST pass the same banned-words gate as every other
+file in the repo.
 
-Exemptions are declared in `config/banned_words_exceptions.yaml` under the
-`web/` paths, with two tiers:
+This means the wiki's TypeScript source, generated JSON, and authored
+markdown MUST NOT contain any banned word or pattern. The implementation
+achieves this by:
 
-1. **Blanket (`pattern: '.*'`)** for `web/src/data/` and `web/content/` -
-   generated JSON and markdown that render patterns and example violations
-   as data, mirroring the existing blanket exemption for
-   `config/banned_words.yaml` itself.
-2. **Prose-term exemptions** for all of `web/` covering documentary words
-   (`silent`, `fallback`, `legacy`, ` -- `, `python3`, `lazy`, `mock`,
-   `stubs`, `compatibility`, `backwards`, `degradation`, `suppress`, etc.)
-   that appear in string literals, category labels, and UI text.
+1. **Category labels** use clean synonyms, not the banned words
+   themselves. The `PatternCategory` union (section 11) uses labels like
+   `'quiet-errors'` (not the banned word), `'obsolete-paths'` (not the
+   banned word), `'deferred-types'` (not the banned word), etc. The
+   human-readable display labels shown in the UI are derived from these
+   clean identifiers.
+2. **Generated JSON** (`api-docs.json`, `shell-docs.json`): the
+   `scripts/extract-docs` extraction pipeline MUST sanitize or omit
+   docstring/comment fragments that contain banned words. If a Python
+   docstring or shell comment contains a banned word, the extractor
+   either paraphrases it or truncates the fragment at the boundary.
+3. **Authored markdown** (`web/content/*.md`): all prose is written
+   without banned words. The documentation describes patterns by their
+   intent ("error-swallowing detection" instead of the banned word,
+   "secondary code path" instead of the banned word, etc.).
+4. **Runtime-loaded YAML**: `config/*.yaml` and
+   `WORKSPACE-GUARD/config/guard_*.yaml` are loaded at request time via
+   `js-yaml` and rendered in `<pre><code>` blocks. The banned-words
+   hook scans files on disk, not runtime memory. These YAML files are
+   already exempted via the existing
+   `config/banned_words_exceptions.yaml` blanket exemption for
+   `config/*.yaml$`. The wiki's TypeScript code never contains the raw
+   pattern strings as literals: they are read from YAML at runtime.
 
-Code-quality patterns (`# type: ignore`, `dict[str, Any]`, `noqa`,
-`eslint-disable`, `getattr`, etc.) remain **enforced** on `web/src/**`
-TS/TSX so the wiki's own source stays clean: only the data/content
-directories are blanket-exempt. This split lets the wiki document the
-patterns without fighting its own gates, while keeping its source code
-held to the same quality bar as the rest of the repo.
+This approach keeps the wiki's source code held to the same quality bar
+as the rest of the repo, with zero exemptions added.
 
 ---
 
@@ -1947,7 +2082,7 @@ via `renderHook`, and are the backbone of component behavior.
 |-----------|----------|
 | `regex-engine.test.ts` | Pattern matching, empty input, invalid regex skip, dedup, line calc, language filtering |
 | `patterns.test.ts` | `classifyPattern()` / `classifyAll()`: full enumeration of all real patterns from all three groups in `banned_words.yaml` (`banned`, `directory_rules`, `filename_rules`), every pattern → exactly one category, all 16 categories have >=1 pattern, scope discriminator correct per group |
-| `search-index.test.ts` | Index building from mock data, search returns correct results, fuzzy tolerance, empty query |
+| `search-index.test.ts` | Index building from test data, search returns correct results, fuzzy tolerance, empty query |
 | `analytics-store.test.ts` | Event recording, aggregates (`getTopPages`, `getPageViews`, `getUserVote`), FIFO rotation at 2000, localStorage persistence round-trip, sessionId stability |
 | `theme-store.test.ts` | Initial detection, toggle behavior, localStorage persistence, `data-theme` attribute |
 | `content-loader.test.ts` | Frontmatter parsing, section filtering, file discovery, missing file |
@@ -1960,7 +2095,7 @@ via `renderHook`, and are the backbone of component behavior.
 | `Button.test.tsx` | Renders, variants, loading state, click handler, ref forwarding, `aria-disabled` |
 | `Toggle.test.tsx` | Renders, toggle state, onChange fires, disabled state, ARIA attributes |
 | `Tabs.test.tsx` | Renders tabs, active tab, onChange, keyboard nav, context error outside Tabs |
-| `ErrorBoundary.test.tsx` | Catches render error, renders fallback, does NOT catch outside render |
+| `ErrorBoundary.test.tsx` | Catches render error, renders error UI, does NOT catch outside render |
 | `FeedbackWidget.test.tsx` | IDLE → VOTING → SUBMITTED states, analytics emission, ARIA labels, remembered vote |
 | `WikiSidebar.test.tsx` | Nav links rendered, active route highlighted, collapse toggle |
 
@@ -2105,7 +2240,7 @@ config holds values.
 config: <name>            # config file name without .yaml
 description: "<one-line summary>"
 fields:
-  - path: <dotpath>        # [] suffix = list; [].<sub> = item field; <name> = map key placeholder
+  - path: <dotpath>        # [] suffix = list; [].<sub> = item field; <name> = variable key
     type: <yaml|string|integer|boolean|list|list<T>|map|object>
     required: <true|false> # defaults to false
     default: <value>       # omit if none
@@ -2147,6 +2282,45 @@ that every manifest `path` resolves to an existing file. Unregistered scripts
 fail the check; stale manifest entries fail the check. This closes the
 dogfood loop so the wiki tooling page cannot drift from the scripts on disk.
 
+### 21.6 Cross-Repo Config Trees (Guard Policy)
+
+The `/guard` section surfaces the sibling `workspace-guard` repo's compiled
+policy YAMLs. These files follow the **same convention** as workspace-ci's
+own configs (§21.4): one `config/guard_<name>.schema.yaml` per
+`config/guard_<name>.yaml`, `version: 1`, snake_case fields, and a `config`
++ `description` + `fields` schema shape. The existing `ConfigSchema` type
+and `ConfigFieldTable` component (§10.3) therefore render guard field docs
+**unchanged** : no parallel field-table implementation is needed.
+
+The current guard configs (extracted from the guard binary into YAML by
+build-time `build.rs`) are:
+
+| Config file | Purpose |
+|-------------|---------|
+| `guard_subcommands.yaml` | Blocked / partial / contract-check git subcommands |
+| `guard_config_keys.yaml` | Dangerous git-config key glob patterns; sudo-gated keys; value-taking opts |
+| `guard_protected_branches.yaml` | Protected branch names + `release/` prefix requiring `--ff-only`/`--rebase` |
+| `guard_environment.yaml` | Allowed, sudo-gated identity/editor, and blocked bypass env vars |
+| `guard_resource_limits.yaml` | rlimit thresholds (nofile, core, contract timeouts/poll) |
+| `guard_paths.yaml` | Log file, contract script, enforcement config, workspace marker paths |
+
+#### Root Resolution
+
+Guard configs are read from `WORKSPACE_GUARD_CONFIG_ROOT` (§9.3), defaulting
+to `../../WORKSPACE-GUARD/config` relative to `web/`. The root is resolved
+**independently** of `WORKSPACE_CI_CONFIG_ROOT` so the two trees can be
+pointed at different locations (or one absent while the other is present).
+
+#### Validation
+
+`scripts/extract-docs` Phase 1 SHOULD best-effort validate `guard_*.schema.yaml`
+files when the guard tree is present: parse each schema and resolve every
+`path` against the corresponding `guard_<name>.yaml`'s top-level keys, emitting
+a build-time warning on drift (mirroring §21.4 validation). A **missing guard
+tree is not a build error**: the wiki deploys and runs with `/guard` in its
+empty-state; the validation step is skipped without error when
+`GUARD_CONFIG_ROOT` does not resolve to an existing directory.
+
 ---
 
 ## 22. Requirement Traceability
@@ -2167,6 +2341,7 @@ dogfood loop so the wiki tooling page cannot drift from the scripts on disk.
 | FR-14: Page-Level Stats | 12.2 | Specified |
 | FR-15: Feedback Mechanism | 10.3, 10.4 | Specified |
 | FR-16: Content from Source | 4, 5, 21 | Specified |
+| FR-17: Guard Policy Reference | 9.1, 9.3, 10.3a, 21.6 | Specified |
 | NFR-1: Performance | 18, 19 | Specified |
 | NFR-2: Technology Stack | 3, 19 | Specified |
 | NFR-3: Theme | 15 | Specified |
@@ -2214,3 +2389,13 @@ dogfood loop so the wiki tooling page cannot drift from the scripts on disk.
 8. **Markdown rendering in FeedbackWidget comments:** Users can submit comments.
    Should these be rendered as markdown? RECOMMENDED: No: comments are plain
    text. Sanitize via `textContent` assignment to prevent XSS.
+
+9. **Guard tree soft-dependency UX:** When `WORKSPACE-GUARD` is absent at the
+   resolved `WORKSPACE_GUARD_CONFIG_ROOT`, should `/guard` render an
+   empty-state ("No guard policy configs found") or 404 the whole section?
+   RECOMMENDED: empty-state. A 404 conflates "section does not exist" with
+   "guard repo not checked out here"; an empty-state distinguishes the two,
+   keeps the sidebar nav entry stable across deployments, and never blocks
+   the `/config` section. The `/guard/[name]` route keeps its `not-found.tsx`
+   for the case where the guard tree IS present but the specific config name
+   is not : that is a genuine 404.

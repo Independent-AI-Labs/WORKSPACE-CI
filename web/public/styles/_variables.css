@@ -1,0 +1,238 @@
+/* ============================================================
+   Design Token System (P1-10)
+   Three layers: primitive → semantic → component.
+   Tier 1 primitives define raw scale values on :root.
+   Tier 2 semantic tokens name purposes and map to primitives.
+   Components consume semantic tokens, never primitives directly,
+   so a redesign only requires updating Tier 1 primitives.
+   Dark mode overrides colors + adaptive shadows only; the
+   spacing/typography/radius scales are theme-invariant.
+   ============================================================ */
+
+:root {
+  /* ---- Tier 1: Color primitives (unchanged) ---- */
+  --bg: #0b0c0f;
+  --panel: #111319;
+  --text: #e6e9ef;
+  --muted: #9aa3b2;
+  --accent: #7aa2f7;
+  --ok: #10b981;
+  --warn: #f97316;
+  --error: #ef4444;
+  --link: #7dcfff;
+  --teal: #2dd4bf;
+  --purple: #a855f7;
+  --border: #242832;
+  --code-bg: #0d1117;
+
+  /* ---- Tier 2: Color semantic aliases ---- */
+  --surface-1: color-mix(in oklab, var(--bg) 95%, var(--text) 5%);
+  --surface-2: color-mix(in oklab, var(--panel) 90%, var(--text) 10%);
+
+  /* ---- Tier 1: Spacing scale (4px grid) ---- */
+  --space-0: 0;
+  --space-px: 0.0625rem;   /* 1px  */
+  --space-0-5: 0.125rem;   /* 2px  */
+  --space-1: 0.25rem;      /* 4px  */
+  --space-1-5: 0.375rem;   /* 6px  */
+  --space-2: 0.5rem;       /* 8px  */
+  --space-2-5: 0.625rem;   /* 10px */
+  --space-3: 0.75rem;      /* 12px */
+  --space-3-5: 0.875rem;   /* 14px */
+  --space-4: 1rem;         /* 16px */
+  --space-5: 1.25rem;      /* 20px */
+  --space-6: 1.5rem;       /* 24px */
+  --space-8: 2rem;         /* 32px */
+  --space-10: 2.5rem;      /* 40px */
+  --space-12: 3rem;        /* 48px */
+  --space-16: 4rem;        /* 64px */
+  --space-20: 5rem;        /* 80px */
+  --space-24: 6rem;        /* 96px */
+
+  /* ---- Tier 1: Typography scale (font-size) ---- */
+  --text-xs: 0.75rem;      /* 12px */
+  --text-sm: 0.875rem;     /* 14px */
+  --text-base: 1rem;       /* 16px */
+  --text-lg: 1.125rem;     /* 18px */
+  --text-xl: 1.25rem;      /* 20px */
+  --text-2xl: 1.5rem;      /* 24px */
+  --text-3xl: 1.875rem;    /* 30px */
+  --text-4xl: 2.25rem;     /* 36px */
+  --text-5xl: 3rem;        /* 48px */
+
+  /* ---- Tier 1: Line-height scale ---- */
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+
+  /* ---- Tier 1: Letter-spacing scale ---- */
+  --tracking-tighter: -0.05em;
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+
+  /* ---- Tier 1: Font families ---- */
+  --font-body: var(--font-montserrat), system-ui, sans-serif;
+  --font-display: var(--font-montserrat), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), 'Courier New', monospace;
+
+  /* ---- Tier 1: Border-radius scale ---- */
+  --radius-none: 0;
+  --radius-xs: 0.125rem;   /* 2px  */
+  --radius-sm: 0.25rem;    /* 4px  */
+  --radius-md: 0.5rem;     /* 8px  */
+  --radius-lg: 0.75rem;    /* 12px */
+  --radius-xl: 1rem;       /* 16px */
+  --radius-2xl: 1.25rem;   /* 20px */
+  --radius-full: 9999px;
+
+  /* Tier 2: alias retained so existing usages keep working; prefer --radius-md in new code */
+  --btn-radius: var(--radius-md);
+
+  /* ---- Tier 1: Shadow scale (dark theme) ---- */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.2);
+  --shadow-md: 0 4px 8px rgb(0 0 0 / 0.25);
+  --shadow-lg: 0 8px 32px rgb(0 0 0 / 0.3);
+
+  /* ---- Tier 2: Elevation semantic aliases ---- */
+  --elevation-raised: var(--shadow-sm);
+  --elevation-overlay: var(--shadow-md);
+  --elevation-modal: var(--shadow-lg);
+  --overlay-backdrop: rgb(0 0 0 / 0.6);
+
+  /* ---- Tier 1: Motion duration (unchanged) ---- */
+  --duration-fast: 120ms;
+  --duration-medium: 200ms;
+
+  /* ---- Tier 2: Z-index strata (see P1-11) ----
+     Ordered so each layer sits above the one it must cover.
+     Blocking overlays (modal) above non-blocking (dropdown);
+     transient UI (tooltip/toast) on top. */
+  --z-base: 0;
+  --z-sticky: 100;
+  --z-dropdown: 1000;
+  --z-skip-link: 1100;
+  --z-overlay: 1100;
+  --z-modal: 2000;
+  --z-tooltip: 2200;
+  --z-toast: 3000;
+  /* Legacy aliases remapped to the new strata. */
+  --z-sidebar: var(--z-sticky);
+  --z-header: var(--z-sticky);
+  --z-search: var(--z-modal);
+}
+
+[data-theme='light'] {
+  /* Colors only (typography/spacing/radius/shadow scales are theme-invariant),
+     but shadow alpha must soften so the dark-theme black veil does not bleed. */
+  --bg: #ffffff;
+  --panel: #f7f7f9;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --accent: #1d4ed8;
+  --ok: #16a34a;
+  --warn: #ea580c;
+  --error: #dc2626;
+  --link: #2563eb;
+  --teal: #0d9488;
+  --purple: #7c3aed;
+  --border: #e5e7eb;
+  --code-bg: #f3f4f6;
+
+  /* Adaptive shadows for light theme (softer alpha) */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 8px rgb(0 0 0 / 0.08);
+  --shadow-lg: 0 8px 32px rgb(0 0 0 / 0.12);
+  --overlay-backdrop: rgb(0 0 0 / 0.4);
+}
+
+/* Expose token scales to Tailwind via @theme so utility classes
+   (e.g. p-4, text-lg, rounded-md, shadow-md) resolve to our tokens. */
+@theme {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-error: var(--error);
+  --color-link: var(--link);
+  --color-teal: var(--teal);
+  --color-purple: var(--purple);
+  --color-border: var(--border);
+  --color-code-bg: var(--code-bg);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+
+  --font-body: var(--font-body);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+
+  --text-xs: var(--text-xs);
+  --text-sm: var(--text-sm);
+  --text-base: var(--text-base);
+  --text-lg: var(--text-lg);
+  --text-xl: var(--text-xl);
+  --text-2xl: var(--text-2xl);
+  --text-3xl: var(--text-3xl);
+  --text-4xl: var(--text-4xl);
+  --text-5xl: var(--text-5xl);
+
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+  --radius-full: var(--radius-full);
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  background-color: var(--bg);
+  color: var(--text);
+  margin: 0;
+  padding: 0;
+}
+
+code, pre {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+::-webkit-scrollbar {
+  width: var(--space-2);
+  height: var(--space-2);
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

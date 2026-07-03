@@ -1,0 +1,291 @@
+/* ============================================================
+   Reusable component primitives (P1-12)
+   Base classes live in @layer components so cascade precedence
+   is explicit: layered bases sit below unlayered component
+   modifiers (in the per-feature CSS files), so unique overrides
+   win without specificity wars. Existing BEM class names are
+   included in each selector list so no TSX markup changes are
+   needed: the base applies wherever the consumer class appears.
+   ============================================================ */
+
+@layer components {
+   /* ---- .card: panel + 1px border + radius + padding ----
+      Collapses .pattern-card, .tooling-card, .check-card. */
+   .card,
+   .pattern-card,
+   .tooling-card,
+   .check-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+  }
+
+  /* ---- .table: full-width collapsed border grid ----
+     Collapses .hook-table__table, .config-field-table,
+     .prose table (previously 3 verbatim copies). */
+  .table,
+  .hook-table__table,
+  .config-field-table,
+  .prose table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .table th,
+  .table td,
+  .hook-table__table th,
+  .hook-table__table td,
+  .config-field-table th,
+  .config-field-table td,
+  .prose th,
+  .prose td {
+    border: 1px solid var(--border);
+    padding: var(--space-2) var(--space-3);
+    text-align: left;
+  }
+
+  .table th,
+  .hook-table__table th,
+  .config-field-table th,
+  .prose th {
+    background: var(--surface-1);
+  }
+
+  /* ---- .badge: compact uppercase label ----
+     Provides the missing base block for .badge--* modifiers
+     and collapses .hook-badge, .pattern-card__badge. */
+  .badge,
+  .badge--green,
+  .badge--blue,
+  .badge--orange,
+  .badge--teal,
+  .badge--purple,
+  .badge--gray,
+  .hook-badge,
+  .pattern-card__badge,
+  .check-card__source {
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: var(--space-0-5) var(--space-2);
+    border-radius: var(--radius-sm);
+    line-height: 1;
+  }
+
+  /* ---- .input: shared form-control chrome ----
+     Captures the common border + radius + color + font pattern
+     across .language-selector, .feedback-comment textarea. */
+  .input,
+  .language-selector,
+  .feedback-comment textarea {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+  }
+
+  /* ---- .icon-btn: 32px circular icon button ----
+     Collapses .theme-toggle, .feedback-btn (previously 2
+     verbatim copies). */
+  .icon-btn,
+  .theme-toggle,
+  .feedback-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--duration-fast);
+  }
+
+  /* ---- .pill: rounded filter chip ----
+     Collapses .filter-pill, .category-nav__pill (previously 2
+     near-verbatim copies). */
+  .pill,
+  .filter-pill,
+  .category-nav__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    transition: all var(--duration-fast);
+  }
+
+  /* ---- .kbd: monospace keyboard hint ----
+     Collapses .search-trigger__kbd, .search-modal__kbd
+     (previously 2 verbatim copies). */
+  .kbd,
+  .search-trigger__kbd,
+  .search-modal__kbd {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    background: var(--surface-2);
+    padding: var(--space-px) var(--space-1-5);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  /* ---- .overlay + .modal: blocking dialog layers ----
+     Provides the reusable base for the search modal today and
+     the generic <Modal> primitive (P1-17) tomorrow. */
+  .overlay,
+  .search-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--overlay-backdrop);
+    z-index: var(--z-modal);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  .modal,
+  .search-modal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--elevation-modal);
+    overflow: hidden;
+  }
+
+  /* ---- .modal-dialog: native <dialog> modal (P1-17) ----
+     showModal() places the dialog in the top layer, so
+     z-index is handled by the browser. ::backdrop styles
+     the dimming layer. */
+  .modal-dialog {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--elevation-modal);
+    padding: 0;
+    margin: auto;
+    color: var(--text);
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow: auto;
+  }
+
+  .modal-dialog::backdrop {
+    background: var(--overlay-backdrop);
+  }
+
+  .modal-dialog__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .modal-dialog__title {
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: 600;
+  }
+
+  .modal-dialog__close {
+    flex-shrink: 0;
+  }
+
+  .modal-dialog__content {
+    padding: var(--space-4);
+  }
+
+  /* ---- .tooltip-wrapper + .tooltip (P1-16) ----
+     Tooltip is always rendered; visibility toggles via CSS.
+     Wrapper has tabIndex=0 so non-interactive children
+     (icons, text) are keyboard-focusable. */
+  .tooltip-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .tooltip {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    visibility: hidden;
+    background: var(--surface-2);
+    color: var(--text);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+    white-space: nowrap;
+    z-index: var(--z-tooltip);
+  }
+
+  .tooltip.is-visible {
+    visibility: visible;
+  }
+
+  .tooltip--top {
+    bottom: 100%;
+    margin-bottom: var(--space-1);
+  }
+
+  .tooltip--bottom {
+    top: 100%;
+    margin-top: var(--space-1);
+  }
+
+  /* ---- .copy-button (P1-15) ----
+     State machine: idle → copying → copied/failed → idle.
+     Visual state communicated via text label + color,
+     never color alone. */
+  .copy-button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--panel);
+    color: var(--text);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: all var(--duration-fast);
+  }
+
+  .copy-button:hover:not(:disabled) {
+    border-color: var(--accent);
+  }
+
+  .copy-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .copy-button.is-copied {
+    border-color: var(--ok);
+    color: var(--ok);
+  }
+
+  .copy-button.is-failed {
+    border-color: var(--error);
+    color: var(--error);
+  }
+
+  .page-intro {
+    color: var(--muted);
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+    margin-bottom: var(--space-6);
+    max-width: 72ch;
+  }
+}

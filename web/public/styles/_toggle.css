@@ -1,0 +1,39 @@
+@layer components {
+  .toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .toggle__track {
+    width: 36px;
+    height: 20px;
+    background: var(--border);
+    border-radius: var(--radius-lg);
+    position: relative;
+    transition: background var(--duration-fast);
+  }
+
+  .toggle.is-active .toggle__track {
+    background: var(--accent);
+  }
+
+  .toggle__thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--text);
+    border-radius: var(--radius-full);
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: transform var(--duration-fast);
+  }
+
+  .toggle.is-active .toggle__thumb {
+    transform: translateX(16px);
+  }
+}

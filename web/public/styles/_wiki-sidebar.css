@@ -1,0 +1,61 @@
+.wiki-sidebar {
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.wiki-sidebar__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  line-height: 1;
+  min-height: calc(var(--space-3) * 2 + var(--space-8) + var(--space-px));
+}
+
+.wiki-sidebar__logo {
+  font-size: 1.5rem;
+  color: var(--accent);
+}
+
+.wiki-sidebar__title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.wiki-sidebar__nav {
+  list-style: none;
+  padding: 0.5rem 0;
+  margin: 0;
+}
+
+.wiki-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color var(--duration-fast), background var(--duration-fast);
+}
+
+.wiki-sidebar__link:hover {
+  color: var(--text);
+  background: var(--surface-1);
+}
+
+.wiki-sidebar__link.is-active {
+  color: var(--accent);
+  background: var(--surface-1);
+  border-right: 3px solid var(--accent);
+}
+
+.wiki-sidebar__link i {
+  font-size: 1.125rem;
+}

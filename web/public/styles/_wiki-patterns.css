@@ -1,0 +1,99 @@
+.pattern-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.pattern-list__count {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.pattern-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: var(--space-4);
+}
+
+/* .pattern-card base now provided by .card; flex layout is unique */
+.pattern-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* .pattern-card__badge base now provided by .badge; align-self is unique */
+.pattern-card__badge {
+  align-self: flex-start;
+}
+
+.pattern-card__regex {
+  font-family: var(--font-mono);
+  background: var(--code-bg);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  word-break: break-all;
+}
+
+.pattern-card__reason {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.pattern-card__scope {
+  font-size: var(--text-xs);
+  color: var(--warn);
+}
+
+.pattern-card__feedback {
+  margin-top: var(--space-2);
+}
+
+.category-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.category-nav__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.category-nav__count {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.category-nav__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.category-nav__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* .category-nav__pill base now provided by .pill */
+.category-nav__pill.is-active {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.category-nav__pill-count {
+  font-size: var(--text-xs);
+  opacity: 0.7;
+}
+
+/* Badge color modifiers (base provided by .badge in _components.css) */
+.badge--green { background: var(--ok); color: var(--bg); }
+.badge--blue { background: var(--accent); color: var(--bg); }
+.badge--orange { background: var(--warn); color: var(--bg); }
+.badge--teal { background: var(--teal); color: var(--bg); }
+.badge--purple { background: var(--purple); color: var(--bg); }
+.badge--gray { background: var(--muted); color: var(--bg); }

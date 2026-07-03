@@ -170,6 +170,24 @@ _test-push-impl:
 	$(PYTEST) tests/integration --cov=ci --cov-report=term-missing --cov-fail-under=5 --tb=short -q
 
 # =============================================================================
+# Wiki Dev Server (delegates to web/Makefile; systemd user service on :3001)
+# =============================================================================
+
+.PHONY: wiki-dev-start wiki-dev wiki-dev-stop wiki-dev-restart wiki-dev-status wiki-dev-logs
+wiki-dev-start: ## Start wiki dev server (Next.js HMR on :3001)
+	$(MAKE) -C web dev-start
+wiki-dev: wiki-dev-start ## Alias for wiki-dev-start
+	@:
+wiki-dev-stop: ## Stop wiki dev server
+	$(MAKE) -C web dev-stop
+wiki-dev-restart: ## Restart wiki dev server (stop + start)
+	$(MAKE) -C web dev-restart
+wiki-dev-status: ## Show wiki dev server status
+	$(MAKE) -C web dev-status
+wiki-dev-logs: ## Tail wiki dev server logs
+	$(MAKE) -C web dev-logs
+
+# =============================================================================
 # Cleanup
 # =============================================================================
 

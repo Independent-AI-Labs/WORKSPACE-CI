@@ -1,0 +1,22 @@
+@layer components {
+  .collapsible-section__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text);
+    padding: var(--space-2) 0;
+  }
+
+  .collapsible-section__header i {
+    transition: transform var(--duration-fast);
+  }
+
+  .collapsible-section__header i.is-rotated {
+    transform: rotate(90deg);
+  }
+}

@@ -1,0 +1,118 @@
+.playground-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  height: calc(100vh - 120px);
+}
+
+.playground-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.playground-panes {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: var(--space-4);
+  flex: 1;
+  min-height: 0;
+}
+
+.code-editor {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: auto;
+  min-height: 400px;
+}
+
+.code-editor .cm-content {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.playground-editor-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  min-height: 400px;
+}
+
+.match-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.match-panel__header {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+.match-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.match-panel__empty {
+  padding: var(--space-4);
+  color: var(--muted);
+  text-align: center;
+}
+
+.match-panel__item {
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.match-panel__item:hover {
+  background: var(--surface-1);
+}
+
+.match-panel__line {
+  font-size: var(--text-xs);
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.match-panel__pattern {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--accent);
+}
+
+.match-panel__reason {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+/* .language-selector base now provided by .input; padding is unique */
+.language-selector {
+  padding: var(--space-1) var(--space-2);
+}
+
+.pattern-category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+@media (max-width: 768px) {
+  .playground-panes {
+    grid-template-columns: 1fr;
+  }
+}

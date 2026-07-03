@@ -1,0 +1,11 @@
+/* .theme-toggle base provided by .icon-btn in _components.css */
+@layer components {
+  .theme-toggle {
+    color: var(--text);
+  }
+
+  .theme-toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+}

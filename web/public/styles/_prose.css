@@ -1,0 +1,79 @@
+.prose {
+  color: var(--text);
+  line-height: var(--leading-loose);
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  margin-top: var(--space-6);
+  margin-bottom: var(--space-2);
+  font-weight: 700;
+}
+
+.prose h1 { font-size: var(--text-2xl); }
+.prose h2 { font-size: var(--text-xl); }
+.prose h3 { font-size: var(--text-lg); }
+
+.prose p {
+  margin: var(--space-2) 0;
+}
+
+.prose ul, .prose ol {
+  padding-left: var(--space-6);
+  margin: var(--space-2) 0;
+}
+
+.prose li {
+  margin: var(--space-1) 0;
+}
+
+.prose code {
+  background: var(--code-bg);
+  padding: var(--space-0-5) var(--space-1-5);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+
+.prose pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  overflow-x: auto;
+  margin: var(--space-3) 0;
+}
+
+.prose pre code {
+  background: transparent;
+  padding: 0;
+}
+
+/* .prose table + th/td base now provided by .table; margin is unique */
+.prose table {
+  margin: var(--space-3) 0;
+}
+
+.prose th {
+  font-weight: 600;
+}
+
+.prose blockquote {
+  border-left: 3px solid var(--accent);
+  margin: var(--space-3) 0;
+  padding: var(--space-2) var(--space-4);
+  color: var(--muted);
+}
+
+.prose a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+.prose a:hover {
+  text-decoration: underline;
+}
+
+.prose hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: var(--space-4) 0;
+}

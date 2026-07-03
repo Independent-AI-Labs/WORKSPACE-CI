@@ -1,0 +1,63 @@
+.error-boundary,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.error-boundary h2,
+.error-state h2 {
+  color: var(--error);
+  margin: 0;
+}
+
+.not-found-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 3rem;
+  text-align: center;
+}
+
+.not-found-state h1 {
+  font-size: 3rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.not-found-state h2 {
+  margin: 0;
+}
+
+.empty-state {
+  padding: 2rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.guard-empty-state {
+  padding: 2rem;
+  text-align: center;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--btn-radius);
+}
+
+.warning {
+  color: var(--warn);
+  font-size: 0.85rem;
+}
+
+.text-muted {
+  color: var(--muted);
+}
+
+.text-ok {
+  color: var(--ok);
+}

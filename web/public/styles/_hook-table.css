@@ -1,0 +1,27 @@
+/* .hook-table__table + th/td base provided by .table in _components.css */
+
+.hook-table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.hook-table__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.stage-filter,
+.tier-filter {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.hook-table__link {
+  color: var(--link);
+  text-decoration: none;
+}
