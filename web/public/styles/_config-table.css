@@ -1,27 +1,5 @@
 /* .config-field-table + th/td base provided by .table in _components.css */
 @layer components {
-  .config-index {
-    list-style: none;
-    padding: 0;
-  }
-
-  .config-index__item {
-    border-bottom: 1px solid var(--border);
-  }
-
-  .config-index__link {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-3) 0;
-    text-decoration: none;
-    color: var(--text);
-  }
-
-  .config-index__link:hover {
-    color: var(--link);
-  }
-
   .config-field-table {
     margin: var(--space-3) 0;
   }
@@ -36,4 +14,62 @@
     color: var(--muted);
     font-size: var(--text-xs);
   }
+}
+
+/* .config-card / .guard-card base provided by .card in _components.css */
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: var(--space-4);
+}
+
+.config-card,
+.guard-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+
+.config-card:hover,
+.guard-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--elevation-raised);
+}
+
+.config-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.config-card__header i {
+  font-size: var(--text-xl);
+  color: var(--accent);
+}
+
+.config-card__name {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.config-card__schema {
+  margin-left: auto;
+  align-self: flex-start;
+}
+
+.config-card__description {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.config-card__field-count {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }

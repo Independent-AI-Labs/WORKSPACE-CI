@@ -1,0 +1,35 @@
+# Schema for dead_code.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: dead_code
+description: "AST-based dead code analysis configuration: scan paths, entry points, and ignore rules for check_dead_code.py."
+fields:
+  - path: scan_paths
+    type: list<string>
+    required: true
+    description: "Directories scanned for Python source files. All .py files under these paths are parsed and analyzed for dead code."
+
+  - path: ignore_paths
+    type: list<string>
+    description: "Paths excluded from scanning entirely (not parsed, not counted for references)."
+
+  - path: entry_points
+    type: list<string>
+    default: "[]"
+    description: "Modules that are entry points (called directly from CLI or external callers, not imported). These are never reported as dead. Override per-project via config/dead_code_overrides.yaml."
+
+  - path: ignored_names
+    type: list<string>
+    description: "Specific names never reported as dead, regardless of reference count (e.g. 'main', 'cli')."
+
+  - path: ignored_name_patterns
+    type: list<string>
+    description: "Regex patterns for names to ignore. Matches against function, class, and variable names."
+
+  - path: reference_only_paths
+    type: list<string>
+    description: "Files excluded from REPORTING dead code but still scanned for references. Used for test files and conftest modules that are never 'dead' but whose imports matter."

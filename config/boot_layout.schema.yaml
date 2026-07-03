@@ -1,0 +1,36 @@
+# Schema for boot_layout.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: boot_layout
+description: "Boot-path layout declaration: single source of truth for the boot-path resolver and the boot-venv compliance audit."
+fields:
+  - path: version
+    type: integer
+    required: true
+    default: 1
+    description: "Schema version of the boot-layout config. Bumped when the YAML shape changes."
+
+  - path: boot_dir
+    type: string
+    required: true
+    default: ".boot-linux/"
+    description: "Directory (relative to repo root) where this repo's own .boot-linux/ tree lives."
+
+  - path: venv_dir
+    type: string
+    required: true
+    default: ".venv/"
+    description: "Directory (relative to repo root) where this repo's own uv-managed .venv/ lives. Private per repo; never shared or symlinked across project boundaries."
+
+  - path: inherit
+    type: list<string>
+    default: "[]"
+    description: "Paths (relative to this repo root) to sibling or ancestor .boot-linux/ trees whose bin/ subdirs are prepended to PATH before this repo's own. Later-listed entries win (land leftmost)."
+
+  - path: comment
+    type: string
+    description: "Free-form description of the boot-layout configuration and ownership notes."

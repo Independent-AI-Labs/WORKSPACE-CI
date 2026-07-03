@@ -41,14 +41,6 @@
   color: var(--muted);
 }
 
-.guard-empty-state {
-  padding: 2rem;
-  text-align: center;
-  color: var(--muted);
-  border: 1px dashed var(--border);
-  border-radius: var(--btn-radius);
-}
-
 .warning {
   color: var(--warn);
   font-size: 0.85rem;

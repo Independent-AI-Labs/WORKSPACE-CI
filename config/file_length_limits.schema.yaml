@@ -1,0 +1,20 @@
+# Schema for file_length_limits.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: file_length_limits
+description: "Maximum line count per file by extension; enforced by the file-length checker to prevent oversized source files."
+fields:
+  - path: max_lines
+    type: integer
+    required: true
+    default: 512
+    description: "Maximum number of lines allowed in a single file. Files exceeding this limit are flagged by the checker."
+
+  - path: extensions
+    type: list<string>
+    required: true
+    description: "File extensions subject to the line-count limit. Only files matching these extensions are checked."

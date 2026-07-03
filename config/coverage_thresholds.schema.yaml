@@ -1,0 +1,63 @@
+# Schema for coverage_thresholds.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: coverage_thresholds
+description: "Test coverage thresholds per test suite type; enforced by the coverage devolution checker to prevent regression."
+fields:
+  - path: unit
+    type: map
+    required: true
+    description: "Configuration for the unit test suite. Unit tests have a high coverage floor (90%) because they are fast and deterministic."
+
+  - path: unit.path
+    type: string
+    required: true
+    description: "Directory path where unit tests live."
+
+  - path: unit.min_coverage
+    type: integer
+    required: true
+    description: "Minimum coverage percentage required for the suite to pass. Devolution is flagged when coverage drops below this threshold."
+
+  - path: unit.source_path
+    type: string
+    required: true
+    description: "Source directory measured for coverage (the code under test)."
+
+  - path: unit.runner
+    type: string
+    required: true
+    description: "Command used to run the test suite (e.g. '.venv/bin/python -m pytest')."
+
+  - path: integration
+    type: map
+    required: true
+    description: "Configuration for the integration test suite. Integration tests use real git repos and subprocess spawns; coverage is supplementary with a low floor."
+
+  - path: integration.path
+    type: string
+    required: true
+    description: "Directory path where integration tests live."
+
+  - path: integration.min_coverage
+    type: integer
+    required: true
+    description: "Minimum coverage percentage for integration tests. Low floor (5%) because coverage measurement is disabled to avoid tracing slow I/O."
+
+  - path: integration.source_path
+    type: string
+    required: true
+    description: "Source directory measured for coverage."
+
+  - path: integration.runner
+    type: string
+    required: true
+    description: "Command used to run the integration test suite."
+
+  - path: integration.coverage
+    type: string
+    description: "Set to 'false' to disable coverage tracing for this suite (avoids overhead of tracing slow I/O under PRoot)."

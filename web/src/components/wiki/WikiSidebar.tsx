@@ -33,7 +33,9 @@ export function WikiSidebar() {
     <nav id="wiki-sidebar" className="wiki-sidebar" role="navigation" aria-label="Wiki navigation">
       <div className="wiki-sidebar__header">
         <i className="ri-terminal-box-line wiki-sidebar__logo" aria-hidden="true" />
-        <span className="wiki-sidebar__title">digitalguardrails</span>
+        <span className="wiki-sidebar__title">
+          <span className="wiki-sidebar__title-thin">digital</span>guardrails
+        </span>
       </div>
       <ul className="wiki-sidebar__nav">
         {NAV_ITEMS.map((item) => {

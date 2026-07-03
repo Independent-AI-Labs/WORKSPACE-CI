@@ -1,0 +1,27 @@
+# Schema for sensitive_files.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: sensitive_files
+description: "Sensitive file detection configuration: extensions, keywords, and safe-list rules used to prevent accidental secret leakage."
+fields:
+  - path: sensitive_extensions
+    type: list<string>
+    required: true
+    description: "File extensions that may contain secrets. Files with these extensions trigger the sensitive-file blocker when their name also matches a sensitive keyword."
+
+  - path: sensitive_keywords
+    type: list<string>
+    required: true
+    description: "Filename keywords that suggest secrets (substring match, case-insensitive). A file is flagged when its name contains any of these keywords AND its extension is in sensitive_extensions."
+
+  - path: safe_exceptions
+    type: list<string>
+    description: "Exact filenames that are always safe (standard project config files). These bypass the sensitive-file check entirely, regardless of keyword matches."
+
+  - path: safe_prefixes
+    type: list<string>
+    description: "Filename prefixes that are always safe (e.g. 'tsconfig' matches tsconfig.json, tsconfig.app.json, etc.). These bypass the sensitive-file check."

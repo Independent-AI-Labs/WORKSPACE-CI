@@ -78,10 +78,23 @@ export const getConfigIndex = cache(async (): Promise<ConfigEntry[]> => {
         !f.endsWith('.schema.yaml') &&
         !f.includes('banned_words_exceptions'),
     )
-    .map((f) => {
+    .map((f): ConfigEntry => {
       const name = f.replace(/\.yaml$/, '')
-      const hasSchema = existsSync(join(CONFIG_ROOT, `${name}.schema.yaml`))
-      return { name, hasSchema, link: `/config/${name}` }
+      const schemaPath = join(CONFIG_ROOT, `${name}.schema.yaml`)
+      const hasSchema = existsSync(schemaPath)
+      const entry: ConfigEntry = { name, hasSchema, link: `/config/${name}` }
+      if (hasSchema) {
+        try {
+          const schema = load(
+            readFileSync(schemaPath, 'utf8'),
+          ) as ConfigSchema
+          if (schema.description) entry.description = schema.description
+          if (schema.fields) entry.fieldCount = schema.fields.length
+        } catch {
+          // schema exists but is malformed; still include the entry
+        }
+      }
+      return entry
     })
     .sort((a, b) => a.name.localeCompare(b.name))
 })
@@ -129,12 +142,29 @@ export const getGuardConfigSchema = cache(
 )
 
 export function getGuardConfigEntries(names: string[]): GuardConfigEntry[] {
-  return names.map((name) => ({
-    name,
-    title: name
-      .replace(/^guard_/, '')
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase()),
-    link: `/guard/${name}`,
-  }))
+  return names.map((name): GuardConfigEntry => {
+    const schemaPath = join(GUARD_CONFIG_ROOT, `${name}.schema.yaml`)
+    const hasSchema = existsSync(schemaPath)
+    const entry: GuardConfigEntry = {
+      name,
+      title: name
+        .replace(/^guard_/, '')
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase()),
+      link: `/guard/${name}`,
+      hasSchema,
+    }
+    if (hasSchema) {
+      try {
+        const schema = load(
+          readFileSync(schemaPath, 'utf8'),
+        ) as ConfigSchema
+        if (schema.description) entry.description = schema.description
+        if (schema.fields) entry.fieldCount = schema.fields.length
+      } catch {
+        // schema exists but is malformed; still include the entry
+      }
+    }
+    return entry
+  })
 }

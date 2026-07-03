@@ -1,10 +1,11 @@
 'use client'
 
-import { useId } from 'react'
 import { useSearch } from '@/hooks/useSearch'
 import { Modal } from '@/components/ui/Modal'
 import type { SearchIndexEntry } from '@/types/wiki'
 import clsx from 'clsx'
+
+const LISTBOX_ID = 'wiki-search-listbox'
 
 interface WikiSearchProps {
   searchData: SearchIndexEntry[]
@@ -12,9 +13,7 @@ interface WikiSearchProps {
 
 export function WikiSearch({ searchData }: WikiSearchProps) {
   const search = useSearch(searchData)
-  const baseId = useId()
-  const listboxId = `${baseId}-listbox`
-  const optionId = (i: number) => `${baseId}-option-${i}`
+  const optionId = (i: number) => `wiki-search-option-${i}`
 
   const activeOptionId =
     search.results.length > 0 && search.selectedIndex < search.results.length
@@ -50,7 +49,7 @@ export function WikiSearch({ searchData }: WikiSearchProps) {
             aria-label="Search query"
             role="combobox"
             aria-expanded={search.isOpen}
-            aria-controls={listboxId}
+            aria-controls={LISTBOX_ID}
             aria-activedescendant={activeOptionId}
             autoComplete="off"
             autoFocus
@@ -65,7 +64,7 @@ export function WikiSearch({ searchData }: WikiSearchProps) {
             <i className="ri-close-line" aria-hidden="true" />
           </button>
         </div>
-        <ul className="search-modal__results" id={listboxId} role="listbox">
+        <ul className="search-modal__results" id={LISTBOX_ID} role="listbox">
           {search.results.length === 0 && search.query.trim() && (
             <li className="search-modal__empty">No results found</li>
           )}

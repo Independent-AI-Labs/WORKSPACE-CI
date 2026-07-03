@@ -1,5 +1,5 @@
-import Link from 'next/link'
 import { WikiShell } from '@/components/wiki/WikiShell'
+import { ConfigCard } from '@/components/wiki/ConfigCard'
 import { getConfigIndex } from '@/lib/yaml-loader'
 
 export default async function ConfigPage() {
@@ -19,24 +19,11 @@ export default async function ConfigPage() {
           accessible at WORKSPACE_CI_CONFIG_ROOT.
         </p>
       ) : (
-      <ul className="config-index">
-        {configs.map((config) => (
-          <li key={config.name} className="config-index__item">
-            <Link href={config.link} className="config-index__link">
-              <code>{config.name}</code>
-              {config.hasSchema ? (
-                <span className="config-index__schema badge--green">
-                  has schema
-                </span>
-              ) : (
-                <span className="config-index__schema badge--orange">
-                  no schema
-                </span>
-              )}
-            </Link>
-          </li>
-        ))}
-      </ul>
+        <div className="config-grid">
+          {configs.map((config) => (
+            <ConfigCard key={config.name} config={config} />
+          ))}
+        </div>
       )}
     </WikiShell>
   )

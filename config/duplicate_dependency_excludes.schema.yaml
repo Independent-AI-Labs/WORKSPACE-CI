@@ -1,0 +1,14 @@
+# Schema for duplicate_dependency_excludes.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: duplicate_dependency_excludes
+description: "Dependencies intentionally declared in both the workspace root and a workspace member; not flagged as redundant by check_duplicate_dependencies."
+fields:
+  - path: excludes
+    type: list<string>
+    required: true
+    description: "Package names excluded from duplicate-dependency detection. Self-duplicates (same dep in multiple sections of a single pyproject.toml) are NOT affected: version-mismatch self-duplicates always block, same-version duplicates warn."

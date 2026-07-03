@@ -1,0 +1,28 @@
+# Schema for markdown_docs.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: markdown_docs
+description: "Markdown documentation checker config: remote link checks, ignore globs, and known-broken reference exceptions."
+fields:
+  - path: check_remote
+    type: boolean
+    default: true
+    description: "Whether to check remote HTTP(S) links. Slow and network-dependent; can be overridden via CLI --check-remote."
+
+  - path: timeout
+    type: number
+    default: 5.0
+    description: "Timeout in seconds for each remote HTTP(S) link check."
+
+  - path: ignore
+    type: list<string>
+    description: "Glob patterns for markdown files to skip entirely (e.g. node_modules, .venv, CHANGELOG.md)."
+
+  - path: exceptions
+    type: list
+    default: "[]"
+    description: "Known-broken reference entries that should not fail CI. Each entry can specify a file (endswith match), a line (exact), and a reason for context."

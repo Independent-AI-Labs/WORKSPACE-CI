@@ -10,3 +10,4 @@ uv.lock
 .coverage
 .venv/
 .boot-linux/
+web/res/

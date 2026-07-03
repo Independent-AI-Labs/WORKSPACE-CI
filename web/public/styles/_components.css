@@ -10,11 +10,13 @@
 
 @layer components {
    /* ---- .card: panel + 1px border + radius + padding ----
-      Collapses .pattern-card, .tooling-card, .check-card. */
+      Collapses .pattern-card, .tooling-card, .check-card, .config-card. */
    .card,
    .pattern-card,
    .tooling-card,
-   .check-card {
+   .check-card,
+   .config-card,
+   .guard-card {
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);

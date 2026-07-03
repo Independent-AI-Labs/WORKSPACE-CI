@@ -1,0 +1,69 @@
+# Schema for required_hooks.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: required_hooks
+description: "Manifest of hooks every consumer project must wire; read by the hook generator and the required-hooks-present validator."
+fields:
+  - path: version
+    type: integer
+    required: true
+    default: 1
+    description: "Schema version of the required-hooks config. Bumped when the YAML shape changes."
+
+  - path: hooks
+    type: list
+    required: true
+    description: "Ordered list of hook entries. Each entry defines a git hook (pre-commit, commit-msg, or pre-push) with its kind, entry point, and enforcement metadata."
+
+  - path: hooks[].id
+    type: string
+    required: true
+    description: "Stable hook identifier; matches the '# === Hook: <id> ===' marker in generated .git/hooks/* files."
+
+  - path: hooks[].kind
+    type: string
+    required: true
+    description: "Hook implementation kind: shell | shell_inline | shell_with_arg | python_module | python_module_files | makefile_target."
+
+  - path: hooks[].entry
+    type: string
+    required: true
+    description: "Bash function name, python module path, make target name, or inline command string depending on kind."
+
+  - path: hooks[].stage
+    type: string
+    required: true
+    description: "Git hook stage: pre-commit | commit-msg | pre-push."
+
+  - path: hooks[].pass_filenames
+    type: boolean
+    description: "Whether staged filenames are passed as arguments to the hook entry."
+
+  - path: hooks[].always_run
+    type: boolean
+    description: "Whether the hook runs unconditionally, even when no files are staged."
+
+  - path: hooks[].mandatory
+    type: boolean
+    description: "true: cannot be exempted via quality_exceptions.yaml. false: exemptable per-path because the check is heuristic."
+
+  - path: hooks[].safety
+    type: boolean
+    description: "true: included even at POC tier (basic-safety subset). false: strict-tier only."
+
+  - path: hooks[].applicable_to
+    type: list<string>
+    required: true
+    description: "Language hints the check applies to. [any] runs for every project; [python] | [node] | [rust] scopes by detected language."
+
+  - path: hooks[].files
+    type: string
+    description: "Optional path pattern that scopes the hook (pass-through to the rendered hook)."
+
+  - path: hooks[].files_types
+    type: list<string>
+    description: "File type filters for python_module_files hooks (e.g. [markdown]). Only matching staged files are passed."

@@ -27,6 +27,14 @@
   font-weight: 700;
   font-size: 0.95rem;
   color: var(--text);
+  position: relative;
+  top: 0.4rem;
+}
+
+.wiki-sidebar__title-thin {
+  font-weight: 300;
+  position: relative;
+  top: -0.4rem;
 }
 
 .wiki-sidebar__nav {

@@ -1,0 +1,24 @@
+# Schema for blocked_commit_patterns.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: blocked_commit_patterns
+description: "Regex patterns blocked in commit messages; checked case-insensitively during commit-msg and pre-push stages."
+fields:
+  - path: blocked
+    type: list
+    required: true
+    description: "List of blocked regex patterns and their reasons. Each entry is checked case-insensitively against the full commit message body."
+
+  - path: blocked[].pattern
+    type: string
+    required: true
+    description: "Regex pattern matched against the commit message. Examples include co-author attribution lines and AI-generated attribution strings."
+
+  - path: blocked[].reason
+    type: string
+    required: true
+    description: "Human-readable explanation of why the pattern is blocked; surfaced to the developer on violation."

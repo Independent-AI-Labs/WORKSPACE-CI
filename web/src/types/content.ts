@@ -16,10 +16,15 @@ export interface ConfigEntry {
   name: string
   hasSchema: boolean
   link: string
+  description?: string
+  fieldCount?: number
 }
 
 export interface GuardConfigEntry {
   name: string
   title: string
   link: string
+  hasSchema: boolean
+  description?: string
+  fieldCount?: number
 }
