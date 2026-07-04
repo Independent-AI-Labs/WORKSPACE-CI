@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
 import type { WikiStats } from '@/lib/search-data'
+import type { Branding } from '@/lib/branding'
 import { useSidebarStore } from '@/stores/sidebar-store'
 
 interface NavItem {
@@ -22,7 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/config', label: 'Config Files', icon: 'ri-settings-3-line', count: 'configs' },
   { href: '/tooling', label: 'Tools & Scripts', icon: 'ri-tools-line', count: 'scripts' },
   { href: '/guard', label: 'Guard Policies', icon: 'ri-shield-keyhole-line', count: 'guards' },
-  { href: '/standards', label: 'Standards & Regulations', icon: 'ri-book-marked-line', count: 'standards' },
+  { href: '/standards', label: 'Standards & Regulation', icon: 'ri-book-marked-line', count: 'standards' },
   { href: '/llm-gateway', label: 'LLM Gateway', icon: 'ri-router-line', divider: true },
   { href: '/checks', label: 'Static Analysis', icon: 'ri-check-double-line' },
   { href: '/playground', label: 'Playground', icon: 'ri-code-box-line' },
@@ -36,9 +37,10 @@ function isPathActive(pathname: string, href: string): boolean {
 
 interface WikiSidebarProps {
   stats: WikiStats
+  branding: Branding
 }
 
-export function WikiSidebar({ stats }: WikiSidebarProps) {
+export function WikiSidebar({ stats, branding }: WikiSidebarProps) {
   const pathname = usePathname()
   const collapsed = useSidebarStore((s) => s.collapsed)
   const toggle = useSidebarStore((s) => s.toggle)
@@ -46,9 +48,9 @@ export function WikiSidebar({ stats }: WikiSidebarProps) {
   return (
     <nav id="wiki-sidebar" className="wiki-sidebar" role="navigation" aria-label="Wiki navigation">
       <div className="wiki-sidebar__header">
-        <img src="/LOGO.png" className="wiki-sidebar__logo" alt="workspaceguardrails logo" width="32" height="30" />
+        <img src={branding.logo_path} className="wiki-sidebar__logo" alt={`${branding.sidebar_title_thin}${branding.sidebar_title_bold} logo`} width="32" height="30" />
         <span className="wiki-sidebar__title">
-          <span className="wiki-sidebar__title-thin">workspace</span>guardrails
+          <span className="wiki-sidebar__title-thin">{branding.sidebar_title_thin}</span>{branding.sidebar_title_bold}
         </span>
         <button
           type="button"

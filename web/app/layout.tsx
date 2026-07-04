@@ -1,7 +1,10 @@
 import type { Metadata } from 'next'
 import { Montserrat, JetBrains_Mono } from 'next/font/google'
 import { StoreHydration } from '@/components/StoreHydration'
+import { getBranding } from '@/lib/branding'
 import '@/styles/globals.css'
+
+const branding = getBranding()
 
 const montserrat = Montserrat({
   subsets: ['latin'],
@@ -16,8 +19,8 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Workspace Guardrails',
-  description: 'Interactive wiki for workspace-ci',
+  title: branding.metadata_title,
+  description: branding.metadata_description,
 }
 
 const themeScript = `

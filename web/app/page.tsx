@@ -3,6 +3,7 @@ import { ProjectList } from '@/components/wiki/ProjectList'
 import { loadAllProjectSummaries } from '@/lib/project-registry'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
 import { loadCodeStats } from '@/lib/docs-loader'
+import { getBranding } from '@/lib/branding'
 import type { LanguagePercent } from '@/types/code-stats'
 
 function getLanguagePercentsForAllRepos(
@@ -48,7 +49,7 @@ export default async function HomePage() {
   return (
     <WikiShell>
       <section className="hero">
-        <h1 className="hero__title">AI Workspace Guardrails</h1>
+        <h1 className="hero__title">{getBranding().name}</h1>
         <p className="hero__subtitle">
           Interactive documentation for git hooks, code anti-patterns, config schemas,
           runtime guardrails, and AI governance standards.

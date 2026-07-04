@@ -5,6 +5,7 @@ import { CardListSection } from '@/components/wiki/CardListSection'
 import { standardAdapter, deriveCategories } from '@/lib/card-adapters'
 import { loadStandards } from '@/lib/docs-loader'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
+import { getBranding } from '@/lib/branding'
 import { Icon } from '@/components/ui/Icon'
 import type { ReactNode } from 'react'
 
@@ -13,6 +14,7 @@ export default async function StandardsPage() {
   const items = standardAdapter(standards)
   const categories = deriveCategories(items)
   const feedbackCounts = getAllFeedbackCounts('standard')
+  const branding = getBranding()
 
   const standardMap = new Map(standards.map((s) => [s.id, s]))
 
@@ -52,6 +54,7 @@ export default async function StandardsPage() {
             issuer={std.issuer}
             price={std.price}
             purchaseUrl={std.purchaseUrl}
+            contactEmail={branding.contact_email}
           />
         )}
         <FeedbackWidget
@@ -66,7 +69,7 @@ export default async function StandardsPage() {
 
   return (
     <WikiShell>
-      <h1>Standards &amp; Regulations</h1>
+      <h1>Standards &amp; Regulation</h1>
       <p className="page-intro">
         Curated catalogue of AI standards, regulations, frameworks, and
         declarations from around the world. Open documents are available for

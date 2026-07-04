@@ -6,7 +6,7 @@ export default function LLMGatewayPage() {
       title="LLM Gateway"
       description="This page will provide a gateway for routing, auditing, and governing LLM API calls, including token budgeting, model allowlists, and prompt logging."
       links={[
-        { href: '/standards', label: 'Browse Standards & Regulations' },
+        { href: '/standards', label: 'Browse Standards & Regulation' },
         { href: '/integration', label: 'View Integration Guide' },
       ]}
     />

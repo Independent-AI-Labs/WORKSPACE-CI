@@ -248,7 +248,7 @@ const staticPages: SearchIndexEntry[] = [
   },
   {
     id: 'page-standards',
-    title: 'Standards & Regulations',
+    title: 'Standards & Regulation',
     section: 'Pages',
     content: 'AI standards, regulations, frameworks, and declarations',
     href: '/standards',

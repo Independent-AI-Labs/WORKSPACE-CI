@@ -8,7 +8,7 @@
 .hero__title {
   font-size: var(--text-4xl);
   font-weight: 800;
-  color: var(--accent);
+  color: color-mix(in oklab, var(--text) 80%, transparent);
   letter-spacing: var(--tracking-tight);
   margin: 0 0 var(--space-2) 0;
   line-height: var(--leading-tight);

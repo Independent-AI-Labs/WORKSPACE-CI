@@ -1,11 +1,17 @@
-export function WikiFooter() {
+import type { Branding } from '@/lib/branding'
+
+interface WikiFooterProps {
+  branding: Branding
+}
+
+export function WikiFooter({ branding }: WikiFooterProps) {
   return (
     <footer className="wiki-footer">
       <span className="wiki-footer__text">
-        The AI Workspace Guardrails Wiki
+        {branding.footer_tagline}
       </span>
       <span className="wiki-footer__version">
-        2026 ◆ Independent AI Labs
+        {branding.footer_copyright}
       </span>
     </footer>
   )

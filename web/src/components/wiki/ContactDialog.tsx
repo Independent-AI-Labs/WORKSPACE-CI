@@ -10,6 +10,7 @@ interface ContactDialogProps {
   issuer: string
   price?: string
   purchaseUrl?: string
+  contactEmail: string
 }
 
 export function ContactDialog({
@@ -18,6 +19,7 @@ export function ContactDialog({
   issuer,
   price,
   purchaseUrl,
+  contactEmail,
 }: ContactDialogProps) {
   const [open, setOpen] = useState(false)
 
@@ -56,11 +58,11 @@ export function ContactDialog({
           implementation guidance, contact:
         </p>
         <a
-          href="mailto:independentailabs@gmail.com"
+          href={`mailto:${contactEmail}`}
           className="contact-dialog__email btn btn--primary"
         >
           <Icon name="ri-mail-line" size="sm" />
-          independentailabs@gmail.com
+          {contactEmail}
         </a>
         {purchaseUrl && (
           <>
