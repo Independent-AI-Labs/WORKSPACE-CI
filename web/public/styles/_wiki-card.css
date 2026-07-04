@@ -116,6 +116,14 @@ code.wiki-card__title {
   gap: var(--space-2);
 }
 
+.wiki-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
 .wiki-card__cta {
   display: inline-flex;
   align-items: center;
@@ -123,10 +131,28 @@ code.wiki-card__title {
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--link);
-  margin-top: var(--space-2);
   text-decoration: none;
 }
 
 .wiki-card__cta:hover {
   text-decoration: underline;
+}
+
+.wiki-card__external-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color var(--duration-fast);
+}
+
+.wiki-card__external-link:hover {
+  color: var(--text);
+}
+
+.wiki-card__external-link i {
+  font-size: var(--text-base);
 }

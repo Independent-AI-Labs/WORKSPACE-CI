@@ -69,10 +69,25 @@ export function WikiCard({ item, children }: WikiCardProps) {
 
       {children && <div className="wiki-card__children">{children}</div>}
 
-      {item.href && (
-        <Link href={item.href} className="wiki-card__cta">
-          View details
-        </Link>
+      {(item.href || item.repoUrl) && (
+        <div className="wiki-card__footer">
+          {item.href && (
+            <Link href={item.href} className="wiki-card__cta">
+              View details
+            </Link>
+          )}
+          {item.repoUrl && (
+            <a
+              href={item.repoUrl}
+              className="wiki-card__external-link"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <i className="ri-external-link-line" aria-hidden="true" />
+              GitHub
+            </a>
+          )}
+        </div>
       )}
     </>
   )

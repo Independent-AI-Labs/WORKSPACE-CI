@@ -110,6 +110,24 @@ describe('WikiCard', () => {
     expect(container.querySelector('.wiki-card__cta')).toBeNull()
   })
 
+  it('renders external GitHub link when repoUrl is set', () => {
+    const { container } = render(
+      <WikiCard item={makeItem({ href: '/detail', repoUrl: 'https://github.com/Org/Repo' })} />,
+    )
+    const externalLink = container.querySelector('.wiki-card__external-link') as HTMLAnchorElement
+    expect(externalLink).not.toBeNull()
+    expect(externalLink.getAttribute('href')).toBe('https://github.com/Org/Repo')
+    expect(externalLink.getAttribute('target')).toBe('_blank')
+    expect(externalLink.getAttribute('rel')).toBe('noopener noreferrer')
+    expect(externalLink.querySelector('i')).toHaveClass('ri-external-link-line')
+    expect(externalLink.textContent).toContain('GitHub')
+  })
+
+  it('does not render external link when repoUrl is absent', () => {
+    const { container } = render(<WikiCard item={makeItem({ href: '/detail' })} />)
+    expect(container.querySelector('.wiki-card__external-link')).toBeNull()
+  })
+
   it('renders icon when provided', () => {
     const { container } = render(
       <WikiCard item={makeItem({ icon: 'ri-settings-3-line' })} />,

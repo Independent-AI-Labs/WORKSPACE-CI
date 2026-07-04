@@ -43,6 +43,28 @@
   top: -0.4rem;
 }
 
+.wiki-sidebar__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  transition: color var(--duration-fast), background var(--duration-fast);
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.wiki-sidebar__toggle:hover {
+  color: var(--text);
+  background: var(--surface-1);
+}
+
 .wiki-sidebar__nav {
   list-style: none;
   padding: 0.5rem 0;
@@ -72,6 +94,15 @@
 
 .wiki-sidebar__link i {
   font-size: 1.125rem;
+  flex-shrink: 0;
+}
+
+.wiki-sidebar__count {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
 .wiki-sidebar__nav-logo {
@@ -84,4 +115,35 @@
   mask-repeat: no-repeat;
   mask-position: center;
   background-color: currentColor;
+}
+
+/* Collapsed state - desktop only */
+@media (min-width: 769px) {
+  [data-sidebar-collapsed='true'] .wiki-sidebar {
+    overflow-x: hidden;
+  }
+
+  [data-sidebar-collapsed='true'] .wiki-sidebar__header {
+    justify-content: center;
+    padding: var(--space-3) var(--space-1);
+  }
+
+  [data-sidebar-collapsed='true'] .wiki-sidebar__logo,
+  [data-sidebar-collapsed='true'] .wiki-sidebar__title {
+    display: none;
+  }
+
+  [data-sidebar-collapsed='true'] .wiki-sidebar__toggle {
+    margin-left: 0;
+  }
+
+  [data-sidebar-collapsed='true'] .wiki-sidebar__link {
+    justify-content: center;
+    padding: 0.5rem var(--space-1);
+  }
+
+  [data-sidebar-collapsed='true'] .wiki-sidebar__link span,
+  [data-sidebar-collapsed='true'] .wiki-sidebar__count {
+    display: none;
+  }
 }

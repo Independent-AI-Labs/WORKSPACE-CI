@@ -5,7 +5,7 @@ import { WikiFooter } from '@/components/wiki/WikiFooter'
 import { ThemeToggle } from '@/components/wiki/ThemeToggle'
 import { WikiSearch } from '@/components/wiki/WikiSearch'
 import { MobileNavToggle } from '@/components/wiki/MobileNavToggle'
-import { buildSearchData } from '@/lib/search-data'
+import { buildSearchData, getWikiStats } from '@/lib/search-data'
 
 interface WikiShellProps {
   children: ReactNode
@@ -13,13 +13,14 @@ interface WikiShellProps {
 
 export function WikiShell({ children }: WikiShellProps) {
   const searchData = buildSearchData()
+  const stats = getWikiStats()
 
   return (
     <div className="wiki-shell">
       <a href="#main-content" className="skip-link">
         Skip to content
       </a>
-      <WikiSidebar />
+      <WikiSidebar stats={stats} />
       <div className="wiki-main">
         <header className="wiki-header" role="banner">
           <div className="wiki-header__left">

@@ -32,9 +32,15 @@ describe('projectAdapter', () => {
     expect(item.subtitle).toBe('CI Pipeline Monitor')
     expect(item.description).toBe('A collection of CI utilities.')
     expect(item.href).toBe('/ci')
+    expect(item.repoUrl).toBeUndefined()
     expect(item.icon).toBe('ri-terminal-line')
     expect(item.monoTitle).toBeUndefined()
     expect(item.tags).toEqual([{ label: 'Python', variant: 'muted' }])
+  })
+
+  it('passes repoUrl through when set on ProjectSummary', () => {
+    const [item] = projectAdapter([{ ...project, repoUrl: 'https://github.com/Test-Org/CI' }])
+    expect(item.repoUrl).toBe('https://github.com/Test-Org/CI')
   })
 
   it('shows language percent badges when code-stats provided', () => {

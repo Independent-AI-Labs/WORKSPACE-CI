@@ -203,7 +203,7 @@ const staticPages: SearchIndexEntry[] = [
   },
   {
     id: 'page-guard',
-    title: 'Workspace Guard',
+    title: 'Guard Policies',
     section: 'Pages',
     content: 'Guard configurations reference',
     href: '/guard',
@@ -294,4 +294,25 @@ export const buildSearchData = cache((): SearchIndexEntry[] => {
     ...loadScriptsSearch(),
     ...staticPages,
   ]
+})
+
+export interface WikiStats {
+  hooks: number
+  patterns: number
+  configs: number
+  guards: number
+  standards: number
+  scripts: number
+}
+
+export const getWikiStats = cache((): WikiStats => {
+  const data = buildSearchData()
+  return {
+    hooks: data.filter((d) => d.type === 'hook').length,
+    patterns: data.filter((d) => d.type === 'pattern').length,
+    configs: data.filter((d) => d.type === 'config').length,
+    guards: data.filter((d) => d.type === 'guard').length,
+    standards: data.filter((d) => d.type === 'standard').length,
+    scripts: data.filter((d) => d.type === 'tooling').length,
+  }
 })

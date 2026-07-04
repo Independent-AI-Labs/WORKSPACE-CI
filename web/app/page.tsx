@@ -47,6 +47,13 @@ export default async function HomePage() {
 
   return (
     <WikiShell>
+      <section className="hero">
+        <h1 className="hero__title">AI Workspace Guardrails</h1>
+        <p className="hero__subtitle">
+          Interactive documentation for git hooks, code anti-patterns, config schemas,
+          runtime guardrails, and AI governance standards.
+        </p>
+      </section>
       <h1>Project Catalogue</h1>
       <p className="page-intro">
         Browse README documentation for all backend projects in the workspace.

@@ -79,7 +79,7 @@ export function pageTitle(path: string): string {
     '/patterns': 'Code Anti-Patterns',
     '/hooks': 'Git Hooks',
     '/config': 'Config Files',
-    '/guard': 'Workspace Guard',
+    '/guard': 'Guard Policies',
     '/checks': 'Static Analysis',
     '/playground': 'Playground',
     '/tooling': 'Tools & Scripts',

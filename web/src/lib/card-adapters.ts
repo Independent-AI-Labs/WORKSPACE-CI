@@ -84,6 +84,7 @@ export function projectAdapter(
       subtitle: p.title,
       description: p.summary,
       href: `/${p.slug}`,
+      repoUrl: p.repoUrl,
       icon: p.icon,
       tags: tags.length > 0 ? tags : [{ label: p.language, variant: 'muted' }],
     }

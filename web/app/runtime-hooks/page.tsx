@@ -7,7 +7,7 @@ export default function RuntimeHooksPage() {
       description="This page will document runtime hooks that intercept and audit AI agent actions during execution, including file access monitoring, command execution guards, and network call inspection."
       links={[
         { href: '/hooks', label: 'Browse Git Hooks' },
-        { href: '/guard', label: 'View Workspace Guard' },
+        { href: '/guard', label: 'View Guard Policies' },
       ]}
     />
   )

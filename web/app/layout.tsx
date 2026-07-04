@@ -30,6 +30,11 @@ const themeScript = `
     } else {
       document.documentElement.setAttribute('data-theme', 'dark');
     }
+    var sidebarCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+    if (sidebarCollapsed) {
+      document.documentElement.setAttribute('data-sidebar-collapsed', 'true');
+      document.documentElement.style.setProperty('--sidebar-width', '56px');
+    }
   })();
 `
 

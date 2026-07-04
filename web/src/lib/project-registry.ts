@@ -1,10 +1,32 @@
 import { cache } from 'react'
 import { readFile } from 'fs/promises'
+import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { ProjectEntry, ProjectSummary, ProjectReadme } from '@/types/projects'
 
 const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT
   ?? join(process.cwd(), '..', '..')
+
+function getGitHubBaseUrl(): string {
+  const gitConfigPath = join(process.cwd(), '..', '.git', 'config')
+  let config: string
+  try {
+    config = readFileSync(gitConfigPath, 'utf8')
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+    return ''
+  }
+  const sectionMatch = config.match(/\[remote "origin"\][^\[]*?url\s*=\s*(\S+)/)
+  if (!sectionMatch) return ''
+  const remote = sectionMatch[1]
+  const sshMatch = remote.match(/git@([^:]+):([^/]+)\//)
+  if (sshMatch) return `https://${sshMatch[1]}/${sshMatch[2]}`
+  const httpsMatch = remote.match(/https?:\/\/([^/]+\/[^/]+)\//)
+  if (httpsMatch) return `https://${httpsMatch[1]}`
+  return ''
+}
+
+const GITHUB_BASE_URL = getGitHubBaseUrl()
 
 export const PROJECTS: ProjectEntry[] = [
   {
@@ -115,6 +137,9 @@ export const loadAllProjectSummaries = cache(
           icon: entry.icon,
           title: extractReadmeTitle(content),
           summary: extractReadmeSummary(content),
+          ...(GITHUB_BASE_URL
+            ? { repoUrl: `${GITHUB_BASE_URL}/${entry.displayName}` }
+            : {}),
         }
       }),
     )

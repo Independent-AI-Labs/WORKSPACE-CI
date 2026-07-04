@@ -17,6 +17,7 @@ export interface CardItem {
   subtitle?: string
   description: string
   href?: string
+  repoUrl?: string
   icon?: string
   monoTitle?: boolean
   category?: string

@@ -1,6 +1,6 @@
 .wiki-shell {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: var(--sidebar-width, auto) 1fr;
   min-height: 100vh;
 }
 

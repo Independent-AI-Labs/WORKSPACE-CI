@@ -15,6 +15,7 @@ export interface ProjectSummary {
   icon: string
   title: string
   summary: string
+  repoUrl?: string
 }
 
 export interface ProjectReadme {
