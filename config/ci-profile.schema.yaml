@@ -1,0 +1,71 @@
+# Schema for ci-profile.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: ci-profile
+description: "Per-project CI profile declaring desired hooks, stage ordering, languages, and enforcement tier. Consumed by scripts/scaffold-ci to generate .pre-commit-config.yaml, Makefile, config/ defaults, and quality_exceptions.yaml."
+fields:
+  - path: version
+    type: integer
+    required: true
+    default: 1
+    description: "Schema version of the CI profile. MUST be 1. Bumped when the YAML shape changes."
+
+  - path: project
+    type: string
+    required: true
+    description: "Project name rendered into quality_exceptions.yaml. Must match ^[A-Za-z0-9][A-Za-z0-9_.-]*$. No whitespace or shell metacharacters."
+
+  - path: languages
+    type: list<string>
+    required: true
+    description: "Project language profile. Each entry in {any, python, rust, node}. The sentinel 'any' is exclusive (cannot coexist with others). Drives hook applicability validation and config/ defaults post-processing."
+
+  - path: tier
+    type: string
+    required: true
+    description: "Enforcement tier. strict: full contract; all mandatory + safety hooks required. poc: safety hooks only (mandatory=true AND safety=true). vendored: no hooks; generator exits 0 early with a notice."
+
+  - path: hooks
+    type: map
+    required: true
+    description: "Hook configuration. Map keyed by stage name. Required unless tier=vendored (in which case hooks is forbidden). Order within each stage list is the explicit order; auto-inserted mandatory hooks append to the END."
+
+  - path: hooks.pre-commit
+    type: list<string>
+    description: "Ordered list of hook IDs for the pre-commit stage. Each entry MUST exist in config/required_hooks.yaml."
+
+  - path: hooks.commit-msg
+    type: list<string>
+    description: "Ordered list of hook IDs for the commit-msg stage. Each entry MUST exist in config/required_hooks.yaml."
+
+  - path: hooks.pre-push
+    type: list<string>
+    description: "Ordered list of hook IDs for the pre-push stage. Each entry MUST exist in config/required_hooks.yaml."
+
+  - path: overrides
+    type: map
+    description: "Optional explicit overrides for individual hook entries. Keys are hook IDs present in the profile's hooks block. Values are partial hook metadata dicts."
+
+  - path: overrides.<id>.entry
+    type: string
+    description: "Full entry string as it will appear in .pre-commit-config.yaml. Written verbatim by the generator; caller is responsible for embedding the correct relative path."
+
+  - path: overrides.<id>.files
+    type: string
+    description: "Path pattern scoping the hook (pass-through to .pre-commit-config.yaml)."
+
+  - path: overrides.<id>.exclude
+    type: string
+    description: "Path pattern excluding files from the hook (pass-through)."
+
+  - path: overrides.<id>.always_run
+    type: boolean
+    description: "Whether the hook runs unconditionally. Overrides the registry default."
+
+  - path: overrides.<id>.pass_filenames
+    type: boolean
+    description: "Whether staged filenames are passed as arguments. Overrides the registry default."

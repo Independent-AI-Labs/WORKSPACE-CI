@@ -1,0 +1,35 @@
+# ci-profile.template.yaml: reference profile generated from
+# config/required_hooks.yaml by scripts/scaffold-ci --emit-template.
+# Copy this to <consumer>/ci-profile.yaml and trim per-project.
+# DO NOT edit this template by hand; regenerate it via
+# make scaffold-ci ARGS=--emit-template.
+
+pre-commit:
+  - check-unstaged
+  - block-sensitive-files
+  - gitleaks
+  - ci-check-error-swallow
+  - check-coverage-no-devolution
+  - check-banned-words
+  - check-portable-shell
+  - check-markdown-docs
+  - check-boot-venv-layout
+  - check-file-length
+  - check-required-hooks-present
+  - ci-lint
+  - ci-type-check
+  - check-dependency-versions
+  - check-duplicate-dependencies
+
+commit-msg:
+  - check-commit-message
+  - block-coauthored
+
+pre-push:
+  - block-coauthored-history
+  - ci-check-push
+  - check-dead-code
+
+# Total hooks: 20 (pre-commit=15 commit-msg=2 pre-push=3)
+# Generated: 2026-07-04T17:55:01Z
+# Source: config/required_hooks.yaml

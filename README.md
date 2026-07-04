@@ -174,6 +174,8 @@ the enforcement layer above them.
 | [`docs/specifications/SPEC-BOOT-LAYOUT.md`](docs/specifications/SPEC-BOOT-LAYOUT.md) | Boot layout implementation: walk-up PATH resolution, config schema, compliance check |
 | [`docs/requirements/REQ-WIKI.md`](docs/requirements/REQ-WIKI.md) | Interactive wiki UI requirements |
 | [`docs/specifications/SPEC-WIKI.md`](docs/specifications/SPEC-WIKI.md) | Wiki implementation specification |
+| [`docs/requirements/REQ-SCAFFOLD-CI.md`](docs/requirements/REQ-SCAFFOLD-CI.md) | scaffold-ci feature requirements (FR/NFR/TR acceptance criteria) |
+| [`docs/specifications/SPEC-SCAFFOLD-CI.md`](docs/specifications/SPEC-SCAFFOLD-CI.md) | scaffold-ci implementation: 5-phase validation, generation pipeline, awk parser |
 | [`lib/`](lib/) | Shell check functions: core, files, commit, coverage, compliance, quality |
 | [`ci/`](ci/) | Python checks: dependency versions, dead code, markdown refs, required hooks |
 

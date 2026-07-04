@@ -244,6 +244,10 @@ extract-script-sources: ## Generate web/src/data/script-sources.json for wiki To
 
 extract-wiki-data: extract-code-stats extract-hook-sources extract-script-sources ## Regenerate all wiki JSON data files
 
+.PHONY: scaffold-ci
+scaffold-ci: ## Generate CI integration files for a consumer project
+	bash scripts/scaffold-ci $(ARGS)
+
 # =============================================================================
 # WORKSPACE-GUARD: compiled git protection (opt-in)
 # =============================================================================

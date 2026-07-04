@@ -1,0 +1,382 @@
+#!/usr/bin/env bash
+# scaffold-ci: Generate CI integration files for a consumer project.
+#
+# Takes a consumer directory + ci-profile.yaml and emits:
+#   .pre-commit-config.yaml, Makefile, config/*.yaml, quality_exceptions.yaml
+#
+# Usage: scaffold-ci --consumer PATH [--profile PATH] [--dry-run] [--force]
+#        scaffold-ci --emit-template
+set -euo pipefail
+
+_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+_CI_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
+
+if ! source "$_CI_ROOT/lib/ci.sh"; then
+    echo "ERROR: failed to source $_CI_ROOT/lib/ci.sh" >&2
+    exit 2
+fi
+if ! source "$_CI_ROOT/lib/scaffold_lib.sh"; then
+    echo "ERROR: failed to source $_CI_ROOT/lib/scaffold_lib.sh" >&2
+    exit 2
+fi
+
+_PARSER="$_CI_ROOT/lib/parse_hook_yaml.awk"
+_REGISTRY="$_CI_ROOT/config/required_hooks.yaml"
+_QE_TEMPLATE="$_CI_ROOT/templates/quality_exceptions.template.yaml"
+_CONFIG_DIR="$_CI_ROOT/config"
+
+_consumer=""
+_profile=""
+_dry_run=0
+_force=0
+_emit_template=0
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --consumer)      _consumer="$2"; shift 2 ;;
+        --profile)       _profile="$2"; shift 2 ;;
+        --dry-run)       _dry_run=1; shift ;;
+        --force)         _force=1; shift ;;
+        --emit-template) _emit_template=1; shift ;;
+        -h|--help)
+            cat <<'USAGE'
+Usage: scaffold-ci --consumer PATH [--profile PATH] [--dry-run] [--force]
+       scaffold-ci --emit-template
+
+  --consumer PATH   Consumer project directory (required for scaffolding).
+  --profile PATH    Profile YAML path (default: <consumer>/ci-profile.yaml).
+  --dry-run         Print intended file content without writing.
+  --force           Overwrite existing .pre-commit-config.yaml / Makefile.
+  --emit-template   Regenerate templates/ci-profile.template.yaml.
+USAGE
+            exit 0
+            ;;
+        *) ci_fail "Unknown option: $1"; exit 1 ;;
+    esac
+done
+
+_generated=()
+_skipped=()
+
+# ── --emit-template mode ───────────────────────────────────────────────────
+if [[ $_emit_template -eq 1 ]]; then
+    _emit_target="$_CI_ROOT/templates/ci-profile.template.yaml"
+    [[ -f "$_REGISTRY" ]] || { ci_fail "required_hooks.yaml not found"; exit 1; }
+    _reg_parsed="$(awk -v mode=registry -f "$_PARSER" "$_REGISTRY")" || {
+        ci_fail "Failed to parse required_hooks.yaml"; exit 1
+    }
+    declare -a _tpl_pc=() _tpl_cm=() _tpl_pp=()
+    _seq=0
+    while IFS= read -r _rl; do
+        if [[ -z "$_rl" ]]; then continue; fi
+        IFS=$'\034' read -r _rid _rk _re _rs _rpf _ra _rm _rsaf _rapp _rf _rft <<< "$_rl"
+        _sk="1"
+        if [[ "$_rsaf" == "true" ]]; then _sk="0"; fi
+        _mk="1"
+        if [[ "$_rm" == "true" ]]; then _mk="0"; fi
+        _seq=$((_seq + 1))
+        _key="$(printf '%s%s%05d' "$_sk" "$_mk" "$_seq"):$_rid"
+        case "$_rs" in
+            pre-commit)  _tpl_pc+=("$_key") ;;
+            commit-msg)  _tpl_cm+=("$_key") ;;
+            pre-push)    _tpl_pp+=("$_key") ;;
+        esac
+    done <<< "$_reg_parsed"
+
+    IFS=$'\n' _tpl_pc_sorted=($(printf '%s\n' "${_tpl_pc[@]:-}" | sort)); unset IFS
+    IFS=$'\n' _tpl_cm_sorted=($(printf '%s\n' "${_tpl_cm[@]:-}" | sort)); unset IFS
+    IFS=$'\n' _tpl_pp_sorted=($(printf '%s\n' "${_tpl_pp[@]:-}" | sort)); unset IFS
+
+    _emit_content="$(_scl_gen_template)"
+    if [[ $_dry_run -eq 1 ]]; then
+        echo "================================================================================"
+        echo "Would write: $_emit_target"
+        echo "================================================================================"
+        printf '%s\n' "$_emit_content"
+    else
+        _tmp=$(mktemp)
+        printf '%s\n' "$_emit_content" > "$_tmp"
+        mv -f "$_tmp" "$_emit_target"
+        ci_pass "Generated $_emit_target"
+    fi
+    exit 0
+fi
+
+# ── Validate consumer dir ──────────────────────────────────────────────────
+if [[ -z "$_consumer" ]]; then
+    ci_fail "--consumer PATH is required (or use --emit-template)"
+    exit 1
+fi
+[[ -d "$_consumer" ]] || { ci_fail "Consumer directory not found: $_consumer"; exit 1; }
+_consumer="$(cd "$_consumer" && pwd)"
+
+if [[ -z "$_profile" ]]; then
+    _profile="$_consumer/ci-profile.yaml"
+fi
+[[ -f "$_profile" ]] || { ci_fail "Profile not found: $_profile"; exit 1; }
+
+command -v realpath > /dev/null 2>&1 || { ci_fail "realpath(1) not found, install coreutils >= 8.23"; exit 2; }
+REL_CI="$(realpath --relative-to="$_consumer" "$_CI_ROOT")"
+
+# ── Parse profile ──────────────────────────────────────────────────────────
+_profile_parsed="$(awk -v mode=profile -f "$_PARSER" "$_profile")" || {
+    ci_fail "Failed to parse profile: $_profile"; exit 1
+}
+
+_pf_version=""
+_pf_project=""
+_pf_tier=""
+_pf_languages=()
+_pf_hooks_pre_commit=()
+_pf_hooks_commit_msg=()
+_pf_hooks_pre_push=()
+_pf_override_ids=()
+_pf_override_fields=()
+_pf_override_values=()
+
+while IFS= read -r _line; do
+    if [[ -z "$_line" ]]; then continue; fi
+    _prefix="${_line%%$'\034'*}"
+    _rest="${_line#*$'\034'}"
+    case "$_prefix" in
+        S)
+            _key="${_rest%%$'\034'*}"
+            _val="${_rest#*$'\034'}"
+            case "$_key" in
+                version) _pf_version="$_val" ;;
+                project) _pf_project="$_val" ;;
+                tier)    _pf_tier="$_val" ;;
+            esac
+            ;;
+        L) _pf_languages+=("$_rest") ;;
+        H)
+            _stage="${_rest%%$'\034'*}"
+            _hid="${_rest#*$'\034'}"
+            case "$_stage" in
+                pre-commit)  _pf_hooks_pre_commit+=("$_hid") ;;
+                commit-msg)  _pf_hooks_commit_msg+=("$_hid") ;;
+                pre-push)    _pf_hooks_pre_push+=("$_hid") ;;
+            esac
+            ;;
+        O)
+            _oid="${_rest%%$'\034'*}"
+            _orest="${_rest#*$'\034'}"
+            _ofield="${_orest%%$'\034'*}"
+            _oval="${_orest#*$'\034'}"
+            _pf_override_ids+=("$_oid")
+            _pf_override_fields+=("$_ofield")
+            _pf_override_values+=("$_oval")
+            ;;
+    esac
+done <<< "$_profile_parsed"
+
+# ── Phase A: Schema Parse ──────────────────────────────────────────────────
+if [[ -z "$_pf_version" ]]; then
+    ci_fail "Profile missing 'version' field or version is empty"
+    exit 1
+fi
+
+# ── Phase B: Required Fields ───────────────────────────────────────────────
+_missing=()
+if [[ -z "$_pf_version" ]]; then _missing+=("version"); fi
+if [[ -z "$_pf_project" ]]; then _missing+=("project"); fi
+if [[ "${#_pf_languages[@]}" -eq 0 ]]; then _missing+=("languages"); fi
+if [[ -z "$_pf_tier" ]]; then _missing+=("tier"); fi
+if [[ ${#_missing[@]} -gt 0 ]]; then
+    ci_fail "Missing required fields: ${_missing[*]}"
+    exit 1
+fi
+
+if [[ "$_pf_tier" == "vendored" ]]; then
+    _has_hooks=0
+    if [[ ${#_pf_hooks_pre_commit[@]} -gt 0 || ${#_pf_hooks_commit_msg[@]} -gt 0 || ${#_pf_hooks_pre_push[@]} -gt 0 ]]; then
+        _has_hooks=1
+    fi
+    if [[ $_has_hooks -eq 1 ]]; then
+        ci_fail "tier=vendored but hooks block is non-empty; use tier=strict or remove hooks"
+        exit 1
+    fi
+    ci_info "tier=vendored: no CI integration generated."
+    exit 0
+fi
+
+# ── Phase C: Field Value Validation ────────────────────────────────────────
+_c_errors=()
+[[ "$_pf_version" == "1" ]] || _c_errors+=("version must be 1, got '$_pf_version'")
+case "$_pf_tier" in strict|poc|vendored) ;; *) _c_errors+=("tier must be strict|poc|vendored, got '$_pf_tier'") ;; esac
+_has_any=0
+for _lang in "${_pf_languages[@]}"; do
+    case "$_lang" in any) _has_any=1 ;; python|rust|node) ;; *) _c_errors+=("unknown language: $_lang") ;; esac
+done
+if [[ $_has_any -eq 1 && ${#_pf_languages[@]} -gt 1 ]]; then
+    _c_errors+=("language 'any' cannot coexist with other languages")
+fi
+if ! [[ "$_pf_project" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]]; then
+    _c_errors+=("project name '$_pf_project' does not match required pattern")
+fi
+if [[ ${#_c_errors[@]} -gt 0 ]]; then
+    ci_fail "Validation errors:"
+    for _e in "${_c_errors[@]}"; do echo "  - $_e" >&2; done
+    exit 1
+fi
+
+# ── Parse registry ─────────────────────────────────────────────────────────
+[[ -f "$_REGISTRY" ]] || { ci_fail "required_hooks.yaml not found at $_REGISTRY"; exit 1; }
+_registry_parsed="$(awk -v mode=registry -f "$_PARSER" "$_REGISTRY")" || {
+    ci_fail "Failed to parse required_hooks.yaml"; exit 1
+}
+
+declare -A _reg_id _reg_kind _reg_entry _reg_stage _reg_pass_fn _reg_always
+declare -A _reg_mandatory _reg_safety _reg_applicable _reg_files _reg_files_types
+
+while IFS= read -r _rline; do
+    if [[ -z "$_rline" ]]; then continue; fi
+    IFS=$'\034' read -r _rid _rkind _rentry _rstage _rpass _ralways _rmand _rsafety _rapp _rfiles _rftypes <<< "$_rline"
+    _reg_id["$_rid"]=1
+    _reg_kind["$_rid"]="$_rkind"
+    _reg_entry["$_rid"]="$_rentry"
+    _reg_stage["$_rid"]="$_rstage"
+    _reg_pass_fn["$_rid"]="$_rpass"
+    _reg_always["$_rid"]="$_ralways"
+    _reg_mandatory["$_rid"]="$_rmand"
+    _reg_safety["$_rid"]="$_rsafety"
+    _reg_applicable["$_rid"]="$_rapp"
+    _reg_files["$_rid"]="$_rfiles"
+    _reg_files_types["$_rid"]="$_rftypes"
+done <<< "$_registry_parsed"
+
+# ── Phase D: Hook ID Resolution ────────────────────────────────────────────
+_d_errors=()
+_d_warnings=()
+
+_scl_validate_ids() {
+    local stage="$1"; shift
+    local -n _arr="_pf_hooks_$stage"
+    local _id _app _found _w _lang
+    for _id in "${_arr[@]:-}"; do
+        if [[ -z "$_id" ]]; then continue; fi
+        if [[ -z "${_reg_id[$_id]:-}" ]]; then
+            _d_errors+=("hook '$_id' in stage '$stage' is not registered in required_hooks.yaml")
+            continue
+        fi
+        _app="${_reg_applicable[$_id]}"
+        _found=0
+        for _w in $_app; do
+            if [[ "$_w" == "any" ]]; then _found=1; break; fi
+            for _lang in "${_pf_languages[@]}"; do
+                if [[ "$_w" == "$_lang" ]]; then _found=1; break; fi
+            done
+            if [[ $_found -eq 1 ]]; then break; fi
+        done
+        if [[ $_found -eq 0 ]]; then
+            _d_warnings+=("hook '$_id': applicable_to=[$_app] does not intersect languages=[${_pf_languages[*]}]")
+        fi
+    done
+    return 0
+}
+
+_scl_validate_ids pre_commit
+_scl_validate_ids commit_msg
+_scl_validate_ids pre_push
+
+if [[ ${#_d_errors[@]} -gt 0 ]]; then
+    ci_fail "Hook ID resolution errors:"
+    for _e in "${_d_errors[@]}"; do echo "  - $_e" >&2; done
+    exit 1
+fi
+for _w in "${_d_warnings[@]:-}"; do
+    if [[ -z "$_w" ]]; then continue; fi
+    ci_warn "$_w"
+done
+
+# ── Phase E: Mandatory-Hook Completeness ───────────────────────────────────
+_auto_inserted=()
+declare -A _in_profile
+for _h in "${_pf_hooks_pre_commit[@]:-}" "${_pf_hooks_commit_msg[@]:-}" "${_pf_hooks_pre_push[@]:-}"; do
+    if [[ -n "$_h" ]]; then _in_profile["$_h"]=1; fi
+done
+
+for _rid in "${!_reg_id[@]}"; do
+    _mand="${_reg_mandatory[$_rid]}"
+    _safety="${_reg_safety[$_rid]}"
+    _app="${_reg_applicable[$_rid]}"
+    if [[ "$_mand" != "true" ]]; then continue; fi
+    if [[ "$_pf_tier" == "poc" && "$_safety" != "true" ]]; then continue; fi
+    _app_ok=0
+    for _w in $_app; do
+        if [[ "$_w" == "any" ]]; then _app_ok=1; break; fi
+        for _lang in "${_pf_languages[@]}"; do
+            if [[ "$_w" == "$_lang" ]]; then _app_ok=1; break; fi
+        done
+        if [[ $_app_ok -eq 1 ]]; then break; fi
+    done
+    if [[ $_app_ok -eq 0 ]]; then continue; fi
+    if [[ -z "${_in_profile[$_rid]:-}" ]]; then
+        _mstage="${_reg_stage[$_rid]}"
+        case "$_mstage" in
+            pre-commit) _pf_hooks_pre_commit+=("$_rid") ;;
+            commit-msg) _pf_hooks_commit_msg+=("$_rid") ;;
+            pre-push)   _pf_hooks_pre_push+=("$_rid") ;;
+        esac
+        _auto_inserted+=("$_rid")
+        ci_warn "auto-inserted required hook '$_rid' into stage '$_mstage'"
+    fi
+done
+
+# ── Generation ─────────────────────────────────────────────────────────────
+ci_info "==> scaffolding CI integration for $_consumer (tier=$_pf_tier, languages=${_pf_languages[*]}, REL_CI=$REL_CI)"
+
+_pc_target="$_consumer/.pre-commit-config.yaml"
+if [[ -f "$_pc_target" && $_force -eq 0 ]]; then
+    _skipped+=("$_pc_target (exists, use --force)")
+else
+    _pc_content="$(_scl_gen_precommit)"
+    if [[ $_dry_run -eq 1 ]]; then
+        echo "================================================================================"
+        echo "Would write: $_pc_target  (REL_CI=$REL_CI)"
+        echo "================================================================================"
+        printf '%s\n' "$_pc_content"
+    else
+        printf '%s\n' "$_pc_content" > "$_pc_target"
+        _generated+=("$_pc_target")
+    fi
+fi
+
+_mf_target="$_consumer/Makefile"
+if [[ -f "$_mf_target" && $_force -eq 0 ]]; then
+    _skipped+=("$_mf_target (exists, use --force)")
+else
+    _mf_content="$(_scl_gen_makefile)"
+    if [[ $_dry_run -eq 1 ]]; then
+        echo "================================================================================"
+        echo "Would write: $_mf_target"
+        echo "================================================================================"
+        printf '%s\n' "$_mf_content"
+    else
+        printf '%s\n' "$_mf_content" > "$_mf_target"
+        _generated+=("$_mf_target")
+    fi
+fi
+
+_scl_copy_config "$_CONFIG_DIR/coverage_thresholds.yaml" "$_consumer/config/coverage_thresholds.yaml" "coverage"
+_scl_copy_config "$_CONFIG_DIR/file_length_limits.yaml" "$_consumer/config/file_length_limits.yaml" ""
+_scl_copy_config "$_CONFIG_DIR/dead_code.yaml" "$_consumer/config/dead_code.yaml" "dead_code"
+_scl_copy_config "$_CONFIG_DIR/dependency_excludes.yaml" "$_consumer/config/dependency_excludes.yaml" ""
+_scl_copy_config "$_CONFIG_DIR/duplicate_dependency_excludes.yaml" "$_consumer/config/duplicate_dependency_excludes.yaml" ""
+_scl_copy_config "$_CONFIG_DIR/markdown_docs.yaml" "$_consumer/config/markdown_docs.yaml" ""
+
+_scl_gen_qe
+
+# ── Summary ────────────────────────────────────────────────────────────────
+echo ""
+if [[ ${#_generated[@]} -gt 0 ]]; then
+    ci_pass "Generated: ${_generated[*]}"
+fi
+if [[ ${#_skipped[@]} -gt 0 ]]; then
+    ci_warn "Skipped: ${_skipped[*]}"
+fi
+if [[ ${#_auto_inserted[@]} -gt 0 ]]; then
+    ci_warn "Auto-inserted mandatory hooks: ${_auto_inserted[*]}"
+fi
+
+exit 0

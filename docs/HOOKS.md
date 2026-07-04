@@ -284,3 +284,58 @@ companion commit so the hook stops re-capturing it.
 Never bypass the hook with `git commit --no-verify`: it is blocked by
 the git-guard, and even if it were not, the hook is almost certainly
 catching a real problem.
+
+## Bootstrapping a New Project with scaffold-ci
+
+Instead of hand-writing `.pre-commit-config.yaml`, `Makefile`, and
+config defaults, use `scaffold-ci` to generate them from a declarative
+`ci-profile.yaml`.
+
+### Quick Start
+
+```bash
+# 1. Copy the template into your project
+cp ../CI/templates/ci-profile.template.yaml myproject/ci-profile.yaml
+
+# 2. Edit: set project name, tier, languages, trim hooks as needed
+# 3. Generate CI integration files
+make -C ../CI scaffold-ci ARGS="--consumer myproject --force"
+
+# 4. Install native git hooks
+cd myproject && make install-hooks
+```
+
+### ci-profile.yaml Fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `version` | yes | Must be `1` |
+| `project` | yes | Project name (alphanumeric, dash, dot, underscore) |
+| `tier` | yes | `strict` (full hooks), `poc` (safety-only), `vendored` (no hooks) |
+| `languages` | yes | List of `rust`, `python`, `node`, or `any` (any = all hooks) |
+| `hooks` | yes | Map of stage → list of hook IDs from `required_hooks.yaml` |
+| `overrides` | no | Per-hook entry overrides (map: hook_id → {entry, ...}) |
+
+### What scaffold-ci Generates
+
+| File | Overwritten by `--force`? | Purpose |
+|------|--------------------------|---------|
+| `.pre-commit-config.yaml` | Yes | Hook configuration (consumed by `generate-hooks`) |
+| `Makefile` | Yes | 10-target contract with vacuous stubs |
+| `config/*.yaml` | Yes (new files only) | 6 default CI config files |
+| `quality_exceptions.yaml` | **Never** | Per-project exception declarations |
+
+### Mandatory Hook Auto-Insertion
+
+Hooks marked `mandatory: true` in `required_hooks.yaml` are automatically
+appended to the END of their stage if not explicitly listed. This ensures
+safety-critical hooks (gitleaks, banned-words, coauthored blocking) are
+never accidentally omitted.
+
+### Dry Run
+
+```bash
+make -C ../CI scaffold-ci ARGS="--consumer myproject --dry-run"
+```
+
+Prints what would be written without touching disk.

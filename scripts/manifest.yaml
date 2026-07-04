@@ -141,3 +141,16 @@ scripts:
     args:
       - { name: PROJECT_DIR, description: "Project to audit (default: current directory)" }
     output: "Score + findings on stdout. Always exits 0 (non-blocking, per FR-BL-7.7)."
+
+  - id: scaffold-ci
+    path: scripts/scaffold-ci
+    summary: Generate CI integration files (.pre-commit-config.yaml, Makefile, config defaults) for a consumer project.
+    usage: scaffold-ci --consumer DIR [--dry-run] [--force] [--emit-template]
+    category: bootstrap
+    args:
+      - { name: --consumer, description: "Target project directory containing ci-profile.yaml" }
+      - { name: --dry-run, description: "Print what would be written without touching disk" }
+      - { name: --force, description: "Overwrite existing .pre-commit-config.yaml and Makefile" }
+      - { name: --emit-template, description: "Generate a reference ci-profile.template.yaml from required_hooks.yaml" }
+    output: "Writes .pre-commit-config.yaml, Makefile, config/ defaults, quality_exceptions.yaml to consumer dir."
+    make_target: scaffold-ci

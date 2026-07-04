@@ -17,6 +17,7 @@ source "$TESTS_DIR/integration/test_compliance.sh"
 source "$TESTS_DIR/integration/test_e2e_checks.sh"
 source "$TESTS_DIR/integration/test_silent_swallow.sh"
 source "$TESTS_DIR/integration/test_fail_closed.sh"
+source "$TESTS_DIR/integration/test_scaffold_ci.sh"
 
 # Summary
 echo ""
