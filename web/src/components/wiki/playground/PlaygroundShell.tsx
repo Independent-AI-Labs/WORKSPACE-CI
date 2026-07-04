@@ -1,26 +1,11 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import { usePlayground } from '@/hooks/usePlayground'
 import { LanguageSelector } from '@/components/wiki/playground/LanguageSelector'
 import { PatternCategoryFilter } from '@/components/wiki/playground/PatternCategoryFilter'
 import { MatchPanel } from '@/components/wiki/playground/MatchPanel'
+import { CodeEditor } from '@/components/wiki/playground/CodeEditor'
 import type { ClassifiedPattern } from '@/types/patterns'
-
-
-const CodeEditor = dynamic(
-  () => import('@/components/wiki/playground/CodeEditor'),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="playground-editor-loading" aria-busy="true">
-        <div className="loading-line" />
-        <div className="loading-line w-3/4" />
-        <div className="loading-line w-1/2" />
-      </div>
-    ),
-  },
-)
 
 interface EditorApi {
   scrollToLine: (line: number) => void

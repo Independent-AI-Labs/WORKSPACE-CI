@@ -154,8 +154,8 @@ dev-status: ## Show dev server status
 	@echo "Logs:    journalctl --user -u $(SYSTEMD_UNIT) -f"
 
 .PHONY: dev-logs
-dev-logs: ## Tail dev server logs
-	@journalctl --user -u $(SYSTEMD_UNIT) -f
+dev-logs: ## Print dev server logs (last 100 lines)
+	@journalctl --user -u $(SYSTEMD_UNIT) --no-pager -n 100
 
 # =============================================================================
 # Code Quality

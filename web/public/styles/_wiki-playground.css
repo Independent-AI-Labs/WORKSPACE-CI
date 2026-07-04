@@ -16,6 +16,7 @@
 .playground-panes {
   display: grid;
   grid-template-columns: 1fr 400px;
+  grid-template-rows: 1fr;
   gap: var(--space-4);
   flex: 1;
   min-height: 0;
@@ -26,7 +27,20 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   overflow: hidden;
-  height: 100%;
+  min-height: 0;
+}
+
+.code-editor:empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.code-editor:empty::before {
+  content: 'Loading editor...';
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
 }
 
 .code-editor .cm-editor {
@@ -64,7 +78,7 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-4);
-  height: 100%;
+  min-height: 300px;
 }
 
 .match-panel {
