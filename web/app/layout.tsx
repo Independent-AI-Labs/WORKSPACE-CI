@@ -16,7 +16,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Practical Guardrails',
+  title: 'Workspace Guardrails',
   description: 'Interactive wiki for workspace-ci',
 }
 
