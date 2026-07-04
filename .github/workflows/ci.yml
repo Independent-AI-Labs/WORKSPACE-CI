@@ -127,5 +127,10 @@ jobs:
         run: npm install
         working-directory: web
 
+      - name: Configure git identity for integration tests
+        run: |
+          git config user.email "ci@no-reply.example"
+          git config user.name "CI Runner"
+
       - name: Quality gate (lint + type + tests + coverage + web)
         run: make check-push
