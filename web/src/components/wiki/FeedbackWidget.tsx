@@ -82,6 +82,7 @@ export function FeedbackWidget({
         open={dialogOpen}
         onClose={handleCancel}
         title="Share feedback"
+        titleId={`feedback-title-${targetId}`}
         ariaLabel="Feedback dialog"
       >
         <div className="feedback-dialog__body">

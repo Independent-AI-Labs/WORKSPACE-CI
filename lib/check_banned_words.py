@@ -17,7 +17,6 @@ implementation does zero subprocess spawns for pattern matching
 (one git ls-files call for file discovery) and completes in <1s.
 """
 
-import os
 import re
 import subprocess
 import sys
@@ -25,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from ci_paths import find_config_dir
 
 
 def _merge_exceptions(exc_map: dict[str, list[str]], exc_path: Path) -> None:
@@ -268,7 +268,7 @@ def _compile_dir_rules(
 
 
 def main() -> int:
-    config_dir = Path(os.environ.get("CI_CONFIG_DIR", "config"))
+    config_dir = find_config_dir()
     argv_files = sys.argv[1:]
 
     bw_path = config_dir / "banned_words.yaml"

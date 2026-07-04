@@ -1,21 +1,21 @@
 'use client'
 
-import { useEffect, useRef, useId, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { Icon } from './Icon'
 
 interface ModalProps {
   open: boolean
   onClose: () => void
   title?: string
+  titleId?: string
   ariaLabel?: string
   className?: string
   children: ReactNode
 }
 
-export function Modal({ open, onClose, title, ariaLabel, className, children }: ModalProps) {
+export function Modal({ open, onClose, title, titleId, ariaLabel, className, children }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null)
   const previousFocus = useRef<HTMLElement | null>(null)
-  const titleId = useId()
 
   useEffect(() => {
     const dialog = ref.current
@@ -56,7 +56,8 @@ export function Modal({ open, onClose, title, ariaLabel, className, children }: 
     }
   }
 
-  const labelledBy = title ? titleId : undefined
+  const resolvedTitleId = title ? (titleId ?? 'modal-title') : undefined
+  const labelledBy = resolvedTitleId
 
   return (
     <dialog
@@ -68,7 +69,7 @@ export function Modal({ open, onClose, title, ariaLabel, className, children }: 
     >
       {title && (
         <div className="modal-dialog__header">
-          <h2 id={titleId} className="modal-dialog__title">
+          <h2 id={resolvedTitleId} className="modal-dialog__title">
             {title}
           </h2>
           <button

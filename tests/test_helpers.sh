@@ -79,14 +79,6 @@ _setup_tmpdir() {
     local _ci_dir="$TEST_TMP/workspace/projects/CI"
     # Create a minimal workspace structure so ci.sh doesn't bail
     mkdir -p "$_ci_dir/lib" "$_ci_dir/config"
-    # Git identity: git config is blocked by the workspace guard, so
-    # set author/committer identity via env vars. Every test that
-    # creates commits (test_blocked_patterns, test_e2e_checks) relies
-    # on this.
-    export GIT_AUTHOR_NAME="CI Test"
-    export GIT_AUTHOR_EMAIL="ci-test@localhost"
-    export GIT_COMMITTER_NAME="CI Test"
-    export GIT_COMMITTER_EMAIL="ci-test@localhost"
     # Symlink library files instead of copying: eliminates ~25 file copies
     # per test (the dominant cost under PRoot's slow filesystem). Tests that
     # create NEW files in lib/ (e.g. test_portable_shell.sh's evil_test.sh)
@@ -96,7 +88,8 @@ _setup_tmpdir() {
     for f in ci.sh checks.sh checks_*.sh check_banned_words.py \
              check_silent_swallow.py check_silent_swallow_base.py \
              check_silent_swallow_python.py check_silent_swallow_js.py \
-             check_silent_swallow_system.py check_silent_swallow_ansible.py; do
+             check_silent_swallow_system.py check_silent_swallow_ansible.py \
+             ci_paths.py; do
         local src
         for src in "$LIB_DIR"/$f; do
             [[ -f "$src" ]] && ln -s "$src" "$_ci_dir/lib/$(basename "$src")"

@@ -24,7 +24,7 @@ from pathlib import Path
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _SCRIPTS_DIR.parent
-_OUTPUT_DIR = Path(os.environ.get("CI_WEB_DATA_DIR", "web/src/data"))
+_OUTPUT_DIR = Path(os.environ.get("CI_WEB_DATA_DIR") or str(_REPO_ROOT / "web" / "src" / "data"))
 _OUTPUT_PATH = _OUTPUT_DIR / "code-stats.json"
 _CODE_STATS = _SCRIPTS_DIR / "code-stats"
 

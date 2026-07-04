@@ -27,9 +27,11 @@ from pathlib import Path
 
 import yaml
 
-_CONFIG_DIR = Path(os.environ.get("CI_CONFIG_DIR", "config"))
-_LIB_DIR = Path(os.environ.get("CI_LIB_DIR", "lib"))
-_OUTPUT_DIR = Path(os.environ.get("CI_WEB_DATA_DIR", "web/src/data"))
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _SCRIPTS_DIR.parent
+_CONFIG_DIR = Path(os.environ.get("CI_CONFIG_DIR") or str(_REPO_ROOT / "config"))
+_LIB_DIR = Path(os.environ.get("CI_LIB_DIR") or str(_REPO_ROOT / "lib"))
+_OUTPUT_DIR = Path(os.environ.get("CI_WEB_DATA_DIR") or str(_REPO_ROOT / "web" / "src" / "data"))
 CONFIG_PATH = _CONFIG_DIR / "silent_swallow_patterns.yaml"
 OUTPUT_PATH = _OUTPUT_DIR / "swallow-detectors.json"
 

@@ -229,6 +229,69 @@ ci_capture_pipe() {
 }
 
 # ---------------------------------------------------------------------------
+# Fail-closed Python checker wrapper
+# ---------------------------------------------------------------------------
+# ci_run_python_checker <script_path> [args...]
+#
+# Fail-closed wrapper for Python checker invocation. stdin is passed
+# through to the Python process. stdout captured to CI_CHECKER_STDOUT
+# (temp file, caller MUST rm after use). stderr captured to
+# CI_CHECKER_STDERR (auto-rm'd after printing on failure).
+#
+# INVARIANT (fail-closed / mathematical proof):
+#   Python exit 0           → return 0
+#   Python exit != 0        → return 1   (regardless of stdout content)
+#
+# Proof: The function has exactly two return paths:
+#   (a) rc == 0 → return 0   (only when the Python child exits 0)
+#   (b) rc != 0 → return 1   (every other case: violations, crash, timeout)
+# There is no third path. A caller checking `if ci_run_python_checker ...`
+# cannot reach a "pass" state for any non-zero child exit code, because
+# the `|| _rc=$?` capture defeats `set -e` without masking the result,
+# and the `if [[ $_rc -ne 0 ]]` branch is the ONLY non-return-0 path.
+#
+# Environment variables CI_CONFIG_DIR, CI_LIB_DIR, CI_PROJECT_ROOT
+# are ALWAYS propagated to the child, regardless of whether they are
+# exported in the parent shell. This eliminates CWD-dependent
+# relative-path bugs in sibling repos (e.g. WORKSPACE-GUARD) whose
+# hooks `cd` to their own root before invoking CI checkers.
+ci_run_python_checker() {
+    local _script="$1"; shift
+    local _ci_py="${CI_PROJECT_ROOT:-}/.venv/bin/python"
+
+    if [[ ! -x "$_ci_py" ]]; then
+        ci_fail "CI venv python not found at $_ci_py"
+        return 1
+    fi
+    if [[ ! -f "$_script" ]]; then
+        ci_fail "Checker script not found: $_script"
+        return 1
+    fi
+
+    CI_CHECKER_STDOUT="$(mktemp)"
+    CI_CHECKER_STDERR="$(mktemp)"
+
+    local _rc=0
+    CI_CONFIG_DIR="$CI_CONFIG_DIR" \
+    CI_LIB_DIR="$CI_LIB_DIR" \
+    CI_PROJECT_ROOT="$CI_PROJECT_ROOT" \
+        "$_ci_py" "$_script" "$@" \
+        > "$CI_CHECKER_STDOUT" 2>"$CI_CHECKER_STDERR" \
+        || _rc=$?
+
+    if [[ $_rc -ne 0 ]]; then
+        if [[ -s "$CI_CHECKER_STDERR" ]]; then
+            cat "$CI_CHECKER_STDERR" >&2
+        fi
+        rm -f "$CI_CHECKER_STDERR"
+        return 1
+    fi
+
+    rm -f "$CI_CHECKER_STDERR"
+    return 0
+}
+
+# ---------------------------------------------------------------------------
 # Boot-path resolver (hierarchical .boot-linux/ + .venv/ contract per SPEC-BOOT-LAYOUT)
 # ---------------------------------------------------------------------------
 

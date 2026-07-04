@@ -33,6 +33,7 @@ export function FunctionCodeDialog({
         open={open}
         onClose={() => setOpen(false)}
         title={functionName}
+        titleId={`fn-code-title-${functionName}`}
         ariaLabel={`Source code for detector function ${functionName}`}
         className="function-code-dialog"
       >

@@ -18,12 +18,11 @@ Sibling modules provide file-type detection and multi-line detector logic:
   check_silent_swallow_ansible.py: Ansible multi-line task detection
 """
 
-import os
 import re
 import sys
-from pathlib import Path
 
 import yaml
+from ci_paths import find_config_dir
 
 from check_silent_swallow_ansible import (
     detect_ansible_tasks,
@@ -47,10 +46,7 @@ from check_silent_swallow_system import (
 
 _SNIPPET_MAX = 200
 
-_CONFIG_PATH = (
-    Path(os.environ.get("CI_CONFIG_DIR", "config"))
-    / "silent_swallow_patterns.yaml"
-)
+_CONFIG_PATH = find_config_dir() / "silent_swallow_patterns.yaml"
 
 _LANGUAGE_CHECKERS: list[tuple[str, object]] = [
     ("python", is_python_file),
@@ -62,6 +58,9 @@ _LANGUAGE_CHECKERS: list[tuple[str, object]] = [
 
 
 def _load_config() -> dict:
+    if not _CONFIG_PATH.is_file():
+        sys.stderr.write(f"Config not found: {_CONFIG_PATH}\n")
+        sys.exit(2)
     with open(_CONFIG_PATH, encoding="utf-8") as f:
         return yaml.safe_load(f)
 

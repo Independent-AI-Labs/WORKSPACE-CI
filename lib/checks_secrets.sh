@@ -54,7 +54,13 @@ ci_scan_secrets() {
         --no-banner --redact --verbose --log-level=error || _ss_rc=$?
 
     if [[ $_ss_rc -ne 0 ]]; then
-        ci_fail "gitleaks: secrets found (scanned $_ss_total files)"
+        if [[ $_ss_rc -eq 124 || $_ss_rc -eq 137 ]]; then
+            ci_fail "gitleaks: TIMED OUT (exit $_ss_rc, scanned $_ss_total files)"
+        elif [[ $_ss_rc -eq 139 || $_ss_rc -eq 245 ]]; then
+            ci_fail "gitleaks: CRASHED (SIGSEGV, exit $_ss_rc, scanned $_ss_total files)"
+        else
+            ci_fail "gitleaks: secrets found or error (exit $_ss_rc, scanned $_ss_total files)"
+        fi
         return 1
     fi
     ci_pass "gitleaks: no leaks found ($_ss_total files)"

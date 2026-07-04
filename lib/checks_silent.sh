@@ -15,9 +15,17 @@
 # without log redirection using AST-based analysis.
 # Blocks the commit so developers must re-raise, log, or handle errors
 # explicitly.
+#
+# FAIL-CLOSED INVARIANT:
+#   ci_run_python_checker guarantees that ANY non-zero Python exit code
+#   (violations, crash, timeout, missing config) increments the error
+#   counter. There is no code path where a non-zero exit is swallowed
+#   as a clean pass. The prior bug (line 130 AND-gate on stdout) is
+#   eliminated by structural design: the wrapper returns 1 on every
+#   non-zero child exit, and this function increments errors on every
+#   wrapper non-zero return.
 ci_check_silent_swallow() {
-    local violations_tmp files_tmp combined_tmp diff_tmp stderr_tmp
-    violations_tmp="$(mktemp)"
+    local files_tmp combined_tmp diff_tmp stderr_tmp
     files_tmp="$(mktemp)"
     combined_tmp="$(mktemp)"
     diff_tmp="$(mktemp)"
@@ -31,7 +39,7 @@ ci_check_silent_swallow() {
     if [[ $_gd_rc -ne 0 ]]; then
         ci_pass "Silent-swallow: not a git repo, skipping."
         [[ -s "$stderr_tmp" ]] && cat "$stderr_tmp" >&2
-        rm -f "$violations_tmp" "$files_tmp" "$combined_tmp" \
+        rm -f "$files_tmp" "$combined_tmp" \
               "$diff_tmp" "$stderr_tmp"
         return 0
     fi
@@ -40,16 +48,19 @@ ci_check_silent_swallow() {
     local script_path="${CI_LIB_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}/check_silent_swallow.py"
     if [[ ! -f "$script_path" ]]; then
         ci_fail "Silent-swallow: helper script not found at $script_path"
-        rm -f "$violations_tmp" "$files_tmp" "$combined_tmp" "$diff_tmp"
+        rm -f "$files_tmp" "$combined_tmp" "$diff_tmp"
         return 1
     fi
 
-    # Resolve the canonical CI venv python (NO `python3` bare-word per
-    # AGENTS.md §3.3). Same-project direct invocation per AGENTS.md §4.1.
-    local _ci_py="${CI_PROJECT_ROOT:-}/.venv/bin/python"
-    if [[ ! -x "$_ci_py" ]]; then
-        ci_fail "Silent-swallow: CI venv python not found at $_ci_py"
-        rm -f "$violations_tmp" "$files_tmp" "$combined_tmp" "$diff_tmp"
+    # Config file validation: fail fast if the pattern config is missing.
+    # This prevents entering the per-file loop where every file would crash
+    # with FileNotFoundError. The Python checker (ci_paths.find_config_dir)
+    # also resolves this via __file__ walk-up, but checking here gives a
+    # clear, immediate error message.
+    local _config_file="${CI_CONFIG_DIR}/silent_swallow_patterns.yaml"
+    if [[ ! -f "$_config_file" ]]; then
+        ci_fail "Silent-swallow: config not found at $_config_file"
+        rm -f "$files_tmp" "$combined_tmp" "$diff_tmp"
         return 1
     fi
 
@@ -63,7 +74,7 @@ ci_check_silent_swallow() {
 
     if [[ ! -s "$files_tmp" ]]; then
         ci_pass "Silent-swallow: no scannable files found."
-        rm -f "$files_tmp" "$violations_tmp" "$combined_tmp" "$diff_tmp"
+        rm -f "$files_tmp" "$combined_tmp" "$diff_tmp"
         return 0
     fi
 
@@ -83,7 +94,7 @@ ci_check_silent_swallow() {
         rm -f "$_exc_tmp"
     fi
 
-    local rc=0 errors=0 file
+    local errors=0 file
     while IFS= read -r file; do
         [[ -z "$file" || ! -f "$file" ]] && continue
         # Skip binary files (prevents UnicodeDecodeError in Python checker)
@@ -111,36 +122,42 @@ ci_check_silent_swallow() {
             echo "@@ -0,0 +1,$(wc -l < "$file") @@"
             sed 's/^/+/' "$file"
         } > "$diff_tmp"
-        local _py_err _py_rc=0
-        _py_err="$(mktemp)"
-        "$_ci_py" "$script_path" < "$diff_tmp" > "$violations_tmp" 2>"$_py_err" \
-            || _py_rc=$?
-        if [[ $_py_rc -ne 0 ]]; then
-            # Python checkers may emit findings to stdout, or fail with an
-            # infra message on stderr. Print stderr (real signal, no swallow)
-            # and consume stdout as violations.
-            if [[ -s "$_py_err" ]]; then
-                _log_warn_prefix="[silent-swallow: $file] helper stderr:"
-                printf '%s\n' "$_log_warn_prefix" >&2
-                cat "$_py_err" >&2
+
+        # FAIL-CLOSED: ci_run_python_checker returns 0 IFF the Python
+        # checker exits 0. Any non-zero exit (violations, crash, timeout,
+        # missing config) returns 1. There is no code path where a
+        # non-zero child exit is swallowed as a clean pass.
+        #
+        # The prior bug: `if [[ $_py_rc -ne 0 && -s "$violations_tmp" ]]`
+        # gated error-counting on BOTH non-zero exit AND non-empty stdout.
+        # A crash (FileNotFoundError, traceback on stderr, empty stdout)
+        # fell through the AND-gate → errors never incremented →
+        # function returned 0 = PASS. The silent-swallow hook was
+        # silently swallowing its own checker's crash.
+        #
+        # The fix: errors is incremented on ANY non-zero wrapper return.
+        # CI_CHECKER_STDOUT (violations) is collected for display when
+        # non-empty; when empty, the crash is logged as a violation.
+        ci_run_python_checker "$script_path" < "$diff_tmp"
+        local _chk_rc=$?
+        if [[ $_chk_rc -ne 0 ]]; then
+            if [[ -s "$CI_CHECKER_STDOUT" ]]; then
+                while IFS= read -r line; do
+                    echo "$file: $line" >> "$combined_tmp"
+                done < "$CI_CHECKER_STDOUT"
+            else
+                echo "$file: [CHECKER CRASHED exit=$_chk_rc] -- see stderr above" >> "$combined_tmp"
             fi
-        fi
-        rm -f "$_py_err"
-        rc=0
-        if [[ $_py_rc -ne 0 && -s "$violations_tmp" ]]; then
-            while IFS= read -r line; do
-                echo "$file: $line" >> "$combined_tmp"
-            done < "$violations_tmp"
             errors=$((errors + 1))
         fi
-        : > "$violations_tmp"
+        rm -f "$CI_CHECKER_STDOUT"
     done < "$files_tmp"
 
     rm -f "$files_tmp"
 
     if [[ $errors -eq 0 ]]; then
         ci_pass "Silent-swallow: no silent-error patterns found."
-        rm -f "$violations_tmp" "$combined_tmp" "$diff_tmp"
+        rm -f "$combined_tmp" "$diff_tmp"
         return 0
     fi
 
@@ -152,6 +169,6 @@ ci_check_silent_swallow() {
     echo "Silent-error swallowing breaks production debuggability."
     echo "Re-raise, log, or handle the error explicitly."
     echo ""
-    rm -f "$violations_tmp" "$combined_tmp" "$diff_tmp"
+    rm -f "$combined_tmp" "$diff_tmp"
     return 1
 }
