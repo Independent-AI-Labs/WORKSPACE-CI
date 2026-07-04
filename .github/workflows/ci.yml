@@ -124,7 +124,7 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - name: Install web deps
-        run: npm ci
+        run: npm install
         working-directory: web
 
       - name: Quality gate (lint + type + tests + coverage + web)
