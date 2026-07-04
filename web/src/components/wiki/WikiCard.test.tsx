@@ -13,11 +13,13 @@ function makeItem(overrides: Partial<CardItem> = {}): CardItem {
 }
 
 describe('WikiCard', () => {
-  it('renders as a link when href is provided', () => {
-    render(<WikiCard item={makeItem({ href: '/test' })} />)
+  it('renders as an article with CTA link when href is provided', () => {
+    const { container } = render(<WikiCard item={makeItem({ href: '/test' })} />)
+    const article = container.querySelector('article.wiki-card')
+    expect(article).not.toBeNull()
     const link = screen.getByRole('link')
     expect(link).toHaveAttribute('href', '/test')
-    expect(link).toHaveClass('wiki-card')
+    expect(link).toHaveClass('wiki-card__cta')
   })
 
   it('renders as an article when no href', () => {

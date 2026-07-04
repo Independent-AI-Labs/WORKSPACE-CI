@@ -69,22 +69,16 @@ export function WikiCard({ item, children }: WikiCardProps) {
 
       {children && <div className="wiki-card__children">{children}</div>}
 
-      {item.href && <span className="wiki-card__cta">View details</span>}
+      {item.href && (
+        <Link href={item.href} className="wiki-card__cta">
+          View details
+        </Link>
+      )}
     </>
   )
 
-  const className = 'wiki-card'
-
-  if (item.href) {
-    return (
-      <Link href={item.href} className={className} aria-label={`Open ${item.title}`}>
-        {content}
-      </Link>
-    )
-  }
-
   return (
-    <article className={className} id={item.id}>
+    <article className="wiki-card" id={item.id}>
       {content}
     </article>
   )
