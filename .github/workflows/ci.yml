@@ -41,6 +41,9 @@ jobs:
       - name: Sync Python deps
         run: uv sync --extra dev
 
+      - name: Install git hooks
+        run: make install-hooks
+
       # ── Security checks ────────────────────────────────────────────
       - name: Block sensitive files
         run: bash -c 'source lib/checks.sh && ci_block_sensitive_files'
@@ -116,6 +119,9 @@ jobs:
 
       - name: Sync Python deps
         run: uv sync --extra dev
+
+      - name: Install git hooks
+        run: make install-hooks
 
       - uses: actions/setup-node@v4
         with:
