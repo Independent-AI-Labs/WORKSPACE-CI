@@ -10,6 +10,14 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/lib/search-data', () => ({
   buildSearchData: () => [],
+  getWikiStats: () => ({
+    hooks: 0,
+    patterns: 0,
+    configs: 0,
+    guards: 0,
+    standards: 0,
+    scripts: 0,
+  }),
 }))
 
 describe('ComingSoon', () => {
