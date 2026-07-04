@@ -137,7 +137,7 @@ describe('FeedbackWidget', () => {
     vi.unstubAllGlobals()
   })
 
-  it('calls the API on submit', async () => {
+  it('calls the API with sessionId on submit', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ upvotes: 1, downvotes: 0 }),
@@ -153,6 +153,9 @@ describe('FeedbackWidget', () => {
         method: 'POST',
       }))
     })
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+    expect(body.sessionId).toBe('test-session')
     vi.unstubAllGlobals()
   })
 

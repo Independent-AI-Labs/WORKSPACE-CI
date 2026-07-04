@@ -1,7 +1,7 @@
 import { readFileSync, existsSync, readdirSync, mkdirSync } from 'fs'
 import { writeFile } from 'fs/promises'
 import { join } from 'path'
-import type { FeedbackData, FeedbackCounts, FeedbackSubmission, FeedbackEntry } from '@/types/feedback'
+import type { FeedbackData, FeedbackCounts, FeedbackSubmission } from '@/types/feedback'
 
 const FEEDBACK_DIR = join(process.cwd(), 'data', 'feedback')
 const MAX_ENTRIES = 1000
@@ -65,51 +65,66 @@ export function getAllFeedbackCounts(
 
 export async function saveFeedback(
   submission: FeedbackSubmission,
-  sessionId: string,
 ): Promise<FeedbackCounts> {
   if (!existsSync(FEEDBACK_DIR)) {
     mkdirSync(FEEDBACK_DIR, { recursive: true })
   }
 
+  const sanitizedSessionId = submission.sessionId.slice(0, MAX_SESSION_ID_LENGTH)
   const path = feedbackPath(submission.targetType, submission.targetId)
   let data: FeedbackData
 
   const existing = readFeedbackFile(submission.targetType, submission.targetId)
   if (existing) {
     data = existing
-    const prevVote = data.entries.length > 0
-      ? data.entries[data.entries.length - 1].vote
-      : null
+
+    const existingEntry = data.entries.find(
+      (e) => e.sessionId === sanitizedSessionId,
+    )
+    const prevVote = existingEntry?.vote ?? null
+
     if (prevVote === submission.vote) {
       return { upvotes: data.upvotes, downvotes: data.downvotes }
     }
+
     if (prevVote === 'up') data.upvotes = Math.max(0, data.upvotes - 1)
     if (prevVote === 'down') data.downvotes = Math.max(0, data.downvotes - 1)
     if (submission.vote === 'up') data.upvotes += 1
     if (submission.vote === 'down') data.downvotes += 1
+
+    if (existingEntry) {
+      existingEntry.vote = submission.vote
+      existingEntry.comment = submission.comment
+        ? stripControlChars(submission.comment).slice(0, MAX_COMMENT_LENGTH)
+        : undefined
+      existingEntry.timestamp = Date.now()
+    } else {
+      const sanitizedComment = submission.comment
+        ? stripControlChars(submission.comment).slice(0, MAX_COMMENT_LENGTH)
+        : undefined
+      data.entries.push({
+        vote: submission.vote,
+        comment: sanitizedComment,
+        timestamp: Date.now(),
+        sessionId: sanitizedSessionId,
+      })
+    }
   } else {
     data = {
       targetType: submission.targetType,
       targetId: submission.targetId,
       upvotes: submission.vote === 'up' ? 1 : 0,
       downvotes: submission.vote === 'down' ? 1 : 0,
-      entries: [],
+      entries: [{
+        vote: submission.vote,
+        comment: submission.comment
+          ? stripControlChars(submission.comment).slice(0, MAX_COMMENT_LENGTH)
+          : undefined,
+        timestamp: Date.now(),
+        sessionId: sanitizedSessionId,
+      }],
     }
   }
-
-  const sanitizedComment = submission.comment
-    ? stripControlChars(submission.comment).slice(0, MAX_COMMENT_LENGTH)
-    : undefined
-
-  const sanitizedSessionId = sessionId.slice(0, MAX_SESSION_ID_LENGTH)
-
-  const entry: FeedbackEntry = {
-    vote: submission.vote,
-    comment: sanitizedComment,
-    timestamp: Date.now(),
-    sessionId: sanitizedSessionId,
-  }
-  data.entries.push(entry)
 
   if (data.entries.length > MAX_ENTRIES) {
     data.entries = data.entries.slice(-MAX_ENTRIES)

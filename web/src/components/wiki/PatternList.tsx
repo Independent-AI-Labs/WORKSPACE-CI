@@ -8,7 +8,6 @@ import { FeedbackWidget } from '@/components/wiki/FeedbackWidget'
 import { EntryPointDialog } from '@/components/wiki/EntryPointDialog'
 import { usePatternFilter } from '@/hooks/usePatternFilter'
 import { patternAdapter } from '@/lib/card-adapters'
-import { slugify } from '@/lib/utils'
 
 interface PatternListProps {
   patterns: ClassifiedPattern[]
@@ -50,7 +49,7 @@ export function PatternList({
       <div className="wiki-card-grid">
         {items.map((item, i) => {
           const p = filtered[i]
-          const patternId = slugify(p.pattern)
+          const patternId = p.pattern
           const counts = feedbackCounts[patternId] ?? { upvotes: 0, downvotes: 0 }
           const html = p.detectorFunction
             ? highlightedHtml[p.detectorFunction]

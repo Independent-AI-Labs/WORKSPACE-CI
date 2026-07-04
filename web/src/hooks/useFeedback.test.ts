@@ -131,4 +131,57 @@ describe('useFeedback', () => {
     })
     expect(result.current.upCount).toBe(1)
   })
+
+  it('sends sessionId in POST body', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ upvotes: 1, downvotes: 0 }),
+    })
+    vi.stubGlobal('fetch', mockFetch)
+
+    const { result } = renderHook(() =>
+      useFeedback('test-id', 'pattern', 0, 0),
+    )
+    await act(async () => {
+      await result.current.submit('up')
+    })
+
+    const callArgs = mockFetch.mock.calls[0]
+    const body = JSON.parse(callArgs[1].body)
+    expect(body.sessionId).toBe('test-session')
+    vi.unstubAllGlobals()
+  })
+
+  it('rolls back counts on POST failure', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: () => Promise.resolve({ error: 'bad' }),
+    })
+    vi.stubGlobal('fetch', mockFetch)
+
+    const { result } = renderHook(() =>
+      useFeedback('test-id', 'pattern', 5, 2),
+    )
+    await act(async () => {
+      await result.current.submit('up')
+    })
+    expect(result.current.upCount).toBe(5)
+    expect(result.current.downCount).toBe(2)
+    vi.unstubAllGlobals()
+  })
+
+  it('rolls back counts on network error', async () => {
+    const mockFetch = vi.fn().mockRejectedValue(new Error('network'))
+    vi.stubGlobal('fetch', mockFetch)
+
+    const { result } = renderHook(() =>
+      useFeedback('test-id', 'pattern', 3, 1),
+    )
+    await act(async () => {
+      await result.current.submit('down')
+    })
+    expect(result.current.upCount).toBe(3)
+    expect(result.current.downCount).toBe(1)
+    vi.unstubAllGlobals()
+  })
 })

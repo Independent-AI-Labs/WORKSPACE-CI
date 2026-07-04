@@ -152,7 +152,9 @@ exceptions:
       - 'web/src/components/wiki/WikiSidebar\.test\.tsx$'
       - 'web/src/components/wiki/WikiSearch\.test\.tsx$'
       - 'web/src/components/wiki/ComingSoon\.test\.tsx$'
+      - 'web/src/components/wiki/FeedbackWidget\.test\.tsx$'
       - 'web/src/hooks/useSearch\.test\.ts$'
+      - 'web/src/hooks/useFeedback\.test\.ts$'
   - pattern: '\bbackwards\b'
     paths: ['web/src/lib/patterns\.ts$']
   - pattern: '\bskeleton\b'

@@ -53,6 +53,9 @@ export function useFeedback(
 
   const submit = useCallback(
     async (v: 'up' | 'down') => {
+      const prevUp = upCount
+      const prevDown = downCount
+
       if (vote === 'up') setUpCount((c) => Math.max(0, c - 1))
       if (vote === 'down') setDownCount((c) => Math.max(0, c - 1))
       if (v === 'up') setUpCount((c) => c + 1)
@@ -60,6 +63,7 @@ export function useFeedback(
 
       setVote(v)
       setSubmitted(true)
+      const sid = useAnalyticsStore.getState().sessionId
       addFeedback({
         type: 'feedback',
         targetId,
@@ -67,7 +71,7 @@ export function useFeedback(
         vote: v,
         comment: comment || undefined,
         timestamp: Date.now(),
-        sessionId: useAnalyticsStore.getState().sessionId,
+        sessionId: sid,
       })
 
       try {
@@ -79,18 +83,24 @@ export function useFeedback(
             targetId,
             vote: v,
             comment: comment || undefined,
+            sessionId: sid,
           }),
         })
         if (res.ok) {
           const counts = await res.json()
           setUpCount(counts.upvotes)
           setDownCount(counts.downvotes)
+        } else {
+          setUpCount(prevUp)
+          setDownCount(prevDown)
         }
       } catch (err) {
         console.error('Failed to submit feedback to server:', err)
+        setUpCount(prevUp)
+        setDownCount(prevDown)
       }
     },
-    [targetId, targetType, comment, addFeedback, vote],
+    [targetId, targetType, comment, addFeedback, vote, upCount, downCount],
   )
 
   const dismiss = useCallback(() => {

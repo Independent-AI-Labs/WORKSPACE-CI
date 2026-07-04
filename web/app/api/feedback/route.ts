@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { randomUUID } from 'crypto'
 import { saveFeedback, getAllFeedbackCounts } from '@/lib/feedback-loader'
 import type { FeedbackSubmission } from '@/types/feedback'
 
@@ -63,7 +62,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const { targetType, targetId, vote, comment } = body as Partial<FeedbackSubmission>
+  const { targetType, targetId, vote, comment, sessionId } = body as Partial<FeedbackSubmission>
 
   if (!targetType || !VALID_TARGET_TYPES.includes(targetType as typeof VALID_TARGET_TYPES[number])) {
     return NextResponse.json({ error: 'Invalid targetType' }, { status: 400 })
@@ -74,6 +73,9 @@ export async function POST(request: NextRequest) {
   if (vote !== 'up' && vote !== 'down') {
     return NextResponse.json({ error: 'vote must be "up" or "down"' }, { status: 400 })
   }
+  if (!sessionId || typeof sessionId !== 'string' || sessionId.length > 128) {
+    return NextResponse.json({ error: 'Valid sessionId required' }, { status: 400 })
+  }
   if (comment && typeof comment === 'string' && comment.length > MAX_COMMENT_LENGTH) {
     return NextResponse.json(
       { error: `Comment too long (max ${MAX_COMMENT_LENGTH} characters)` },
@@ -81,11 +83,8 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const sessionId = randomUUID()
-
   const counts = await saveFeedback(
-    { targetType, targetId, vote, comment: comment || undefined },
-    sessionId,
+    { targetType, targetId, vote, comment: comment || undefined, sessionId },
   )
 
   return NextResponse.json(counts)

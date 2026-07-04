@@ -5,7 +5,6 @@ import type { ClassifiedPattern, SwallowLanguage } from '@/types/patterns'
 import type { ScriptManifestEntry } from '@/types/wiki'
 import type { HookRecord, HookKind } from '@/types/hooks'
 import type { LanguagePercent } from '@/types/code-stats'
-import { slugify } from '@/lib/utils'
 
 const LANGUAGE_LABELS: Record<SwallowLanguage, string> = {
   shell: 'Shell',
@@ -59,7 +58,7 @@ export function projectAdapter(
     })
 
     return {
-      id: p.slug,
+      id: p.displayName,
       title: p.displayName,
       subtitle: p.title,
       description: p.summary,
@@ -125,7 +124,7 @@ export function patternAdapter(patterns: ClassifiedPattern[]): CardItem[] {
       })
     }
     return {
-      id: slugify(p.pattern),
+      id: p.pattern,
       title: p.pattern,
       description: p.reason,
       monoTitle: true,

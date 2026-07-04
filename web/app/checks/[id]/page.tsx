@@ -1,6 +1,7 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
 import { FeedbackWidget } from '@/components/wiki/FeedbackWidget'
 import { loadApiDocs, loadShellDocs } from '@/lib/docs-loader'
+import { getAllFeedbackCounts } from '@/lib/feedback-loader'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 
@@ -85,6 +86,9 @@ export default async function CheckDetailPage({
     notFound()
   }
 
+  const feedbackCounts = getAllFeedbackCounts('check')
+  const counts = feedbackCounts[found.name] ?? { upvotes: 0, downvotes: 0 }
+
   return (
     <WikiShell>
       <article className="check-detail">
@@ -104,7 +108,12 @@ export default async function CheckDetailPage({
             </pre>
           </div>
         )}
-        <FeedbackWidget targetId={found.name} targetType="check" />
+        <FeedbackWidget
+          targetId={found.name}
+          targetType="check"
+          upCount={counts.upvotes}
+          downCount={counts.downvotes}
+        />
       </article>
     </WikiShell>
   )

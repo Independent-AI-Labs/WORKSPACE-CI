@@ -52,7 +52,7 @@ export function ProjectList({
       <div className="wiki-card-grid">
         {items.map((item, i) => {
           const p = filtered[i]
-          const counts = feedbackCounts[p.slug] ?? { upvotes: 0, downvotes: 0 }
+          const counts = feedbackCounts[p.displayName] ?? { upvotes: 0, downvotes: 0 }
           return (
             <WikiCard key={item.id} item={item}>
               <FeedbackWidget

@@ -23,4 +23,5 @@ export interface FeedbackSubmission {
   targetId: string
   vote: 'up' | 'down'
   comment?: string
+  sessionId: string
 }

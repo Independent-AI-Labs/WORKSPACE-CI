@@ -27,7 +27,7 @@ describe('projectAdapter', () => {
 
   it('converts project to CardItem with correct fields', () => {
     const [item] = projectAdapter([project])
-    expect(item.id).toBe('ci')
+    expect(item.id).toBe('CI')
     expect(item.title).toBe('CI')
     expect(item.subtitle).toBe('CI Pipeline Monitor')
     expect(item.description).toBe('A collection of CI utilities.')
@@ -139,9 +139,9 @@ describe('patternAdapter', () => {
     detectionType: 'inline',
   }
 
-  it('converts pattern to CardItem with slug id and no href', () => {
+  it('converts pattern to CardItem with raw pattern id and no href', () => {
     const [item] = patternAdapter([pattern])
-    expect(item.id).toBe('parent-parent')
+    expect(item.id).toBe('\\.parent\\.parent')
     expect(item.title).toBe('\\.parent\\.parent')
     expect(item.monoTitle).toBe(true)
     expect(item.href).toBeUndefined()
