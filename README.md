@@ -37,9 +37,8 @@ actually run and history cannot be rewritten.
 
 Shell handles everything that doesn't need a full programming language: file
 listing, pattern matching, conditional logic, formatter auto-stage. Python
-handles what shell can't: multi-file regex at scale (banned-words was ~33,000
-subprocesses in bash; <1s in Python), AST analysis (dead code), and network
-requests (dependency freshness, markdown link probing).
+handles what shell can't: multi-file regex at scale, AST analysis (dead code),
+and network requests (dependency freshness, markdown link probing).
 
 
 ---
