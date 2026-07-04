@@ -23,6 +23,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Clone WORKSPACE-GUARD sibling repo (for markdown doc links)
+        run: git clone https://github.com/Independent-AI-Labs/WORKSPACE-GUARD.git ../WORKSPACE-GUARD
+
       - name: Bootstrap uv (SHA256-verified)
         run: bash scripts/bootstrap-uv
 
@@ -104,6 +107,9 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+
+      - name: Clone WORKSPACE-GUARD sibling repo (for markdown doc links)
+        run: git clone https://github.com/Independent-AI-Labs/WORKSPACE-GUARD.git ../WORKSPACE-GUARD
 
       - name: Bootstrap uv (SHA256-verified)
         run: bash scripts/bootstrap-uv
