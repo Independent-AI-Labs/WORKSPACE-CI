@@ -18,16 +18,9 @@ repos:
         pass_filenames: false
         always_run: true
 
-      - id: ruff-format
-        name: ruff format
-        entry: .venv/bin/ruff format --config ruff.toml ci/
-        language: system
-        pass_filenames: false
-        always_run: true
-
-      - id: ruff
-        name: ruff lint
-        entry: .venv/bin/ruff check --config ruff.toml --fix --exit-non-zero-on-fix ci/
+      - id: ci-lint
+        name: Lint (make lint)
+        entry: make lint
         language: system
         pass_filenames: false
         always_run: true
@@ -116,13 +109,12 @@ repos:
         pass_filenames: false
         always_run: true
 
-      - id: mypy
-        name: mypy
-        entry: .venv/bin/python -m mypy
+      - id: ci-type-check
+        name: Type-check (make type-check)
+        entry: make type-check
         language: system
         pass_filenames: false
         always_run: true
-        args: [ci/]
 
       - id: check-markdown-docs
         name: Check Markdown Documentation References
@@ -141,20 +133,6 @@ repos:
       - id: check-boot-venv-layout
         name: Boot Layout Audit (non-blocking)
         entry: ".venv/bin/python -m ci.check_boot_venv_layout"
-        language: system
-        pass_filenames: false
-        always_run: true
-
-      - id: ci-lint
-        name: Lint (make lint)
-        entry: make lint
-        language: system
-        pass_filenames: false
-        always_run: true
-
-      - id: ci-type-check
-        name: Type-check (make type-check)
-        entry: make type-check
         language: system
         pass_filenames: false
         always_run: true
@@ -187,3 +165,12 @@ repos:
         language: system
         stages: [pre-push]
         pass_filenames: false
+        always_run: true
+
+      - id: check-dead-code
+        name: Dead Code Analysis (non-blocking)
+        entry: ".venv/bin/python -m ci.check_dead_code"
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true

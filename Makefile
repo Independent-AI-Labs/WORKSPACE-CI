@@ -128,8 +128,13 @@ test: ## Run all tests (shell + Python)
 
 .PHONY: _lint-impl
 _lint-impl:
+ifdef CI
+	$(RUFF) format --check ci/ --config ruff.toml
+	$(RUFF) check ci/ --config ruff.toml
+else
 	$(RUFF) format ci/ --config ruff.toml
 	$(RUFF) check --fix ci/ --config ruff.toml
+endif
 
 .PHONY: _type-check-impl
 _type-check-impl:

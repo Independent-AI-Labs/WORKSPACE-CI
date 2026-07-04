@@ -224,7 +224,7 @@ and re-run."
 
         # Classify
         _is_formatter=0
-        [[ "$h_id" == "ruff-format" || "$h_id" == "ruff" ]] && _is_formatter=1
+        [[ "$h_id" == "ruff-format" || "$h_id" == "ruff" || "$h_id" == "ci-lint" ]] && _is_formatter=1
 
         _need_gate=0  # skip hook if no staged files match
         [[ -n "$h_files" && "$h_always" != "true" && "$_stage" == "pre-commit" ]] && _need_gate=1
@@ -270,13 +270,13 @@ and re-run."
             # shellcheck disable=SC2086
             w "${h_cmd} \$_match || { ci_fail \"$h_name\"; exit 1; }"
 
-        elif [[ "$h_id" == "check-boot-venv-layout" ]]; then
-            # Non-blocking check per SPEC-BOOT-LAYOUT §6 / FR-BL-7.7.
-            # rc-capture pattern: failures are surfaced as warnings, never hard-fail.
+        elif [[ "$h_id" == "check-boot-venv-layout" || "$h_id" == "check-dead-code" ]]; then
+            # Non-blocking advisory checks: rc-capture pattern.
+            # Failures are surfaced as warnings, never hard-fail.
             w '_bl_rc=0'
             w "${h_cmd} || _bl_rc=\$?"
             w 'if [[ $_bl_rc -ne 0 ]]; then'
-            w "    ci_warn \"${h_name} failed (exit \$_bl_rc): non-blocking, continuing (FR-BL-7.7)\""
+            w "    ci_warn \"${h_name} failed (exit \$_bl_rc): non-blocking, continuing\""
             w 'fi'
 
         else

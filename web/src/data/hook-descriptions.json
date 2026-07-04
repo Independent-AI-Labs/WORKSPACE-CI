@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-04T09:59:09.614180+00:00",
+  "generated_at": "2026-07-04T10:18:41.373894+00:00",
   "descriptions": {
     "check-unstaged": "Fails the commit if there are unstaged or untracked files, auto-staging all changes so the developer can re-commit without losing work. Prevents partial commits that leave the working tree in an inconsistent state. The developer simply re-runs git commit after the auto-stage completes.",
     "block-sensitive-files": "Blocks commit if any staged file matches sensitive extensions or keywords from config/sensitive_files.yaml. Enforces an allowlist of safe file types and supports per-repo exception lists via sensitive_files_exceptions.yaml. Prevents accidental leakage of credentials, keys, and environment files into version control.",

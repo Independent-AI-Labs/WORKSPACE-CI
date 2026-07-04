@@ -9,46 +9,44 @@ on:
 permissions:
   contents: read
 
+env:
+  UV_VERSION: '0.11.23'
+  GITLEAKS_VERSION: '8.21.2'
+
 jobs:
-  quality-gates:
+  # ─────────────────────────────────────────────────────────────────────
+  # Job 1: Security & guard checks (parallel with quality-gate)
+  # ─────────────────────────────────────────────────────────────────────
+  security-guards:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
+      - name: Bootstrap uv (SHA256-verified)
+        run: bash scripts/bootstrap-uv
 
-      - name: Install uv
-        run: pip install uv==0.11.23
+      - name: Bootstrap gitleaks (SHA256-verified)
+        run: bash scripts/bootstrap-gitleaks
+
+      - name: Add .boot-linux/bin to PATH
+        run: echo "$(pwd)/.boot-linux/bin" >> $GITHUB_PATH
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
 
       - name: Sync Python deps
         run: uv sync --extra dev
 
-      - name: Install web deps
-        run: npm ci
-        working-directory: web
+      # ── Security checks ────────────────────────────────────────────
+      - name: Block sensitive files
+        run: bash -c 'source lib/checks.sh && ci_block_sensitive_files'
 
-      - name: Lint (ruff)
-        run: .venv/bin/ruff format --check ci/ --config ruff.toml && .venv/bin/ruff check ci/ --config ruff.toml
-
-      - name: Type-check (mypy)
-        run: .venv/bin/mypy ci/
-
-      - name: Shell unit tests
-        run: ./tests/run_tests_unit.sh
-
-      - name: Integration tests
-        run: ./tests/run_tests_integration.sh
-
-      - name: Python unit tests + coverage
-        run: .venv/bin/python -m pytest tests/unit --cov=ci --cov-report=term-missing --cov-fail-under=90 --tb=short -q
-
-      - name: Integration tests + coverage
-        run: .venv/bin/python -m pytest tests/integration --cov=ci --cov-report=term-missing --cov-fail-under=5 --tb=short -q
+      - name: Secret scan (gitleaks)
+        run: bash -c 'source lib/checks.sh && ci_scan_secrets'
 
       - name: Banned words check
         run: bash -c 'source lib/checks.sh && ci_check_banned_words'
@@ -56,11 +54,27 @@ jobs:
       - name: Silent-swallow check
         run: bash -c 'source lib/checks.sh && ci_check_silent_swallow'
 
-      - name: Secret scan (gitleaks)
-        run: bash -c 'source lib/checks.sh && ci_scan_secrets'
+      - name: Portable shell check
+        run: bash -c 'source lib/checks.sh && ci_check_portable_shell'
 
+      - name: File length check
+        run: bash -c 'source lib/checks.sh && ci_check_file_length'
+
+      - name: Init files check
+        run: bash -c 'source lib/checks.sh && ci_check_init_files'
+
+      - name: Py not executable check
+        run: bash -c 'source lib/checks.sh && ci_check_py_not_executable'
+
+      - name: No dead imports check
+        run: bash -c 'source lib/checks.sh && ci_check_no_dead_imports'
+
+      # ── Dependency & config checks ─────────────────────────────────
       - name: Dependency version check
         run: .venv/bin/python -m ci.check_dependency_versions pyproject.toml web/package.json
+
+      - name: Duplicate dependencies check
+        run: .venv/bin/python -m ci.check_duplicate_dependencies
 
       - name: Coverage no-devolution
         run: bash -c 'source lib/checks.sh && ci_check_coverage_thresholds_no_devolution'
@@ -71,20 +85,47 @@ jobs:
       - name: Markdown docs check
         run: .venv/bin/python -m ci.check_markdown_docs --all-md --check-remote
 
-      - name: File length check
-        run: bash -c 'source lib/checks.sh && ci_check_file_length'
+      - name: Boot venv layout (non-blocking)
+        run: .venv/bin/python -m ci.check_boot_venv_layout
+        continue-on-error: true
 
-      - name: Portable shell check
-        run: bash -c 'source lib/checks.sh && ci_check_portable_shell'
+      - name: Dead code analysis (non-blocking)
+        run: .venv/bin/python -m ci.check_dead_code
+        continue-on-error: true
 
-      - name: Web lint (eslint)
-        run: npm run lint
+  # ─────────────────────────────────────────────────────────────────────
+  # Job 2: Quality gate (lint + type + tests + coverage + web)
+  # ─────────────────────────────────────────────────────────────────────
+  quality-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bootstrap uv (SHA256-verified)
+        run: bash scripts/bootstrap-uv
+
+      - name: Add .boot-linux/bin to PATH
+        run: echo "$(pwd)/.boot-linux/bin" >> $GITHUB_PATH
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+
+      - name: Sync Python deps
+        run: uv sync --extra dev
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: 'web/.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web deps (no postinstall scripts)
+        run: npm ci --ignore-scripts
         working-directory: web
 
-      - name: Web type-check (tsc)
-        run: npm run type-check
-        working-directory: web
-
-      - name: Web tests (vitest)
-        run: npm run test
-        working-directory: web
+      - name: Quality gate (lint + type + tests + coverage + web)
+        run: make check-push
