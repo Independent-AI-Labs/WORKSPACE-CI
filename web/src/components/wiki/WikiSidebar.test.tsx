@@ -83,4 +83,21 @@ describe('WikiSidebar', () => {
     const guardIdx = labels.indexOf('Guard Policies')
     expect(standardsIdx).toBeGreaterThan(guardIdx)
   })
+
+  it('renders dividers around LLM Gateway, Static Analysis, and Playground group', () => {
+    const { container } = render(<WikiSidebar stats={mockStats} />)
+    const items = Array.from(container.querySelectorAll('.wiki-sidebar__nav > li'))
+    const labels = items.map((li) => {
+      const link = li.querySelector('.wiki-sidebar__link')
+      return link ? link.textContent || '' : ''
+    })
+    const llmIdx = labels.findIndex((l) => l.includes('LLM Gateway'))
+    const integrationIdx = labels.findIndex((l) => l.includes('Integration Guide'))
+    expect(items[llmIdx]).toHaveClass('wiki-sidebar__divider')
+    expect(items[integrationIdx]).toHaveClass('wiki-sidebar__divider')
+    const checksLi = items[labels.findIndex((l) => l.includes('Static Analysis'))]
+    const playgroundLi = items[labels.findIndex((l) => l.includes('Playground'))]
+    expect(checksLi).not.toHaveClass('wiki-sidebar__divider')
+    expect(playgroundLi).not.toHaveClass('wiki-sidebar__divider')
+  })
 })

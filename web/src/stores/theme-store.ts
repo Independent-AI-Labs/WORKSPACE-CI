@@ -16,7 +16,7 @@ function applyTheme(theme: Theme): void {
 }
 
 function getSystemTheme(): Theme {
-  if (typeof window === 'undefined' || !window.matchMedia) return 'dark'
+  if (typeof window === 'undefined' || !window.matchMedia) return 'light'
   return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
 }
 
@@ -28,7 +28,7 @@ interface ThemeStore {
 }
 
 export const useThemeStore = create<ThemeStore>((set, get) => ({
-  theme: 'dark',
+  theme: 'light',
   toggle: () => {
     const next = get().theme === 'dark' ? 'light' : 'dark'
     applyTheme(next)

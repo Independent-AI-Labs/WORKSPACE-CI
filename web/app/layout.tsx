@@ -28,7 +28,7 @@ const themeScript = `
     } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
       document.documentElement.setAttribute('data-theme', 'light');
     } else {
-      document.documentElement.setAttribute('data-theme', 'dark');
+      document.documentElement.setAttribute('data-theme', 'light');
     }
     var sidebarCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
     if (sidebarCollapsed) {

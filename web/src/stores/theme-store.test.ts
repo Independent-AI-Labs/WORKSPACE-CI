@@ -6,35 +6,35 @@ describe('theme-store', () => {
     if (typeof localStorage !== 'undefined') {
       localStorage.clear()
     }
-    useThemeStore.setState({ theme: 'dark' })
+    useThemeStore.setState({ theme: 'light' })
   })
 
-  it('starts with dark theme by default', () => {
+  it('starts with light theme by default', () => {
+    expect(useThemeStore.getState().theme).toBe('light')
+  })
+
+  it('toggles to dark', () => {
+    useThemeStore.getState().toggle()
     expect(useThemeStore.getState().theme).toBe('dark')
   })
 
-  it('toggles to light', () => {
+  it('toggles back to light', () => {
+    useThemeStore.getState().toggle()
     useThemeStore.getState().toggle()
     expect(useThemeStore.getState().theme).toBe('light')
   })
 
-  it('toggles back to dark', () => {
-    useThemeStore.getState().toggle()
-    useThemeStore.getState().toggle()
-    expect(useThemeStore.getState().theme).toBe('dark')
-  })
-
   it('persists to localStorage', () => {
-    useThemeStore.getState().setTheme('light')
+    useThemeStore.getState().setTheme('dark')
     if (typeof localStorage !== 'undefined') {
-      expect(localStorage.getItem('theme')).toBe('light')
+      expect(localStorage.getItem('theme')).toBe('dark')
     }
   })
 
   it('sets data-theme attribute on document', () => {
-    useThemeStore.getState().setTheme('light')
+    useThemeStore.getState().setTheme('dark')
     if (typeof document !== 'undefined') {
-      expect(document.documentElement.getAttribute('data-theme')).toBe('light')
+      expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
     }
   })
 })
