@@ -5,7 +5,7 @@ export function WikiFooter() {
         The AI Workspace Guardrails Wiki
       </span>
       <span className="wiki-footer__version">
-        2026 Independent AI Labs
+        2026 ◆ Independent AI Labs
       </span>
     </footer>
   )

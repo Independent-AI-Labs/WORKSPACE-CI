@@ -119,7 +119,12 @@ exceptions:
       - 'web/package\.json$'
       - 'web/package-lock\.json$'
   - pattern: '\blegacy\b'
-    paths: ['web/package-lock\.json$']
+    paths:
+      - 'web/package\.json$'
+      - 'web/package-lock\.json$'
+      - 'web/src/components/wiki/playground/CodeEditor\.tsx$'
+      - 'web/src/lib/patterns\.test\.ts$'
+      - 'web/src/lib/patterns\.ts$'
   - pattern: 'eslint-disable'
     paths:
       - 'web/src/lib/patterns\.test\.ts$'
@@ -128,10 +133,6 @@ exceptions:
       - 'web/src/hooks/usePlayground\.test\.ts$'
   - pattern: '\blist\[object\]'
     paths: ['web/src/lib/patterns\.test\.ts$']
-  - pattern: '\blegacy\b'
-    paths:
-      - 'web/src/lib/patterns\.test\.ts$'
-      - 'web/src/lib/patterns\.ts$'
   - pattern: '@dataclass'
     paths: ['web/src/lib/patterns\.test\.ts$']
   - pattern: '\bxfail\b'

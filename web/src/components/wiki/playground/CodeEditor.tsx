@@ -1,11 +1,18 @@
 'use client'
 
 import { forwardRef, useImperativeHandle, useRef, useEffect } from 'react'
-import { EditorView, keymap } from '@codemirror/view'
+import { EditorView, keymap, lineNumbers } from '@codemirror/view'
 import { EditorState, EditorSelection } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { python } from '@codemirror/lang-python'
 import { javascript } from '@codemirror/lang-javascript'
+import {
+  syntaxHighlighting,
+  defaultHighlightStyle,
+  StreamLanguage,
+} from '@codemirror/language'
+import { shell as shellMode } from '@codemirror/legacy-modes/mode/shell'
+import { yaml as yamlMode } from '@codemirror/legacy-modes/mode/yaml'
 import type { ClassifiedPattern, PatternCategory } from '@/types/patterns'
 import type { PatternMatch } from '@/types/wiki'
 import { runPatterns } from '@/lib/regex-engine'
@@ -28,6 +35,7 @@ export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
   ) {
     const containerRef = useRef<HTMLDivElement>(null)
     const viewRef = useRef<EditorView | null>(null)
+    const docRef = useRef<string>('')
 
     const patternsRef = useRef(patterns)
     patternsRef.current = patterns
@@ -53,6 +61,8 @@ export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       if (lang === 'javascript' || lang === 'typescript') {
         return [javascript()]
       }
+      if (lang === 'shell') return [StreamLanguage.define(shellMode)]
+      if (lang === 'yaml') return [StreamLanguage.define(yamlMode)]
       return []
     }
 
@@ -60,14 +70,17 @@ export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       if (!containerRef.current) return
 
       const state = EditorState.create({
-        doc: '',
+        doc: docRef.current,
         extensions: [
           history(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           ...getLanguageExtension(language),
           EditorView.lineWrapping,
+          lineNumbers(),
+          syntaxHighlighting(defaultHighlightStyle),
           EditorView.updateListener.of((update) => {
             if (update.docChanged) {
+              docRef.current = update.state.doc.toString()
               const matches = runPatterns(
                 update.state.doc.toString(),
                 patternsRef.current,
@@ -86,6 +99,7 @@ export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       viewRef.current = view
 
       return () => {
+        docRef.current = view.state.doc.toString()
         view.destroy()
         viewRef.current = null
       }
