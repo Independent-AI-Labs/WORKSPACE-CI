@@ -7,6 +7,48 @@ import type { HookRecord, HookKind } from '@/types/hooks'
 import type { LanguagePercent } from '@/types/code-stats'
 import type { StandardEntry, StandardType } from '@/types/standards'
 
+const CONFIG_CATEGORY_MAP: Record<string, string> = {
+  banned_words: 'Content Rules',
+  banned_words_exceptions: 'Content Rules',
+  blocked_commit_patterns: 'Content Rules',
+  sensitive_files: 'Content Rules',
+  silent_swallow_patterns: 'Content Rules',
+  coverage_thresholds: 'Quality Gates',
+  dead_code: 'Quality Gates',
+  file_length_limits: 'Quality Gates',
+  dependency_excludes: 'Dependencies',
+  duplicate_dependency_excludes: 'Dependencies',
+  boot_layout: 'Project Structure',
+  markdown_docs: 'Project Structure',
+  required_hooks: 'Project Structure',
+}
+
+const GUARD_CATEGORY_MAP: Record<string, string> = {
+  guard_config_keys: 'Access Control',
+  guard_protected_branches: 'Access Control',
+  guard_subcommands: 'Access Control',
+  guard_environment: 'Environment',
+  guard_resource_limits: 'Environment',
+  guard_paths: 'Filesystem',
+}
+
+function capitalizeCategory(cat: string): string {
+  return cat
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+}
+
+export function deriveCategories(items: CardItem[]): { id: string; label: string }[] {
+  const seen = new Set<string>()
+  for (const item of items) {
+    if (item.category) seen.add(item.category)
+  }
+  return Array.from(seen)
+    .sort()
+    .map((id) => ({ id, label: id }))
+}
+
 const LANGUAGE_LABELS: Record<SwallowLanguage, string> = {
   shell: 'Shell',
   python: 'Python',
@@ -98,6 +140,7 @@ export function configAdapter(configs: ConfigEntry[]): CardItem[] {
     description: c.description ?? '',
     icon: 'ri-settings-3-line',
     monoTitle: true,
+    category: CONFIG_CATEGORY_MAP[c.name] ?? 'Other',
     meta:
       c.fieldCount !== undefined
         ? [{ label: 'Fields', value: String(c.fieldCount) }]
@@ -112,6 +155,7 @@ export function guardConfigAdapter(entries: GuardConfigEntry[]): CardItem[] {
     description: e.description ?? '',
     icon: 'ri-shield-keyhole-line',
     monoTitle: true,
+    category: GUARD_CATEGORY_MAP[e.name] ?? 'Other',
     meta:
       e.fieldCount !== undefined
         ? [{ label: 'Fields', value: String(e.fieldCount) }]
@@ -158,16 +202,20 @@ export function patternAdapter(patterns: ClassifiedPattern[]): CardItem[] {
 }
 
 export function scriptAdapter(scripts: ScriptManifestEntry[]): CardItem[] {
-  return scripts.map((s) => ({
-    id: s.id,
-    title: s.id,
-    description: s.summary,
-    monoTitle: true,
-    tags: [{ label: s.category, variant: 'accent' }],
-    meta: s.make_target
-      ? [{ label: 'Make target', value: s.make_target }]
-      : undefined,
-  }))
+  return scripts.map((s) => {
+    const catLabel = capitalizeCategory(s.category)
+    return {
+      id: s.id,
+      title: s.id,
+      description: s.summary,
+      monoTitle: true,
+      category: catLabel,
+      tags: [{ label: catLabel, variant: 'accent' }],
+      meta: s.make_target
+        ? [{ label: 'Make target', value: s.make_target }]
+        : undefined,
+    }
+  })
 }
 
 export function hookAdapter(
@@ -238,6 +286,7 @@ export function standardAdapter(standards: StandardEntry[]): CardItem[] {
       subtitle: s.fullTitle,
       description: s.summary,
       icon: STANDARD_TYPE_ICONS[s.type] ?? 'ri-book-marked-line',
+      category: STANDARD_TYPE_LABELS[s.type] ?? s.type,
       tags,
       meta,
     }

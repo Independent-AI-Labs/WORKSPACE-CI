@@ -46,9 +46,10 @@ export function ProjectList({
         toggleLanguage={toggleLanguage}
         selectAll={selectAll}
         deselectAll={deselectAll}
-        visibleCount={visibleCount}
-        totalCount={totalCount}
       />
+      <div className="project-list__count">
+        {visibleCount} of {totalCount} projects
+      </div>
       <div className="wiki-card-grid">
         {items.map((item, i) => {
           const p = filtered[i]

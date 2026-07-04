@@ -40,8 +40,6 @@ export function PatternList({
         toggleCategory={toggleCategory}
         selectAll={selectAll}
         deselectAll={deselectAll}
-        visibleCount={visibleCount}
-        totalCount={totalCount}
       />
       <div className="pattern-list__count">
         {visibleCount} of {totalCount} patterns

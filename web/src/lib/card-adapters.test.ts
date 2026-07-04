@@ -6,6 +6,8 @@ import {
   patternAdapter,
   scriptAdapter,
   hookAdapter,
+  standardAdapter,
+  deriveCategories,
 } from '@/lib/card-adapters'
 import type { ProjectSummary } from '@/types/projects'
 import type { ConfigEntry, GuardConfigEntry } from '@/types/content'
@@ -13,6 +15,7 @@ import type { ClassifiedPattern } from '@/types/patterns'
 import type { ScriptManifestEntry } from '@/types/wiki'
 import type { HookRecord } from '@/types/hooks'
 import type { LanguagePercent } from '@/types/code-stats'
+import type { StandardEntry } from '@/types/standards'
 
 describe('projectAdapter', () => {
   const project: ProjectSummary = {
@@ -105,6 +108,7 @@ describe('configAdapter', () => {
     expect(item.href).toBeUndefined()
     expect(item.icon).toBe('ri-settings-3-line')
     expect(item.meta).toEqual([{ label: 'Fields', value: '5' }])
+    expect(item.category).toBe('Content Rules')
   })
 
   it('omits meta when fieldCount is undefined', () => {
@@ -130,6 +134,7 @@ describe('guardConfigAdapter', () => {
     expect(item.href).toBeUndefined()
     expect(item.icon).toBe('ri-shield-keyhole-line')
     expect(item.meta).toEqual([{ label: 'Fields', value: '3' }])
+    expect(item.category).toBe('Filesystem')
   })
 })
 
@@ -191,8 +196,9 @@ describe('scriptAdapter', () => {
     expect(item.monoTitle).toBe(true)
     expect(item.href).toBeUndefined()
     expect(item.description).toBe('Extracts detector source code.')
+    expect(item.category).toBe('Extraction')
     expect(item.tags).toEqual([
-      { label: 'extraction', variant: 'accent' },
+      { label: 'Extraction', variant: 'accent' },
     ])
     expect(item.meta).toEqual([
       { label: 'Make target', value: 'extract-swallow' },
@@ -271,5 +277,79 @@ describe('hookAdapter', () => {
       descriptions,
     )
     expect(item.icon).toBe('ri-tools-line')
+  })
+})
+
+describe('standardAdapter', () => {
+  const standard: StandardEntry = {
+    id: 'eu-ai-act',
+    title: 'EU AI Act',
+    fullTitle: 'Regulation (EU) 2024/1689',
+    issuer: 'European Parliament',
+    jurisdiction: 'EU',
+    date: '2024-06-13',
+    type: 'regulation',
+    status: 'binding',
+    summary: 'Comprehensive AI regulation.',
+    tags: ['Risk Management'],
+    free: true,
+    downloadPath: '/standards/eu-ai-act.pdf',
+    pages: 144,
+  }
+
+  it('converts standard to CardItem with category from type', () => {
+    const [item] = standardAdapter([standard])
+    expect(item.id).toBe('eu-ai-act')
+    expect(item.title).toBe('EU AI Act')
+    expect(item.subtitle).toBe('Regulation (EU) 2024/1689')
+    expect(item.category).toBe('Regulation')
+    expect(item.icon).toBe('ri-government-line')
+  })
+
+  it('creates jurisdiction, type, free/paid, and topic tags', () => {
+    const [item] = standardAdapter([standard])
+    expect(item.tags).toEqual([
+      { label: 'EU', variant: 'accent' },
+      { label: 'Regulation', variant: 'muted' },
+      { label: 'FREE', variant: 'ok' },
+      { label: 'Risk Management', variant: 'muted' },
+    ])
+  })
+
+  it('uses PAID warn tag for paid standards', () => {
+    const [item] = standardAdapter([{ ...standard, free: false, price: '$50' }])
+    expect(item.tags![2]).toEqual({ label: 'PAID', variant: 'warn' })
+  })
+})
+
+describe('deriveCategories', () => {
+  it('extracts unique sorted categories from items', () => {
+    const items = [
+      { id: 'a', title: 'A', description: '', category: 'Zeta' },
+      { id: 'b', title: 'B', description: '', category: 'Alpha' },
+      { id: 'c', title: 'C', description: '', category: 'Zeta' },
+    ]
+    const result = deriveCategories(items)
+    expect(result).toEqual([
+      { id: 'Alpha', label: 'Alpha' },
+      { id: 'Zeta', label: 'Zeta' },
+    ])
+  })
+
+  it('skips items without category', () => {
+    const items = [
+      { id: 'a', title: 'A', description: '', category: 'Foo' },
+      { id: 'b', title: 'B', description: '' },
+    ]
+    const result = deriveCategories(items)
+    expect(result).toEqual([{ id: 'Foo', label: 'Foo' }])
+  })
+
+  it('returns empty array when no items have category', () => {
+    const items = [
+      { id: 'a', title: 'A', description: '' },
+    ]
+    const result = deriveCategories(items)
+    expect(result).toEqual([])
   })
 })

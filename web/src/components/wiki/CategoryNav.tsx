@@ -11,8 +11,6 @@ interface CategoryNavProps {
   toggleCategory: (category: PatternCategory) => void
   selectAll: () => void
   deselectAll: () => void
-  visibleCount: number
-  totalCount: number
 }
 
 export function CategoryNav({
@@ -21,8 +19,6 @@ export function CategoryNav({
   toggleCategory,
   selectAll,
   deselectAll,
-  visibleCount,
-  totalCount,
 }: CategoryNavProps) {
   const categoryCounts = PATTERN_CATEGORIES.map((cat) => ({
     ...cat,
@@ -32,9 +28,7 @@ export function CategoryNav({
   return (
     <div className="category-nav">
       <div className="category-nav__header">
-        <span className="category-nav__count">
-          {visibleCount} of {totalCount} patterns
-        </span>
+        <span />
         <div className="category-nav__actions">
           <button className="btn btn--sm btn--ghost" onClick={selectAll}>
             Select all

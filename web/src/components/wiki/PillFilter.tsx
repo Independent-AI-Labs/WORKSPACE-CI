@@ -2,21 +2,23 @@
 
 import clsx from 'clsx'
 
-interface LanguageFilterProps {
-  allLanguages: string[]
-  activeLanguages: Set<string>
-  toggleLanguage: (lang: string) => void
+interface PillFilterProps {
+  categories: { id: string; label: string }[]
+  activeCategories: Set<string>
+  toggleCategory: (id: string) => void
   selectAll: () => void
   deselectAll: () => void
+  categoryCounts: Record<string, number>
 }
 
-export function LanguageFilter({
-  allLanguages,
-  activeLanguages,
-  toggleLanguage,
+export function PillFilter({
+  categories,
+  activeCategories,
+  toggleCategory,
   selectAll,
   deselectAll,
-}: LanguageFilterProps) {
+  categoryCounts,
+}: PillFilterProps) {
   return (
     <div className="category-nav">
       <div className="category-nav__header">
@@ -31,17 +33,20 @@ export function LanguageFilter({
         </div>
       </div>
       <div className="category-nav__pills">
-        {allLanguages.map((lang) => (
+        {categories.map((cat) => (
           <button
-            key={lang}
+            key={cat.id}
             className={clsx(
               'category-nav__pill',
-              activeLanguages.has(lang) && 'is-active',
+              activeCategories.has(cat.id) && 'is-active',
             )}
-            onClick={() => toggleLanguage(lang)}
-            aria-pressed={activeLanguages.has(lang)}
+            onClick={() => toggleCategory(cat.id)}
+            aria-pressed={activeCategories.has(cat.id)}
           >
-            {lang}
+            {cat.label}
+            <span className="category-nav__pill-count">
+              {categoryCounts[cat.id] ?? 0}
+            </span>
           </button>
         ))}
       </div>

@@ -5,6 +5,28 @@
   margin: var(--space-6) 0;
 }
 
+.card-list-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.card-list-section__count {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.project-list__count {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
 .wiki-card {
   display: flex;
   flex-direction: column;
