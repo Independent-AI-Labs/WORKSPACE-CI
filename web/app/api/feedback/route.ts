@@ -30,16 +30,64 @@ function getClientIp(request: NextRequest): string {
   return request.headers.get('x-real-ip') ?? 'unknown'
 }
 
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
+
+const isProduction = process.env.NODE_ENV === 'production'
+
+interface ParsedOrigin {
+  protocol: string
+  host: string
+}
+
+function parseOrigin(origin: string): ParsedOrigin | null {
+  const match = origin.match(/^(https?):\/\/([^/]+)/)
+  if (!match) return null
+  return { protocol: match[1], host: match[2] }
+}
+
 function checkSameOrigin(request: NextRequest): boolean {
-  const origin = request.headers.get('origin')
-  if (origin && origin !== request.nextUrl.origin) {
-    return false
-  }
   const secFetchSite = request.headers.get('sec-fetch-site')
-  if (secFetchSite && secFetchSite !== 'same-origin' && secFetchSite !== 'none') {
+  if (secFetchSite) {
+    return secFetchSite === 'same-origin' || secFetchSite === 'none' || secFetchSite === 'same-site'
+  }
+
+  const origin = request.headers.get('origin')
+  if (!origin) {
+    return true
+  }
+
+  const parsed = parseOrigin(origin)
+  if (!parsed) {
     return false
   }
-  return true
+
+  const host = request.headers.get('host')
+  if (host && parsed.host === host) {
+    return true
+  }
+
+  if (ALLOWED_ORIGINS.length > 0) {
+    const originBase = `${parsed.protocol}://${parsed.host}`
+    if (ALLOWED_ORIGINS.includes(originBase)) {
+      return true
+    }
+  }
+
+  if (!isProduction) {
+    const localhostVariants = ['localhost', '127.0.0.1', '0.0.0.0', '[::1]']
+    if (localhostVariants.some((v) => parsed.host.startsWith(v))) {
+      const originPort = parsed.host.split(':')[1]
+      const hostPort = host?.split(':')[1]
+      if (!originPort || !hostPort || originPort === hostPort) {
+        return true
+      }
+    }
+  }
+
+  return false
 }
 
 export async function POST(request: NextRequest) {
