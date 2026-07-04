@@ -243,7 +243,7 @@ def test_hook_applies_skips_non_mandatory() -> None:
         stage="pre-commit",
         mandatory=False,
     )
-    assert _hook_applies(hook, "strict") is False
+    assert _hook_applies(hook, "strict", {"rust"}) is False
 
 
 def test_hook_applies_skips_non_safety_at_poc_tier() -> None:
@@ -255,8 +255,8 @@ def test_hook_applies_skips_non_safety_at_poc_tier() -> None:
         mandatory=True,
         safety=False,
     )
-    assert _hook_applies(hook, "strict") is True
-    assert _hook_applies(hook, "poc") is False
+    assert _hook_applies(hook, "strict", {"rust"}) is True
+    assert _hook_applies(hook, "poc", {"rust"}) is False
 
 
 def test_hook_applies_includes_safety_at_poc_tier() -> None:
@@ -268,7 +268,7 @@ def test_hook_applies_includes_safety_at_poc_tier() -> None:
         mandatory=True,
         safety=True,
     )
-    assert _hook_applies(hook, "poc") is True
+    assert _hook_applies(hook, "poc", {"rust"}) is True
 
 
 def test_resolve_gitdir_with_directory(tmp_path: Path) -> None:

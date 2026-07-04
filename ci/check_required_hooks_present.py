@@ -290,10 +290,26 @@ def _read_rendered_hooks(hooks_dir: Path) -> dict[str, str]:
     return rendered
 
 
-def _hook_applies(hook: HookEntry, tier: str) -> bool:
+def _detect_languages(project_dir: Path) -> set[str]:
+    """Detect project languages from file markers."""
+    langs: set[str] = set()
+    if (project_dir / "Cargo.toml").is_file():
+        langs.add("rust")
+    if (project_dir / "pyproject.toml").is_file():
+        langs.add("python")
+    if (project_dir / "package.json").is_file():
+        langs.add("node")
+    return langs
+
+
+def _hook_applies(hook: HookEntry, tier: str, languages: set[str]) -> bool:
     if not hook.mandatory:
         return False
-    return not (tier == "poc" and not hook.safety)
+    if tier == "poc" and not hook.safety:
+        return False
+    if "any" in hook.applicable_to:
+        return True
+    return bool(languages & set(hook.applicable_to))
 
 
 def _check_hooks_rendered(
@@ -308,10 +324,11 @@ def _check_hooks_rendered(
     if not hooks_dir.is_dir():
         return [f".git/hooks not found at {hooks_dir}"]
     rendered = _read_rendered_hooks(hooks_dir)
+    languages = _detect_languages(project_dir)
     return [
         f"hook '{hook.id}' (stage={hook.stage}) not present in .git/hooks/{hook.stage}"
         for hook in manifest.hooks
-        if _hook_applies(hook, tier)
+        if _hook_applies(hook, tier, languages)
         and _hook_marker(hook.id) not in rendered.get(hook.stage, "")
     ]
 
