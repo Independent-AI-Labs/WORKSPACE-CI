@@ -159,7 +159,7 @@ test-python: ## Run Python tests only (no moon caching)
 # The pre-push hook invokes this target directly (see .pre-commit-config.yaml).
 
 .PHONY: check-push
-check-push: ## Single-pass pre-push gate running ruff lint, mypy, shell unit tests, and pytest with per-suite coverage in one invocation. Eliminates the previous redundancy where the same tests ran two to three times across separate targets. Fails the push if any lint, type, test, or coverage threshold check does not pass.
+check-push: ## Single-pass pre-push gate running ruff lint, mypy, shell unit tests, pytest with per-suite coverage, and web/ JS quality (eslint + tsc + vitest) in one invocation. Eliminates the previous redundancy where the same tests ran two to three times across separate targets. Fails the push if any lint, type, test, or coverage threshold check does not pass.
 	@$(MAKE) _lint-impl && $(MAKE) _type-check-impl && $(MAKE) _test-push-impl
 
 .PHONY: _test-push-impl
@@ -168,6 +168,7 @@ _test-push-impl:
 	./tests/run_tests_integration.sh
 	$(PYTEST) tests/unit --cov=ci --cov-report=term-missing --cov-fail-under=90 --tb=short -q
 	$(PYTEST) tests/integration --cov=ci --cov-report=term-missing --cov-fail-under=5 --tb=short -q
+	$(MAKE) -C web lint type-check test
 
 # =============================================================================
 # Wiki Dev Server (delegates to web/Makefile; systemd user service on :3001)
