@@ -3,6 +3,7 @@ import { join } from 'path'
 import type { ApiDocsOutput, ShellDocsOutput } from '@/types/wiki'
 import type { SwallowDetectorData } from '@/types/patterns'
 import type { HookDescriptionData } from '@/types/hooks'
+import type { CodeStatsData } from '@/types/code-stats'
 
 function loadJson<T>(filePath: string): T | null {
   try {
@@ -35,5 +36,11 @@ export function loadSwallowDetectors(): SwallowDetectorData | null {
 export function loadHookDescriptions(): HookDescriptionData | null {
   return loadJson<HookDescriptionData>(
     join(process.cwd(), 'src', 'data', 'hook-descriptions.json'),
+  )
+}
+
+export function loadCodeStats(): CodeStatsData | null {
+  return loadJson<CodeStatsData>(
+    join(process.cwd(), 'src', 'data', 'code-stats.json'),
   )
 }

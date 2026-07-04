@@ -1,0 +1,477 @@
+{
+  "generated_at": "2026-07-04T06:22:25.362692+00:00",
+  "totals": {
+    "repos": 4,
+    "files": 1258,
+    "blank": 29249,
+    "comment": 9397,
+    "code": 326733,
+    "lines": 365379
+  },
+  "repos": [
+    {
+      "repo": "AMI-PORTAL",
+      "files": 720,
+      "blank": 15988,
+      "comment": 3228,
+      "code": 256399
+    },
+    {
+      "repo": "CI",
+      "files": 316,
+      "blank": 5815,
+      "comment": 2817,
+      "code": 41562
+    },
+    {
+      "repo": "DATAOPS",
+      "files": 181,
+      "blank": 6544,
+      "comment": 3121,
+      "code": 24083
+    },
+    {
+      "repo": "WORKSPACE-GUARD",
+      "files": 41,
+      "blank": 902,
+      "comment": 231,
+      "code": 4689
+    }
+  ],
+  "languages": [
+    {
+      "language": "JavaScript",
+      "files": 89,
+      "blank": 1329,
+      "comment": 502,
+      "code": 134769,
+      "repos": 2
+    },
+    {
+      "language": "TypeScript",
+      "files": 641,
+      "blank": 7780,
+      "comment": 2028,
+      "code": 62789,
+      "repos": 2
+    },
+    {
+      "language": "Markdown",
+      "files": 89,
+      "blank": 9483,
+      "comment": 0,
+      "code": 31108,
+      "repos": 4
+    },
+    {
+      "language": "CSS",
+      "files": 72,
+      "blank": 1065,
+      "comment": 421,
+      "code": 29279,
+      "repos": 2
+    },
+    {
+      "language": "Python",
+      "files": 194,
+      "blank": 7759,
+      "comment": 4198,
+      "code": 28993,
+      "repos": 3
+    },
+    {
+      "language": "JSON",
+      "files": 19,
+      "blank": 0,
+      "comment": 0,
+      "code": 26947,
+      "repos": 2
+    },
+    {
+      "language": "Bourne Shell",
+      "files": 31,
+      "blank": 603,
+      "comment": 870,
+      "code": 4220,
+      "repos": 2
+    },
+    {
+      "language": "YAML",
+      "files": 66,
+      "blank": 406,
+      "comment": 771,
+      "code": 2704,
+      "repos": 4
+    },
+    {
+      "language": "Rust",
+      "files": 10,
+      "blank": 248,
+      "comment": 12,
+      "code": 2113,
+      "repos": 1
+    },
+    {
+      "language": "Bourne Again Shell",
+      "files": 11,
+      "blank": 254,
+      "comment": 370,
+      "code": 1928,
+      "repos": 1
+    },
+    {
+      "language": "make",
+      "files": 6,
+      "blank": 232,
+      "comment": 174,
+      "code": 1053,
+      "repos": 4
+    },
+    {
+      "language": "Lua",
+      "files": 3,
+      "blank": 42,
+      "comment": 42,
+      "code": 291,
+      "repos": 1
+    },
+    {
+      "language": "GLSL",
+      "files": 11,
+      "blank": 15,
+      "comment": 0,
+      "code": 174,
+      "repos": 1
+    },
+    {
+      "language": "Text",
+      "files": 8,
+      "blank": 7,
+      "comment": 0,
+      "code": 159,
+      "repos": 2
+    },
+    {
+      "language": "TOML",
+      "files": 5,
+      "blank": 17,
+      "comment": 2,
+      "code": 132,
+      "repos": 3
+    },
+    {
+      "language": "awk",
+      "files": 1,
+      "blank": 9,
+      "comment": 7,
+      "code": 65,
+      "repos": 1
+    },
+    {
+      "language": "SVG",
+      "files": 2,
+      "blank": 0,
+      "comment": 0,
+      "code": 9,
+      "repos": 2
+    }
+  ],
+  "repo_languages": [
+    {
+      "repo": "AMI-PORTAL",
+      "language": "JavaScript",
+      "files": 85,
+      "blank": 1304,
+      "comment": 502,
+      "code": 134600
+    },
+    {
+      "repo": "AMI-PORTAL",
+      "language": "TypeScript",
+      "files": 487,
+      "blank": 6856,
+      "comment": 2019,
+      "code": 54405
+    },
+    {
+      "repo": "AMI-PORTAL",
+      "language": "CSS",
+      "files": 46,
+      "blank": 824,
+      "comment": 336,
+      "code": 27680
+    },
+    {
+      "repo": "AMI-PORTAL",
+      "language": "Markdown",
+      "files": 56,
+      "blank": 6627,
+      "comment": 0,
+      "code": 20763
+    },
+    {
+      "repo": "AMI-PORTAL",
+      "language": "JSON",
+      "files": 12,
+      "blank": 0,
+      "comment": 0,
+      "code": 16776
+    },
+    {
+      "repo": "AMI-PORTAL",
+      "language": "Bourne Shell",
+      "files": 9,
+      "blank": 178,
+      "comment": 202,
+      "code": 964
+    },
+    {
+      "repo": "AMI-PORTAL",
+      "language": "make",
+      "files": 1,
+      "blank": 72,
+      "comment": 43,
+      "code": 329
+    },
+    {
+      "repo": "AMI-PORTAL",
+      "language": "Lua",
+      "files": 3,
+      "blank": 42,
+      "comment": 42,
+      "code": 291
+    },
+    {
+      "repo": "AMI-PORTAL",
+      "language": "YAML",
+      "files": 8,
+      "blank": 27,
+      "comment": 57,
+      "code": 285
+    },
+    {
+      "repo": "AMI-PORTAL",
+      "language": "GLSL",
+      "files": 11,
+      "blank": 15,
+      "comment": 0,
+      "code": 174
+    },
+    {
+      "repo": "AMI-PORTAL",
+      "language": "Python",
+      "files": 1,
+      "blank": 43,
+      "comment": 27,
+      "code": 128
+    },
+    {
+      "repo": "AMI-PORTAL",
+      "language": "SVG",
+      "files": 1,
+      "blank": 0,
+      "comment": 0,
+      "code": 4
+    },
+    {
+      "repo": "CI",
+      "language": "JSON",
+      "files": 7,
+      "blank": 0,
+      "comment": 0,
+      "code": 10171
+    },
+    {
+      "repo": "CI",
+      "language": "TypeScript",
+      "files": 154,
+      "blank": 924,
+      "comment": 9,
+      "code": 8384
+    },
+    {
+      "repo": "CI",
+      "language": "Python",
+      "files": 41,
+      "blank": 2064,
+      "comment": 1162,
+      "code": 8260
+    },
+    {
+      "repo": "CI",
+      "language": "Markdown",
+      "files": 9,
+      "blank": 1501,
+      "comment": 0,
+      "code": 5716
+    },
+    {
+      "repo": "CI",
+      "language": "Bourne Shell",
+      "files": 22,
+      "blank": 425,
+      "comment": 668,
+      "code": 3256
+    },
+    {
+      "repo": "CI",
+      "language": "Bourne Again Shell",
+      "files": 11,
+      "blank": 254,
+      "comment": 370,
+      "code": 1928
+    },
+    {
+      "repo": "CI",
+      "language": "CSS",
+      "files": 26,
+      "blank": 241,
+      "comment": 85,
+      "code": 1599
+    },
+    {
+      "repo": "CI",
+      "language": "YAML",
+      "files": 31,
+      "blank": 289,
+      "comment": 440,
+      "code": 1575
+    },
+    {
+      "repo": "CI",
+      "language": "make",
+      "files": 3,
+      "blank": 73,
+      "comment": 74,
+      "code": 328
+    },
+    {
+      "repo": "CI",
+      "language": "JavaScript",
+      "files": 4,
+      "blank": 25,
+      "comment": 0,
+      "code": 169
+    },
+    {
+      "repo": "CI",
+      "language": "awk",
+      "files": 1,
+      "blank": 9,
+      "comment": 7,
+      "code": 65
+    },
+    {
+      "repo": "CI",
+      "language": "TOML",
+      "files": 2,
+      "blank": 5,
+      "comment": 2,
+      "code": 55
+    },
+    {
+      "repo": "CI",
+      "language": "Text",
+      "files": 4,
+      "blank": 5,
+      "comment": 0,
+      "code": 51
+    },
+    {
+      "repo": "CI",
+      "language": "SVG",
+      "files": 1,
+      "blank": 0,
+      "comment": 0,
+      "code": 5
+    },
+    {
+      "repo": "DATAOPS",
+      "language": "Python",
+      "files": 152,
+      "blank": 5652,
+      "comment": 3009,
+      "code": 20605
+    },
+    {
+      "repo": "DATAOPS",
+      "language": "Markdown",
+      "files": 15,
+      "blank": 799,
+      "comment": 0,
+      "code": 2709
+    },
+    {
+      "repo": "DATAOPS",
+      "language": "YAML",
+      "files": 8,
+      "blank": 19,
+      "comment": 61,
+      "code": 314
+    },
+    {
+      "repo": "DATAOPS",
+      "language": "make",
+      "files": 1,
+      "blank": 66,
+      "comment": 51,
+      "code": 299
+    },
+    {
+      "repo": "DATAOPS",
+      "language": "Text",
+      "files": 4,
+      "blank": 2,
+      "comment": 0,
+      "code": 108
+    },
+    {
+      "repo": "DATAOPS",
+      "language": "TOML",
+      "files": 1,
+      "blank": 6,
+      "comment": 0,
+      "code": 48
+    },
+    {
+      "repo": "WORKSPACE-GUARD",
+      "language": "Rust",
+      "files": 10,
+      "blank": 248,
+      "comment": 12,
+      "code": 2113
+    },
+    {
+      "repo": "WORKSPACE-GUARD",
+      "language": "Markdown",
+      "files": 9,
+      "blank": 556,
+      "comment": 0,
+      "code": 1920
+    },
+    {
+      "repo": "WORKSPACE-GUARD",
+      "language": "YAML",
+      "files": 19,
+      "blank": 71,
+      "comment": 213,
+      "code": 530
+    },
+    {
+      "repo": "WORKSPACE-GUARD",
+      "language": "make",
+      "files": 1,
+      "blank": 21,
+      "comment": 6,
+      "code": 97
+    },
+    {
+      "repo": "WORKSPACE-GUARD",
+      "language": "TOML",
+      "files": 2,
+      "blank": 6,
+      "comment": 0,
+      "code": 29
+    }
+  ]
+}

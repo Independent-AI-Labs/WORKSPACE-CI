@@ -12,12 +12,14 @@ import type { ConfigEntry, GuardConfigEntry } from '@/types/content'
 import type { ClassifiedPattern } from '@/types/patterns'
 import type { ScriptManifestEntry } from '@/types/wiki'
 import type { HookRecord } from '@/types/hooks'
+import type { LanguagePercent } from '@/types/code-stats'
 
 describe('projectAdapter', () => {
   const project: ProjectSummary = {
     slug: 'ci',
     displayName: 'CI',
     language: 'Python',
+    repoName: 'CI',
     icon: 'ri-terminal-line',
     title: 'CI Pipeline Monitor',
     summary: 'A collection of CI utilities.',
@@ -32,6 +34,51 @@ describe('projectAdapter', () => {
     expect(item.href).toBe('/ci')
     expect(item.icon).toBe('ri-terminal-line')
     expect(item.monoTitle).toBeUndefined()
+    expect(item.tags).toEqual([{ label: 'Python', variant: 'muted' }])
+  })
+
+  it('shows language percent badges when code-stats provided', () => {
+    const langPercents: Record<string, LanguagePercent[]> = {
+      CI: [
+        { language: 'Python', code: 800, percent: 80 },
+        { language: 'Bourne Shell', code: 200, percent: 20 },
+      ],
+    }
+    const [item] = projectAdapter([project], langPercents)
+    expect(item.tags).toEqual([
+      { label: 'Python 80%', variant: 'accent' },
+      { label: 'Bourne Shell 20%', variant: 'accent' },
+    ])
+  })
+
+  it('rounds percentages correctly', () => {
+    const langPercents: Record<string, LanguagePercent[]> = {
+      CI: [
+        { language: 'Python', code: 333, percent: 33 },
+        { language: 'Shell', code: 333, percent: 33 },
+        { language: 'Markdown', code: 334, percent: 33 },
+      ],
+    }
+    const [item] = projectAdapter([project], langPercents)
+    expect(item.tags).toEqual([
+      { label: 'Python 33%', variant: 'accent' },
+      { label: 'Shell 33%', variant: 'accent' },
+      { label: 'Markdown 33%', variant: 'accent' },
+    ])
+  })
+
+  it('returns muted language tag when no code-stats', () => {
+    const [item] = projectAdapter([project])
+    expect(item.tags).toEqual([{ label: 'Python', variant: 'muted' }])
+  })
+
+  it('returns muted language tag when repo not in stats', () => {
+    const langPercents: Record<string, LanguagePercent[]> = {
+      OTHER: [
+        { language: 'Python', code: 800, percent: 100 },
+      ],
+    }
+    const [item] = projectAdapter([project], langPercents)
     expect(item.tags).toEqual([{ label: 'Python', variant: 'muted' }])
   })
 })

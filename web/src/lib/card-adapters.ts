@@ -4,6 +4,7 @@ import type { ConfigEntry, GuardConfigEntry } from '@/types/content'
 import type { ClassifiedPattern, SwallowLanguage } from '@/types/patterns'
 import type { ScriptManifestEntry } from '@/types/wiki'
 import type { HookRecord, HookKind } from '@/types/hooks'
+import type { LanguagePercent } from '@/types/code-stats'
 import { slugify } from '@/lib/utils'
 
 const LANGUAGE_LABELS: Record<SwallowLanguage, string> = {
@@ -38,16 +39,27 @@ const HOOK_STAGE_LABELS: Record<string, string> = {
   'pre-push': 'Pre-push',
 }
 
-export function projectAdapter(projects: ProjectSummary[]): CardItem[] {
-  return projects.map((p) => ({
-    id: p.slug,
-    title: p.displayName,
-    subtitle: p.title,
-    description: p.summary,
-    href: `/${p.slug}`,
-    icon: p.icon,
-    tags: [{ label: p.language, variant: 'muted' }],
-  }))
+export function projectAdapter(
+  projects: ProjectSummary[],
+  languagePercents: Record<string, LanguagePercent[]> = {},
+): CardItem[] {
+  return projects.map((p) => {
+    const langPercents = languagePercents[p.repoName] ?? []
+    const tags: CardItem['tags'] = langPercents.map((lp) => ({
+      label: `${lp.language} ${lp.percent}%`,
+      variant: 'accent' as const,
+    }))
+
+    return {
+      id: p.slug,
+      title: p.displayName,
+      subtitle: p.title,
+      description: p.summary,
+      href: `/${p.slug}`,
+      icon: p.icon,
+      tags: tags.length > 0 ? tags : [{ label: p.language, variant: 'muted' }],
+    }
+  })
 }
 
 export function configAdapter(configs: ConfigEntry[]): CardItem[] {

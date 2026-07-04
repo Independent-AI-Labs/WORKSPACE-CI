@@ -221,6 +221,14 @@ compliance-all: ## Recursive compliance audit of all repos in workspace
 rewrite-history: ## Strip blocked patterns from git history (dangerous)
 	bash scripts/rewrite-history
 
+.PHONY: code-stats
+code-stats: ## Codebase statistics across the workspace via cloc (lines, files, per-repo, per-language)
+	bash scripts/code-stats $(ARGS)
+
+.PHONY: extract-code-stats
+extract-code-stats: ## Generate web/src/data/code-stats.json for wiki Project Catalogue badges
+	uv run python scripts/extract-code-stats.py
+
 # =============================================================================
 # WORKSPACE-GUARD: compiled git protection (opt-in)
 # =============================================================================

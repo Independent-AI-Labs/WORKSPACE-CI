@@ -142,12 +142,17 @@ for _repo in "${_repos[@]}"; do
     [[ "$_repo" == "$_root" ]] && _rel="(umbrella)"
 
     _cloc_args=(--quiet --json)
-    if [[ $_respect_gitignore -eq 1 ]] && [[ -d "$_repo/.git" ]]; then
-        _cloc_args+=(--vcs=git)
-    else
-        # No VCS hint: still skip common heavy dirs.
+    # Always use --exclude-dir instead of --vcs=git because the workspace
+    # guard blocks ``git -c safe.directory=* ls-files`` (the command cloc
+    # invokes internally under --vcs=git).  The expanded exclude list covers
+    # the same heavy/vendored directories that .gitignore would filter.
+    if [[ $_respect_gitignore -eq 1 ]]; then
         _cloc_args+=(
-            --exclude-dir=node_modules,.venv,__pycache__,target,dist,build,.cache,.boot-linux,.boot-macos
+            --exclude-dir=node_modules,.venv,__pycache__,target,dist,build,.cache,.local,.boot-linux,.boot-macos,.git,.next,.turbo,coverage,res
+        )
+    else
+        _cloc_args+=(
+            --exclude-dir=node_modules,.venv,__pycache__,target,dist,build,.cache,.local,.boot-linux,.boot-macos,.git,.next,.turbo,coverage
         )
     fi
 
@@ -247,6 +252,17 @@ totals = {
 totals["lines"] = totals["blank"] + totals["comment"] + totals["code"]
 
 if as_json:
+    # Per-repo language breakdown for wiki card badges.
+    repo_langs = []
+    for r in langs_raw:
+        repo_langs.append({
+            "repo": r["repo"],
+            "language": r["language"],
+            "files": r["files"],
+            "blank": r["blank"],
+            "comment": r["comment"],
+            "code": r["code"],
+        })
     out = {
         "root": root,
         "totals": totals,
@@ -256,6 +272,7 @@ if as_json:
               "repos": len(v["repos"])} for k,v in agg.items()],
             key=lambda x: -x["code"],
         ),
+        "repo_languages": repo_langs,
     }
     print(json.dumps(out, indent=2))
     sys.exit(0)

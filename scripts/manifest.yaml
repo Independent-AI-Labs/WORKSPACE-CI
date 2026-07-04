@@ -96,9 +96,19 @@ scripts:
   - id: code-stats
     path: scripts/code-stats
     summary: Codebase statistics across the workspace via cloc (lines, files, per-repo and per-language breakdown).
-    usage: code-stats
+    usage: code-stats [--repo PATH] [--root PATH] [--by-language] [--by-repo] [--all-files] [--top N] [--json] [--no-umbrella]
     category: workspace
-    output: "cloc report on stdout (total + per-repo + per-language)."
+    args:
+      - { name: --repo, description: "Restrict to a single repo PATH (default: workspace-wide)" }
+      - { name: --root, description: "Workspace root PATH (default: auto-detected)" }
+      - { name: --by-language, description: "Show only the per-language table" }
+      - { name: --by-repo, description: "Show only the per-repo table" }
+      - { name: --all-files, description: "Ignore .gitignore (count vendored files too)" }
+      - { name: --top, description: "Show top N rows in tables (default: 25)" }
+      - { name: --json, description: "Emit machine-readable JSON instead of tables" }
+      - { name: --no-umbrella, description: "Skip the workspace-root repo itself" }
+    output: "cloc report on stdout (total + per-repo + per-language). Exits 0 on success, 1 if cloc missing, 2 if no repos found."
+    make_target: code-stats
 
   - id: compliance-report
     path: scripts/compliance-report
