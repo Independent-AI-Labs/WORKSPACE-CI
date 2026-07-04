@@ -60,12 +60,13 @@ export function extractReadmeSummary(markdown: string): string {
     if (trimmed === '') break
 
     summaryParts.push(trimmed)
-    if (summaryParts.join(' ').length > 280) break
+    if (summaryParts.join(' ').length > 500) break
   }
 
-  const summary = summaryParts.join(' ').trim()
-  if (summary.length > 300) {
-    return summary.slice(0, 297) + '...'
+  let summary = summaryParts.join(' ').trim()
+  if (summary.length > 600) {
+    const lastPeriod = summary.lastIndexOf('. ', 597)
+    summary = lastPeriod > 200 ? summary.slice(0, lastPeriod + 1) : summary.slice(0, 597) + '...'
   }
   return summary
 }
