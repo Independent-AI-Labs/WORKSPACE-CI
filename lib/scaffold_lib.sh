@@ -81,6 +81,9 @@ _scl_gen_precommit() {
             printf '        language: system\n'
             printf '        pass_filenames: %s\n' "$_pf"
             printf '        always_run: %s\n' "$_ar"
+            if [[ "$_sname" != "pre-commit" ]]; then
+                printf '        stages: [%s]\n' "$_sname"
+            fi
             if [[ -n "$_files" ]]; then
                 printf '        files: %s\n' "\"$_files\""
             fi
