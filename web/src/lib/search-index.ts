@@ -40,12 +40,15 @@ export function buildSearchIndexFromPatterns(
 
 export function buildSearchIndexFromHooks(
   hooks: { id: string; entry: string; stage: string; kind: string }[],
+  descriptions?: Record<string, string>,
 ): SearchIndexEntry[] {
   return hooks.map((h) => ({
     id: `hook-${h.id}`,
     title: h.id,
     section: 'Hooks',
-    content: `Stage: ${h.stage}, Kind: ${h.kind}, Entry: ${h.entry}`,
+    content: descriptions?.[h.id]
+      ? `${descriptions[h.id]} Stage: ${h.stage}, Kind: ${h.kind}, Entry: ${h.entry}`
+      : `Stage: ${h.stage}, Kind: ${h.kind}, Entry: ${h.entry}`,
     href: `/hooks#${h.id}`,
     type: 'hook' as const,
     keywords: [h.stage, h.kind, h.entry],

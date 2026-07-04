@@ -24,7 +24,9 @@ describe('WikiSidebar', () => {
   it('renders all nav items', () => {
     render(<WikiSidebar />)
     expect(screen.getByText('Home')).toBeInTheDocument()
+    expect(screen.getByText('Runtime Hooks')).toBeInTheDocument()
     expect(screen.getByText('Workspace Guard')).toBeInTheDocument()
+    expect(screen.getByText('LLM Gateway')).toBeInTheDocument()
     expect(screen.getByText('Static Analysis')).toBeInTheDocument()
     expect(screen.getByText('Tools & Scripts')).toBeInTheDocument()
     expect(screen.getByText('Integration Guide')).toBeInTheDocument()

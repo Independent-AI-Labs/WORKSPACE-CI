@@ -12,3 +12,6 @@ uv.lock
 .boot-linux/
 web/res/
 data/feedback/
+web/data/feedback/
+/*.pdf
+web/public/standards/*.html

@@ -1,0 +1,82 @@
+/* ============================================================
+   Standards & Regulations page
+   ============================================================ */
+
+.standards-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  transition: all var(--duration-fast);
+}
+
+.contact-dialog-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.contact-dialog-trigger:hover {
+  background: var(--accent);
+  color: var(--panel);
+}
+
+.contact-dialog {
+  max-width: 520px;
+}
+
+.contact-dialog__full-title {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  margin-bottom: var(--space-3);
+  line-height: var(--leading-relaxed);
+}
+
+.contact-dialog__body {
+  margin-bottom: var(--space-3);
+  line-height: var(--leading-relaxed);
+}
+
+.contact-dialog__price {
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-1);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+
+.contact-dialog__email {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+}
+
+.contact-dialog__purchase {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  color: var(--link);
+}
+
+.contact-dialog__purchase:hover {
+  text-decoration: underline;
+}

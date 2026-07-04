@@ -3,7 +3,7 @@ import { saveFeedback, getAllFeedbackCounts } from '@/lib/feedback-loader'
 import type { FeedbackSubmission } from '@/types/feedback'
 
 const VALID_TARGET_TYPES = [
-  'pattern', 'hook', 'config', 'guard', 'check', 'page', 'tooling', 'project',
+  'pattern', 'hook', 'config', 'guard', 'check', 'page', 'tooling', 'project', 'standard',
 ] as const
 
 const RATE_LIMIT_WINDOW_MS = 60_000

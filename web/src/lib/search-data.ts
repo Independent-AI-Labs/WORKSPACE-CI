@@ -5,6 +5,7 @@ import { load } from 'js-yaml'
 import type { SearchIndexEntry } from '@/types/wiki'
 import type { BannedWordsConfig, SwallowPatternConfig } from '@/types/patterns'
 import type { RequiredHooksConfig } from '@/types/hooks'
+import type { ScriptManifest } from '@/types/wiki'
 import { classifyAll, classifySwallowPatterns } from '@/lib/patterns'
 import {
   buildSearchIndexFromPatterns,
@@ -12,10 +13,11 @@ import {
 } from '@/lib/search-index'
 import {
   getConfigRoot,
+  getScriptsRoot,
   getGuardConfigRoot,
   getGuardConfigEntries,
 } from '@/lib/yaml-loader'
-import { loadSwallowDetectors } from '@/lib/docs-loader'
+import { loadSwallowDetectors, loadHookDescriptions, loadStandards } from '@/lib/docs-loader'
 import { PROJECTS } from '@/lib/project-registry'
 
 function loadPatterns(): SearchIndexEntry[] {
@@ -54,7 +56,11 @@ function loadHooks(): SearchIndexEntry[] {
       'utf8',
     )
     const config = load(raw) as RequiredHooksConfig
-    return buildSearchIndexFromHooks(config.hooks)
+    const descriptions = loadHookDescriptions()
+    return buildSearchIndexFromHooks(
+      config.hooks,
+      descriptions?.descriptions ?? undefined,
+    )
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') return []
     throw e
@@ -116,6 +122,48 @@ function loadGuardConfigs(): SearchIndexEntry[] {
   }
 }
 
+function loadStandardsSearch(): SearchIndexEntry[] {
+  const standards = loadStandards()
+  if (!standards) return []
+  return standards.map((s) => ({
+    id: `standard-${s.id}`,
+    title: s.title,
+    section: 'Standards',
+    content: `${s.summary} Issuer: ${s.issuer}, Jurisdiction: ${s.jurisdiction}, Type: ${s.type}, Status: ${s.status}.`,
+    href: `/standards#${s.id}`,
+    type: 'standard' as const,
+    keywords: [
+      s.id,
+      s.title,
+      s.fullTitle,
+      s.issuer,
+      s.jurisdiction,
+      s.type,
+      s.status,
+      ...s.tags,
+    ],
+  }))
+}
+
+function loadScriptsSearch(): SearchIndexEntry[] {
+  try {
+    const raw = readFileSync(join(getScriptsRoot(), 'manifest.yaml'), 'utf8')
+    const manifest = load(raw) as ScriptManifest
+    return manifest.scripts.map((s) => ({
+      id: `script-${s.id}`,
+      title: s.id,
+      section: 'Tooling',
+      content: `${s.summary} Category: ${s.category}. Usage: ${s.usage}. Output: ${s.output}.`,
+      href: `/tooling#${s.id}`,
+      type: 'tooling' as const,
+      keywords: [s.id, s.category, s.make_target ?? ''].filter(Boolean),
+    }))
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return []
+    throw e
+  }
+}
+
 const staticPages: SearchIndexEntry[] = [
   {
     id: 'page-home',
@@ -163,6 +211,24 @@ const staticPages: SearchIndexEntry[] = [
     keywords: ['guard', 'config'],
   },
   {
+    id: 'page-runtime-hooks',
+    title: 'Runtime Hooks',
+    section: 'Pages',
+    content: 'Runtime hooks for AI agent execution monitoring',
+    href: '/runtime-hooks',
+    type: 'page',
+    keywords: ['runtime', 'hooks', 'monitoring', 'audit'],
+  },
+  {
+    id: 'page-llm-gateway',
+    title: 'LLM Gateway',
+    section: 'Pages',
+    content: 'Gateway for routing, auditing, and governing LLM API calls',
+    href: '/llm-gateway',
+    type: 'page',
+    keywords: ['llm', 'gateway', 'routing', 'audit', 'token'],
+  },
+  {
     id: 'page-checks',
     title: 'Static Analysis',
     section: 'Pages',
@@ -179,6 +245,15 @@ const staticPages: SearchIndexEntry[] = [
     href: '/tooling',
     type: 'page',
     keywords: ['tooling', 'scripts', 'make'],
+  },
+  {
+    id: 'page-standards',
+    title: 'Standards & Regulations',
+    section: 'Pages',
+    content: 'AI standards, regulations, frameworks, and declarations',
+    href: '/standards',
+    type: 'page',
+    keywords: ['standards', 'regulations', 'eu ai act', 'nist', 'oecd', 'unesco', 'iso', 'ieee', 'g7', 'un', 'coe'],
   },
   {
     id: 'page-integration',
@@ -215,6 +290,8 @@ export const buildSearchData = cache((): SearchIndexEntry[] => {
     ...loadHooks(),
     ...loadConfigs(),
     ...loadGuardConfigs(),
+    ...loadStandardsSearch(),
+    ...loadScriptsSearch(),
     ...staticPages,
   ]
 })

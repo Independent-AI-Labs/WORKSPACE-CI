@@ -5,6 +5,7 @@ import type { ClassifiedPattern, SwallowLanguage } from '@/types/patterns'
 import type { ScriptManifestEntry } from '@/types/wiki'
 import type { HookRecord, HookKind } from '@/types/hooks'
 import type { LanguagePercent } from '@/types/code-stats'
+import type { StandardEntry, StandardType } from '@/types/standards'
 
 const LANGUAGE_LABELS: Record<SwallowLanguage, string> = {
   shell: 'Shell',
@@ -36,6 +37,26 @@ const HOOK_STAGE_LABELS: Record<string, string> = {
   'pre-commit': 'Pre-commit',
   'commit-msg': 'Commit-msg',
   'pre-push': 'Pre-push',
+}
+
+const STANDARD_TYPE_ICONS: Record<StandardType, string> = {
+  regulation: 'ri-government-line',
+  standard: 'ri-book-marked-line',
+  framework: 'ri-flow-chart',
+  declaration: 'ri-megaphone-line',
+  'code-of-conduct': 'ri-shield-check-line',
+  'executive-order': 'ri-government-line',
+  treaty: 'ri-scales-3-line',
+}
+
+const STANDARD_TYPE_LABELS: Record<StandardType, string> = {
+  regulation: 'Regulation',
+  standard: 'Standard',
+  framework: 'Framework',
+  declaration: 'Declaration',
+  'code-of-conduct': 'Code of Conduct',
+  'executive-order': 'Executive Order',
+  treaty: 'Treaty',
 }
 
 export function projectAdapter(
@@ -178,6 +199,44 @@ export function hookAdapter(
       description: descriptions[h.id] ?? h.entry,
       icon: HOOK_KIND_ICONS[h.kind] ?? 'ri-tools-line',
       monoTitle: true,
+      tags,
+      meta,
+    }
+  })
+}
+
+export function standardAdapter(standards: StandardEntry[]): CardItem[] {
+  return standards.map((s) => {
+    const tags: CardItem['tags'] = [
+      { label: s.jurisdiction, variant: 'accent' },
+      {
+        label: STANDARD_TYPE_LABELS[s.type] ?? s.type,
+        variant: 'muted',
+      },
+      {
+        label: s.free ? 'FREE' : 'PAID',
+        variant: s.free ? 'ok' : 'warn',
+      },
+      ...s.tags.map((t) => ({ label: t, variant: 'muted' as const })),
+    ]
+
+    const meta: CardItem['meta'] = [
+      { label: 'Issuer', value: s.issuer },
+      { label: 'Date', value: s.date },
+      {
+        label: 'Status',
+        value: s.status.charAt(0).toUpperCase() + s.status.slice(1),
+      },
+      ...(s.pages ? [{ label: 'Pages', value: String(s.pages) }] : []),
+      ...(s.price ? [{ label: 'Price', value: s.price }] : []),
+    ]
+
+    return {
+      id: s.id,
+      title: s.title,
+      subtitle: s.fullTitle,
+      description: s.summary,
+      icon: STANDARD_TYPE_ICONS[s.type] ?? 'ri-book-marked-line',
       tags,
       meta,
     }

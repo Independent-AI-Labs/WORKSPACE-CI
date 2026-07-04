@@ -11,7 +11,7 @@ export interface SearchIndexEntry {
   section: string
   content: string
   href: string
-  type: 'pattern' | 'hook' | 'config' | 'guard' | 'check' | 'page' | 'project'
+  type: 'pattern' | 'hook' | 'config' | 'guard' | 'check' | 'page' | 'project' | 'standard' | 'tooling'
   keywords: string[]
 }
 

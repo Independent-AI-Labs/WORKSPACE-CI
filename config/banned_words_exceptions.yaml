@@ -203,3 +203,8 @@ exceptions:
     paths: ['web/src/data/script-sources\.json$']
   - pattern: ' -- '
     paths: ['web/src/data/script-sources\.json$']
+
+  # Standards PDFs are binary documents downloaded from external sources
+  # (EU, NIST, OECD, UNESCO, etc.) and may contain any Unicode characters.
+  - pattern: '.*'
+    paths: ['web/public/standards/.*\.pdf$']

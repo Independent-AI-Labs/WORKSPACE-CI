@@ -23,6 +23,10 @@ export function getConfigRoot(): string {
   return CONFIG_ROOT
 }
 
+export function getScriptsRoot(): string {
+  return SCRIPTS_ROOT
+}
+
 export function getDocsRoot(): string {
   return DOCS_ROOT
 }

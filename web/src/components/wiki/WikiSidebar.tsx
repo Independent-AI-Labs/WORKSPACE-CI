@@ -13,13 +13,16 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Home', icon: 'ri-home-4-line' },
-  { href: '/patterns', label: 'Code Anti-Patterns', icon: '', logo: true },
   { href: '/hooks', label: 'Git Hooks', icon: 'ri-link-m' },
+  { href: '/runtime-hooks', label: 'Runtime Hooks', icon: 'ri-pulse-line' },
+  { href: '/patterns', label: 'Code Anti-Patterns', icon: '', logo: true },
   { href: '/config', label: 'Config Files', icon: 'ri-settings-3-line' },
+  { href: '/tooling', label: 'Tools & Scripts', icon: 'ri-tools-line' },
   { href: '/guard', label: 'Workspace Guard', icon: 'ri-shield-keyhole-line' },
+  { href: '/llm-gateway', label: 'LLM Gateway', icon: 'ri-router-line' },
   { href: '/checks', label: 'Static Analysis', icon: 'ri-check-double-line' },
   { href: '/playground', label: 'Playground', icon: 'ri-code-box-line' },
-  { href: '/tooling', label: 'Tools & Scripts', icon: 'ri-tools-line' },
+  { href: '/standards', label: 'Standards & Regulations', icon: 'ri-book-marked-line' },
   { href: '/integration', label: 'Integration Guide', icon: 'ri-plug-line' },
 ]
 

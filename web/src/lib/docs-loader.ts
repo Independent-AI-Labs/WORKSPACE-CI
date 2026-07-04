@@ -5,6 +5,7 @@ import type { SwallowDetectorData } from '@/types/patterns'
 import type { HookDescriptionData } from '@/types/hooks'
 import type { CodeStatsData } from '@/types/code-stats'
 import type { EntryPointSourceData } from '@/types/entry-point'
+import type { StandardEntry } from '@/types/standards'
 
 function loadJson<T>(filePath: string): T | null {
   try {
@@ -55,5 +56,11 @@ export function loadHookSources(): EntryPointSourceData | null {
 export function loadScriptSources(): EntryPointSourceData | null {
   return loadJson<EntryPointSourceData>(
     join(process.cwd(), 'src', 'data', 'script-sources.json'),
+  )
+}
+
+export function loadStandards(): StandardEntry[] | null {
+  return loadJson<StandardEntry[]>(
+    join(process.cwd(), 'src', 'data', 'standards.json'),
   )
 }
