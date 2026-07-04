@@ -17,6 +17,7 @@ vi.mock('@/lib/search-data', () => ({
     guards: 0,
     standards: 0,
     scripts: 0,
+    runtimeHooks: 0,
   }),
 }))
 

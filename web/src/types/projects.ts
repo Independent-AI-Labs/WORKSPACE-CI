@@ -4,6 +4,7 @@ export interface ProjectEntry {
   language: string
   repoName: string
   icon: string
+  logoPath?: string
   readmePath: string
 }
 
@@ -13,6 +14,7 @@ export interface ProjectSummary {
   language: string
   repoName: string
   icon: string
+  logoPath?: string
   title: string
   summary: string
   repoUrl?: string
@@ -24,6 +26,7 @@ export interface ProjectReadme {
   language: string
   repoName: string
   icon: string
+  logoPath?: string
   title: string
   content: string
 }

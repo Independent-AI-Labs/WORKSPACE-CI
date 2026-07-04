@@ -24,6 +24,7 @@ describe('projectAdapter', () => {
     language: 'Python',
     repoName: 'CI',
     icon: 'ri-terminal-line',
+    logoPath: '/LOGO.png',
     title: 'CI Pipeline Monitor',
     summary: 'A collection of CI utilities.',
   }
@@ -37,6 +38,7 @@ describe('projectAdapter', () => {
     expect(item.href).toBe('/ci')
     expect(item.repoUrl).toBeUndefined()
     expect(item.icon).toBe('ri-terminal-line')
+    expect(item.logoPath).toBe('/LOGO.png')
     expect(item.monoTitle).toBeUndefined()
     expect(item.tags).toEqual([{ label: 'Python', variant: 'muted' }])
   })
@@ -156,6 +158,7 @@ describe('patternAdapter', () => {
     expect(item.title).toBe('\\.parent\\.parent')
     expect(item.monoTitle).toBe(true)
     expect(item.href).toBeUndefined()
+    expect(item.icon).toBe('ri-error-warning-line')
     expect(item.category).toBe('Obsolete Paths')
   })
 
@@ -195,6 +198,7 @@ describe('scriptAdapter', () => {
     expect(item.title).toBe('extract-swallow')
     expect(item.monoTitle).toBe(true)
     expect(item.href).toBeUndefined()
+    expect(item.icon).toBe('ri-tools-line')
     expect(item.description).toBe('Extracts detector source code.')
     expect(item.category).toBe('Extraction')
     expect(item.tags).toEqual([
@@ -233,7 +237,7 @@ describe('hookAdapter', () => {
     expect(item.title).toBe('check-unstaged')
     expect(item.monoTitle).toBe(true)
     expect(item.href).toBeUndefined()
-    expect(item.icon).toBe('ri-terminal-line')
+    expect(item.icon).toBe('ri-git-commit-line')
     expect(item.description).toBe('Fails the commit if there are unstaged files.')
   })
 
@@ -263,20 +267,20 @@ describe('hookAdapter', () => {
     expect(item.description).toBe('ci_check_unstaged')
   })
 
-  it('uses correct icon for python_module kind', () => {
+  it('uses consistent icon for python_module kind', () => {
     const [item] = hookAdapter(
       [{ ...hook, kind: 'python_module' }],
       descriptions,
     )
-    expect(item.icon).toBe('ri-code-line')
+    expect(item.icon).toBe('ri-git-commit-line')
   })
 
-  it('uses correct icon for makefile_target kind', () => {
+  it('uses consistent icon for makefile_target kind', () => {
     const [item] = hookAdapter(
       [{ ...hook, kind: 'makefile_target' }],
       descriptions,
     )
-    expect(item.icon).toBe('ri-tools-line')
+    expect(item.icon).toBe('ri-git-commit-line')
   })
 })
 
@@ -319,6 +323,12 @@ describe('standardAdapter', () => {
   it('uses PAID warn tag for paid standards', () => {
     const [item] = standardAdapter([{ ...standard, free: false, price: '$50' }])
     expect(item.tags![2]).toEqual({ label: 'PAID', variant: 'warn' })
+  })
+
+  it('uses stamp icon for executive-order type', () => {
+    const [item] = standardAdapter([{ ...standard, type: 'executive-order' }])
+    expect(item.icon).toBe('ri-stamp-line')
+    expect(item.category).toBe('Executive Order')
   })
 })
 

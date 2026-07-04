@@ -17,6 +17,17 @@
   color: var(--accent);
 }
 
+.project-detail__logo {
+  width: 2rem;
+  height: 2rem;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+[data-theme='light'] .project-detail__logo {
+  filter: invert(1);
+}
+
 .project-detail__header h1 {
   margin: 0;
   font-size: var(--text-2xl);

@@ -25,7 +25,11 @@ export function WikiCard({ item, children }: WikiCardProps) {
   const content = (
     <>
       <div className="wiki-card__header">
-        {item.icon && <i className={item.icon} aria-hidden="true" />}
+        {item.logoPath ? (
+          <img src={item.logoPath} className="wiki-card__logo" alt="" width={20} height={20} />
+        ) : (
+          item.icon && <i className={item.icon} aria-hidden="true" />
+        )}
         {item.monoTitle ? (
           <code className="wiki-card__title">{item.title}</code>
         ) : (

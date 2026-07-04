@@ -19,6 +19,7 @@ export interface CardItem {
   href?: string
   repoUrl?: string
   icon?: string
+  logoPath?: string
   monoTitle?: boolean
   category?: string
   tags?: CardTag[]

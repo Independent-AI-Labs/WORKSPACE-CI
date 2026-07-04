@@ -36,7 +36,11 @@ export default async function ProjectReadmePage({
     <WikiShell>
       <div className="project-detail">
         <div className="project-detail__header">
-          <i className={project.icon} aria-hidden="true" />
+          {project.logoPath ? (
+            <img src={project.logoPath} className="project-detail__logo" alt="" width={32} height={32} />
+          ) : (
+            <i className={project.icon} aria-hidden="true" />
+          )}
           <h1>{project.displayName}</h1>
           <span className="project-detail__badge">{project.language}</span>
         </div>

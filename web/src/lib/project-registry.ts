@@ -35,6 +35,7 @@ export const PROJECTS: ProjectEntry[] = [
     language: 'Python',
     repoName: 'CI',
     icon: 'ri-terminal-box-line',
+    logoPath: '/LOGO.png',
     readmePath: join(PROJECTS_ROOT, 'CI', 'README.md'),
   },
   {
@@ -43,6 +44,7 @@ export const PROJECTS: ProjectEntry[] = [
     language: 'Rust',
     repoName: 'WORKSPACE-GUARD',
     icon: 'ri-shield-keyhole-line',
+    logoPath: '/GUARD_LOGO.png',
     readmePath: join(PROJECTS_ROOT, 'WORKSPACE-GUARD', 'README.md'),
   },
 ]
@@ -112,6 +114,7 @@ export const loadProjectReadme = cache(
       language: entry.language,
       repoName: entry.repoName,
       icon: entry.icon,
+      ...(entry.logoPath ? { logoPath: entry.logoPath } : {}),
       title: extractReadmeTitle(content),
       content,
     }
@@ -135,6 +138,7 @@ export const loadAllProjectSummaries = cache(
           language: entry.language,
           repoName: entry.repoName,
           icon: entry.icon,
+          ...(entry.logoPath ? { logoPath: entry.logoPath } : {}),
           title: extractReadmeTitle(content),
           summary: extractReadmeSummary(content),
           ...(GITHUB_BASE_URL

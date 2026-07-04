@@ -52,6 +52,17 @@
   flex-shrink: 0;
 }
 
+.wiki-card__logo {
+  width: 1.25rem;
+  height: 1.25rem;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+[data-theme='light'] .wiki-card__logo {
+  filter: invert(1);
+}
+
 .wiki-card__title {
   font-weight: 700;
   font-size: var(--text-lg);

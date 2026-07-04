@@ -136,4 +136,22 @@ describe('WikiCard', () => {
     expect(icon).not.toBeNull()
     expect(icon).toHaveClass('ri-settings-3-line')
   })
+
+  it('renders logo image when logoPath is provided instead of icon', () => {
+    const { container } = render(
+      <WikiCard item={makeItem({ icon: 'ri-settings-3-line', logoPath: '/LOGO.png' })} />,
+    )
+    const img = container.querySelector('.wiki-card__logo') as HTMLImageElement
+    expect(img).not.toBeNull()
+    expect(img.getAttribute('src')).toBe('/LOGO.png')
+    expect(container.querySelector('.wiki-card__header i')).toBeNull()
+  })
+
+  it('renders icon when logoPath is not provided', () => {
+    const { container } = render(
+      <WikiCard item={makeItem({ icon: 'ri-settings-3-line' })} />,
+    )
+    expect(container.querySelector('.wiki-card__logo')).toBeNull()
+    expect(container.querySelector('.wiki-card__header i')).not.toBeNull()
+  })
 })

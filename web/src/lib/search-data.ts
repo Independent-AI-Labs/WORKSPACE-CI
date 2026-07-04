@@ -303,6 +303,7 @@ export interface WikiStats {
   guards: number
   standards: number
   scripts: number
+  runtimeHooks: number
 }
 
 export const getWikiStats = cache((): WikiStats => {
@@ -314,5 +315,6 @@ export const getWikiStats = cache((): WikiStats => {
     guards: data.filter((d) => d.type === 'guard').length,
     standards: data.filter((d) => d.type === 'standard').length,
     scripts: data.filter((d) => d.type === 'tooling').length,
+    runtimeHooks: 0,
   }
 })

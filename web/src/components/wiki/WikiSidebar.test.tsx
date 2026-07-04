@@ -14,6 +14,7 @@ const mockStats: WikiStats = {
   guards: 6,
   standards: 20,
   scripts: 12,
+  runtimeHooks: 0,
 }
 
 describe('WikiSidebar', () => {
@@ -48,16 +49,38 @@ describe('WikiSidebar', () => {
     expect(screen.getAllByText('[12]')).toHaveLength(2)
     expect(screen.getByText('[105]')).toBeInTheDocument()
     expect(screen.getByText('[6]')).toBeInTheDocument()
+    expect(screen.getByText('[0]')).toBeInTheDocument()
   })
 
-  it('does not render counts for items without counts', () => {
+  it('renders [0] for Runtime Hooks', () => {
     render(<WikiSidebar stats={mockStats} />)
-    expect(screen.queryByText('[0]')).not.toBeInTheDocument()
+    const runtimeHooksLink = screen.getByText('Runtime Hooks').closest('a')
+    expect(runtimeHooksLink).toHaveTextContent('[0]')
   })
 
   it('renders collapse toggle button', () => {
     render(<WikiSidebar stats={mockStats} />)
     const toggle = screen.getByRole('button', { name: 'Collapse sidebar' })
     expect(toggle).toBeInTheDocument()
+  })
+
+  it('places Standards & Regulations before LLM Gateway', () => {
+    const { container } = render(<WikiSidebar stats={mockStats} />)
+    const links = container.querySelectorAll('.wiki-sidebar__link')
+    const labels = Array.from(links).map((l) => l.textContent?.replace(/\[\d+\]/g, '').trim())
+    const standardsIdx = labels.indexOf('Standards & Regulations')
+    const llmIdx = labels.indexOf('LLM Gateway')
+    expect(standardsIdx).toBeGreaterThan(-1)
+    expect(llmIdx).toBeGreaterThan(-1)
+    expect(standardsIdx).toBeLessThan(llmIdx)
+  })
+
+  it('places Standards & Regulations after Guard Policies', () => {
+    const { container } = render(<WikiSidebar stats={mockStats} />)
+    const links = container.querySelectorAll('.wiki-sidebar__link')
+    const labels = Array.from(links).map((l) => l.textContent?.replace(/\[\d+\]/g, '').trim())
+    const standardsIdx = labels.indexOf('Standards & Regulations')
+    const guardIdx = labels.indexOf('Guard Policies')
+    expect(standardsIdx).toBeGreaterThan(guardIdx)
   })
 })

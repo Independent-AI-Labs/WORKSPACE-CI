@@ -10,22 +10,21 @@ interface NavItem {
   href: string
   label: string
   icon: string
-  logo?: boolean
   count?: keyof WikiStats
 }
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Home', icon: 'ri-home-4-line' },
-  { href: '/hooks', label: 'Git Hooks', icon: 'ri-link-m', count: 'hooks' },
-  { href: '/runtime-hooks', label: 'Runtime Hooks', icon: 'ri-pulse-line' },
-  { href: '/patterns', label: 'Code Anti-Patterns', icon: '', logo: true, count: 'patterns' },
+  { href: '/hooks', label: 'Git Hooks', icon: 'ri-git-commit-line', count: 'hooks' },
+  { href: '/runtime-hooks', label: 'Runtime Hooks', icon: 'ri-pulse-line', count: 'runtimeHooks' },
+  { href: '/patterns', label: 'Code Anti-Patterns', icon: 'ri-error-warning-line', count: 'patterns' },
   { href: '/config', label: 'Config Files', icon: 'ri-settings-3-line', count: 'configs' },
   { href: '/tooling', label: 'Tools & Scripts', icon: 'ri-tools-line', count: 'scripts' },
   { href: '/guard', label: 'Guard Policies', icon: 'ri-shield-keyhole-line', count: 'guards' },
+  { href: '/standards', label: 'Standards & Regulations', icon: 'ri-book-marked-line', count: 'standards' },
   { href: '/llm-gateway', label: 'LLM Gateway', icon: 'ri-router-line' },
   { href: '/checks', label: 'Static Analysis', icon: 'ri-check-double-line' },
   { href: '/playground', label: 'Playground', icon: 'ri-code-box-line' },
-  { href: '/standards', label: 'Standards & Regulations', icon: 'ri-book-marked-line', count: 'standards' },
   { href: '/integration', label: 'Integration Guide', icon: 'ri-plug-line' },
 ]
 
@@ -72,11 +71,7 @@ export function WikiSidebar({ stats }: WikiSidebarProps) {
                 aria-current={isActive ? 'page' : undefined}
                 title={item.label}
               >
-                {item.logo ? (
-                  <span className="wiki-sidebar__nav-logo" aria-hidden="true" />
-                ) : (
-                  <i className={item.icon} aria-hidden="true" />
-                )}
+                <i className={item.icon} aria-hidden="true" />
                 <span>{item.label}</span>
                 {count !== undefined && (
                   <span className="wiki-sidebar__count">[{count}]</span>

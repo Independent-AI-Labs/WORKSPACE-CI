@@ -57,15 +57,6 @@ const LANGUAGE_LABELS: Record<SwallowLanguage, string> = {
   cron: 'Cron',
 }
 
-const HOOK_KIND_ICONS: Record<HookKind, string> = {
-  shell: 'ri-terminal-line',
-  shell_inline: 'ri-terminal-line',
-  shell_with_arg: 'ri-terminal-line',
-  python_module: 'ri-code-line',
-  python_module_files: 'ri-code-line',
-  makefile_target: 'ri-tools-line',
-}
-
 const HOOK_KIND_LABELS: Record<HookKind, string> = {
   shell: 'Shell',
   shell_inline: 'Shell (inline)',
@@ -87,7 +78,7 @@ const STANDARD_TYPE_ICONS: Record<StandardType, string> = {
   framework: 'ri-flow-chart',
   declaration: 'ri-megaphone-line',
   'code-of-conduct': 'ri-shield-check-line',
-  'executive-order': 'ri-government-line',
+  'executive-order': 'ri-stamp-line',
   treaty: 'ri-scales-3-line',
 }
 
@@ -128,6 +119,7 @@ export function projectAdapter(
       href: `/${p.slug}`,
       repoUrl: p.repoUrl,
       icon: p.icon,
+      logoPath: p.logoPath,
       tags: tags.length > 0 ? tags : [{ label: p.language, variant: 'muted' }],
     }
   })
@@ -193,6 +185,7 @@ export function patternAdapter(patterns: ClassifiedPattern[]): CardItem[] {
       id: p.pattern,
       title: p.pattern,
       description: p.reason,
+      icon: 'ri-error-warning-line',
       monoTitle: true,
       category: p.categoryLabel,
       tags: tags.length > 0 ? tags : undefined,
@@ -208,6 +201,7 @@ export function scriptAdapter(scripts: ScriptManifestEntry[]): CardItem[] {
       id: s.id,
       title: s.id,
       description: s.summary,
+      icon: 'ri-tools-line',
       monoTitle: true,
       category: catLabel,
       tags: [{ label: catLabel, variant: 'accent' }],
@@ -246,7 +240,7 @@ export function hookAdapter(
       id: h.id,
       title: h.id,
       description: descriptions[h.id] ?? h.entry,
-      icon: HOOK_KIND_ICONS[h.kind] ?? 'ri-tools-line',
+      icon: 'ri-git-commit-line',
       monoTitle: true,
       tags,
       meta,

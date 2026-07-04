@@ -105,18 +105,6 @@
   flex-shrink: 0;
 }
 
-.wiki-sidebar__nav-logo {
-  display: inline-block;
-  width: 1.125rem;
-  height: 1.125rem;
-  flex-shrink: 0;
-  mask-image: url('/LOGO.png');
-  mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-position: center;
-  background-color: currentColor;
-}
-
 /* Collapsed state - desktop only */
 @media (min-width: 769px) {
   [data-sidebar-collapsed='true'] .wiki-sidebar {
