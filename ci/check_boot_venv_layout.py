@@ -1,30 +1,21 @@
 #!/usr/bin/env python3
-"""Non-blocking audit of the hierarchical `.boot-linux/` + `.venv/` contract.
+"""Non-blocking audit of the hierarchical .boot-linux/ and .venv/ contract
+defined in SPEC-BOOT-LAYOUT. Validates that boot-layout declarations match
+the filesystem state and are consistent with moon.yml and
+.pre-commit-config.yaml. Always exits 0 as an advisory check, with
+infrastructure errors returning 2.
 
-Implements SPEC-BOOT-LAYOUT §6. Validates the boot-layout declarations of
-the invoking repo against the filesystem state and its own `moon.yml` +
-`.pre-commit-config.yaml`. Always exits 0 (advisory; per FR-BL-7.7).
-
-Checks performed (numbered per SPEC §6.3):
-
-1.  `config/boot_layout.yaml` exists? INFO + early-exit if absent.
-2.  Parse + validate against schema. WARN + early-exit if malformed.
-3.  `boot_dir` resolves against project root. OK/INFO/WARN.
-4.  `venv_dir` resolves against project root. OK/INFO/WARN.
-5.  Each `inherit:` entry resolves against project root. OK/INFO/WARN.
-6.  Existing inherit leaves checked for world-writable mode. WARN.
-7.  `moon.yml::project.bootDir`/`parentBoot` match `boot_layout.yaml`.
-    WARN on mismatch.
-8.  `moon.yml::dependsOn` contains the moon project id derivable from each
-    inherit entry's owning repo directory (per SPEC §8.2). WARN on missing.
-9.  `.pre-commit-config.yaml` `entry: uv run --project <X> --no-sync python -m
-    ci.<check>` refs resolve to `<X>/pyproject.toml` + `<X>/.venv/bin/python`.
-    WARN on missing.
-10. Print summary line (ok/warn/info counts). Exit 0.
-
-Exit codes: always 0 (non-blocking). The only hard failure mode is an
-infrastructure error (e.g. unreadable YAML containing an EmbeddedNull): those
-return 2 per the canon, mirroring `ci/check_required_hooks_present.py`.
+Checks performed (numbered per SPEC section 6.3):
+1. config/boot_layout.yaml exists (INFO + early-exit if absent).
+2. Parse + validate against schema (WARN + early-exit if malformed).
+3. boot_dir resolves against project root (OK/INFO/WARN).
+4. venv_dir resolves against project root (OK/INFO/WARN).
+5. Each inherit entry resolves against project root (OK/INFO/WARN).
+6. Existing inherit leaves checked for world-writable mode (WARN).
+7. moon.yml project.bootDir/parentBoot match boot_layout.yaml (WARN).
+8. moon.yml dependsOn contains the moon project id from each inherit entry.
+9. .pre-commit-config.yaml entry refs resolve to pyproject.toml + venv.
+10. Print summary line with ok/warn/info counts. Exit 0.
 """
 
 from __future__ import annotations

@@ -138,6 +138,7 @@ code.wiki-card__title {
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--accent);
+  cursor: pointer;
 }
 
 .card-details__toggle i {

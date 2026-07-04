@@ -208,14 +208,11 @@ ci_verify_coverage() {
 }
 
 # --- ci_check_coverage_thresholds_no_devolution ---
-# Compares the staged coverage_thresholds.yaml against HEAD.  Fails the
-# commit if any suite's min_coverage value is being lowered.  Thresholds
-# are earned: they may only stay the same or increase.
-#
-# Exception: when a suite's path changes, the threshold comparison is
-# skipped because the suite is testing a different set of tests. A
-# threshold of 50% against tests/ is not comparable to 5% against
-# tests/integration/, the latter being a genuinely smaller, focused set.
+# Compares the staged coverage_thresholds.yaml against HEAD and fails the
+# commit if any suite's min_coverage value is being lowered.
+# Thresholds are earned and may only stay the same or increase over time.
+# An exception applies when a suite's path changes, since the new path tests
+# a different set of code.
 ci_check_coverage_thresholds_no_devolution() {
     local config="config/coverage_thresholds.yaml"
     if [[ ! -f "$config" ]]; then

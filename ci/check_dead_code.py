@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""
-AST-based dead code detection.
+"""AST-based dead code detector that scans Python modules for unreferenced
+functions, classes, variables, and imports. Builds a cross-reference graph
+across all modules in scope and reports any definition never referenced
+outside its own module. Supports public API exemptions via
+config/dead_code.yaml including dunder methods and __all__ exports.
 
-Scans Python modules for unreferenced definitions using AST analysis.
 Configuration: config/dead_code.yaml
 """
 

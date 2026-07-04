@@ -112,11 +112,11 @@ check: ## Run all quality gates (lint + type-check + test)
 	@$(MAKE) _lint-impl && $(MAKE) _type-check-impl && $(MAKE) _test-impl
 
 .PHONY: lint
-lint: ## Run ruff format + lint on ci/
+lint: ## Runs ruff format and ruff lint with auto-fix on all ci/ modules. Catches style violations, import sorting issues, and unused variables before they reach the remote. Acts as the first stage of the pre-commit quality gate.
 	@$(MAKE) _lint-impl
 
 .PHONY: type-check
-type-check: ## Run mypy on ci/
+type-check: ## Runs mypy strict type checking on all ci/ Python modules. Catches type errors, missing annotations, and incompatible signatures before they can break downstream consumers. Acts as the second stage of the pre-commit quality gate after lint passes.
 	@$(MAKE) _type-check-impl
 
 .PHONY: test
@@ -159,7 +159,7 @@ test-python: ## Run Python tests only (no moon caching)
 # The pre-push hook invokes this target directly (see .pre-commit-config.yaml).
 
 .PHONY: check-push
-check-push: ## Pre-push gate: lint + type + tests + coverage (single pass)
+check-push: ## Single-pass pre-push gate running ruff lint, mypy, shell unit tests, and pytest with per-suite coverage in one invocation. Eliminates the previous redundancy where the same tests ran two to three times across separate targets. Fails the push if any lint, type, test, or coverage threshold check does not pass.
 	@$(MAKE) _lint-impl && $(MAKE) _type-check-impl && $(MAKE) _test-push-impl
 
 .PHONY: _test-push-impl

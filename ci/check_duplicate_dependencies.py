@@ -1,15 +1,9 @@
 #!/usr/bin/env python3
-"""
-Duplicate and redundant dependency checker for uv workspaces.
-
-Detects two classes of dependency issues:
-
-1. SELF-DUPLICATES: same package declared in multiple dependency sections
-   within a single pyproject.toml (e.g. [project.dependencies] +
-   [project.optional-dependencies]). Flags version mismatches as errors.
-
-2. REDUNDANT: workspace root declares a dependency already provided by
-   a workspace member, creating unnecessary maintenance burden.
+"""Duplicate and redundant dependency checker for uv workspaces that detects
+two classes of issues in pyproject.toml. Flags self-duplicates where the same
+package appears in multiple dependency sections with version mismatches as
+errors. Warns on redundant dependencies where the workspace root declares a
+package already provided by a workspace member.
 
 Intentionally duplicated deps can be excluded via
 config/duplicate_dependency_excludes.yaml.

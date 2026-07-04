@@ -9,7 +9,11 @@
 # untracked non-ignored files. Together = all files on disk minus gitignored.
 
 # --- ci_scan_secrets ---
-# Exits 0 if no secrets found, 1 otherwise.
+# Scans all non-gitignored files (tracked + untracked) for leaked secrets
+# using gitleaks in parallel across the full file set.
+# No .gitleaks.toml is needed because each repo's .gitignore serves as the
+# sole filter.
+# Redacts secret values in output to prevent re-exposure in CI logs.
 ci_scan_secrets() {
     local _ss_gitleaks_bin
     _ss_gitleaks_bin="$(command -v gitleaks)" || {

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""
-Dependency version checker (PyPI + npm + Docker).
-
-Enforces: exact pin (==X.Y) or bounded range (>=X.Y,<A.B) for every dep.
-Also checks all pinned versions are latest available from registry.
+"""Dependency version checker for Python (PyPI), Node (npm), and Docker
+images that enforces strict pinning. Rejects floating versions, wildcards,
+and unbounded ranges in favor of exact pins (==X.Y.Z) or bounded ranges
+(>=X.Y,<A.B). Also verifies that every pinned version is the latest
+available from its registry and supports auto-upgrade mode.
 
 Usage:
-    python -m ci.check_dependency_versions                # Check pyproject.toml
-    python -m ci.check_dependency_versions --upgrade      # Auto-upgrade
-    python -m ci.check_dependency_versions --exclude X,Y  # Exclude packages
+    python -m ci.check_dependency_versions
+    python -m ci.check_dependency_versions --upgrade
+    python -m ci.check_dependency_versions --exclude X,Y
 """
 
 from __future__ import annotations

@@ -1,22 +1,9 @@
 #!/usr/bin/env python3
-"""Self-check: every check_*.py is registered, hooks are wired, exceptions valid.
-
-Validates three invariants for the project from which it's invoked:
-
-1. **Manifest completeness**: every `ci/check_*.py` (non-private) is
-   registered in required_hooks.yaml. Adding a
-   check without registering it fails this check (closes the dogfood loop).
-
-2. **`quality_exceptions.yaml` schema**: for strict-tier projects: file
-   exists, parses, every entry has the required fields, no mandatory hook
-   is exempted, paths list is non-empty, reason ≥ 20 chars.
-
-3. **Hooks rendered**: every applicable mandatory hook is present in the
-   rendered `.git/hooks/pre-commit` / `pre-push` (greps the
-   `# === Hook: <id> ===` markers emitted by `generate-hooks`).
-
-Tier-aware: POC tier checks only (1) and the safety subset of (3); vendored
-tier passes trivially. Tier resolved via `project_enforcement.yaml`.
+"""Self-check that validates the CI hook infrastructure of the invoking
+project across three invariants. Ensures every check_*.py module is
+registered in required_hooks.yaml, quality_exceptions.yaml is schema-valid,
+and all applicable mandatory hooks are rendered in .git/hooks. Tier-aware
+so POC tier checks only the safety subset while vendored tier passes trivially.
 
 Exit codes: 0 = all invariants hold, 1 = violation, 2 = infrastructure error.
 """

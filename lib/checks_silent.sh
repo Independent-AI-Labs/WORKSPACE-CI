@@ -9,7 +9,12 @@
 # This check scans ALL tracked files. Every swallowed error is a bug.
 #
 # --- ci_check_silent_swallow ---
-# Exits 0 if no violations, 1 otherwise.
+# Scans all tracked files for silent error-swallowing patterns across Python,
+# JavaScript/TypeScript, shell, and cron.
+# Detects bare except/catch blocks, stderr-to-null redirects, and cron entries
+# without log redirection using AST-based analysis.
+# Blocks the commit so developers must re-raise, log, or handle errors
+# explicitly.
 ci_check_silent_swallow() {
     local violations_tmp files_tmp combined_tmp diff_tmp stderr_tmp
     violations_tmp="$(mktemp)"

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Markdown documentation reference validator.
-
-Walks `.md` files (or dirs), extracts every link / image target, and validates
-each against the local filesystem, in-doc and cross-doc anchor slugs, and
-(optionally) remote HTTP(S) endpoints.
+"""Markdown documentation validator that walks .md files and checks every
+link and image target against the local filesystem and remote endpoints.
+Detects broken file links, missing section anchors, dead URLs, and
+unresolvable image references. Supports --check-remote for live HTTP
+verification and --all-md for scanning every tracked markdown file in the
+repo.
 
 Usage:
     python -m ci.check_markdown_docs [PATHS...]
@@ -14,7 +15,7 @@ Usage:
               When this flag is set, PATHS are ignored and every .md file
               in the repository is checked. Useful for pre-push or CI.
 
-Config (optional): `<CI_CONFIG_DIR>/markdown_docs.yaml`.
+Config (optional): config/markdown_docs.yaml.
 """
 
 from __future__ import annotations

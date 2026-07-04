@@ -28,8 +28,10 @@ _in_ignored_dir() {
 }
 
 # --- ci_check_unstaged ---
-# Fails the commit if there are unstaged or untracked files, auto-staging
-# all changes so the developer can re-commit without losing work.
+# Fails the commit if there are unstaged or untracked files, auto-staging all
+# changes so the developer can re-commit without losing work.
+# Prevents partial commits that leave the working tree in an inconsistent state.
+# The developer simply re-runs git commit after the auto-stage completes.
 ci_check_unstaged() {
     local untracked
     untracked=$(git ls-files --others --exclude-standard)
@@ -51,11 +53,13 @@ ci_check_unstaged() {
 }
 
 # --- ci_check_banned_words [files...] ---
-# Delegates to lib/check_banned_words.py (Python implementation).
-# Replaces the prior bash+AWK implementation that spawned ~33,000
-# subprocesses under PRoot (58 patterns x 96 files x ~6 procs),
-# taking 5+ minutes. The Python version does zero subprocess spawns
-# for pattern matching and completes in <1s.
+# Delegates to lib/check_banned_words.py to scan all tracked files for banned
+# patterns defined in config/banned_words.yaml.
+# Replaces a prior bash+AWK implementation that spawned ~33,000 subprocesses
+# under PRoot and took 5+ minutes; the Python version does zero subprocess
+# spawns and completes in <1s.
+# Per-project exemptions are supported via config/banned_words_exceptions.yaml
+# with granular path and pattern scoping.
 ci_check_banned_words() {
     local config="${CI_CONFIG_DIR}/banned_words.yaml"
     if [[ ! -f "$config" ]]; then

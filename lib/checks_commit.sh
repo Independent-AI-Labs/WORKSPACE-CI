@@ -60,7 +60,12 @@ _check_message_blocked() {
 }
 
 # --- ci_block_coauthored <commit-msg-file> ---
-# Commit-msg stage: check the message being committed.
+# Commit-msg hook that validates the commit message against blocked patterns
+# from config/blocked_commit_patterns.yaml.
+# Catches AI-attribution markers and other forbidden text that must never
+# enter commit history.
+# Prints the configured reason for each match so the developer knows exactly
+# what to remove.
 ci_block_coauthored() {
     local msg_file="${1:-}"
 
@@ -83,8 +88,12 @@ ci_block_coauthored() {
 }
 
 # --- ci_block_coauthored_history ---
-# Pre-push stage: scan commits in the ACTUAL push range for blocked patterns.
-# Reads push refs from stdin (git pre-push protocol).
+# Pre-push hook that scans every commit in the actual push range for blocked
+# patterns from config/blocked_commit_patterns.yaml.
+# Reads push refs from stdin per the git pre-push protocol and computes the
+# exact set of new commits being pushed.
+# Blocks the push if any commit contains a violation, instructing the
+# developer to rewrite history via interactive rebase.
 ci_block_coauthored_history() {
     _load_blocked_commit_patterns || return 1
 
@@ -151,8 +160,12 @@ ci_block_coauthored_history() {
 }
 
 # --- ci_check_commit_message <commit-msg-file> ---
-# Enforces: "type: description" on first line, blank second line (if multi-line).
-# Valid types: feat fix refactor docs test chore ci perf style build revert
+# Commit-msg hook that enforces conventional-commit format on the first line,
+# a blank second line, and a mandatory body explaining what changed and why.
+# Validates the type prefix against feat, fix, refactor, docs, test, chore,
+# ci, perf, style, build, and revert.
+# Auto-generated git messages such as merge and squash are allowed through
+# without validation.
 ci_check_commit_message() {
     local msg_file="${1:-}"
 

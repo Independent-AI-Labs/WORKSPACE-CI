@@ -174,3 +174,8 @@ exceptions:
   # extracts from lib/check_silent_swallow*.py (which are already exempted).
   - pattern: '\bsilent'
     paths: ['web/src/data/swallow-detectors\.json$']
+
+  # hook-descriptions.json is generated data containing descriptions of the
+  # silent-swallow checker itself.
+  - pattern: '\bsilent'
+    paths: ['web/src/data/hook-descriptions\.json$']

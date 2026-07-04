@@ -4,8 +4,11 @@
 
 # --- ci_block_sensitive_files [files...] ---
 # Blocks commit if any staged file matches sensitive extensions or keywords
-# from config/sensitive_files.yaml. Prevents accidental secret leakage by
-# enforcing an allowlist of safe file types.
+# from config/sensitive_files.yaml.
+# Enforces an allowlist of safe file types and supports per-repo exception
+# lists via sensitive_files_exceptions.yaml.
+# Prevents accidental leakage of credentials, keys, and environment files
+# into version control.
 _load_sensitive_config() {
     local config="${CI_CONFIG_DIR}/sensitive_files.yaml"
     [[ -f "$config" ]] || return 1
@@ -113,8 +116,11 @@ ci_block_sensitive_files() {
 
 # --- ci_check_file_length [files...] ---
 # Fails the commit if any source file exceeds the line limit defined in
-# config/file_length_limits.yaml. Default limit is 512 lines; per-file
-# overrides are supported.
+# config/file_length_limits.yaml.
+# The default limit is 512 lines with support for per-file overrides in the
+# config.
+# Scans .py, .sh, .js, .ts, .tsx, .rs, and .css files, skipping ignored
+# directories.
 ci_check_file_length() {
     local config="./config/file_length_limits.yaml"
     if [[ ! -f "$config" ]]; then
@@ -305,14 +311,12 @@ ci_check_no_dead_imports() {
 }
 
 # --- ci_check_portable_shell [files...] ---
-# Enforce: no process substitution (< <(...), > >(...), <(...), >(...))
-# in shell scripts. Process substitution opens /dev/fd/NN by path, which
-# is broken under PRoot, some bwrap/firejail sandboxes, and chroots
-# without /proc. Use ci_capture_lines / ci_capture_pipe (lib/ci.sh) instead.
-#
-# Scans lib/*.sh and scripts/* (all extensionless scripts + *.sh).
-# Skips comment lines and string literals where the pattern appears as prose.
-# Exit: 0 if pass, 1 if violation found.
+# Enforces that no process substitution (< <(...), > >(...), <(...), >(...))
+# appears in shell scripts under lib/ and scripts/.
+# Process substitution opens /dev/fd/NN by path, which breaks under PRoot,
+# bwrap/firejail sandboxes, and chroots without /proc.
+# Scans comment lines and string literals to avoid false positives where the
+# pattern appears as prose.
 ci_check_portable_shell() {
     local has_errors=0
     local _ci_root
