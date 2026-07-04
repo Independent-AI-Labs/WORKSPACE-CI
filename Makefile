@@ -229,6 +229,15 @@ code-stats: ## Codebase statistics across the workspace via cloc (lines, files, 
 extract-code-stats: ## Generate web/src/data/code-stats.json for wiki Project Catalogue badges
 	uv run python scripts/extract-code-stats.py
 
+.PHONY: extract-hook-sources extract-script-sources extract-wiki-data
+extract-hook-sources: ## Generate web/src/data/hook-sources.json for wiki Hook EntryPointDialog
+	uv run python scripts/extract-hook-sources.py
+
+extract-script-sources: ## Generate web/src/data/script-sources.json for wiki Tooling EntryPointDialog
+	uv run python scripts/extract-script-sources.py
+
+extract-wiki-data: extract-code-stats extract-hook-sources extract-script-sources ## Regenerate all wiki JSON data files
+
 # =============================================================================
 # WORKSPACE-GUARD: compiled git protection (opt-in)
 # =============================================================================

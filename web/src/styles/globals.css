@@ -25,4 +25,6 @@
 @import '../../public/styles/_error-boundary.css';
 @import '../../public/styles/_project-card.css';
 @import '../../public/styles/_wiki-card.css';
+@import '../../public/styles/_entry-point-dialog.css';
+@import '../../public/styles/_config-dialog.css';
 @import '../../public/styles/_a11y.css';

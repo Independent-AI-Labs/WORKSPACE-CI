@@ -529,7 +529,7 @@ Key principles from Next.js Metadata API best practice:
 3. **Server Component only**: Next.js docs: "The `metadata` object and `generateMetadata` function exports are only supported in Server Components."
 4. **Use React `cache()` to deduplicate**: Stanza: "`generateMetadata` and the page component run independently : if both call the same fetcher, that's two database queries. Fix it with React's `cache()`."
 5. **Return `notFound()` for missing items**: Next.js docs: "`redirect()` and `notFound()` can also be used inside `generateMetadata`."
-6. **Title template in root layout**: Set `title: { template: '%s | Digital Guardrails' }` in `app/layout.tsx` so detail page titles automatically get the suffix.
+6. **Title template in root layout**: Set `  title: { template: '%s | Practical Guardrails' }` in `app/layout.tsx` so detail page titles automatically get the suffix.
 
 
 ### 2.16 `VALID_CATEGORIES` duplicated from type system

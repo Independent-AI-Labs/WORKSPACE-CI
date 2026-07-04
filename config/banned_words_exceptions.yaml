@@ -115,8 +115,11 @@ exceptions:
       - 'web/app/checks/\[id\]/page\.tsx$'
       - 'web/app/patterns/\[category\]/page\.tsx$'
       - 'web/app/hooks/page\.tsx$'
+      - 'web/app/patterns/page\.tsx$'
       - 'web/package\.json$'
       - 'web/package-lock\.json$'
+  - pattern: '\blegacy\b'
+    paths: ['web/package-lock\.json$']
   - pattern: 'eslint-disable'
     paths:
       - 'web/src/lib/patterns\.test\.ts$'
@@ -179,3 +182,21 @@ exceptions:
   # silent-swallow checker itself.
   - pattern: '\bsilent'
     paths: ['web/src/data/hook-descriptions\.json$']
+
+  # hook-sources.json is generated data containing raw source code of CI
+  # hooks, including ci_check_silent_swallow and python module hooks.
+  - pattern: '\bsilent'
+    paths: ['web/src/data/hook-sources\.json$']
+  - pattern: '\bpython3?\b'
+    paths: ['web/src/data/hook-sources\.json$']
+  - pattern: ' -- '
+    paths: ['web/src/data/hook-sources\.json$']
+
+  # script-sources.json is generated data containing raw source code of CI
+  # scripts, including shebangs, language identifiers, and comment headers.
+  - pattern: '\bpython3?\b'
+    paths: ['web/src/data/script-sources\.json$']
+  - pattern: '\blegacy\b'
+    paths: ['web/src/data/script-sources\.json$']
+  - pattern: ' -- '
+    paths: ['web/src/data/script-sources\.json$']

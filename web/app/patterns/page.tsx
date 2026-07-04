@@ -4,6 +4,7 @@ import { getBannedPatterns, getSwallowPatterns } from '@/lib/yaml-loader'
 import { loadSwallowDetectors } from '@/lib/docs-loader'
 import { classifyAll, classifySwallowPatterns } from '@/lib/patterns'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
+import { highlightCode } from '@/lib/highlight'
 
 export default async function PatternsPage() {
   const [config, swallowConfig] = await Promise.all([
@@ -15,6 +16,16 @@ export default async function PatternsPage() {
   const swallowPatterns = classifySwallowPatterns(swallowConfig, detectorData)
   const allPatterns = [...bannedPatterns, ...swallowPatterns]
   const feedbackCounts = getAllFeedbackCounts('pattern')
+
+  const highlightedHtml: Record<string, string> = {}
+  for (const p of allPatterns) {
+    if (p.detectorFunction && p.detectorSource) {
+      highlightedHtml[p.detectorFunction] = await highlightCode(
+        p.detectorSource,
+        'python',
+      )
+    }
+  }
 
   return (
     <WikiShell>
@@ -30,7 +41,11 @@ export default async function PatternsPage() {
           WORKSPACE_CI_CONFIG_ROOT.
         </p>
       ) : (
-        <PatternList patterns={allPatterns} feedbackCounts={feedbackCounts} />
+        <PatternList
+          patterns={allPatterns}
+          highlightedHtml={highlightedHtml}
+          feedbackCounts={feedbackCounts}
+        />
       )}
     </WikiShell>
   )

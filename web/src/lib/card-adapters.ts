@@ -45,10 +45,18 @@ export function projectAdapter(
 ): CardItem[] {
   return projects.map((p) => {
     const langPercents = languagePercents[p.repoName] ?? []
-    const tags: CardItem['tags'] = langPercents.map((lp) => ({
-      label: `${lp.language} ${lp.percent}%`,
-      variant: 'accent' as const,
-    }))
+    const maxPercent = langPercents.length > 0 ? langPercents[0].percent : 0
+    const tags: CardItem['tags'] = langPercents.map((lp) => {
+      const factor = maxPercent > 0 ? lp.percent / maxPercent : 0
+      const mixPct = Math.round(factor * 100)
+      return {
+        label: `${lp.language} ${lp.percent}%`,
+        variant: 'accent' as const,
+        style: {
+          backgroundColor: `color-mix(in oklab, var(--muted), var(--accent) ${mixPct}%)`,
+        },
+      }
+    })
 
     return {
       id: p.slug,
@@ -67,7 +75,6 @@ export function configAdapter(configs: ConfigEntry[]): CardItem[] {
     id: c.name,
     title: c.name,
     description: c.description ?? '',
-    href: c.link,
     icon: 'ri-settings-3-line',
     monoTitle: true,
     meta:
@@ -82,7 +89,6 @@ export function guardConfigAdapter(entries: GuardConfigEntry[]): CardItem[] {
     id: e.name,
     title: e.name,
     description: e.description ?? '',
-    href: e.link,
     icon: 'ri-shield-keyhole-line',
     monoTitle: true,
     meta:
@@ -164,7 +170,6 @@ export function hookAdapter(
     ]
 
     const meta: CardItem['meta'] = [
-      { label: 'Entry', value: h.entry },
       { label: 'Applicable to', value: h.applicable_to.join(', ') },
     ]
 
@@ -172,7 +177,6 @@ export function hookAdapter(
       id: h.id,
       title: h.id,
       description: descriptions[h.id] ?? h.entry,
-      href: `/hooks/${h.id}`,
       icon: HOOK_KIND_ICONS[h.kind] ?? 'ri-tools-line',
       monoTitle: true,
       tags,

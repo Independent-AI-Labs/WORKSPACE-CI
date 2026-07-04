@@ -46,24 +46,24 @@ describe('projectAdapter', () => {
     }
     const [item] = projectAdapter([project], langPercents)
     expect(item.tags).toEqual([
-      { label: 'Python 80%', variant: 'accent' },
-      { label: 'Bourne Shell 20%', variant: 'accent' },
+      { label: 'Python 80%', variant: 'accent', style: { backgroundColor: 'color-mix(in oklab, var(--muted), var(--accent) 100%)' } },
+      { label: 'Bourne Shell 20%', variant: 'accent', style: { backgroundColor: 'color-mix(in oklab, var(--muted), var(--accent) 25%)' } },
     ])
   })
 
-  it('rounds percentages correctly', () => {
+  it('formats decimal percentages with dynamic color gradient', () => {
     const langPercents: Record<string, LanguagePercent[]> = {
       CI: [
-        { language: 'Python', code: 333, percent: 33 },
-        { language: 'Shell', code: 333, percent: 33 },
-        { language: 'Markdown', code: 334, percent: 33 },
+        { language: 'Python', code: 805, percent: 80.5 },
+        { language: 'Shell', code: 153, percent: 15.3 },
+        { language: 'Markdown', code: 42, percent: 4.2 },
       ],
     }
     const [item] = projectAdapter([project], langPercents)
     expect(item.tags).toEqual([
-      { label: 'Python 33%', variant: 'accent' },
-      { label: 'Shell 33%', variant: 'accent' },
-      { label: 'Markdown 33%', variant: 'accent' },
+      { label: 'Python 80.5%', variant: 'accent', style: { backgroundColor: 'color-mix(in oklab, var(--muted), var(--accent) 100%)' } },
+      { label: 'Shell 15.3%', variant: 'accent', style: { backgroundColor: 'color-mix(in oklab, var(--muted), var(--accent) 19%)' } },
+      { label: 'Markdown 4.2%', variant: 'accent', style: { backgroundColor: 'color-mix(in oklab, var(--muted), var(--accent) 5%)' } },
     ])
   })
 
@@ -87,7 +87,6 @@ describe('configAdapter', () => {
   const config: ConfigEntry = {
     name: 'banned_words',
     hasSchema: true,
-    link: '/config/banned_words',
     description: 'Words banned from source code.',
     fieldCount: 5,
   }
@@ -97,7 +96,7 @@ describe('configAdapter', () => {
     expect(item.id).toBe('banned_words')
     expect(item.title).toBe('banned_words')
     expect(item.monoTitle).toBe(true)
-    expect(item.href).toBe('/config/banned_words')
+    expect(item.href).toBeUndefined()
     expect(item.icon).toBe('ri-settings-3-line')
     expect(item.meta).toEqual([{ label: 'Fields', value: '5' }])
   })
@@ -112,7 +111,6 @@ describe('guardConfigAdapter', () => {
   const entry: GuardConfigEntry = {
     name: 'guard_paths',
     title: 'Paths',
-    link: '/guard/guard_paths',
     hasSchema: true,
     description: 'Filesystem paths.',
     fieldCount: 3,
@@ -123,6 +121,7 @@ describe('guardConfigAdapter', () => {
     expect(item.id).toBe('guard_paths')
     expect(item.title).toBe('guard_paths')
     expect(item.monoTitle).toBe(true)
+    expect(item.href).toBeUndefined()
     expect(item.icon).toBe('ri-shield-keyhole-line')
     expect(item.meta).toEqual([{ label: 'Fields', value: '3' }])
   })
@@ -216,12 +215,12 @@ describe('hookAdapter', () => {
     'check-unstaged': 'Fails the commit if there are unstaged files.',
   }
 
-  it('converts hook to CardItem with description, href, and mono title', () => {
+  it('converts hook to CardItem with description and mono title', () => {
     const [item] = hookAdapter([hook], descriptions)
     expect(item.id).toBe('check-unstaged')
     expect(item.title).toBe('check-unstaged')
     expect(item.monoTitle).toBe(true)
-    expect(item.href).toBe('/hooks/check-unstaged')
+    expect(item.href).toBeUndefined()
     expect(item.icon).toBe('ri-terminal-line')
     expect(item.description).toBe('Fails the commit if there are unstaged files.')
   })
@@ -240,10 +239,9 @@ describe('hookAdapter', () => {
     expect(item.tags![2]).toEqual({ label: 'Strict only', variant: 'warn' })
   })
 
-  it('includes entry and applicable_to in meta', () => {
+  it('includes applicable_to in meta', () => {
     const [item] = hookAdapter([hook], descriptions)
     expect(item.meta).toEqual([
-      { label: 'Entry', value: 'ci_check_unstaged' },
       { label: 'Applicable to', value: 'any' },
     ])
   })

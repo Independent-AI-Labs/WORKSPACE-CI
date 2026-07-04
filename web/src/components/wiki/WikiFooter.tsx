@@ -2,10 +2,10 @@ export function WikiFooter() {
   return (
     <footer className="wiki-footer">
       <span className="wiki-footer__text">
-        workspace-ci wiki
+        The Practical AI Guardrails WIKI
       </span>
       <span className="wiki-footer__version">
-        Built from source
+        2026 Independent AI Labs
       </span>
     </footer>
   )

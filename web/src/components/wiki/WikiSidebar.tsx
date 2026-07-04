@@ -33,9 +33,9 @@ export function WikiSidebar() {
   return (
     <nav id="wiki-sidebar" className="wiki-sidebar" role="navigation" aria-label="Wiki navigation">
       <div className="wiki-sidebar__header">
-        <img src="/LOGO.png" className="wiki-sidebar__logo" alt="digitalguardrails logo" width="32" height="30" />
+        <img src="/LOGO.png" className="wiki-sidebar__logo" alt="practicalguardrails logo" width="32" height="30" />
         <span className="wiki-sidebar__title">
-          <span className="wiki-sidebar__title-thin">digital</span>guardrails
+          <span className="wiki-sidebar__title-thin">practical</span>guardrails
         </span>
       </div>
       <ul className="wiki-sidebar__nav">

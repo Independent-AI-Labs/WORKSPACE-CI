@@ -46,7 +46,7 @@ export function buildSearchIndexFromHooks(
     title: h.id,
     section: 'Hooks',
     content: `Stage: ${h.stage}, Kind: ${h.kind}, Entry: ${h.entry}`,
-    href: `/hooks/${h.id}`,
+    href: `/hooks#${h.id}`,
     type: 'hook' as const,
     keywords: [h.stage, h.kind, h.entry],
   }))

@@ -33,6 +33,46 @@ export function formatValue(value: unknown): string {
   }
 }
 
+function escHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+export function formatValueHtml(value: unknown, indent = 0): string {
+  const pad = '\n' + '  '.repeat(indent)
+  const padInner = '\n' + '  '.repeat(indent + 1)
+
+  if (value === null || value === undefined) {
+    return '<span class="syn-null">null</span>'
+  }
+  if (typeof value === 'boolean') {
+    return `<span class="syn-boolean">${value}</span>`
+  }
+  if (typeof value === 'number') {
+    return `<span class="syn-number">${value}</span>`
+  }
+  if (typeof value === 'string') {
+    return `<span class="syn-string">&quot;${escHtml(value)}&quot;</span>`
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '<span class="syn-punct">[]</span>'
+    const items = value.map((v) => padInner + formatValueHtml(v, indent + 1))
+    return `<span class="syn-punct">[</span>${items.join('<span class="syn-punct">,</span>')}${pad}<span class="syn-punct">]</span>`
+  }
+  if (typeof value === 'object') {
+    const entries = Object.entries(value)
+    if (entries.length === 0) return '<span class="syn-punct">{}</span>'
+    const items = entries.map(
+      ([k, v]) =>
+        `${padInner}<span class="syn-key">${escHtml(k)}</span><span class="syn-punct">: </span>${formatValueHtml(v, indent + 1)}`,
+    )
+    return `<span class="syn-punct">{</span>${items.join('<span class="syn-punct">,</span>')}${pad}<span class="syn-punct">}</span>`
+  }
+  return escHtml(String(value))
+}
+
 export function pageTitle(path: string): string {
   const map: Record<string, string> = {
     '/': 'Home',

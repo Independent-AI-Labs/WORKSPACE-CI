@@ -1,0 +1,100 @@
+.entry-point-link {
+  display: inline-block;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.entry-point-link:hover {
+  color: var(--accent-hover, var(--accent));
+}
+
+.entry-point-dialog__meta {
+  margin-bottom: var(--space-3);
+}
+
+.entry-point-dialog__file {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--muted);
+  margin-bottom: var(--space-2);
+}
+
+.entry-point-dialog__docstring {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.entry-point-dialog__details {
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-alt, var(--code-bg));
+  border-radius: var(--radius-sm);
+}
+
+.entry-point-dialog__details dl {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.entry-point-dialog__details dt {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.entry-point-dialog__details dd {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  color: var(--text);
+}
+
+.entry-point-dialog__details pre {
+  margin: 0;
+  padding: var(--space-2);
+  background: var(--code-bg);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.entry-point-dialog__code-wrapper {
+  position: relative;
+}
+
+.entry-point-dialog__code-wrapper .copy-button {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 1;
+}
+
+.entry-point-dialog__code {
+  margin: 0;
+  border-radius: var(--radius-sm);
+  overflow: auto;
+  max-height: 60vh;
+}
+
+.entry-point-dialog__code .shiki {
+  margin: 0 !important;
+  padding: var(--space-3) !important;
+  border-radius: var(--radius-sm) !important;
+  font-family: var(--font-mono) !important;
+  font-size: var(--text-sm) !important;
+  line-height: 1.5 !important;
+}

@@ -69,6 +69,10 @@ export const getConfigValue = cache(
   },
 )
 
+export function getConfigRawYaml(name: string): string {
+  return readFileSync(join(CONFIG_ROOT, `${name}.yaml`), 'utf8')
+}
+
 export const getConfigIndex = cache(async (): Promise<ConfigEntry[]> => {
   const entries = readdirSync(CONFIG_ROOT)
   return entries
@@ -82,7 +86,7 @@ export const getConfigIndex = cache(async (): Promise<ConfigEntry[]> => {
       const name = f.replace(/\.yaml$/, '')
       const schemaPath = join(CONFIG_ROOT, `${name}.schema.yaml`)
       const hasSchema = existsSync(schemaPath)
-      const entry: ConfigEntry = { name, hasSchema, link: `/config/${name}` }
+      const entry: ConfigEntry = { name, hasSchema }
       if (hasSchema) {
         try {
           const schema = load(
@@ -129,6 +133,10 @@ export const getGuardConfig = cache(
   },
 )
 
+export function getGuardConfigRawYaml(name: string): string {
+  return readFileSync(join(GUARD_CONFIG_ROOT, `${name}.yaml`), 'utf8')
+}
+
 export const getGuardConfigSchema = cache(
   async (name: string): Promise<ConfigSchema | null> => {
     const p = join(GUARD_CONFIG_ROOT, `${name}.schema.yaml`)
@@ -151,7 +159,6 @@ export function getGuardConfigEntries(names: string[]): GuardConfigEntry[] {
         .replace(/^guard_/, '')
         .replace(/_/g, ' ')
         .replace(/\b\w/g, (c) => c.toUpperCase()),
-      link: `/guard/${name}`,
       hasSchema,
     }
     if (hasSchema) {

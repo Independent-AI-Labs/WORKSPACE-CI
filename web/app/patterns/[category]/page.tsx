@@ -3,6 +3,7 @@ import { PatternList } from '@/components/wiki/PatternList'
 import { getBannedPatterns, getSwallowPatterns } from '@/lib/yaml-loader'
 import { loadSwallowDetectors } from '@/lib/docs-loader'
 import { classifyAll, classifySwallowPatterns } from '@/lib/patterns'
+import { highlightCode } from '@/lib/highlight'
 import type { PatternCategory } from '@/types/patterns'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
@@ -59,10 +60,23 @@ export default async function PatternCategoryPage({
   const allPatterns = [...bannedPatterns, ...swallowPatterns]
   const filtered = allPatterns.filter((p) => p.category === category)
 
+  const highlightedHtml: Record<string, string> = {}
+  for (const p of filtered) {
+    if (p.detectorFunction && p.detectorSource) {
+      highlightedHtml[p.detectorFunction] = await highlightCode(
+        p.detectorSource,
+        'python',
+      )
+    }
+  }
+
   return (
     <WikiShell>
       <h1>Patterns: {category}</h1>
-      <PatternList patterns={filtered} />
+      <PatternList
+        patterns={filtered}
+        highlightedHtml={highlightedHtml}
+      />
     </WikiShell>
   )
 }

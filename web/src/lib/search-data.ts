@@ -78,7 +78,7 @@ function loadConfigs(): SearchIndexEntry[] {
           title: name,
           section: 'Configuration',
           content: `Configuration file: ${name}`,
-          href: `/config/${name}`,
+          href: `/config#${name}`,
           type: 'config' as const,
           keywords: [name],
         }
@@ -106,7 +106,7 @@ function loadGuardConfigs(): SearchIndexEntry[] {
       title: g.title,
       section: 'Guard',
       content: `Guard configuration: ${g.title}`,
-      href: g.link,
+      href: `/guard#${g.name}`,
       type: 'guard' as const,
       keywords: [g.name, g.title],
     }))

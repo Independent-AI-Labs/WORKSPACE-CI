@@ -5,17 +5,22 @@ import type { FeedbackCounts } from '@/types/feedback'
 import { WikiCard } from '@/components/wiki/WikiCard'
 import { CategoryNav } from '@/components/wiki/CategoryNav'
 import { FeedbackWidget } from '@/components/wiki/FeedbackWidget'
-import { FunctionCodeDialog } from '@/components/wiki/FunctionCodeDialog'
+import { EntryPointDialog } from '@/components/wiki/EntryPointDialog'
 import { usePatternFilter } from '@/hooks/usePatternFilter'
 import { patternAdapter } from '@/lib/card-adapters'
 import { slugify } from '@/lib/utils'
 
 interface PatternListProps {
   patterns: ClassifiedPattern[]
+  highlightedHtml: Record<string, string>
   feedbackCounts?: Record<string, FeedbackCounts>
 }
 
-export function PatternList({ patterns, feedbackCounts = {} }: PatternListProps) {
+export function PatternList({
+  patterns,
+  highlightedHtml,
+  feedbackCounts = {},
+}: PatternListProps) {
   const {
     filtered,
     activeCategories,
@@ -47,14 +52,19 @@ export function PatternList({ patterns, feedbackCounts = {} }: PatternListProps)
           const p = filtered[i]
           const patternId = slugify(p.pattern)
           const counts = feedbackCounts[patternId] ?? { upvotes: 0, downvotes: 0 }
+          const html = p.detectorFunction
+            ? highlightedHtml[p.detectorFunction]
+            : undefined
           return (
             <WikiCard key={`${item.id}-${i}`} item={item}>
-              {p.detectorFunction && p.detectorSource && (
-                <FunctionCodeDialog
-                  functionName={p.detectorFunction}
+              {p.detectorFunction && p.detectorSource && html && (
+                <EntryPointDialog
+                  name={`${p.detectorFunction}()`}
                   sourceFile={p.detectorSourceFile ?? ''}
                   source={p.detectorSource}
+                  highlightedHtml={html}
                   docstring={p.detectorDocstring}
+                  titleId={`pattern-src-${patternId}`}
                 />
               )}
               <FeedbackWidget

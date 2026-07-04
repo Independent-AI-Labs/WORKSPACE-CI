@@ -19,7 +19,7 @@ function getLanguagePercentsForAllRepos(
       .map((r) => ({
         language: r.language,
         code: r.code,
-        percent: Math.round((r.code / totalCode) * 100),
+        percent: Math.round((r.code / totalCode) * 1000) / 10,
       }))
       .sort((a, b) => b.percent - a.percent)
   }

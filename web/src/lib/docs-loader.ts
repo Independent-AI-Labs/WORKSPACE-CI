@@ -4,6 +4,7 @@ import type { ApiDocsOutput, ShellDocsOutput } from '@/types/wiki'
 import type { SwallowDetectorData } from '@/types/patterns'
 import type { HookDescriptionData } from '@/types/hooks'
 import type { CodeStatsData } from '@/types/code-stats'
+import type { EntryPointSourceData } from '@/types/entry-point'
 
 function loadJson<T>(filePath: string): T | null {
   try {
@@ -42,5 +43,17 @@ export function loadHookDescriptions(): HookDescriptionData | null {
 export function loadCodeStats(): CodeStatsData | null {
   return loadJson<CodeStatsData>(
     join(process.cwd(), 'src', 'data', 'code-stats.json'),
+  )
+}
+
+export function loadHookSources(): EntryPointSourceData | null {
+  return loadJson<EntryPointSourceData>(
+    join(process.cwd(), 'src', 'data', 'hook-sources.json'),
+  )
+}
+
+export function loadScriptSources(): EntryPointSourceData | null {
+  return loadJson<EntryPointSourceData>(
+    join(process.cwd(), 'src', 'data', 'script-sources.json'),
   )
 }

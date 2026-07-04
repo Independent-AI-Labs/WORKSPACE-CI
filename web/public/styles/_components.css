@@ -200,18 +200,16 @@
   }
 
   /* ---- .tooltip-wrapper + .tooltip (P1-16) ----
-     Tooltip is always rendered; visibility toggles via CSS.
-     Wrapper has tabIndex=0 so non-interactive children
-     (icons, text) are keyboard-focusable. */
+     Tooltip is portaled to document.body via createPortal
+     and positioned with position:fixed + JS-computed
+     inline styles. Wrapper has tabIndex=0 so non-interactive
+     children (icons, text) are keyboard-focusable. */
   .tooltip-wrapper {
-    position: relative;
     display: inline-block;
   }
 
   .tooltip {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    position: fixed;
     visibility: hidden;
     background: var(--surface-2);
     color: var(--text);
@@ -226,14 +224,11 @@
     visibility: visible;
   }
 
-  .tooltip--top {
-    bottom: 100%;
-    margin-bottom: var(--space-1);
-  }
-
-  .tooltip--bottom {
-    top: 100%;
-    margin-top: var(--space-1);
+  .tooltip--html {
+    white-space: pre;
+    width: max-content;
+    max-width: 80vw;
+    font-family: var(--font-mono);
   }
 
   /* ---- .copy-button (P1-15) ----

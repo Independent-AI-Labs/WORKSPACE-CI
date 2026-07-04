@@ -26,7 +26,7 @@ const testData: SearchIndexEntry[] = [
     title: 'check-unstaged',
     section: 'Hooks',
     content: 'Pre-commit hook for unstaged files',
-    href: '/hooks/check-unstaged',
+    href: '/hooks#check-unstaged',
     type: 'hook',
     keywords: ['pre-commit', 'safety'],
   },

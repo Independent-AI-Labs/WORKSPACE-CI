@@ -1,14 +1,34 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
 import { HookList } from '@/components/wiki/HookList'
 import { getRequiredHooks } from '@/lib/yaml-loader'
-import { loadHookDescriptions } from '@/lib/docs-loader'
+import { loadHookDescriptions, loadHookSources } from '@/lib/docs-loader'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
+import { highlightCode } from '@/lib/highlight'
+import type { HookRecord } from '@/types/hooks'
 
 export default async function HooksPage() {
   const manifest = await getRequiredHooks()
   const descData = loadHookDescriptions()
   const descriptions = descData?.descriptions ?? {}
+  const sourceData = loadHookSources()
   const feedbackCounts = getAllFeedbackCounts('hook')
+
+  const sourceMap = new Map(
+    (sourceData?.sources ?? []).map((s) => [s.id, s]),
+  )
+
+  const hooksWithHighlight: HookRecord[] = []
+  const highlightedHtml: Record<string, string> = {}
+  for (const hook of manifest.hooks) {
+    hooksWithHighlight.push(hook)
+    const src = sourceMap.get(hook.id)
+    if (src) {
+      highlightedHtml[hook.id] = await highlightCode(
+        src.source,
+        src.language,
+      )
+    }
+  }
 
   return (
     <WikiShell>
@@ -24,8 +44,10 @@ export default async function HooksPage() {
         </p>
       ) : (
         <HookList
-          hooks={manifest.hooks}
+          hooks={hooksWithHighlight}
           descriptions={descriptions}
+          sourceMap={sourceMap}
+          highlightedHtml={highlightedHtml}
           feedbackCounts={feedbackCounts}
         />
       )}
