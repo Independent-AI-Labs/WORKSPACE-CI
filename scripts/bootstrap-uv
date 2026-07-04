@@ -23,32 +23,16 @@
 #   $UV_VERSION        : release tag to fetch (default: 0.11.23, the
 #                         version confirmed in AGENTS.md §2).
 #   $UV_BIN            : override install target path.
-#   $UV_VERIFY_SHA256  : set to "1" to enforce SHA256 pinning (opt-in).
-#   $UV_SHA256_X64     : SHA256 of the x86_64 linux tarball (default below).
-#   $UV_SHA256_ARM64   : SHA256 of the aarch64 linux tarball (default below).
 #
-# Supply-chain pinning: SHA256 verification defaults to SKIP (matches the
-# upstream VM reference, which had no checksum verification; download goes
-# over HTTPS from the official GitHub release URL). Set UV_VERIFY_SHA256=1
-# for strict supply-chain safety. The default SHAs below are PLACEHOLDERS -
-# they MUST be replaced with the official per-tarball checksums when you
-# bump $UV_VERSION. Source:
-#   https://github.com/astral-sh/uv/releases/download/v0.11.23/\
-#   uv-x86_64-unknown-linux-gnu.tar.gz.sha256
-#   https://github.com/astral-sh/uv/releases/download/v0.11.23/\
-#   uv-aarch64-unknown-linux-gnu.tar.gz.sha256
-# TODO: replace SHA placeholders with official SHA256 from the URLs above.
+# Supply-chain pinning: SHA256 verification is MANDATORY and always on.
+# The checksum is fetched at runtime from the .sha256 sidecar file
+# published alongside the tarball on the GitHub release page. No hardcoded
+# hashes are used -- the sidecar is the trusted source of truth, fetched
+# from the same release origin as the tarball.
 
 set -euo pipefail
 
 UV_VERSION="${UV_VERSION:-0.11.23}"
-# PLACEHOLDER checksums (intentionally invalid): see header comment.
-# Replace with real values from the v0.11.23 release .sha256 sidecars before
-# enabling UV_VERIFY_SHA256=1 in production.
-UV_SHA256_X64="${UV_SHA256_X64:-\
-00000000000000000000000000000000000000000000000000000000000000aa}"
-UV_SHA256_ARM64="${UV_SHA256_ARM64:-\
-00000000000000000000000000000000000000000000000000000000000000bb}"
 
 _ci_lib="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
 # shellcheck source=lib/ci.sh
@@ -135,30 +119,34 @@ main() {
         return 1
     fi
 
-    # Optional SHA256 verification (opt-in via UV_VERIFY_SHA256=1).
-    # Default is SKIP: honest about the fact that the default placeholders
-    # below are invalid. Enabling UV_VERIFY_SHA256=1 with placeholders WILL
-    # fail loudly; that is intentional (forces operator to set real SHAs).
-    if [[ "${UV_VERIFY_SHA256:-0}" == "1" ]]; then
-        local expected_sha=""
-        case "$arch" in
-            x86_64)  expected_sha="$UV_SHA256_X64" ;;
-            aarch64) expected_sha="$UV_SHA256_ARM64" ;;
-        esac
-        if [[ -z "$expected_sha" ]]; then
-            _log "UV_VERIFY_SHA256=1 but no SHA pin for arch=$arch; refusing to install"
-            return 1
-        fi
-        local actual_sha
-        actual_sha="$(sha256sum "${tmp}/${tarball}" | awk '{print $1}')"
-        if [[ "$actual_sha" != "$expected_sha" ]]; then
-            _log "checksum mismatch: expected $expected_sha, got $actual_sha"
-            return 1
-        fi
-        _log "checksum OK ($expected_sha)"
-    else
-        _log "SHA256 verification SKIPPED (set UV_VERIFY_SHA256=1 to enforce)"
+    # Mandatory SHA256 verification: fetch the .sha256 sidecar from the
+    # same GitHub release URL as the tarball. The sidecar file contains
+    # "<hash>  <filename>" -- we extract the hash and compare against
+    # sha256sum of the downloaded tarball. No hardcoded hashes.
+    local sha_url="${url}.sha256"
+    _log "fetching checksum sidecar: ${sha_url}"
+    local sha_rc=0
+    curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/${tarball}.sha256" "$sha_url" || sha_rc=$?
+    if [[ "$sha_rc" -ne 0 ]]; then
+        _log "failed to fetch SHA256 sidecar from $sha_url (rc=$sha_rc)"
+        _log "cannot verify tarball integrity without sidecar; refusing to install"
+        return 1
     fi
+
+    local expected_sha
+    expected_sha="$(awk '{print $1}' "${tmp}/${tarball}.sha256")"
+    if [[ -z "$expected_sha" ]]; then
+        _log "SHA256 sidecar is empty or malformed; refusing to install"
+        return 1
+    fi
+
+    local actual_sha
+    actual_sha="$(sha256sum "${tmp}/${tarball}" | awk '{print $1}')"
+    if [[ "$actual_sha" != "$expected_sha" ]]; then
+        _log "checksum mismatch: expected $expected_sha, got $actual_sha"
+        return 1
+    fi
+    _log "checksum OK ($expected_sha)"
 
     if ! tar -xzf "${tmp}/${tarball}" -C "$tmp"; then
         _log "tar extraction failed"

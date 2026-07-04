@@ -50,7 +50,7 @@ init: ## Install all system-level dependencies (apt packages + Rust toolchain)
 		build-essential pkg-config
 	@echo "==> Installing Rust toolchain (if missing)..."
 	@if ! command -v cargo > /dev/null 2>&1; then \
-		curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal; \
+		bash scripts/bootstrap-rust; \
 	fi
 	@echo "==> System dependencies installed."
 
@@ -193,7 +193,7 @@ wiki-dev-logs: ## Tail wiki dev server logs
 
 .PHONY: clean
 clean: ## Remove build artifacts
-	rm -rf build/ dist/ *.egg-info
+	rm -rf -- build/ dist/ ./*.egg-info
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 

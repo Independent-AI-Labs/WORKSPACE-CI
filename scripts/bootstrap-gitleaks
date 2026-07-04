@@ -23,11 +23,12 @@
 set -euo pipefail
 
 GITLEAKS_VERSION="${GITLEAKS_VERSION:-8.21.2}"
-# Supply-chain pinning: SHA256 defaults are hard-coded for the default version.
-# checksums per https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_checksums.txt
-# Override only if you intentionally bump $GITLEAKS_VERSION (then supply matching SHAs).
-GITLEAKS_SHA256_X64="${GITLEAKS_SHA256_X64:-5bc41815076e6ed6ef8fbecc9d9b75bcae31f39029ceb55da08086315316e3ba}"
-GITLEAKS_SHA256_ARM64="${GITLEAKS_SHA256_ARM64:-654c935542c89f565aabe7bf7c6c500830f116c114f0aeb509d2460c1ac2e6da}"
+#
+# Supply-chain pinning: SHA256 verification is MANDATORY and always on.
+# The checksum is fetched at runtime from the checksums.txt sidecar file
+# published alongside the tarballs on the GitHub release page. No hardcoded
+# hashes are used -- the sidecar is the trusted source of truth, fetched
+# from the same release origin as the tarball.
 
 _ci_lib="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
 # shellcheck source=lib/ci.sh
@@ -103,19 +104,28 @@ main() {
         return 1
     fi
 
-    # Mandatory checksum verification (supply-chain safety).
-    # Defaults are hard-coded above for the default version; any version bump
-    # must supply matching SHAs via $GITLEAKS_SHA256_X64 / $GITLEAKS_SHA256_ARM64.
-    local expected_sha=""
-    case "$arch" in
-        x64)   expected_sha="$GITLEAKS_SHA256_X64" ;;
-        arm64) expected_sha="$GITLEAKS_SHA256_ARM64" ;;
-    esac
-    if [[ -z "$expected_sha" ]]; then
-        _log "no SHA256 pin available for arch=$arch version=$GITLEAKS_VERSION; refusing to install unverified binary"
-        _log "set GITLEAKS_SHA256_${arch^^} to the official checksum for gitleaks_${GITLEAKS_VERSION}_linux_${arch}.tar.gz"
+    # Mandatory SHA256 verification: fetch the checksums.txt sidecar from
+    # the same GitHub release URL as the tarball. The sidecar contains
+    # lines of "<hash>  <filename>" -- we extract the line matching our
+    # tarball name and compare the hash against sha256sum of the download.
+    # No hardcoded hashes.
+    local checksums_url="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+    _log "fetching checksum sidecar: ${checksums_url}"
+    local sha_rc=0
+    curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/checksums.txt" "$checksums_url" || sha_rc=$?
+    if [[ "$sha_rc" -ne 0 ]]; then
+        _log "failed to fetch checksums sidecar (rc=$sha_rc): $checksums_url"
+        _log "cannot verify tarball integrity without sidecar; refusing to install"
         return 1
     fi
+
+    local expected_sha
+    expected_sha="$(awk -v tb="$tarball" '$2 == tb {print $1}' "${tmp}/checksums.txt")"
+    if [[ -z "$expected_sha" ]]; then
+        _log "no checksum entry for $tarball in sidecar; refusing to install"
+        return 1
+    fi
+
     local actual_sha
     actual_sha="$(sha256sum "${tmp}/${tarball}" | awk '{print $1}')"
     if [[ "$actual_sha" != "$expected_sha" ]]; then

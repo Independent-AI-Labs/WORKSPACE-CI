@@ -1,11 +1,19 @@
-import { readFileSync, existsSync, writeFileSync, readdirSync, mkdirSync } from 'fs'
+import { readFileSync, existsSync, readdirSync, mkdirSync } from 'fs'
+import { writeFile } from 'fs/promises'
 import { join } from 'path'
 import type { FeedbackData, FeedbackCounts, FeedbackSubmission, FeedbackEntry } from '@/types/feedback'
 
 const FEEDBACK_DIR = join(process.cwd(), 'data', 'feedback')
+const MAX_ENTRIES = 1000
+const MAX_COMMENT_LENGTH = 500
+const MAX_SESSION_ID_LENGTH = 128
 
 function sanitizeId(id: string): string {
   return id.replace(/[^a-zA-Z0-9._-]/g, '-')
+}
+
+function stripControlChars(str: string): string {
+  return str.replace(/[\x00-\x1f\x7f]/g, '')
 }
 
 function feedbackPath(targetType: string, targetId: string): string {
@@ -55,10 +63,10 @@ export function getAllFeedbackCounts(
   return result
 }
 
-export function saveFeedback(
+export async function saveFeedback(
   submission: FeedbackSubmission,
   sessionId: string,
-): FeedbackCounts {
+): Promise<FeedbackCounts> {
   if (!existsSync(FEEDBACK_DIR)) {
     mkdirSync(FEEDBACK_DIR, { recursive: true })
   }
@@ -89,15 +97,25 @@ export function saveFeedback(
     }
   }
 
+  const sanitizedComment = submission.comment
+    ? stripControlChars(submission.comment).slice(0, MAX_COMMENT_LENGTH)
+    : undefined
+
+  const sanitizedSessionId = sessionId.slice(0, MAX_SESSION_ID_LENGTH)
+
   const entry: FeedbackEntry = {
     vote: submission.vote,
-    comment: submission.comment,
+    comment: sanitizedComment,
     timestamp: Date.now(),
-    sessionId,
+    sessionId: sanitizedSessionId,
   }
   data.entries.push(entry)
 
-  writeFileSync(path, JSON.stringify(data, null, 2), 'utf8')
+  if (data.entries.length > MAX_ENTRIES) {
+    data.entries = data.entries.slice(-MAX_ENTRIES)
+  }
+
+  await writeFile(path, JSON.stringify(data, null, 2), 'utf8')
 
   return { upvotes: data.upvotes, downvotes: data.downvotes }
 }

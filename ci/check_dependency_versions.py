@@ -456,7 +456,7 @@ def main() -> int:
     parser.add_argument(
         "paths",
         nargs="*",
-        default=["pyproject.toml"],
+        default=["pyproject.toml", "web/package.json"],
         help="Paths to check (pyproject.toml, package.json, "
         "docker-compose.yml, Dockerfile)",
     )

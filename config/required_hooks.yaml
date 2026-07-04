@@ -224,10 +224,10 @@ hooks:
   - id: check-dependency-versions
     kind: python_module
     entry: ci.check_dependency_versions
-    stage: pre-push
+    stage: pre-commit
     pass_filenames: false
     always_run: true
-    mandatory: false
+    mandatory: true
     safety: false
     applicable_to: [python, node]
 

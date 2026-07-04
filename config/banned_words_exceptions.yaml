@@ -95,7 +95,7 @@ exceptions:
 
   # Audit documents reference all banned patterns by name.
   - pattern: '.*'
-    paths: ['docs/AUDIT-.*\.md$']
+    paths: ['docs/AUDIT-.*\.md$', 'docs/audits/.*\.md$']
 
   # ── Wiki web UI (web/) ───────────────────────────────────────────────
   # The wiki's pattern-detection module and its tests must contain the

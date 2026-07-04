@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install uv
+        run: pip install uv==0.11.23
+
+      - name: Sync Python deps
+        run: uv sync --extra dev
+
+      - name: Install web deps
+        run: npm ci
+        working-directory: web
+
+      - name: Lint (ruff)
+        run: .venv/bin/ruff format --check ci/ --config ruff.toml && .venv/bin/ruff check ci/ --config ruff.toml
+
+      - name: Type-check (mypy)
+        run: .venv/bin/mypy ci/
+
+      - name: Shell unit tests
+        run: ./tests/run_tests_unit.sh
+
+      - name: Integration tests
+        run: ./tests/run_tests_integration.sh
+
+      - name: Python unit tests + coverage
+        run: .venv/bin/python -m pytest tests/unit --cov=ci --cov-report=term-missing --cov-fail-under=90 --tb=short -q
+
+      - name: Integration tests + coverage
+        run: .venv/bin/python -m pytest tests/integration --cov=ci --cov-report=term-missing --cov-fail-under=5 --tb=short -q
+
+      - name: Banned words check
+        run: bash -c 'source lib/checks.sh && ci_check_banned_words'
+
+      - name: Silent-swallow check
+        run: bash -c 'source lib/checks.sh && ci_check_silent_swallow'
+
+      - name: Secret scan (gitleaks)
+        run: bash -c 'source lib/checks.sh && ci_scan_secrets'
+
+      - name: Dependency version check
+        run: .venv/bin/python -m ci.check_dependency_versions pyproject.toml web/package.json
+
+      - name: Coverage no-devolution
+        run: bash -c 'source lib/checks.sh && ci_check_coverage_thresholds_no_devolution'
+
+      - name: Required hooks present
+        run: .venv/bin/python -m ci.check_required_hooks_present --quiet
+
+      - name: Markdown docs check
+        run: .venv/bin/python -m ci.check_markdown_docs --all-md --check-remote
+
+      - name: File length check
+        run: bash -c 'source lib/checks.sh && ci_check_file_length'
+
+      - name: Portable shell check
+        run: bash -c 'source lib/checks.sh && ci_check_portable_shell'
+
+      - name: Web lint (eslint)
+        run: npm run lint
+        working-directory: web
+
+      - name: Web type-check (tsc)
+        run: npm run type-check
+        working-directory: web
+
+      - name: Web tests (vitest)
+        run: npm run test
+        working-directory: web
