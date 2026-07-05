@@ -14,6 +14,19 @@ _TESTS_PASSED=0
 _TESTS_FAILED=0
 _FAILURES=()
 
+# Remove a directory tree. In this sandbox, git init/commit create
+# root-owned files inside .git that rm cannot delete. When rm fails,
+# relocate the tree to a .trash dir (mv only needs write perms on the
+# parent, not the contents) so it does not interfere with the next test.
+_scrub_dir() {
+    local _target="$1"
+    [[ -e "$_target" ]] || return 0
+    rm -rf "$_target" 2>/dev/null && return 0
+    local _trash="${TEST_TMP:-/tmp}/.trash"
+    mkdir -p "$_trash"
+    mv "$_target" "$_trash/$(basename "$_target").$$.$RANDOM" 2>/dev/null || true
+}
+
 # Set up config files in the tmpdir.
 # Most config files are symlinks (read-only by tests). The 3 files
 # that tests write fixtures to are COPIES so test writes do not
@@ -45,17 +58,17 @@ _setup_tmpdir() {
         # Reuse existing tmpdir: reset git state and remove test-created
         # regular files (preserving symlinked lib originals).
         local _ci_dir="$TEST_TMP/workspace/projects/CI"
-        rm -rf "$_ci_dir/.git"
+        _scrub_dir "$_ci_dir/.git"
         # Remove regular files in CI dir (not symlinks). find without -L
         # does not follow symlinks, so symlinked lib files are preserved.
-        find "$_ci_dir" -type f -delete
+        find "$_ci_dir" -type f -delete 2>/dev/null
         # Remove config symlinks so _restore_configs can re-create them
-        find "$_ci_dir/config" -maxdepth 1 -type l -delete
+        find "$_ci_dir/config" -maxdepth 1 -type l -delete 2>/dev/null
         _restore_configs "$_ci_dir"
         # Remove extra project dirs created by compliance tests
         local _d
         for _d in "$TEST_TMP/workspace/projects"/*; do
-            [[ -d "$_d" && "$(basename "$_d")" != "CI" ]] && rm -rf "$_d"
+            [[ -d "$_d" && "$(basename "$_d")" != "CI" ]] && _scrub_dir "$_d"
         done
         # Remove extra dirs/files at workspace root (e.g. repos from
         # test_blocked_patterns)
@@ -63,12 +76,13 @@ _setup_tmpdir() {
         for _w in "$TEST_TMP/workspace"/*; do
             [[ "$_w" == "$TEST_TMP/workspace/projects" ]] && continue
             [[ "$_w" == "$TEST_TMP/workspace/pyproject.toml" ]] && continue
-            rm -rf "$_w"
+            _scrub_dir "$_w"
         done
         # Remove test repos at tmpdir root (test_blocked_patterns)
         for _w in "$TEST_TMP"/*; do
             [[ "$_w" == "$TEST_TMP/workspace" ]] && continue
-            rm -rf "$_w"
+            [[ "$_w" == "$TEST_TMP/.trash" ]] && continue
+            _scrub_dir "$_w"
         done
         # Reset workspace pyproject.toml (may have been overwritten)
         echo '[project]' > "$TEST_TMP/workspace/pyproject.toml"
@@ -114,7 +128,7 @@ _teardown_tmpdir() {
 # Final cleanup: remove the shared tmpdir at end of test suite.
 _final_cleanup() {
     if [[ -n "${TEST_TMP:-}" && -d "${TEST_TMP:-}" ]]; then
-        rm -rf "$TEST_TMP"
+        rm -rf "$TEST_TMP" 2>/dev/null
     fi
 }
 trap '_final_cleanup' EXIT

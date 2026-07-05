@@ -7,6 +7,7 @@ _TEST_CONFIG="$PROJECT_DIR/config/blocked_commit_patterns.yaml"
 # Helper: create a temp git repo
 _make_bp_repo() {
     local repo="$TEST_TMP/repo"
+    _scrub_dir "$repo"
     mkdir -p "$repo"
     cd "$repo"
     git init -q .
