@@ -365,7 +365,7 @@ instead of `PatternCard`. `FunctionCodeDialog` and `FeedbackWidget` passed as ch
 - HTML `placeholder` attribute banned - use `aria-label`
 - `@typescript-eslint/no-explicit-any` is an ESLint error in web/
 - DO NOT run `next build` - hangs indefinitely on Next.js 16
-- DO NOT `pkill -f next` - kills AMI-PORTAL processes on port 3000
+- DO NOT `pkill -f next` - kills WORKSPACE-PORTAL processes on port 3000
 
 ---
 

@@ -1840,7 +1840,7 @@ the vendored set is reproducible.
 | `_error-boundary.css` | Error boundary UI |
 | `_a11y.css` | Focus rings (`:focus-visible`), skip-to-content link, screen-reader-only |
 
-Class naming: BEM-like, following AMI-PORTAL conventions.
+Class naming: BEM-like, following WORKSPACE-PORTAL conventions.
 `--modifier` for variants, `.is-state` for state classes.
 
 ---

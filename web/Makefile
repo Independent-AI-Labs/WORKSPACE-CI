@@ -1,12 +1,12 @@
 # Makefile for workspace-ci Wiki (Next.js 16)
 # Manages the dev server via systemd user services.
-# Pattern copied from AMI-PORTAL.
+# Pattern copied from WORKSPACE-PORTAL.
 
 SHELL := /bin/bash
 
 # Wiki lives at WORKSPACE-VM/projects/CI/web (3 levels under WORKSPACE-VM),
 # so .boot-linux/node-env (which holds Node) is reached via ../../.. .
-# AMI-PORTAL uses ../.. because it sits at projects/AMI-PORTAL (2 levels).
+# WORKSPACE-PORTAL uses ../.. because it sits at projects/WORKSPACE-PORTAL (2 levels).
 AGENTS_ROOT := $(abspath ../../..)
 AGENTS_BOOT := $(AGENTS_ROOT)/.boot-linux
 NODE_BIN := $(AGENTS_BOOT)/node-env/bin

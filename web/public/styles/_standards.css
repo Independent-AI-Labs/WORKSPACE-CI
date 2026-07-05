@@ -74,9 +74,12 @@
   gap: var(--space-1);
   text-decoration: none;
   font-size: var(--text-sm);
-  color: var(--link);
+  font-weight: 600;
+  color: var(--muted);
+  transition: color var(--duration-fast);
 }
 
 .contact-dialog__purchase:hover {
+  color: var(--text);
   text-decoration: underline;
 }

@@ -67,7 +67,7 @@ quality gates workspace-ci enforces.
 - Execute or spawn Python processes at request time (no `uv run`, no subprocesses)
 - Modify workspace-ci configs, hooks, or source files
 - Require authentication (it is a public documentation surface)
-- Replace or duplicate AMI-PORTAL's shell, tab system, or iframe architecture
+- Replace or duplicate WORKSPACE-PORTAL's shell, tab system, or iframe architecture
 - Serve as a general-purpose documentation viewer for arbitrary files
 - Implement i18n: English only
 - Modify or re-compile the guard binary, its build-time `build.rs` embed, or

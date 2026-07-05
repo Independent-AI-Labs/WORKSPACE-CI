@@ -141,7 +141,7 @@ for _repo in "${_repos[@]}"; do
     _rel="${_repo#"$_root"/}"
     [[ "$_repo" == "$_root" ]] && _rel="(umbrella)"
 
-    _cloc_args=(--quiet --json)
+    _cloc_args=(--quiet --json --not-match-f='package-lock\.json')
     # Always use --exclude-dir instead of --vcs=git because the workspace
     # guard blocks ``git -c safe.directory=* ls-files`` (the command cloc
     # invokes internally under --vcs=git).  The expanded exclude list covers
