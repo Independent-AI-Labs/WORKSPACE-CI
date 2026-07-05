@@ -312,7 +312,7 @@ install_guard_binary() {
         echo ""
         echo "WHAT IT DOES:"
         echo "  • Relocates real git → /usr/bin/git.original (0700, root-only)"
-        echo "  • Installs guard binary → /usr/bin/git (0755, cap_dac_override+ep)"
+        echo "  • Installs guard binary → /usr/bin/git (0755, cap_setpcap,cap_chown,cap_dac_override,cap_fowner,cap_fsetid+ep)"
         echo "  • Gives users rights to run git ONLY through the guard"
         echo "  • Blocks: git reset --hard, git checkout --hard, git rebase,"
         echo "            git commit --amend, git push --force, git reset,"
@@ -449,7 +449,7 @@ install_guard_binary() {
         cp "$guard_bin" /usr/bin/git
         chown root:root /usr/bin/git
         chmod 0755 /usr/bin/git
-        setcap cap_dac_override+ep /usr/bin/git || {
+        setcap 'cap_setpcap,cap_chown,cap_dac_override,cap_fowner,cap_fsetid+ep' /usr/bin/git || {
             log_error "Failed to set file capabilities on /usr/bin/git"
             return 1
         }
@@ -511,8 +511,31 @@ EOF
     fi
 
     if [[ "$install_mode" == "capability" ]]; then
-        if ! getcap /usr/bin/git | grep -q cap_dac_override; then
-            log_error "Guard binary missing cap_dac_override capability"
+        local _caps_found=0
+        if command -v getcap >/dev/null; then
+            local _gc _gc_err _gc_rc
+            _gc_err="$(mktemp)"
+            _gc="$(getcap /usr/bin/git 2>"$_gc_err")" && _gc_rc=0 || _gc_rc=$?
+            if [[ $_gc_rc -ne 0 ]]; then
+                log_error "getcap failed (rc=$_gc_rc): $(cat "$_gc_err")"
+                rm -f "$_gc_err"
+                errors=1
+                continue
+            fi
+            if [[ -s "$_gc_err" ]]; then
+                log_warn "getcap stderr: $(cat "$_gc_err")"
+            fi
+            rm -f "$_gc_err"
+            for _c in cap_setpcap cap_chown cap_dac_override cap_fowner cap_fsetid; do
+                if echo "$_gc" | grep -q "$_c"; then
+                    _caps_found=$((_caps_found+1))
+                else
+                    log_error "Guard binary missing $_c capability"
+                    errors=1
+                fi
+            done
+        else
+            log_error "getcap not found: cannot verify file capabilities"
             errors=1
         fi
     fi
@@ -553,7 +576,7 @@ EOF
             log_warn "  root-only mode: root can bypass (soft barrier, see threat model docs)"
         else
             log_info "Git guard installation complete."
-            log_info "  /usr/bin/git          (0755 root:root, cap_dac_override+ep, immutable)"
+            log_info "  /usr/bin/git          (0755 root:root, cap_setpcap,cap_chown,cap_dac_override,cap_fowner,cap_fsetid+ep, immutable)"
             log_info "  /usr/bin/git.original (0700 root:root, immutable)"
             log_info "  dpkg-divert configured"
             log_info "  apt hook registered"
@@ -588,8 +611,8 @@ check_guard() {
         log_info "Rust guard status: INSTALLED"
         if [[ -f /usr/bin/git ]]; then
             log_info "  /usr/bin/git: $(stat -c '%a %U:%G' /usr/bin/git)"
-            if command -v getcap >/dev/null && getcap /usr/bin/git | grep -q cap_dac_override; then
-                log_info "  mode: capability (cap_dac_override+ep)"
+            if command -v getcap >/dev/null && getcap /usr/bin/git | grep -q cap_setpcap; then
+                log_info "  mode: capability (cap_setpcap,cap_chown,cap_dac_override,cap_fowner,cap_fsetid+ep)"
             else
                 log_info "  mode: root-only (no caps: soft barrier)"
             fi
