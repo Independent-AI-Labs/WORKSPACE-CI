@@ -342,7 +342,7 @@ class TestMainNpm:
 
     @patch("ci.check_dependency_versions.Path")
     def test_missing_file_returns_one(self, mock_path_class) -> None:
-        """Test returns 1 when package.json not found."""
+        """Test returns 1 when package.json not found (all paths missing)."""
         mock_path = MagicMock()
         mock_path.exists.return_value = False
         mock_path_class.return_value = mock_path

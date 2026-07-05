@@ -370,7 +370,7 @@ class TestMain:
 
     @patch("ci.check_dependency_versions.Path")
     def test_returns_one_for_missing_pyproject(self, mock_path_class) -> None:
-        """Test returns 1 when pyproject.toml missing."""
+        """Test returns 1 when all paths missing (nothing to check)."""
         mock_path = MagicMock()
         mock_path.exists.return_value = False
         mock_path_class.return_value = mock_path

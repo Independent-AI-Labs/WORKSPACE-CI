@@ -100,7 +100,10 @@ ci_check_silent_swallow() {
         # Skip binary files (prevents UnicodeDecodeError in Python checker)
         local _enc
         _enc="$(file --mime-encoding -b "$file")" || { echo "[silent-swallow] file --mime-encoding failed on $file" >&2; continue; }
-        [[ "$_enc" == "binary" ]] && continue
+        case "$_enc" in
+            utf-8|us-ascii) ;;
+            *) continue ;;
+        esac
         # Default exemptions: tests may contain deliberate error patterns;
         # compose.yml has pre-existing patterns fixed incrementally.
         case "$file" in

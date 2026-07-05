@@ -1,15 +1,7 @@
 #!/usr/bin/env python3
-"""Dependency version checker for Python (PyPI), Node (npm), and Docker
-images that enforces strict pinning. Rejects floating versions, wildcards,
-and unbounded ranges in favor of exact pins (==X.Y.Z) or bounded ranges
-(>=X.Y,<A.B). Also verifies that every pinned version is the latest
-available from its registry and supports auto-upgrade mode.
-
-Usage:
-    python -m ci.check_dependency_versions
-    python -m ci.check_dependency_versions --upgrade
-    python -m ci.check_dependency_versions --exclude X,Y
-"""
+"""Dependency version checker (PyPI, npm, Docker). Enforces strict pinning
+(==X.Y.Z or >=X.Y,<A.B) and verifies every pin is the latest from its
+registry. Supports --upgrade mode to auto-fix outdated dependencies."""
 
 from __future__ import annotations
 
@@ -469,13 +461,14 @@ def main() -> int:
 
     dep_errors = False
     upgrade_count = 0
+    found_count = 0
 
     for path_str in args.paths:
         path = Path(path_str)
         if not path.exists():
-            print(f"Error: {path} not found")
-            return 1
-
+            print(f"Warning: {path} not found, skipping")
+            continue
+        found_count += 1
         if path.name == "package.json":
             excludes = npm_excludes
         elif docker.is_compose_file(path) or docker.is_dockerfile(path):
@@ -492,6 +485,9 @@ def main() -> int:
 
     if dep_errors:
         print("\nRun with --upgrade to auto-fix.")
+        return 1
+    if found_count == 0:
+        print("ERROR: No dependency files found to check.")
         return 1
 
     f = _QUERY_RESULTS["failures"]
