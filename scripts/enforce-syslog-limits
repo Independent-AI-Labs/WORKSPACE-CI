@@ -1,0 +1,120 @@
+#!/bin/bash
+set -euo pipefail
+
+# enforce-syslog-limits.sh
+#
+# Applies system-level log ceilings that require root:
+#   1. /etc/logrotate.d/rsyslog  - size-based rotation (maxsize 500M, daily, 7 kept)
+#   2. /etc/systemd/journald.conf - rate limiting (2000/30s) + storage caps (2G) + MaxLevelSyslog=err
+#
+# CONTEXT: A corrupted Turbopack SST database caused ami-portal-dev to emit panic
+# stack traces at ~50k lines/sec into journald -> rsyslog -> /var/log/syslog,
+# filling the root filesystem to 697G (INCIDENT-2026-07-05). The portal-side
+# fix (LogRateLimit in the systemd unit) stops *that* process; this script
+# stops ANY process from ever flooding syslog again.
+#
+# This script MUST be run with sudo. It is intentionally idempotent - safe to
+# re-run. Re-running will overwrite both config files with the values below.
+#
+# Usage:  sudo bash scripts/enforce-syslog-limits.sh
+#     or:  make enforce-syslog-limits   (Make target wraps with sudo -v)
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "ERROR: This script requires root. Run with: sudo bash $0" >&2
+    exit 1
+fi
+
+LOGROTATE_FILE="/etc/logrotate.d/rsyslog"
+JOURNALD_FILE="/etc/systemd/journald.conf"
+
+echo "=== Enforcing system-wide log ceilings ==="
+echo ""
+
+# --- 1. logrotate: size-based rotation ---
+echo "[1/2] Writing $LOGROTATE_FILE ..."
+cat > "$LOGROTATE_FILE" << 'LOGROTATE_EOF'
+/var/log/syslog
+/var/log/mail.log
+/var/log/kern.log
+/var/log/auth.log
+/var/log/user.log
+/var/log/cron.log
+{
+    rotate 7
+    daily
+    maxsize 500M
+    missingok
+    notifempty
+    compress
+    delaycompress
+    sharedscripts
+    postrotate
+        /usr/lib/rsyslog/rsyslog-rotate
+    endscript
+}
+LOGROTATE_EOF
+chmod 644 "$LOGROTATE_FILE"
+echo "    done (maxsize=500M, rotate=7, daily)"
+
+# --- 2. journald: rate limit + storage cap + syslog level ceiling ---
+echo "[2/2] Patching $JOURNALD_FILE ..."
+
+JOURNALD_PATCH_LOGROTATE="false"
+
+if [ ! -f "$JOURNALD_FILE" ]; then
+    echo "    $JOURNALD_FILE not found - creating"
+    echo "# journald configuration" > "$JOURNALD_FILE"
+fi
+
+# Idempotent: if the values are already present, skip the patch.
+_needs_patch=false
+grep -qE '^RateLimitIntervalSec=30s' "$JOURNALD_FILE" || _needs_patch=true
+grep -qE '^RateLimitBurst=2000' "$JOURNALD_FILE" || _needs_patch=true
+grep -qE '^SystemMaxUse=2G' "$JOURNALD_FILE" || _needs_patch=true
+grep -qE '^SystemMaxFileSize=100M' "$JOURNALD_FILE" || _needs_patch=true
+grep -qE '^MaxLevelSyslog=err' "$JOURNALD_FILE" || _needs_patch=true
+
+if [ "$_needs_patch" = "true" ]; then
+    # Replace commented or existing lines, append if the key is absent.
+    _set_val() {
+        local key="$1" val="$2"
+        if grep -qE "^[#]?${key}=" "$JOURNALD_FILE"; then
+            sed -i "s|^[#]*${key}=.*|${key}=${val}|" "$JOURNALD_FILE"
+        else
+            echo "${key}=${val}" >> "$JOURNALD_FILE"
+        fi
+    }
+    _set_val "RateLimitIntervalSec" "30s"
+    _set_val "RateLimitBurst" "2000"
+    _set_val "SystemMaxUse" "2G"
+    _set_val "SystemMaxFileSize" "100M"
+    _set_val "MaxLevelSyslog" "err"
+    JOURNALD_PATCH_LOGROTATE="true"
+    echo "    done (RateLimit=2000/30s, SystemMaxUse=2G, MaxLevelSyslog=err)"
+else
+    echo "    already configured - no changes needed"
+fi
+
+# --- 3. Reload daemons ---
+echo ""
+echo "=== Reloading daemons ==="
+systemctl daemon-reload
+systemctl restart systemd-journald 2>/dev/null || true
+echo "    journald reloaded"
+
+if systemctl is-active --quiet rsyslog 2>/dev/null; then
+    systemctl restart rsyslog
+    echo "    rsyslog restarted"
+else
+    echo "    rsyslog not active - skipped"
+fi
+
+echo ""
+echo "=== Done ==="
+echo "System log ceilings in place:"
+echo "  - logrotate: /var/log/syslog rotates at 500M or daily, 7 copies kept"
+echo "  - journald:  max 2000 messages/30s per unit, 2G total storage"
+echo "  - journald:  only err+ forwarded to syslog (no info/warning spam)"
+echo "  - portal:    LogRateLimit 500/10s in workspace-portal-dev.service"
+echo ""
+echo "A runaway process can no longer fill the root disk via syslog."

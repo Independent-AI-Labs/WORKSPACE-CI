@@ -249,6 +249,15 @@ scaffold-ci: ## Generate CI integration files for a consumer project
 	bash scripts/scaffold-ci $(ARGS)
 
 # =============================================================================
+# System Hardening (requires sudo)
+# =============================================================================
+
+.PHONY: enforce-syslog-limits
+enforce-syslog-limits: ## Enforce system-level log ceilings: logrotate maxsize + journald rate limiting (prevents /var/log/syslog filling root disk)
+	@echo "==> Enforcing system log ceilings..."
+	$(SUDO) bash scripts/enforce-syslog-limits
+
+# =============================================================================
 # WORKSPACE-GUARD: compiled git protection (opt-in)
 # =============================================================================
 
