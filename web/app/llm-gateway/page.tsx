@@ -1,14 +1,30 @@
-import { ComingSoon } from '@/components/wiki/ComingSoon'
+import { WikiShell } from '@/components/wiki/WikiShell'
+
+const GRAFANA_URL =
+  'http://localhost:3030/d/gateway-overview/gateway-overview?orgId=1&from=now-6h&to=now&timezone=browser&var-model=$__all&refresh=15s&kiosk'
 
 export default function LLMGatewayPage() {
   return (
-    <ComingSoon
-      title="LLM Gateway"
-      description="This page will provide a gateway for routing, auditing, and governing LLM API calls, including token budgeting, model allowlists, and prompt logging."
-      links={[
-        { href: '/standards', label: 'Browse Standards & Regulation' },
-        { href: '/integration', label: 'View Integration Guide' },
-      ]}
-    />
+    <WikiShell>
+      <section className="hero">
+        <h1 className="hero__title">LLM Gateway</h1>
+        <p className="hero__subtitle">
+          Real-time metrics for the multi-tenant LLM gateway - routing,
+          token accounting, PII redaction, and provider health across
+          all upstream AI models.
+        </p>
+      </section>
+
+      <div className="gateway-dashboard">
+        <iframe
+          src={GRAFANA_URL}
+          title="LLM Gateway Grafana Dashboard"
+          width="100%"
+          height="1200"
+          frameBorder="0"
+          allow="fullscreen"
+        />
+      </div>
+    </WikiShell>
   )
 }

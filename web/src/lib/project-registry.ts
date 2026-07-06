@@ -39,6 +39,14 @@ export const PROJECTS: ProjectEntry[] = [
     readmePath: join(PROJECTS_ROOT, 'CI', 'README.md'),
   },
   {
+    slug: 'workspace-gateway',
+    displayName: 'WORKSPACE-GATEWAY',
+    language: 'Lua',
+    repoName: 'WORKSPACE-GATEWAY',
+    icon: 'ri-router-line',
+    readmePath: join(PROJECTS_ROOT, 'WORKSPACE-GATEWAY', 'README.md'),
+  },
+  {
     slug: 'workspace-guard',
     displayName: 'WORKSPACE-GUARD',
     language: 'Rust',

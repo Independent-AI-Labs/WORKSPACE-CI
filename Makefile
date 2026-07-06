@@ -180,13 +180,13 @@ _test-push-impl:
 # =============================================================================
 
 .PHONY: wiki-dev-start wiki-dev wiki-dev-stop wiki-dev-restart wiki-dev-status wiki-dev-logs
-wiki-dev-start: ## Start wiki dev server (Next.js HMR on :3001)
+wiki-dev-start: extract-code-stats ## Start wiki dev server (Next.js HMR on :3001)
 	$(MAKE) -C web dev-start
 wiki-dev: wiki-dev-start ## Alias for wiki-dev-start
 	@:
 wiki-dev-stop: ## Stop wiki dev server
 	$(MAKE) -C web dev-stop
-wiki-dev-restart: ## Restart wiki dev server (stop + start)
+wiki-dev-restart: extract-code-stats ## Restart wiki dev server (stop + start)
 	$(MAKE) -C web dev-restart
 wiki-dev-status: ## Show wiki dev server status
 	$(MAKE) -C web dev-status
