@@ -2,7 +2,7 @@ import { WikiShell } from '@/components/wiki/WikiShell'
 import { ContentRenderer } from '@/components/wiki/ContentRenderer'
 import { loadProjectReadme, getProjectSlugs, getProjectBySlug } from '@/lib/project-registry'
 import { notFound } from 'next/navigation'
-import Image from 'next/image'
+import { ThemeLogo } from '@/components/wiki/ThemeLogo'
 import type { Metadata } from 'next'
 
 export async function generateStaticParams() {
@@ -38,7 +38,7 @@ export default async function ProjectReadmePage({
       <div className="project-detail">
         <div className="project-detail__header">
           {project.logoPath ? (
-            <Image src={project.logoPath} className="project-detail__logo" alt="" width={32} height={32} unoptimized />
+            <ThemeLogo src={project.logoPath} className="project-detail__logo" />
           ) : (
             <i className={project.icon} aria-hidden="true" />
           )}

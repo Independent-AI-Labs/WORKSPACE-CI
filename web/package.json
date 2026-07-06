@@ -8,7 +8,8 @@
     "npm": ">=11"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/sync-logos.mjs && next dev",
+    "prebuild": "node scripts/sync-logos.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

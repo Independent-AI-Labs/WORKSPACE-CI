@@ -103,6 +103,8 @@ async function main() {
 
   await writeLock()
 
+  await import('./sync-logos.mjs')
+
   const args = ['dev', '-H', HOST, '-p', String(APP_PORT), ...process.argv.slice(2)]
   const startedAt = Date.now()
   console.error(`[dev-single] starting next dev (pid=${process.pid}) on ${HOST}:${APP_PORT}`)

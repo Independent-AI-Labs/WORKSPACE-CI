@@ -47,7 +47,7 @@ describe('WikiSidebar', () => {
 
   it('renders all nav items', () => {
     render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
-    expect(screen.getByText('Home')).toBeInTheDocument()
+    expect(screen.getByText('Guardrail Ecosystem')).toBeInTheDocument()
     expect(screen.getByText('Runtime Hooks')).toBeInTheDocument()
     expect(screen.getByText('Guard Policies')).toBeInTheDocument()
     expect(screen.getByText('LLM Gateway')).toBeInTheDocument()

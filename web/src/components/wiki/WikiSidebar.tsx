@@ -1,12 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
 import type { WikiStats } from '@/lib/search-data'
 import type { Branding } from '@/lib/branding'
 import { useSidebarStore } from '@/stores/sidebar-store'
+import { ThemeLogo } from './ThemeLogo'
 
 interface NavItem {
   href: string
@@ -17,7 +17,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/', label: 'Home', icon: 'ri-home-4-line' },
+  { href: '/', label: 'Guardrail Ecosystem', icon: 'ri-dna-line' },
   { href: '/hooks', label: 'Git Hooks', icon: 'ri-git-commit-line', count: 'hooks' },
   { href: '/runtime-hooks', label: 'Runtime Hooks', icon: 'ri-pulse-line', count: 'runtimeHooks' },
   { href: '/patterns', label: 'Code Anti-Patterns', icon: 'ri-error-warning-line', count: 'patterns' },
@@ -51,7 +51,12 @@ export function WikiSidebar({ stats, branding }: WikiSidebarProps) {
   return (
     <nav id="wiki-sidebar" className={clsx('wiki-sidebar', mobileOpen && 'is-open')} role="navigation" aria-label="Wiki navigation">
       <div className="wiki-sidebar__header">
-        <Image src={branding.logo_path} className="wiki-sidebar__logo" alt={`${branding.sidebar_title_thin}${branding.sidebar_title_bold} logo`} width={32} height={30} unoptimized priority />
+        <ThemeLogo
+          src={branding.logo_path}
+          className="wiki-sidebar__logo"
+          alt={`${branding.sidebar_title_thin}${branding.sidebar_title_bold} logo`}
+          colorVar="var(--text)"
+        />
         <span className="wiki-sidebar__title">
           <span className="wiki-sidebar__title-thin">{branding.sidebar_title_thin}</span>{branding.sidebar_title_bold}
         </span>

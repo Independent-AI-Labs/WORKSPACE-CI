@@ -167,7 +167,7 @@ function loadScriptsSearch(): SearchIndexEntry[] {
 const staticPages: SearchIndexEntry[] = [
   {
     id: 'page-home',
-    title: 'Home',
+    title: 'Guardrail Ecosystem',
     section: 'Pages',
     content: 'Project catalogue: browse READMEs for all backend projects',
     href: '/',

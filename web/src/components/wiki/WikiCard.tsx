@@ -1,10 +1,10 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import clsx from 'clsx'
 import { marked } from 'marked'
 import { sanitizeHtml } from '@/lib/sanitize'
 import type { ReactNode } from 'react'
 import type { CardItem } from '@/types/card'
+import { ThemeLogo } from './ThemeLogo'
 
 function renderInlineMd(text: string): string {
   return sanitizeHtml(marked.parseInline(text, { gfm: true }) as string)
@@ -40,7 +40,7 @@ export function WikiCard({ item, children, viewDetails }: WikiCardProps) {
     <>
       <div className="wiki-card__header">
         {item.logoPath ? (
-          <Image src={item.logoPath} className="wiki-card__logo" alt="" width={20} height={20} unoptimized />
+          <ThemeLogo src={item.logoPath} className="wiki-card__logo" />
         ) : (
           item.icon && <i className={item.icon} aria-hidden="true" />
         )}

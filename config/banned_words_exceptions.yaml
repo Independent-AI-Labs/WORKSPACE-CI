@@ -211,5 +211,6 @@ exceptions:
 
   # Logo PNGs are binary images and may contain arbitrary byte sequences
   # that match banned Unicode patterns (e.g. em-dash U+2014) by coincidence.
+  # Covers repo res/LOGO.png sources and the wiki public/logos/ build output.
   - pattern: '.*'
-    paths: ['web/public/.*\.png$']
+    paths: ['\.png$']
