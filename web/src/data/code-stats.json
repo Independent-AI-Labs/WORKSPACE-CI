@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-07-06T18:22:14.682533+00:00",
+  "generated_at": "2026-07-06T18:37:01.817070+00:00",
   "totals": {
     "repos": 15,
     "files": 24013,
-    "blank": 939176,
+    "blank": 939178,
     "comment": 636066,
-    "code": 5975693,
-    "lines": 7550935
+    "code": 5975712,
+    "lines": 7550956
   },
   "repos": [
     {
@@ -75,9 +75,9 @@
     {
       "repo": "CI",
       "files": 364,
-      "blank": 7542,
+      "blank": 7544,
       "comment": 3230,
-      "code": 44297
+      "code": 44316
     },
     {
       "repo": "DATAOPS",
@@ -135,9 +135,9 @@
     {
       "language": "TypeScript",
       "files": 4169,
-      "blank": 67988,
+      "blank": 67989,
       "comment": 35464,
-      "code": 623298,
+      "code": 623312,
       "repos": 6
     },
     {
@@ -231,9 +231,9 @@
     {
       "language": "CSS",
       "files": 252,
-      "blank": 6435,
+      "blank": 6436,
       "comment": 1100,
-      "code": 64374,
+      "code": 64379,
       "repos": 6
     },
     {
@@ -594,9 +594,9 @@
       "repo": "CI",
       "language": "TypeScript",
       "files": 171,
-      "blank": 1157,
+      "blank": 1158,
       "comment": 12,
-      "code": 10818
+      "code": 10832
     },
     {
       "repo": "CI",
@@ -642,9 +642,9 @@
       "repo": "CI",
       "language": "CSS",
       "files": 31,
-      "blank": 331,
+      "blank": 332,
       "comment": 98,
-      "code": 2163
+      "code": 2168
     },
     {
       "repo": "CI",

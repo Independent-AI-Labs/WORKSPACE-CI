@@ -208,3 +208,8 @@ exceptions:
   # (EU, NIST, OECD, UNESCO, etc.) and may contain any Unicode characters.
   - pattern: '.*'
     paths: ['web/public/standards/.*\.pdf$']
+
+  # Logo PNGs are binary images and may contain arbitrary byte sequences
+  # that match banned Unicode patterns (e.g. em-dash U+2014) by coincidence.
+  - pattern: '.*'
+    paths: ['web/public/.*\.png$']

@@ -45,6 +45,7 @@ export const PROJECTS: ProjectEntry[] = [
     language: 'Lua',
     repoName: 'WORKSPACE-GATEWAY',
     icon: 'ri-router-line',
+    logoPath: '/GATEWAY_LOGO.png',
     readmePath: join(PROJECTS_ROOT, 'WORKSPACE-GATEWAY', 'README.md'),
     makefilePath: join(PROJECTS_ROOT, 'WORKSPACE-GATEWAY', 'Makefile'),
   },
