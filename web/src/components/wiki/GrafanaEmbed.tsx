@@ -18,7 +18,8 @@ export function GrafanaEmbed({ src, title, className }: GrafanaEmbedProps) {
       title={title}
       className={className}
       width="100%"
-      height="1200"
+      height="600"
+      style={{ height: 'clamp(400px, 80vh, 1200px)' }}
       frameBorder="0"
       allow="fullscreen"
     />

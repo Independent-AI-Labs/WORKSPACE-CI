@@ -63,8 +63,10 @@ export default async function HomePage() {
       <section className="hero">
         <h1 className="hero__title">{getBranding().name}</h1>
         <p className="hero__subtitle">
-          Interactive documentation for git hooks, code anti-patterns, config schemas,
-          runtime guardrails, and AI governance standards.
+          One wiki for the whole AI guardrail stack. Browse READMEs, Makefile
+          targets, language breakdowns, and feedback for every project: native
+          git hooks, syscall-level escape-hatch blocking, and a multi-tenant LLM
+          gateway, side by side.
         </p>
       </section>
       <h1>Project Catalogue</h1>

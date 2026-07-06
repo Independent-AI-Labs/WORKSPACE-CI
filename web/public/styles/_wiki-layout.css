@@ -12,8 +12,10 @@
 
 .wiki-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-2);
   padding: var(--space-3) var(--space-6);
   border-bottom: 1px solid var(--border);
   background: var(--panel);
@@ -65,12 +67,16 @@
     background: transparent;
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     cursor: pointer;
     color: var(--text);
     font-size: 1.25rem;
     flex-shrink: 0;
+    position: fixed;
+    top: var(--space-3);
+    left: var(--space-6);
+    z-index: calc(var(--z-modal) + 1);
   }
 
   .mobile-nav-toggle:hover {
@@ -81,18 +87,22 @@
     position: fixed;
     inset: 0;
     background: var(--overlay-backdrop);
-    z-index: calc(var(--z-sticky) - 1);
+    z-index: calc(var(--z-modal) - 1);
   }
 
-  .wiki-sidebar {
-    position: fixed;
-    left: -260px;
-    width: 260px;
-    transition: left var(--duration-medium);
-    z-index: var(--z-modal);
+  .wiki-header__left {
+    padding-left: calc(44px + var(--space-2));
   }
+}
 
-  .wiki-sidebar.is-open {
-    left: 0;
+@media (max-width: 768px) {
+  .wiki-content {
+    padding: var(--space-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .wiki-content {
+    padding: var(--space-3);
   }
 }

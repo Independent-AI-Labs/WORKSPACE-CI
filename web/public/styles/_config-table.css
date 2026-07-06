@@ -15,3 +15,11 @@
     font-size: var(--text-xs);
   }
 }
+
+@media (max-width: 768px) {
+  .config-field-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

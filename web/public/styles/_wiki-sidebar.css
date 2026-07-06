@@ -141,3 +141,19 @@
     display: none;
   }
 }
+
+/* Mobile: off-canvas drawer. Must come after base .wiki-sidebar rule
+   so position:fixed overrides position:sticky within the same file. */
+@media (max-width: 768px) {
+  .wiki-sidebar {
+    position: fixed;
+    left: -260px;
+    width: 260px;
+    transition: left var(--duration-medium);
+    z-index: var(--z-modal);
+  }
+
+  .wiki-sidebar.is-open {
+    left: 0;
+  }
+}

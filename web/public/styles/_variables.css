@@ -49,16 +49,18 @@
   --space-20: 5rem;        /* 80px */
   --space-24: 6rem;        /* 96px */
 
-  /* ---- Tier 1: Typography scale (font-size) ---- */
+  /* ---- Tier 1: Typography scale (font-size) ----
+     Display tiers (lg+) use clamp() for fluid scaling across 320-1280px.
+     Body/UI tiers (xs/sm/base) stay fixed rem for stability and WCAG minimum. */
   --text-xs: 0.75rem;      /* 12px */
   --text-sm: 0.875rem;     /* 14px */
   --text-base: 1rem;       /* 16px */
-  --text-lg: 1.125rem;     /* 18px */
-  --text-xl: 1.25rem;      /* 20px */
-  --text-2xl: 1.5rem;      /* 24px */
-  --text-3xl: 1.875rem;    /* 30px */
-  --text-4xl: 2.25rem;     /* 36px */
-  --text-5xl: 3rem;        /* 48px */
+  --text-lg: clamp(1rem, 0.9rem + 0.42vw, 1.125rem);     /* 16-18px */
+  --text-xl: clamp(1.125rem, 0.95rem + 0.83vw, 1.25rem); /* 18-20px */
+  --text-2xl: clamp(1.25rem, 0.9rem + 1.67vw, 1.5rem);   /* 20-24px */
+  --text-3xl: clamp(1.5rem, 0.9rem + 3vw, 1.875rem);     /* 24-30px */
+  --text-4xl: clamp(1.75rem, 0.75rem + 5vw, 2.25rem);    /* 28-36px */
+  --text-5xl: clamp(2rem, 0.5rem + 7.5vw, 3rem);         /* 32-48px */
 
   /* ---- Tier 1: Line-height scale ---- */
   --leading-none: 1;

@@ -5,6 +5,12 @@
   margin: var(--space-6) 0;
 }
 
+@media (max-width: 480px) {
+  .wiki-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .card-list-section {
   display: flex;
   flex-direction: column;

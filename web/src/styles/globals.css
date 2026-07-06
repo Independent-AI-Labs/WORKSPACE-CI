@@ -1,6 +1,11 @@
 @import 'tailwindcss';
 @import 'remixicon/fonts/remixicon.css';
 
+img {
+  max-width: 100%;
+  height: auto;
+}
+
 @import '../../public/styles/_variables.css';
 @import '../../public/styles/_components.css';
 @import '../../public/styles/_wiki-layout.css';
@@ -19,7 +24,6 @@
 @import '../../public/styles/_filter-pill.css';
 @import '../../public/styles/_hook-list.css';
 @import '../../public/styles/_config-table.css';
-@import '../../public/styles/_tooling-card.css';
 @import '../../public/styles/_toggle.css';
 @import '../../public/styles/_collapsible-section.css';
 @import '../../public/styles/_error-boundary.css';

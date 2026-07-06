@@ -1,20 +1,48 @@
 {
-  "generated_at": "2026-07-06T13:38:40.816844+00:00",
+  "generated_at": "2026-07-06T18:22:14.682533+00:00",
   "totals": {
-    "repos": 9,
-    "files": 9536,
-    "blank": 223359,
-    "comment": 90920,
-    "code": 1618311,
-    "lines": 1932590
+    "repos": 15,
+    "files": 24013,
+    "blank": 939176,
+    "comment": 636066,
+    "code": 5975693,
+    "lines": 7550935
   },
   "repos": [
+    {
+      "repo": "llamafile",
+      "files": 8006,
+      "blank": 367147,
+      "comment": 357715,
+      "code": 2394222
+    },
     {
       "repo": "opencode",
       "files": 5624,
       "blank": 120733,
       "comment": 19621,
       "code": 1083860
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "files": 2846,
+      "blank": 152498,
+      "comment": 72881,
+      "code": 940191
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "files": 2108,
+      "blank": 95527,
+      "comment": 62061,
+      "code": 507452
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "files": 1311,
+      "blank": 82745,
+      "comment": 41715,
+      "code": 406861
     },
     {
       "repo": "WORKSPACE-PORTAL",
@@ -31,6 +59,13 @@
       "code": 111121
     },
     {
+      "repo": "llamafile/stable-diffusion.cpp",
+      "files": 187,
+      "blank": 17495,
+      "comment": 10632,
+      "code": 103900
+    },
+    {
       "repo": "WORKSPACE-STREAMS/ansible/matrix-docker-ansible-deploy",
       "files": 1144,
       "blank": 32161,
@@ -39,10 +74,10 @@
     },
     {
       "repo": "CI",
-      "files": 354,
-      "blank": 7336,
-      "comment": 3224,
-      "code": 41371
+      "files": 364,
+      "blank": 7542,
+      "comment": 3230,
+      "code": 44297
     },
     {
       "repo": "DATAOPS",
@@ -53,10 +88,10 @@
     },
     {
       "repo": "WORKSPACE-GATEWAY",
-      "files": 66,
-      "blank": 2097,
-      "comment": 93,
-      "code": 9770
+      "files": 67,
+      "blank": 2154,
+      "comment": 97,
+      "code": 10536
     },
     {
       "repo": "WORKSPACE-STREAMS/himalaya",
@@ -70,41 +105,120 @@
       "files": 43,
       "blank": 977,
       "comment": 317,
-      "code": 5312
+      "code": 5310
+    },
+    {
+      "repo": "llamafile/third_party/zipalign",
+      "files": 8,
+      "blank": 142,
+      "comment": 132,
+      "code": 1066
     }
   ],
   "languages": [
     {
+      "language": "C++",
+      "files": 2388,
+      "blank": 236773,
+      "comment": 113980,
+      "code": 1271867,
+      "repos": 5
+    },
+    {
+      "language": "C/C++ Header",
+      "files": 3997,
+      "blank": 193431,
+      "comment": 209913,
+      "code": 1179211,
+      "repos": 6
+    },
+    {
       "language": "TypeScript",
-      "files": 3582,
-      "blank": 58770,
-      "comment": 20177,
-      "code": 569878,
-      "repos": 3
+      "files": 4169,
+      "blank": 67988,
+      "comment": 35464,
+      "code": 623298,
+      "repos": 6
+    },
+    {
+      "language": "C",
+      "files": 365,
+      "blank": 81620,
+      "comment": 123315,
+      "code": 508704,
+      "repos": 6
     },
     {
       "language": "JSON",
-      "files": 344,
-      "blank": 12,
+      "files": 688,
+      "blank": 86,
       "comment": 0,
-      "code": 368944,
-      "repos": 7
+      "code": 418090,
+      "repos": 11
+    },
+    {
+      "language": "CSV",
+      "files": 22,
+      "blank": 0,
+      "comment": 0,
+      "code": 374186,
+      "repos": 2
     },
     {
       "language": "Markdown",
-      "files": 1242,
-      "blank": 93533,
-      "comment": 2727,
-      "code": 235164,
-      "repos": 9
+      "files": 1990,
+      "blank": 119256,
+      "comment": 2784,
+      "code": 321341,
+      "repos": 15
+    },
+    {
+      "language": "Python",
+      "files": 949,
+      "blank": 43798,
+      "comment": 37286,
+      "code": 197128,
+      "repos": 10
+    },
+    {
+      "language": "CUDA",
+      "files": 1085,
+      "blank": 31265,
+      "comment": 7726,
+      "code": 157478,
+      "repos": 4
     },
     {
       "language": "JavaScript",
-      "files": 99,
-      "blank": 1417,
-      "comment": 514,
-      "code": 135757,
-      "repos": 3
+      "files": 173,
+      "blank": 2753,
+      "comment": 1624,
+      "code": 141953,
+      "repos": 7
+    },
+    {
+      "language": "YAML",
+      "files": 1396,
+      "blank": 17200,
+      "comment": 25311,
+      "code": 87438,
+      "repos": 15
+    },
+    {
+      "language": "OpenCL",
+      "files": 521,
+      "blank": 13746,
+      "comment": 2853,
+      "code": 77519,
+      "repos": 4
+    },
+    {
+      "language": "GLSL",
+      "files": 758,
+      "blank": 14890,
+      "comment": 2911,
+      "code": 71241,
+      "repos": 5
     },
     {
       "language": "PO File",
@@ -116,91 +230,227 @@
     },
     {
       "language": "CSS",
-      "files": 242,
-      "blank": 6142,
-      "comment": 997,
-      "code": 62536,
-      "repos": 3
-    },
-    {
-      "language": "YAML",
-      "files": 1049,
-      "blank": 12496,
-      "comment": 21518,
-      "code": 52105,
-      "repos": 9
+      "files": 252,
+      "blank": 6435,
+      "comment": 1100,
+      "code": 64374,
+      "repos": 6
     },
     {
       "language": "Jinja Template",
-      "files": 461,
-      "blank": 6532,
-      "comment": 1003,
-      "code": 43824,
-      "repos": 2
-    },
-    {
-      "language": "Python",
-      "files": 203,
-      "blank": 7951,
-      "comment": 4341,
-      "code": 29559,
-      "repos": 5
-    },
-    {
-      "language": "SVG",
-      "files": 1223,
-      "blank": 11,
-      "comment": 0,
-      "code": 16009,
-      "repos": 5
-    },
-    {
-      "language": "Rust",
-      "files": 172,
-      "blank": 2186,
-      "comment": 1549,
-      "code": 12898,
-      "repos": 3
-    },
-    {
-      "language": "Bourne Shell",
-      "files": 83,
-      "blank": 1443,
-      "comment": 1226,
-      "code": 8306,
-      "repos": 7
-    },
-    {
-      "language": "Bourne Again Shell",
-      "files": 20,
-      "blank": 450,
-      "comment": 480,
-      "code": 3134,
-      "repos": 2
-    },
-    {
-      "language": "Text",
-      "files": 59,
-      "blank": 729,
-      "comment": 0,
-      "code": 2507,
+      "files": 575,
+      "blank": 7542,
+      "comment": 1547,
+      "code": 57126,
       "repos": 5
     },
     {
       "language": "HTML",
-      "files": 4,
-      "blank": 251,
-      "comment": 0,
-      "code": 1940,
+      "files": 20,
+      "blank": 20411,
+      "comment": 26,
+      "code": 56806,
+      "repos": 5
+    },
+    {
+      "language": "Svelte",
+      "files": 564,
+      "blank": 5786,
+      "comment": 104,
+      "code": 39906,
       "repos": 2
     },
     {
-      "language": "make",
-      "files": 10,
-      "blank": 325,
-      "comment": 248,
-      "code": 1376,
+      "language": "Metal",
+      "files": 5,
+      "blank": 10617,
+      "comment": 2017,
+      "code": 39608,
+      "repos": 4
+    },
+    {
+      "language": "Bourne Shell",
+      "files": 349,
+      "blank": 6549,
+      "comment": 5676,
+      "code": 36502,
+      "repos": 13
+    },
+    {
+      "language": "WGSL",
+      "files": 159,
+      "blank": 4681,
+      "comment": 893,
+      "code": 27012,
+      "repos": 4
+    },
+    {
+      "language": "CMake",
+      "files": 400,
+      "blank": 5375,
+      "comment": 4175,
+      "code": 26953,
+      "repos": 5
+    },
+    {
+      "language": "Rust",
+      "files": 236,
+      "blank": 2990,
+      "comment": 3573,
+      "code": 21554,
+      "repos": 5
+    },
+    {
+      "language": "SVG",
+      "files": 1238,
+      "blank": 25,
+      "comment": 8,
+      "code": 18945,
       "repos": 7
+    },
+    {
+      "language": "PHP",
+      "files": 47,
+      "blank": 691,
+      "comment": 2047,
+      "code": 13020,
+      "repos": 1
+    },
+    {
+      "language": "Objective-C",
+      "files": 24,
+      "blank": 3046,
+      "comment": 1090,
+      "code": 10205,
+      "repos": 4
+    },
+    {
+      "language": "Swift",
+      "files": 98,
+      "blank": 1166,
+      "comment": 1146,
+      "code": 7662,
+      "repos": 4
+    },
+    {
+      "language": "Fortran 77",
+      "files": 21,
+      "blank": 120,
+      "comment": 2,
+      "code": 6449,
+      "repos": 1
+    },
+    {
+      "language": "Text",
+      "files": 149,
+      "blank": 915,
+      "comment": 0,
+      "code": 5939,
+      "repos": 10
+    },
+    {
+      "language": "make",
+      "files": 52,
+      "blank": 1189,
+      "comment": 1443,
+      "code": 4821,
+      "repos": 13
+    },
+    {
+      "language": "Kotlin",
+      "files": 46,
+      "blank": 596,
+      "comment": 764,
+      "code": 3822,
+      "repos": 3
+    },
+    {
+      "language": "Ruby",
+      "files": 48,
+      "blank": 626,
+      "comment": 22,
+      "code": 3580,
+      "repos": 2
+    },
+    {
+      "language": "Java",
+      "files": 90,
+      "blank": 1062,
+      "comment": 1150,
+      "code": 3472,
+      "repos": 2
+    },
+    {
+      "language": "Go",
+      "files": 36,
+      "blank": 784,
+      "comment": 734,
+      "code": 3218,
+      "repos": 2
+    },
+    {
+      "language": "Bourne Again Shell",
+      "files": 24,
+      "blank": 480,
+      "comment": 564,
+      "code": 3200,
+      "repos": 4
+    },
+    {
+      "language": "diff",
+      "files": 66,
+      "blank": 824,
+      "comment": 2942,
+      "code": 3066,
+      "repos": 2
+    },
+    {
+      "language": "Pascal",
+      "files": 15,
+      "blank": 881,
+      "comment": 4057,
+      "code": 2848,
+      "repos": 2
+    },
+    {
+      "language": "DOS Batch",
+      "files": 30,
+      "blank": 510,
+      "comment": 372,
+      "code": 2836,
+      "repos": 3
+    },
+    {
+      "language": "Dockerfile",
+      "files": 53,
+      "blank": 959,
+      "comment": 305,
+      "code": 2539,
+      "repos": 7
+    },
+    {
+      "language": "TOML",
+      "files": 79,
+      "blank": 446,
+      "comment": 1622,
+      "code": 2055,
+      "repos": 11
+    },
+    {
+      "language": "Nix",
+      "files": 34,
+      "blank": 189,
+      "comment": 399,
+      "code": 1679,
+      "repos": 6
+    },
+    {
+      "language": "vim script",
+      "files": 4,
+      "blank": 304,
+      "comment": 420,
+      "code": 1566,
+      "repos": 3
     },
     {
       "language": "Lua",
@@ -211,6 +461,14 @@
       "repos": 2
     },
     {
+      "language": "XML",
+      "files": 42,
+      "blank": 32,
+      "comment": 20,
+      "code": 1152,
+      "repos": 4
+    },
+    {
       "language": "Astro",
       "files": 8,
       "blank": 150,
@@ -219,12 +477,12 @@
       "repos": 1
     },
     {
-      "language": "diff",
-      "files": 14,
-      "blank": 56,
-      "comment": 675,
-      "code": 765,
-      "repos": 1
+      "language": "Gradle",
+      "files": 26,
+      "blank": 136,
+      "comment": 18,
+      "code": 976,
+      "repos": 3
     },
     {
       "language": "SQL",
@@ -235,19 +493,11 @@
       "repos": 2
     },
     {
-      "language": "TOML",
-      "files": 24,
-      "blank": 288,
-      "comment": 1060,
-      "code": 609,
-      "repos": 8
-    },
-    {
-      "language": "Nix",
-      "files": 12,
-      "blank": 51,
-      "comment": 45,
-      "code": 541,
+      "language": "PowerShell",
+      "files": 15,
+      "blank": 201,
+      "comment": 68,
+      "code": 595,
       "repos": 4
     },
     {
@@ -259,12 +509,12 @@
       "repos": 1
     },
     {
-      "language": "GLSL",
-      "files": 11,
-      "blank": 15,
+      "language": "INI",
+      "files": 13,
+      "blank": 47,
       "comment": 0,
-      "code": 174,
-      "repos": 1
+      "code": 224,
+      "repos": 6
     },
     {
       "language": "Snakemake",
@@ -275,35 +525,67 @@
       "repos": 1
     },
     {
-      "language": "Dockerfile",
-      "files": 11,
-      "blank": 35,
-      "comment": 3,
-      "code": 105,
-      "repos": 3
+      "language": "Objective-C++",
+      "files": 2,
+      "blank": 36,
+      "comment": 6,
+      "code": 104,
+      "repos": 2
     },
     {
-      "language": "INI",
+      "language": "TNSDL",
       "files": 3,
-      "blank": 13,
+      "blank": 21,
       "comment": 0,
-      "code": 66,
+      "code": 99,
       "repos": 3
     },
     {
-      "language": "PowerShell",
+      "language": "Windows Module Definition",
       "files": 1,
-      "blank": 13,
+      "blank": 3,
       "comment": 0,
-      "code": 57,
+      "code": 92,
       "repos": 1
     },
     {
-      "language": "XML",
-      "files": 3,
+      "language": "Properties",
+      "files": 16,
       "blank": 0,
+      "comment": 116,
+      "code": 76,
+      "repos": 3
+    },
+    {
+      "language": "IDL",
+      "files": 5,
+      "blank": 23,
       "comment": 0,
-      "code": 27,
+      "code": 75,
+      "repos": 4
+    },
+    {
+      "language": "ProGuard",
+      "files": 8,
+      "blank": 26,
+      "comment": 108,
+      "code": 24,
+      "repos": 3
+    },
+    {
+      "language": "SCSS",
+      "files": 2,
+      "blank": 4,
+      "comment": 8,
+      "code": 20,
+      "repos": 2
+    },
+    {
+      "language": "HCL",
+      "files": 1,
+      "blank": 2,
+      "comment": 0,
+      "code": 9,
       "repos": 1
     }
   ],
@@ -311,10 +593,10 @@
     {
       "repo": "CI",
       "language": "TypeScript",
-      "files": 164,
-      "blank": 1091,
-      "comment": 13,
-      "code": 10142
+      "files": 171,
+      "blank": 1157,
+      "comment": 12,
+      "code": 10818
     },
     {
       "repo": "CI",
@@ -327,10 +609,10 @@
     {
       "repo": "CI",
       "language": "Markdown",
-      "files": 12,
-      "blank": 2141,
+      "files": 13,
+      "blank": 2250,
       "comment": 0,
-      "code": 7775
+      "code": 8138
     },
     {
       "repo": "CI",
@@ -342,6 +624,14 @@
     },
     {
       "repo": "CI",
+      "language": "JSON",
+      "files": 10,
+      "blank": 0,
+      "comment": 0,
+      "code": 3629
+    },
+    {
+      "repo": "CI",
       "language": "Bourne Again Shell",
       "files": 14,
       "blank": 366,
@@ -350,19 +640,11 @@
     },
     {
       "repo": "CI",
-      "language": "JSON",
-      "files": 10,
-      "blank": 0,
-      "comment": 0,
-      "code": 1955
-    },
-    {
-      "repo": "CI",
       "language": "CSS",
-      "files": 29,
-      "blank": 300,
-      "comment": 91,
-      "code": 1951
+      "files": 31,
+      "blank": 331,
+      "comment": 98,
+      "code": 2163
     },
     {
       "repo": "CI",
@@ -370,7 +652,7 @@
       "files": 35,
       "blank": 347,
       "comment": 469,
-      "code": 1789
+      "code": 1790
     },
     {
       "repo": "CI",
@@ -475,6 +757,1390 @@
       "blank": 6,
       "comment": 0,
       "code": 48
+    },
+    {
+      "repo": "llamafile",
+      "language": "C/C++ Header",
+      "files": 3147,
+      "blank": 114046,
+      "comment": 137508,
+      "code": 779058
+    },
+    {
+      "repo": "llamafile",
+      "language": "C++",
+      "files": 1147,
+      "blank": 108961,
+      "comment": 54776,
+      "code": 587116
+    },
+    {
+      "repo": "llamafile",
+      "language": "C",
+      "files": 221,
+      "blank": 49373,
+      "comment": 113449,
+      "code": 359568
+    },
+    {
+      "repo": "llamafile",
+      "language": "CSV",
+      "files": 11,
+      "blank": 0,
+      "comment": 0,
+      "code": 187093
+    },
+    {
+      "repo": "llamafile",
+      "language": "Python",
+      "files": 378,
+      "blank": 18127,
+      "comment": 16674,
+      "code": 84513
+    },
+    {
+      "repo": "llamafile",
+      "language": "CUDA",
+      "files": 335,
+      "blank": 13334,
+      "comment": 3405,
+      "code": 68176
+    },
+    {
+      "repo": "llamafile",
+      "language": "Markdown",
+      "files": 394,
+      "blank": 13419,
+      "comment": 31,
+      "code": 44511
+    },
+    {
+      "repo": "llamafile",
+      "language": "HTML",
+      "files": 8,
+      "blank": 10080,
+      "comment": 13,
+      "code": 27433
+    },
+    {
+      "repo": "llamafile",
+      "language": "TypeScript",
+      "files": 290,
+      "blank": 4576,
+      "comment": 7644,
+      "code": 26372
+    },
+    {
+      "repo": "llamafile",
+      "language": "GLSL",
+      "files": 238,
+      "blank": 5155,
+      "comment": 1003,
+      "code": 25234
+    },
+    {
+      "repo": "llamafile",
+      "language": "OpenCL",
+      "files": 159,
+      "blank": 4186,
+      "comment": 899,
+      "code": 23758
+    },
+    {
+      "repo": "llamafile",
+      "language": "JSON",
+      "files": 171,
+      "blank": 37,
+      "comment": 0,
+      "code": 23617
+    },
+    {
+      "repo": "llamafile",
+      "language": "Svelte",
+      "files": 282,
+      "blank": 2893,
+      "comment": 52,
+      "code": 19953
+    },
+    {
+      "repo": "llamafile",
+      "language": "YAML",
+      "files": 180,
+      "blank": 2367,
+      "comment": 1887,
+      "code": 17835
+    },
+    {
+      "repo": "llamafile",
+      "language": "Metal",
+      "files": 2,
+      "blank": 4203,
+      "comment": 810,
+      "code": 15731
+    },
+    {
+      "repo": "llamafile",
+      "language": "Bourne Shell",
+      "files": 145,
+      "blank": 2712,
+      "comment": 2495,
+      "code": 15249
+    },
+    {
+      "repo": "llamafile",
+      "language": "PHP",
+      "files": 47,
+      "blank": 691,
+      "comment": 2047,
+      "code": 13020
+    },
+    {
+      "repo": "llamafile",
+      "language": "CMake",
+      "files": 181,
+      "blank": 2363,
+      "comment": 1932,
+      "code": 11556
+    },
+    {
+      "repo": "llamafile",
+      "language": "WGSL",
+      "files": 58,
+      "blank": 1771,
+      "comment": 343,
+      "code": 10511
+    },
+    {
+      "repo": "llamafile",
+      "language": "Jinja Template",
+      "files": 57,
+      "blank": 505,
+      "comment": 272,
+      "code": 6651
+    },
+    {
+      "repo": "llamafile",
+      "language": "Fortran 77",
+      "files": 21,
+      "blank": 120,
+      "comment": 2,
+      "code": 6449
+    },
+    {
+      "repo": "llamafile",
+      "language": "Rust",
+      "files": 32,
+      "blank": 402,
+      "comment": 1012,
+      "code": 4328
+    },
+    {
+      "repo": "llamafile",
+      "language": "Objective-C",
+      "files": 11,
+      "blank": 1244,
+      "comment": 467,
+      "code": 4140
+    },
+    {
+      "repo": "llamafile",
+      "language": "Swift",
+      "files": 49,
+      "blank": 583,
+      "comment": 573,
+      "code": 3831
+    },
+    {
+      "repo": "llamafile",
+      "language": "JavaScript",
+      "files": 37,
+      "blank": 668,
+      "comment": 555,
+      "code": 3098
+    },
+    {
+      "repo": "llamafile",
+      "language": "Pascal",
+      "files": 14,
+      "blank": 879,
+      "comment": 4046,
+      "code": 2773
+    },
+    {
+      "repo": "llamafile",
+      "language": "diff",
+      "files": 52,
+      "blank": 768,
+      "comment": 2267,
+      "code": 2301
+    },
+    {
+      "repo": "llamafile",
+      "language": "make",
+      "files": 28,
+      "blank": 551,
+      "comment": 821,
+      "code": 2177
+    },
+    {
+      "repo": "llamafile",
+      "language": "DOS Batch",
+      "files": 18,
+      "blank": 343,
+      "comment": 312,
+      "code": 2118
+    },
+    {
+      "repo": "llamafile",
+      "language": "Kotlin",
+      "files": 23,
+      "blank": 298,
+      "comment": 382,
+      "code": 1911
+    },
+    {
+      "repo": "llamafile",
+      "language": "Ruby",
+      "files": 24,
+      "blank": 313,
+      "comment": 11,
+      "code": 1790
+    },
+    {
+      "repo": "llamafile",
+      "language": "Java",
+      "files": 45,
+      "blank": 531,
+      "comment": 575,
+      "code": 1736
+    },
+    {
+      "repo": "llamafile",
+      "language": "Text",
+      "files": 45,
+      "blank": 93,
+      "comment": 0,
+      "code": 1716
+    },
+    {
+      "repo": "llamafile",
+      "language": "Go",
+      "files": 18,
+      "blank": 392,
+      "comment": 367,
+      "code": 1609
+    },
+    {
+      "repo": "llamafile",
+      "language": "SVG",
+      "files": 8,
+      "blank": 7,
+      "comment": 4,
+      "code": 1475
+    },
+    {
+      "repo": "llamafile",
+      "language": "Dockerfile",
+      "files": 21,
+      "blank": 462,
+      "comment": 151,
+      "code": 1217
+    },
+    {
+      "repo": "llamafile",
+      "language": "CSS",
+      "files": 4,
+      "blank": 131,
+      "comment": 48,
+      "code": 813
+    },
+    {
+      "repo": "llamafile",
+      "language": "vim script",
+      "files": 2,
+      "blank": 152,
+      "comment": 210,
+      "code": 783
+    },
+    {
+      "repo": "llamafile",
+      "language": "TOML",
+      "files": 28,
+      "blank": 80,
+      "comment": 281,
+      "code": 739
+    },
+    {
+      "repo": "llamafile",
+      "language": "Nix",
+      "files": 11,
+      "blank": 69,
+      "comment": 177,
+      "code": 569
+    },
+    {
+      "repo": "llamafile",
+      "language": "XML",
+      "files": 19,
+      "blank": 16,
+      "comment": 10,
+      "code": 559
+    },
+    {
+      "repo": "llamafile",
+      "language": "Gradle",
+      "files": 13,
+      "blank": 68,
+      "comment": 9,
+      "code": 488
+    },
+    {
+      "repo": "llamafile",
+      "language": "PowerShell",
+      "files": 7,
+      "blank": 94,
+      "comment": 34,
+      "code": 269
+    },
+    {
+      "repo": "llamafile",
+      "language": "Windows Module Definition",
+      "files": 1,
+      "blank": 3,
+      "comment": 0,
+      "code": 92
+    },
+    {
+      "repo": "llamafile",
+      "language": "INI",
+      "files": 5,
+      "blank": 17,
+      "comment": 0,
+      "code": 79
+    },
+    {
+      "repo": "llamafile",
+      "language": "Objective-C++",
+      "files": 1,
+      "blank": 18,
+      "comment": 3,
+      "code": 52
+    },
+    {
+      "repo": "llamafile",
+      "language": "Properties",
+      "files": 8,
+      "blank": 0,
+      "comment": 58,
+      "code": 38
+    },
+    {
+      "repo": "llamafile",
+      "language": "Bourne Again Shell",
+      "files": 2,
+      "blank": 15,
+      "comment": 42,
+      "code": 33
+    },
+    {
+      "repo": "llamafile",
+      "language": "TNSDL",
+      "files": 1,
+      "blank": 7,
+      "comment": 0,
+      "code": 33
+    },
+    {
+      "repo": "llamafile",
+      "language": "IDL",
+      "files": 2,
+      "blank": 9,
+      "comment": 0,
+      "code": 29
+    },
+    {
+      "repo": "llamafile",
+      "language": "ProGuard",
+      "files": 4,
+      "blank": 13,
+      "comment": 54,
+      "code": 12
+    },
+    {
+      "repo": "llamafile",
+      "language": "SCSS",
+      "files": 1,
+      "blank": 2,
+      "comment": 4,
+      "code": 10
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "C++",
+      "files": 567,
+      "blank": 56948,
+      "comment": 23401,
+      "code": 298984
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "CSV",
+      "files": 11,
+      "blank": 0,
+      "comment": 0,
+      "code": 187093
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "C/C++ Header",
+      "files": 300,
+      "blank": 30450,
+      "comment": 27242,
+      "code": 149862
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "C",
+      "files": 45,
+      "blank": 10834,
+      "comment": 2796,
+      "code": 48514
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "Python",
+      "files": 196,
+      "blank": 9710,
+      "comment": 4998,
+      "code": 46575
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "CUDA",
+      "files": 260,
+      "blank": 6202,
+      "comment": 1621,
+      "code": 31285
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "HTML",
+      "files": 3,
+      "blank": 9660,
+      "comment": 0,
+      "code": 25518
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "TypeScript",
+      "files": 280,
+      "blank": 4385,
+      "comment": 7214,
+      "code": 24281
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "OpenCL",
+      "files": 142,
+      "blank": 3912,
+      "comment": 784,
+      "code": 21963
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "Svelte",
+      "files": 282,
+      "blank": 2893,
+      "comment": 52,
+      "code": 19953
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "GLSL",
+      "files": 167,
+      "blank": 3325,
+      "comment": 697,
+      "code": 16027
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "Markdown",
+      "files": 122,
+      "blank": 4827,
+      "comment": 14,
+      "code": 15810
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "Metal",
+      "files": 1,
+      "blank": 2211,
+      "comment": 397,
+      "code": 8146
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "YAML",
+      "files": 72,
+      "blank": 1114,
+      "comment": 602,
+      "code": 7055
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "Bourne Shell",
+      "files": 68,
+      "blank": 1246,
+      "comment": 771,
+      "code": 6523
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "Jinja Template",
+      "files": 55,
+      "blank": 446,
+      "comment": 240,
+      "code": 6485
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "WGSL",
+      "files": 42,
+      "blank": 1134,
+      "comment": 206,
+      "code": 5956
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "CMake",
+      "files": 94,
+      "blank": 1044,
+      "comment": 479,
+      "code": 5548
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "JSON",
+      "files": 15,
+      "blank": 16,
+      "comment": 0,
+      "code": 3319
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "Objective-C",
+      "files": 2,
+      "blank": 558,
+      "comment": 156,
+      "code": 1925
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "SVG",
+      "files": 7,
+      "blank": 7,
+      "comment": 4,
+      "code": 1461
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "Kotlin",
+      "files": 11,
+      "blank": 181,
+      "comment": 333,
+      "code": 1140
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "Dockerfile",
+      "files": 11,
+      "blank": 381,
+      "comment": 134,
+      "code": 1034
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "Swift",
+      "files": 9,
+      "blank": 219,
+      "comment": 40,
+      "code": 1017
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "CSS",
+      "files": 2,
+      "blank": 121,
+      "comment": 45,
+      "code": 770
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "Text",
+      "files": 24,
+      "blank": 24,
+      "comment": 0,
+      "code": 726
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "make",
+      "files": 4,
+      "blank": 129,
+      "comment": 128,
+      "code": 642
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "Nix",
+      "files": 11,
+      "blank": 69,
+      "comment": 177,
+      "code": 569
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "vim script",
+      "files": 1,
+      "blank": 129,
+      "comment": 152,
+      "code": 502
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "JavaScript",
+      "files": 6,
+      "blank": 70,
+      "comment": 63,
+      "code": 403
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "DOS Batch",
+      "files": 6,
+      "blank": 63,
+      "comment": 32,
+      "code": 371
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "PowerShell",
+      "files": 6,
+      "blank": 93,
+      "comment": 33,
+      "code": 257
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "TOML",
+      "files": 4,
+      "blank": 34,
+      "comment": 9,
+      "code": 154
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "Gradle",
+      "files": 4,
+      "blank": 22,
+      "comment": 1,
+      "code": 138
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "INI",
+      "files": 4,
+      "blank": 12,
+      "comment": 0,
+      "code": 62
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "XML",
+      "files": 4,
+      "blank": 5,
+      "comment": 0,
+      "code": 41
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "TNSDL",
+      "files": 1,
+      "blank": 7,
+      "comment": 0,
+      "code": 33
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "IDL",
+      "files": 1,
+      "blank": 5,
+      "comment": 0,
+      "code": 17
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "ProGuard",
+      "files": 3,
+      "blank": 10,
+      "comment": 36,
+      "code": 12
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "Properties",
+      "files": 2,
+      "blank": 0,
+      "comment": 20,
+      "code": 10
+    },
+    {
+      "repo": "llamafile/llama.cpp",
+      "language": "SCSS",
+      "files": 1,
+      "blank": 2,
+      "comment": 4,
+      "code": 10
+    },
+    {
+      "repo": "llamafile/stable-diffusion.cpp",
+      "language": "C/C++ Header",
+      "files": 92,
+      "blank": 13550,
+      "comment": 10048,
+      "code": 77503
+    },
+    {
+      "repo": "llamafile/stable-diffusion.cpp",
+      "language": "C++",
+      "files": 38,
+      "blank": 2443,
+      "comment": 353,
+      "code": 20445
+    },
+    {
+      "repo": "llamafile/stable-diffusion.cpp",
+      "language": "Markdown",
+      "files": 36,
+      "blank": 961,
+      "comment": 3,
+      "code": 2805
+    },
+    {
+      "repo": "llamafile/stable-diffusion.cpp",
+      "language": "C",
+      "files": 1,
+      "blank": 265,
+      "comment": 125,
+      "code": 1678
+    },
+    {
+      "repo": "llamafile/stable-diffusion.cpp",
+      "language": "YAML",
+      "files": 6,
+      "blank": 115,
+      "comment": 7,
+      "code": 858
+    },
+    {
+      "repo": "llamafile/stable-diffusion.cpp",
+      "language": "CMake",
+      "files": 5,
+      "blank": 63,
+      "comment": 17,
+      "code": 388
+    },
+    {
+      "repo": "llamafile/stable-diffusion.cpp",
+      "language": "make",
+      "files": 1,
+      "blank": 36,
+      "comment": 58,
+      "code": 83
+    },
+    {
+      "repo": "llamafile/stable-diffusion.cpp",
+      "language": "Dockerfile",
+      "files": 5,
+      "blank": 43,
+      "comment": 0,
+      "code": 72
+    },
+    {
+      "repo": "llamafile/stable-diffusion.cpp",
+      "language": "Python",
+      "files": 1,
+      "blank": 16,
+      "comment": 18,
+      "code": 54
+    },
+    {
+      "repo": "llamafile/stable-diffusion.cpp",
+      "language": "Bourne Shell",
+      "files": 1,
+      "blank": 0,
+      "comment": 3,
+      "code": 7
+    },
+    {
+      "repo": "llamafile/stable-diffusion.cpp",
+      "language": "Text",
+      "files": 1,
+      "blank": 3,
+      "comment": 0,
+      "code": 7
+    },
+    {
+      "repo": "llamafile/third_party/zipalign",
+      "language": "C",
+      "files": 1,
+      "blank": 51,
+      "comment": 47,
+      "code": 435
+    },
+    {
+      "repo": "llamafile/third_party/zipalign",
+      "language": "C/C++ Header",
+      "files": 1,
+      "blank": 26,
+      "comment": 7,
+      "code": 231
+    },
+    {
+      "repo": "llamafile/third_party/zipalign",
+      "language": "Bourne Shell",
+      "files": 2,
+      "blank": 30,
+      "comment": 78,
+      "code": 215
+    },
+    {
+      "repo": "llamafile/third_party/zipalign",
+      "language": "YAML",
+      "files": 2,
+      "blank": 8,
+      "comment": 0,
+      "code": 109
+    },
+    {
+      "repo": "llamafile/third_party/zipalign",
+      "language": "Markdown",
+      "files": 1,
+      "blank": 23,
+      "comment": 0,
+      "code": 59
+    },
+    {
+      "repo": "llamafile/third_party/zipalign",
+      "language": "make",
+      "files": 1,
+      "blank": 4,
+      "comment": 0,
+      "code": 17
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "C++",
+      "files": 396,
+      "blank": 38583,
+      "comment": 23468,
+      "code": 215731
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "C",
+      "files": 52,
+      "blank": 12254,
+      "comment": 3474,
+      "code": 56187
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "C/C++ Header",
+      "files": 301,
+      "blank": 11062,
+      "comment": 15046,
+      "code": 52187
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "Python",
+      "files": 151,
+      "blank": 7530,
+      "comment": 10815,
+      "code": 34456
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "CUDA",
+      "files": 260,
+      "blank": 6201,
+      "comment": 1612,
+      "code": 31246
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "OpenCL",
+      "files": 142,
+      "blank": 3912,
+      "comment": 784,
+      "code": 21963
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "Markdown",
+      "files": 158,
+      "blank": 5432,
+      "comment": 9,
+      "code": 19766
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "JSON",
+      "files": 149,
+      "blank": 21,
+      "comment": 0,
+      "code": 18378
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "GLSL",
+      "files": 167,
+      "blank": 3325,
+      "comment": 697,
+      "code": 16027
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "Metal",
+      "files": 1,
+      "blank": 2211,
+      "comment": 397,
+      "code": 8146
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "YAML",
+      "files": 80,
+      "blank": 787,
+      "comment": 1239,
+      "code": 7933
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "WGSL",
+      "files": 42,
+      "blank": 1134,
+      "comment": 206,
+      "code": 5956
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "CMake",
+      "files": 57,
+      "blank": 1028,
+      "comment": 1274,
+      "code": 5058
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "Rust",
+      "files": 32,
+      "blank": 402,
+      "comment": 1012,
+      "code": 4328
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "Swift",
+      "files": 32,
+      "blank": 276,
+      "comment": 510,
+      "code": 2235
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "TypeScript",
+      "files": 10,
+      "blank": 191,
+      "comment": 430,
+      "code": 2091
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "Objective-C",
+      "files": 2,
+      "blank": 558,
+      "comment": 156,
+      "code": 1925
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "Bourne Shell",
+      "files": 17,
+      "blank": 323,
+      "comment": 401,
+      "code": 1221
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "JavaScript",
+      "files": 19,
+      "blank": 136,
+      "comment": 135,
+      "code": 925
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "Text",
+      "files": 10,
+      "blank": 2,
+      "comment": 0,
+      "code": 625
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "TOML",
+      "files": 23,
+      "blank": 45,
+      "comment": 272,
+      "code": 554
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "make",
+      "files": 1,
+      "blank": 36,
+      "comment": 81,
+      "code": 206
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "Jinja Template",
+      "files": 2,
+      "blank": 59,
+      "comment": 32,
+      "code": 166
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "Pascal",
+      "files": 1,
+      "blank": 2,
+      "comment": 11,
+      "code": 75
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "TNSDL",
+      "files": 1,
+      "blank": 7,
+      "comment": 0,
+      "code": 33
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "IDL",
+      "files": 1,
+      "blank": 5,
+      "comment": 0,
+      "code": 17
+    },
+    {
+      "repo": "llamafile/transcribe.cpp",
+      "language": "INI",
+      "files": 1,
+      "blank": 5,
+      "comment": 0,
+      "code": 17
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "C++",
+      "files": 240,
+      "blank": 29838,
+      "comment": 11982,
+      "code": 149591
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "C/C++ Header",
+      "files": 156,
+      "blank": 24297,
+      "comment": 20062,
+      "code": 120370
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "C",
+      "files": 45,
+      "blank": 8843,
+      "comment": 3424,
+      "code": 42322
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "CUDA",
+      "files": 230,
+      "blank": 5528,
+      "comment": 1088,
+      "code": 26771
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "GLSL",
+      "files": 175,
+      "blank": 3070,
+      "comment": 514,
+      "code": 13779
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "OpenCL",
+      "files": 78,
+      "blank": 1736,
+      "comment": 386,
+      "code": 9835
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "Metal",
+      "files": 1,
+      "blank": 1992,
+      "comment": 413,
+      "code": 7585
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "Bourne Shell",
+      "files": 33,
+      "blank": 766,
+      "comment": 698,
+      "code": 4894
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "WGSL",
+      "files": 17,
+      "blank": 642,
+      "comment": 138,
+      "code": 4589
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "CMake",
+      "files": 63,
+      "blank": 877,
+      "comment": 473,
+      "code": 4403
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "Markdown",
+      "files": 36,
+      "blank": 928,
+      "comment": 0,
+      "code": 2463
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "Objective-C",
+      "files": 9,
+      "blank": 686,
+      "comment": 311,
+      "code": 2215
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "Python",
+      "files": 20,
+      "blank": 464,
+      "comment": 440,
+      "code": 1971
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "JSON",
+      "files": 9,
+      "blank": 0,
+      "comment": 0,
+      "code": 1931
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "HTML",
+      "files": 5,
+      "blank": 420,
+      "comment": 13,
+      "code": 1915
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "Ruby",
+      "files": 24,
+      "blank": 313,
+      "comment": 11,
+      "code": 1790
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "JavaScript",
+      "files": 12,
+      "blank": 462,
+      "comment": 357,
+      "code": 1770
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "Java",
+      "files": 45,
+      "blank": 531,
+      "comment": 575,
+      "code": 1736
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "Go",
+      "files": 18,
+      "blank": 392,
+      "comment": 367,
+      "code": 1609
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "YAML",
+      "files": 7,
+      "blank": 311,
+      "comment": 58,
+      "code": 1503
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "Kotlin",
+      "files": 12,
+      "blank": 117,
+      "comment": 49,
+      "code": 771
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "Swift",
+      "files": 8,
+      "blank": 88,
+      "comment": 23,
+      "code": 579
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "XML",
+      "files": 16,
+      "blank": 11,
+      "comment": 10,
+      "code": 525
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "Text",
+      "files": 10,
+      "blank": 64,
+      "comment": 0,
+      "code": 358
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "Gradle",
+      "files": 9,
+      "blank": 46,
+      "comment": 8,
+      "code": 350
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "DOS Batch",
+      "files": 6,
+      "blank": 104,
+      "comment": 28,
+      "code": 347
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "make",
+      "files": 7,
+      "blank": 107,
+      "comment": 107,
+      "code": 317
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "vim script",
+      "files": 1,
+      "blank": 23,
+      "comment": 58,
+      "code": 281
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "Dockerfile",
+      "files": 5,
+      "blank": 38,
+      "comment": 17,
+      "code": 111
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "Objective-C++",
+      "files": 1,
+      "blank": 18,
+      "comment": 3,
+      "code": 52
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "CSS",
+      "files": 2,
+      "blank": 10,
+      "comment": 3,
+      "code": 43
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "Bourne Again Shell",
+      "files": 2,
+      "blank": 15,
+      "comment": 42,
+      "code": 33
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "Properties",
+      "files": 6,
+      "blank": 0,
+      "comment": 38,
+      "code": 28
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "IDL",
+      "files": 1,
+      "blank": 4,
+      "comment": 0,
+      "code": 12
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "PowerShell",
+      "files": 1,
+      "blank": 1,
+      "comment": 1,
+      "code": 12
+    },
+    {
+      "repo": "llamafile/whisper.cpp",
+      "language": "ProGuard",
+      "files": 1,
+      "blank": 3,
+      "comment": 18,
+      "code": 0
     },
     {
       "repo": "opencode",
@@ -640,17 +2306,17 @@
       "repo": "WORKSPACE-GATEWAY",
       "language": "Markdown",
       "files": 12,
-      "blank": 1366,
+      "blank": 1390,
       "comment": 0,
-      "code": 5521
+      "code": 5923
     },
     {
       "repo": "WORKSPACE-GATEWAY",
       "language": "Bourne Shell",
       "files": 27,
-      "blank": 484,
-      "comment": 14,
-      "code": 2034
+      "blank": 513,
+      "comment": 18,
+      "code": 2121
     },
     {
       "repo": "WORKSPACE-GATEWAY",
@@ -666,23 +2332,23 @@
       "files": 2,
       "blank": 0,
       "comment": 0,
-      "code": 567
+      "code": 794
     },
     {
       "repo": "WORKSPACE-GATEWAY",
       "language": "YAML",
       "files": 15,
-      "blank": 27,
+      "blank": 29,
       "comment": 56,
-      "code": 317
+      "code": 356
     },
     {
       "repo": "WORKSPACE-GATEWAY",
       "language": "make",
       "files": 1,
-      "blank": 38,
+      "blank": 39,
       "comment": 23,
-      "code": 123
+      "code": 126
     },
     {
       "repo": "WORKSPACE-GATEWAY",
@@ -696,9 +2362,17 @@
       "repo": "WORKSPACE-GATEWAY",
       "language": "TOML",
       "files": 1,
-      "blank": 12,
+      "blank": 11,
       "comment": 0,
-      "code": 52
+      "code": 51
+    },
+    {
+      "repo": "WORKSPACE-GATEWAY",
+      "language": "HCL",
+      "files": 1,
+      "blank": 2,
+      "comment": 0,
+      "code": 9
     },
     {
       "repo": "WORKSPACE-GUARD",
@@ -714,7 +2388,7 @@
       "files": 9,
       "blank": 592,
       "comment": 0,
-      "code": 2142
+      "code": 2140
     },
     {
       "repo": "WORKSPACE-GUARD",

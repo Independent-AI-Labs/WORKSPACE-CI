@@ -4,6 +4,7 @@
 
 .config-dialog__tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 0;
   border-bottom: 1px solid var(--border);
   margin-bottom: var(--space-3);

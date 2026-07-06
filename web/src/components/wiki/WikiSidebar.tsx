@@ -44,10 +44,12 @@ interface WikiSidebarProps {
 export function WikiSidebar({ stats, branding }: WikiSidebarProps) {
   const pathname = usePathname()
   const collapsed = useSidebarStore((s) => s.collapsed)
+  const mobileOpen = useSidebarStore((s) => s.mobileOpen)
+  const setMobileOpen = useSidebarStore((s) => s.setMobileOpen)
   const toggle = useSidebarStore((s) => s.toggle)
 
   return (
-    <nav id="wiki-sidebar" className="wiki-sidebar" role="navigation" aria-label="Wiki navigation">
+    <nav id="wiki-sidebar" className={clsx('wiki-sidebar', mobileOpen && 'is-open')} role="navigation" aria-label="Wiki navigation">
       <div className="wiki-sidebar__header">
         <Image src={branding.logo_path} className="wiki-sidebar__logo" alt={`${branding.sidebar_title_thin}${branding.sidebar_title_bold} logo`} width={32} height={30} unoptimized priority />
         <span className="wiki-sidebar__title">
@@ -56,7 +58,13 @@ export function WikiSidebar({ stats, branding }: WikiSidebarProps) {
         <button
           type="button"
           className="wiki-sidebar__toggle"
-          onClick={toggle}
+          onClick={() => {
+            if (mobileOpen) {
+              setMobileOpen(false)
+            } else {
+              toggle()
+            }
+          }}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
@@ -74,6 +82,7 @@ export function WikiSidebar({ stats, branding }: WikiSidebarProps) {
                 className={clsx('wiki-sidebar__link', isActive && 'is-active')}
                 aria-current={isActive ? 'page' : undefined}
                 title={item.label}
+                onClick={() => setMobileOpen(false)}
               >
                 <i className={item.icon} aria-hidden="true" />
                 <span>{item.label}</span>

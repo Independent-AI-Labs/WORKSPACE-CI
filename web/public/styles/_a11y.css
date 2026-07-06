@@ -40,3 +40,40 @@
     scroll-behavior: smooth;
   }
 }
+
+/* Touch target expansion: touch devices only.
+   Visual size unchanged; only the tappable hit area grows via ::after. */
+@media (pointer: coarse) {
+  .icon-btn,
+  .theme-toggle,
+  .btn,
+  .tab,
+  .config-dialog__tab,
+  .copy-button,
+  .wiki-sidebar__link,
+  .search-modal__close,
+  .collapsible-section__header,
+  .pill,
+  .filter-pill,
+  .category-nav__pill {
+    position: relative;
+  }
+
+  .icon-btn::after,
+  .theme-toggle::after,
+  .btn::after,
+  .tab::after,
+  .config-dialog__tab::after,
+  .copy-button::after,
+  .wiki-sidebar__link::after,
+  .search-modal__close::after,
+  .collapsible-section__header::after,
+  .pill::after,
+  .filter-pill::after,
+  .category-nav__pill::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: inherit;
+  }
+}

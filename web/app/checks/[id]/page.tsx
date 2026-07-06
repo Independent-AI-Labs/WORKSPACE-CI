@@ -97,7 +97,7 @@ export default async function CheckDetailPage({
           {found.source}
         </span>
         {found.signature && (
-          <pre>
+          <pre style={{ overflowX: 'auto' }}>
             <code>{found.signature}</code>
           </pre>
         )}

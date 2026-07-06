@@ -77,3 +77,18 @@
   border-top: 1px solid var(--border);
   margin: var(--space-4) 0;
 }
+
+@media (max-width: 768px) {
+  .prose table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  .prose th,
+  .prose td {
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+}

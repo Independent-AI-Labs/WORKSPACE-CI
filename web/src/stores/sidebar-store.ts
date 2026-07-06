@@ -23,17 +23,21 @@ function applyCollapsed(collapsed: boolean): void {
 
 interface SidebarStore {
   collapsed: boolean
+  mobileOpen: boolean
   toggle: () => void
+  setMobileOpen: (open: boolean) => void
   hydrate: () => void
 }
 
 export const useSidebarStore = create<SidebarStore>((set, get) => ({
   collapsed: false,
+  mobileOpen: false,
   toggle: () => {
     const next = !get().collapsed
     applyCollapsed(next)
     set({ collapsed: next })
   },
+  setMobileOpen: (open: boolean) => set({ mobileOpen: open }),
   hydrate: () => {
     if (typeof document !== 'undefined') {
       const attr = document.documentElement.getAttribute('data-sidebar-collapsed')
