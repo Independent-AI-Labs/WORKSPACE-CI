@@ -46,6 +46,7 @@ safe_exceptions:
   - setup.cfg
   - tox.ini
   - .pre-commit-config.yaml
+  - .env.example
   - alembic.ini
   - ruff.toml
   - mypy.toml
