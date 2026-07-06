@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import clsx from 'clsx'
 import type { ReactNode } from 'react'
 import type { CardItem } from '@/types/card'
@@ -19,21 +20,30 @@ const TAG_BADGE: Record<NonNullable<CardItem['tags']>[number]['variant'], string
 interface WikiCardProps {
   item: CardItem
   children?: ReactNode
+  viewDetails?: ReactNode
 }
 
-export function WikiCard({ item, children }: WikiCardProps) {
+export function WikiCard({ item, children, viewDetails }: WikiCardProps) {
+  const titleEl = item.monoTitle ? (
+    <code className="wiki-card__title">{item.title}</code>
+  ) : (
+    <span className="wiki-card__title">{item.title}</span>
+  )
+
   const content = (
     <>
       <div className="wiki-card__header">
         {item.logoPath ? (
-          <img src={item.logoPath} className="wiki-card__logo" alt="" width={20} height={20} />
+          <Image src={item.logoPath} className="wiki-card__logo" alt="" width={20} height={20} unoptimized />
         ) : (
           item.icon && <i className={item.icon} aria-hidden="true" />
         )}
-        {item.monoTitle ? (
-          <code className="wiki-card__title">{item.title}</code>
+        {item.href ? (
+          <Link href={item.href} className="wiki-card__title-link">
+            {titleEl}
+          </Link>
         ) : (
-          <span className="wiki-card__title">{item.title}</span>
+          titleEl
         )}
         {item.status && item.statusLabel && (
           <span className={clsx('wiki-card__status', STATUS_BADGE[item.status])}>
@@ -73,13 +83,9 @@ export function WikiCard({ item, children }: WikiCardProps) {
 
       {children && <div className="wiki-card__children">{children}</div>}
 
-      {(item.href || item.repoUrl) && (
+      {(viewDetails || item.repoUrl) && (
         <div className="wiki-card__footer">
-          {item.href && (
-            <Link href={item.href} className="wiki-card__cta">
-              View details
-            </Link>
-          )}
+          {viewDetails}
           {item.repoUrl && (
             <a
               href={item.repoUrl}

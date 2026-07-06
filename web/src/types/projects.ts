@@ -6,6 +6,7 @@ export interface ProjectEntry {
   icon: string
   logoPath?: string
   readmePath: string
+  makefilePath: string
 }
 
 export interface ProjectSummary {

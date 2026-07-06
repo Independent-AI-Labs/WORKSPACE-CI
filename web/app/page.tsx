@@ -1,10 +1,13 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
 import { ProjectList } from '@/components/wiki/ProjectList'
-import { loadAllProjectSummaries } from '@/lib/project-registry'
+import { loadAllProjectSummaries, loadProjectMakefile, PROJECTS } from '@/lib/project-registry'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
 import { loadCodeStats } from '@/lib/docs-loader'
 import { getBranding } from '@/lib/branding'
+import { parseMakefile } from '@/lib/makefile-parser'
+import { highlightCode } from '@/lib/highlight'
 import type { LanguagePercent } from '@/types/code-stats'
+import type { MakefileData } from '@/types/makefile'
 
 function getLanguagePercentsForAllRepos(
   stats: ReturnType<typeof loadCodeStats>,
@@ -46,6 +49,15 @@ export default async function HomePage() {
   const codeStats = loadCodeStats()
   const languagePercents = getLanguagePercentsForAllRepos(codeStats)
 
+  const makefileData: Record<string, MakefileData> = {}
+  for (const entry of PROJECTS) {
+    const raw = await loadProjectMakefile(entry.slug)
+    if (!raw) continue
+    const targets = parseMakefile(raw)
+    const highlightedHtml = await highlightCode(raw, 'makefile')
+    makefileData[entry.slug] = { targets, rawContent: raw, highlightedHtml }
+  }
+
   return (
     <WikiShell>
       <section className="hero">
@@ -58,12 +70,14 @@ export default async function HomePage() {
       <h1>Project Catalogue</h1>
       <p className="page-intro">
         Browse README documentation for all backend projects in the workspace.
-        Click a project to read its full README.
+        Click a project title to read its full README, or click View details to
+        explore its Makefile targets.
       </p>
       <ProjectList
         projects={projects}
         languagePercents={languagePercents}
         feedbackCounts={feedbackCounts}
+        makefileData={makefileData}
       />
     </WikiShell>
   )

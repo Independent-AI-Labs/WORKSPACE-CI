@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
 import type { WikiStats } from '@/lib/search-data'
@@ -48,7 +49,7 @@ export function WikiSidebar({ stats, branding }: WikiSidebarProps) {
   return (
     <nav id="wiki-sidebar" className="wiki-sidebar" role="navigation" aria-label="Wiki navigation">
       <div className="wiki-sidebar__header">
-        <img src={branding.logo_path} className="wiki-sidebar__logo" alt={`${branding.sidebar_title_thin}${branding.sidebar_title_bold} logo`} width="32" height="30" />
+        <Image src={branding.logo_path} className="wiki-sidebar__logo" alt={`${branding.sidebar_title_thin}${branding.sidebar_title_bold} logo`} width={32} height={30} unoptimized priority />
         <span className="wiki-sidebar__title">
           <span className="wiki-sidebar__title-thin">{branding.sidebar_title_thin}</span>{branding.sidebar_title_bold}
         </span>

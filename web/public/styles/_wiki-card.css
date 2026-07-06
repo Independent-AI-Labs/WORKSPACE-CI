@@ -40,6 +40,10 @@
   box-shadow: var(--elevation-raised);
 }
 
+.wiki-card:hover .wiki-card__title {
+  color: var(--accent);
+}
+
 .wiki-card__header {
   display: flex;
   align-items: center;
@@ -77,6 +81,22 @@ code.wiki-card__title {
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   word-break: break-all;
+}
+
+.wiki-card__title-link {
+  text-decoration: none;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  transition: color var(--duration-fast);
+}
+
+.wiki-card__title-link:hover {
+  color: var(--accent);
+}
+
+.wiki-card__title-link:hover .wiki-card__title {
+  text-decoration: underline;
 }
 
 .wiki-card__status {
@@ -165,6 +185,7 @@ code.wiki-card__title {
   font-weight: 600;
   color: var(--link);
   text-decoration: none;
+  cursor: pointer;
 }
 
 .wiki-card__cta:hover {

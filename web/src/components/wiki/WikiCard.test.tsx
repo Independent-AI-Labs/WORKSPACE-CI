@@ -13,13 +13,13 @@ function makeItem(overrides: Partial<CardItem> = {}): CardItem {
 }
 
 describe('WikiCard', () => {
-  it('renders as an article with CTA link when href is provided', () => {
+  it('renders title as a link when href is provided', () => {
     const { container } = render(<WikiCard item={makeItem({ href: '/test' })} />)
     const article = container.querySelector('article.wiki-card')
     expect(article).not.toBeNull()
     const link = screen.getByRole('link')
     expect(link).toHaveAttribute('href', '/test')
-    expect(link).toHaveClass('wiki-card__cta')
+    expect(link).toHaveClass('wiki-card__title-link')
   })
 
   it('renders as an article when no href', () => {
@@ -100,14 +100,21 @@ describe('WikiCard', () => {
     expect(screen.getByTestId('child')).toBeInTheDocument()
   })
 
-  it('renders View details CTA for linked cards', () => {
-    render(<WikiCard item={makeItem({ href: '/detail' })} />)
-    expect(screen.getByText('View details')).toBeInTheDocument()
+  it('does not render footer CTA link for href-only cards', () => {
+    const { container } = render(<WikiCard item={makeItem({ href: '/detail' })} />)
+    expect(container.querySelector('.wiki-card__cta')).toBeNull()
   })
 
-  it('does not render CTA for non-linked cards', () => {
-    const { container } = render(<WikiCard item={makeItem()} />)
-    expect(container.querySelector('.wiki-card__cta')).toBeNull()
+  it('renders viewDetails in footer when provided', () => {
+    const { container } = render(
+      <WikiCard
+        item={makeItem({ href: '/detail' })}
+        viewDetails={<button className="wiki-card__cta">Makefile</button>}
+      />,
+    )
+    const cta = container.querySelector('.wiki-card__cta')
+    expect(cta).not.toBeNull()
+    expect(cta?.textContent).toBe('Makefile')
   })
 
   it('renders external GitHub link when repoUrl is set', () => {

@@ -37,6 +37,7 @@ export const PROJECTS: ProjectEntry[] = [
     icon: 'ri-terminal-box-line',
     logoPath: '/LOGO.png',
     readmePath: join(PROJECTS_ROOT, 'CI', 'README.md'),
+    makefilePath: join(PROJECTS_ROOT, 'CI', 'Makefile'),
   },
   {
     slug: 'workspace-gateway',
@@ -45,6 +46,7 @@ export const PROJECTS: ProjectEntry[] = [
     repoName: 'WORKSPACE-GATEWAY',
     icon: 'ri-router-line',
     readmePath: join(PROJECTS_ROOT, 'WORKSPACE-GATEWAY', 'README.md'),
+    makefilePath: join(PROJECTS_ROOT, 'WORKSPACE-GATEWAY', 'Makefile'),
   },
   {
     slug: 'workspace-guard',
@@ -54,6 +56,7 @@ export const PROJECTS: ProjectEntry[] = [
     icon: 'ri-shield-keyhole-line',
     logoPath: '/GUARD_LOGO.png',
     readmePath: join(PROJECTS_ROOT, 'WORKSPACE-GUARD', 'README.md'),
+    makefilePath: join(PROJECTS_ROOT, 'WORKSPACE-GUARD', 'Makefile'),
   },
 ]
 
@@ -125,6 +128,19 @@ export const loadProjectReadme = cache(
       ...(entry.logoPath ? { logoPath: entry.logoPath } : {}),
       title: extractReadmeTitle(content),
       content,
+    }
+  },
+)
+
+export const loadProjectMakefile = cache(
+  async (slug: string): Promise<string | null> => {
+    const entry = getProjectBySlug(slug)
+    if (!entry) return null
+    try {
+      return await readFile(entry.makefilePath, 'utf8')
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+      return null
     }
   },
 )
