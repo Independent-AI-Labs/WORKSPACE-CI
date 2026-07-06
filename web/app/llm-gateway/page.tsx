@@ -1,4 +1,5 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
+import { GrafanaEmbed } from '@/components/wiki/GrafanaEmbed'
 
 const GRAFANA_URL =
   'http://localhost:3030/d/gateway-overview/gateway-overview?orgId=1&from=now-6h&to=now&timezone=browser&var-model=$__all&refresh=15s&kiosk'
@@ -16,13 +17,9 @@ export default function LLMGatewayPage() {
       </section>
 
       <div className="gateway-dashboard">
-        <iframe
+        <GrafanaEmbed
           src={GRAFANA_URL}
           title="LLM Gateway Grafana Dashboard"
-          width="100%"
-          height="1200"
-          frameBorder="0"
-          allow="fullscreen"
         />
       </div>
     </WikiShell>

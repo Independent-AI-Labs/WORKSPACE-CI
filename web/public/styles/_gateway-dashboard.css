@@ -1,0 +1,12 @@
+.gateway-dashboard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--panel);
+  box-shadow: var(--elevation-raised);
+}
+
+.gateway-dashboard iframe {
+  display: block;
+  border: 0;
+}
