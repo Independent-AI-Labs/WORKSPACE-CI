@@ -95,15 +95,11 @@ export function extractReadmeSummary(markdown: string): string {
     if (trimmed === '') break
 
     summaryParts.push(trimmed)
-    if (summaryParts.join(' ').length > 500) break
   }
 
-  let summary = summaryParts.join(' ').trim()
-  if (summary.length > 600) {
-    const lastPeriod = summary.lastIndexOf('. ', 597)
-    summary = lastPeriod > 200 ? summary.slice(0, lastPeriod + 1) : summary.slice(0, 597) + '...'
-  }
-  return summary
+  const full = summaryParts.join(' ').trim()
+  const sentences = full.split(/(?<=\.)\s+(?=[A-Z])/)
+  return sentences.slice(0, 3).join(' ').trim()
 }
 
 export const loadProjectReadme = cache(

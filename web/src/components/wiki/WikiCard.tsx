@@ -1,8 +1,14 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import clsx from 'clsx'
+import { marked } from 'marked'
+import { sanitizeHtml } from '@/lib/sanitize'
 import type { ReactNode } from 'react'
 import type { CardItem } from '@/types/card'
+
+function renderInlineMd(text: string): string {
+  return sanitizeHtml(marked.parseInline(text, { gfm: true }) as string)
+}
 
 const STATUS_BADGE: Record<NonNullable<CardItem['status']>, string> = {
   ok: 'badge--green',
@@ -57,7 +63,10 @@ export function WikiCard({ item, children, viewDetails }: WikiCardProps) {
       )}
 
       {item.description && (
-        <p className="wiki-card__description">{item.description}</p>
+        <p
+          className="wiki-card__description"
+          dangerouslySetInnerHTML={{ __html: renderInlineMd(item.description) }}
+        />
       )}
 
       {item.tags && item.tags.length > 0 && (
