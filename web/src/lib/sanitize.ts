@@ -11,13 +11,13 @@ const ALLOWED_TAGS = [
   'div', 'span',
 ]
 
-const ALLOWED_ATTR = ['href', 'title', 'alt', 'src', 'class', 'id', 'rel', 'target']
+const ALLOWED_ATTR = ['href', 'title', 'alt', 'src', 'class', 'id', 'rel', 'target', 'style']
 
 export function sanitizeHtml(dirty: string): string {
   return createDOMPurify.sanitize(dirty, {
     ALLOWED_TAGS,
     ALLOWED_ATTR,
     FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form'],
-    FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'style'],
+    FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
   })
 }

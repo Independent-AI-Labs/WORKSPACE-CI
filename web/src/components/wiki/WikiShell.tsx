@@ -5,6 +5,7 @@ import { WikiFooter } from '@/components/wiki/WikiFooter'
 import { ThemeToggle } from '@/components/wiki/ThemeToggle'
 import { WikiSearch } from '@/components/wiki/WikiSearch'
 import { MobileNavToggle } from '@/components/wiki/MobileNavToggle'
+import { MermaidRenderer } from '@/components/wiki/MermaidRenderer'
 import { buildSearchData, getWikiStats } from '@/lib/search-data'
 import { getBranding } from '@/lib/branding'
 
@@ -39,6 +40,7 @@ export function WikiShell({ children }: WikiShellProps) {
         </main>
         <WikiFooter branding={branding} />
       </div>
+      <MermaidRenderer />
     </div>
   )
 }

@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-07-06T13:01:42.056752+00:00",
+  "generated_at": "2026-07-06T13:38:40.816844+00:00",
   "totals": {
     "repos": 9,
-    "files": 9535,
-    "blank": 223355,
-    "comment": 90916,
-    "code": 1617804,
-    "lines": 1932075
+    "files": 9536,
+    "blank": 223359,
+    "comment": 90920,
+    "code": 1618311,
+    "lines": 1932590
   },
   "repos": [
     {
@@ -39,10 +39,10 @@
     },
     {
       "repo": "CI",
-      "files": 353,
-      "blank": 7328,
-      "comment": 3220,
-      "code": 40794
+      "files": 354,
+      "blank": 7336,
+      "comment": 3224,
+      "code": 41371
     },
     {
       "repo": "DATAOPS",
@@ -54,9 +54,9 @@
     {
       "repo": "WORKSPACE-GATEWAY",
       "files": 66,
-      "blank": 2101,
+      "blank": 2097,
       "comment": 93,
-      "code": 9840
+      "code": 9770
     },
     {
       "repo": "WORKSPACE-STREAMS/himalaya",
@@ -76,10 +76,10 @@
   "languages": [
     {
       "language": "TypeScript",
-      "files": 3581,
-      "blank": 58762,
-      "comment": 20173,
-      "code": 569827,
+      "files": 3582,
+      "blank": 58770,
+      "comment": 20177,
+      "code": 569878,
       "repos": 3
     },
     {
@@ -87,15 +87,15 @@
       "files": 344,
       "blank": 12,
       "comment": 0,
-      "code": 368418,
+      "code": 368944,
       "repos": 7
     },
     {
       "language": "Markdown",
       "files": 1242,
-      "blank": 93537,
+      "blank": 93533,
       "comment": 2727,
-      "code": 235234,
+      "code": 235164,
       "repos": 9
     },
     {
@@ -311,10 +311,10 @@
     {
       "repo": "CI",
       "language": "TypeScript",
-      "files": 163,
-      "blank": 1083,
-      "comment": 9,
-      "code": 10091
+      "files": 164,
+      "blank": 1091,
+      "comment": 13,
+      "code": 10142
     },
     {
       "repo": "CI",
@@ -350,6 +350,14 @@
     },
     {
       "repo": "CI",
+      "language": "JSON",
+      "files": 10,
+      "blank": 0,
+      "comment": 0,
+      "code": 1955
+    },
+    {
+      "repo": "CI",
       "language": "CSS",
       "files": 29,
       "blank": 300,
@@ -363,14 +371,6 @@
       "blank": 347,
       "comment": 469,
       "code": 1789
-    },
-    {
-      "repo": "CI",
-      "language": "JSON",
-      "files": 10,
-      "blank": 0,
-      "comment": 0,
-      "code": 1429
     },
     {
       "repo": "CI",
@@ -640,9 +640,9 @@
       "repo": "WORKSPACE-GATEWAY",
       "language": "Markdown",
       "files": 12,
-      "blank": 1370,
+      "blank": 1366,
       "comment": 0,
-      "code": 5591
+      "code": 5521
     },
     {
       "repo": "WORKSPACE-GATEWAY",
