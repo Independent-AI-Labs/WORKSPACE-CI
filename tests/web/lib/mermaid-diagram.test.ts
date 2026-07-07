@@ -211,14 +211,15 @@ describe('mountMermaidDiagram', () => {
       }),
     )
     const vb = viewBoxObj(frame)
-    // Dragging 40 right + 10 down translates the viewBox origin by
-    // (-40, -10). Origin is clamped into the base region when vw >= base.w
-    // (here scale stays 1, width unchanged) so origin snaps to the base
-    // boundary: clamping to [0, 100-100]=[0,0] for x and [0, 50-50]=[0,0]
-    // for y means the origin stays at 0,0. The drag therefore cannot leave
-    // the diagram region at scale 1 since there's no whitespace to show.
-    expect(vb.x).toBe(0)
-    expect(vb.y).toBe(0)
+    // Dragging 40 css px right + 10 css px down moves the viewBox origin
+    // by (-dxCss * vb.w / cssW, -dyCss * vb.h / cssH). At scale 1 with
+    // cssW==vb.w==100 the ratio is 1:1, so the origin becomes (-40, -10).
+    // PAN IS NOT CLAMPED (see mermaid-diagram.ts onPointerMove): clamping
+    // at scale 1 would collapse the origin range to {0, 0} (since
+    // base.w - vb.w == 0) and the canvas would never follow the cursor,
+    // which is the regression we are guarding against.
+    expect(vb.x).toBe(-40)
+    expect(vb.y).toBe(-10)
     expect(vb.w).toBe(100)
     expect(vb.h).toBe(50)
     pre.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, bubbles: true }))

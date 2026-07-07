@@ -256,8 +256,14 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
     const { w, h } = cssSize()
     const dxCss = e.clientX - pan.startX
     const dyCss = e.clientY - pan.startY
-    const next = panBy(pan.originVb, dxCss, dyCss, w, h)
-    setViewBox(clampOriginToBase(next, base))
+    // Pan is intentionally NOT clamped: at scale 1 (vb.w == base.w) the
+    // clamp range collapses to base.x and the user would observe a
+    // "stuck" canvas that doesn't follow the cursor. Let the viewBox
+    // origin move freely across the SVG's local coordinate space; the
+    // SVG's own bounding box (clipped to the viewport's overflow:auto)
+    // is what visually bounds the content. clampOriginToBase is still
+    // applied on zoom so out-of-bounds zoom never exposes whitespace.
+    setViewBox(panBy(pan.originVb, dxCss, dyCss, w, h))
   }
 
   function onPointerUp(): void {

@@ -250,8 +250,9 @@ export class FullscreenOverlay {
     const { w, h } = this.cssSize()
     const dxCss = e.clientX - this.pan.startX
     const dyCss = e.clientY - this.pan.startY
-    const next = panBy(this.pan.originVb, dxCss, dyCss, w, h)
-    this.setViewBox(clampOriginToBase(next, this.base))
+    // Pan is not clamped here (see mermaid-diagram.ts onPointerMove for
+    // rationale): clampOriginToBase still applies on every zoom.
+    this.setViewBox(panBy(this.pan.originVb, dxCss, dyCss, w, h))
   }
 
   private onPointerUp = (): void => {
