@@ -225,7 +225,8 @@ def _check_except_print(
     lineno: int,
     header_indent: int,
 ) -> str | None:
-    """Detect except block that only prints the error; no logging, re-raise, or recovery."""
+    """Detect except block that only prints the error; no logging,
+    re-raise, or recovery."""
     match = _PRINT_RE.match(nxt.text)
     if not match:
         return None

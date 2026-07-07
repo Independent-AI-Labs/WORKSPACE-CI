@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 import ci_paths
+import pytest
 
 
 class TestFindConfigDir:
@@ -31,7 +31,11 @@ class TestFindConfigDir:
         result = ci_paths.find_config_dir()
         assert result.is_dir()
 
-    def test_env_var_override(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_env_var_override(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
         monkeypatch.setenv("CI_CONFIG_DIR", str(tmp_path))
         result = ci_paths.find_config_dir()
         assert result == tmp_path.resolve()
@@ -51,7 +55,11 @@ class TestFindConfigDir:
         assert result.is_absolute()
         assert result.is_dir()
 
-    def test_raises_when_not_found(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_raises_when_not_found(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
         monkeypatch.delenv("CI_CONFIG_DIR", raising=False)
         monkeypatch.setattr(ci_paths, "_THIS_FILE", tmp_path / "fake_ci_paths.py")
         with pytest.raises(FileNotFoundError):
@@ -69,7 +77,11 @@ class TestFindLibDir:
         assert result.is_absolute()
         assert result.is_dir()
 
-    def test_env_var_override(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_env_var_override(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
         monkeypatch.setenv("CI_LIB_DIR", str(tmp_path))
         result = ci_paths.find_lib_dir()
         assert result == tmp_path.resolve()
@@ -85,7 +97,11 @@ class TestFindProjectRoot:
         assert result.is_absolute()
         assert result.is_dir()
 
-    def test_env_var_override(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_env_var_override(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
         monkeypatch.setenv("CI_PROJECT_ROOT", str(tmp_path))
         result = ci_paths.find_project_root()
         assert result == tmp_path.resolve()
@@ -101,7 +117,11 @@ class TestFindWebDataDir:
         result = ci_paths.find_web_data_dir()
         assert result.is_absolute()
 
-    def test_env_var_override(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_env_var_override(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
         monkeypatch.setenv("CI_WEB_DATA_DIR", str(tmp_path))
         result = ci_paths.find_web_data_dir()
         assert result == tmp_path.resolve()

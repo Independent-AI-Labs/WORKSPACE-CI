@@ -51,11 +51,14 @@ exceptions:
   - pattern: '\.suppress'
     paths: ['tests/']
 
-  # The check-tester itself authors heredocs containing the banned
-  # "not implemented yet" string as fixture payload; exempt the single
-  # file that exercises the directory_rules check.
-  - pattern: 'not implemented yet'
-    paths: ['tests/unit/test_checks.sh']
+  # Banned-words test files author heredocs containing banned patterns
+  # (leverage, synerg, paradigm, low-hanging fruit, north star, best
+  # practices, move the needle, harness the power of, etc.) as fixture
+  # payload to exercise the detector. Blanket-exempt like patterns.test.ts.
+  - pattern: '.*'
+    paths:
+      - 'tests/unit/test_checks\.sh$'
+      - 'tests/integration/test_e2e_checks\.sh$'
 
   # Tests need these words for test descriptions and mocking
   - pattern: '\bmock\b'

@@ -394,7 +394,10 @@ class TestMain:
             {},
         )
 
-        with patch("sys.argv", ["check_dependency_versions.py", "--upgrade", "pyproject.toml"]):
+        with patch(
+            "sys.argv",
+            ["check_dependency_versions.py", "--upgrade", "pyproject.toml"],
+        ):
             result = main()
 
         mock_upgrade.assert_called_once()

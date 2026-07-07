@@ -179,14 +179,16 @@ _test-push-impl:
 # Wiki Dev Server (delegates to web/Makefile; systemd user service on :3001)
 # =============================================================================
 
-.PHONY: wiki-dev-start wiki-dev wiki-dev-stop wiki-dev-restart wiki-dev-status wiki-dev-logs
-wiki-dev-start: extract-code-stats ## Start wiki dev server (Next.js HMR on :3001)
+.PHONY: start wiki-dev-start wiki-dev wiki-dev-stop wiki-dev-restart wiki-dev-status wiki-dev-logs
+start: wiki-dev-start ## Alias for wiki-dev-start (make start)
+	@:
+wiki-dev-start: extract-wiki-data ## Start wiki dev server (Next.js HMR on :3001)
 	$(MAKE) -C web dev-start
 wiki-dev: wiki-dev-start ## Alias for wiki-dev-start
 	@:
 wiki-dev-stop: ## Stop wiki dev server
 	$(MAKE) -C web dev-stop
-wiki-dev-restart: extract-code-stats ## Restart wiki dev server (stop + start)
+wiki-dev-restart: extract-wiki-data ## Restart wiki dev server (stop + start)
 	$(MAKE) -C web dev-restart
 wiki-dev-status: ## Show wiki dev server status
 	$(MAKE) -C web dev-status
@@ -235,14 +237,17 @@ code-stats: ## Codebase statistics across the workspace via cloc (lines, files, 
 extract-code-stats: ## Generate web/src/data/code-stats.json for wiki Project Catalogue badges
 	uv run python scripts/extract-code-stats.py
 
-.PHONY: extract-hook-sources extract-script-sources extract-wiki-data
+.PHONY: extract-hook-sources extract-script-sources extract-swallow-source extract-wiki-data
 extract-hook-sources: ## Generate web/src/data/hook-sources.json for wiki Hook EntryPointDialog
 	uv run python scripts/extract-hook-sources.py
 
 extract-script-sources: ## Generate web/src/data/script-sources.json for wiki Tooling EntryPointDialog
 	uv run python scripts/extract-script-sources.py
 
-extract-wiki-data: extract-code-stats extract-hook-sources extract-script-sources ## Regenerate all wiki JSON data files
+extract-swallow-source: ## Generate web/src/data/swallow-detectors.json for wiki Silent Swallow Detectors
+	uv run python scripts/extract-swallow-source.py
+
+extract-wiki-data: extract-code-stats extract-hook-sources extract-script-sources extract-swallow-source ## Regenerate all wiki JSON data files
 
 .PHONY: scaffold-ci
 scaffold-ci: ## Generate CI integration files for a consumer project

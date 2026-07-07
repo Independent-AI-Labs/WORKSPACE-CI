@@ -22,8 +22,6 @@ import re
 import sys
 
 import yaml
-from ci_paths import find_config_dir
-
 from check_silent_swallow_ansible import (
     detect_ansible_tasks,
     detect_registered_output_swallow,
@@ -43,6 +41,7 @@ from check_silent_swallow_system import (
     is_cron_file,
     is_shell_file,
 )
+from ci_paths import find_config_dir
 
 _SNIPPET_MAX = 200
 

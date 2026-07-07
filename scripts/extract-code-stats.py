@@ -19,12 +19,13 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _SCRIPTS_DIR.parent
-_OUTPUT_DIR = Path(os.environ.get("CI_WEB_DATA_DIR") or str(_REPO_ROOT / "web" / "src" / "data"))
+_DEFAULT_DATA_DIR = _REPO_ROOT / "web" / "src" / "data"
+_OUTPUT_DIR = Path(os.environ.get("CI_WEB_DATA_DIR") or str(_DEFAULT_DATA_DIR))
 _OUTPUT_PATH = _OUTPUT_DIR / "code-stats.json"
 _CODE_STATS = _SCRIPTS_DIR / "code-stats"
 
@@ -41,19 +42,23 @@ def main() -> int:
     env = dict(os.environ)
     env["CI_WORKSPACE_ROOT"] = workspace_root
 
-    result = subprocess.run(
-        ["bash", str(_CODE_STATS), "--json", "--no-umbrella"],
-        capture_output=True,
-        text=True,
-        env=env,
-        cwd=str(_REPO_ROOT),
-    )
-
-    if result.returncode != 0:
-        print(f"ERROR: code-stats failed (rc={result.returncode})", file=sys.stderr)
-        if result.stderr:
-            print(result.stderr, file=sys.stderr)
-        return result.returncode
+    try:
+        result = subprocess.run(
+            ["bash", str(_CODE_STATS), "--json", "--no-umbrella"],
+            capture_output=True,
+            text=True,
+            env=env,
+            cwd=str(_REPO_ROOT),
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        print(
+            f"ERROR: code-stats failed (rc={exc.returncode})",
+            file=sys.stderr,
+        )
+        if exc.stderr:
+            print(exc.stderr, file=sys.stderr)
+        return exc.returncode
 
     try:
         data = json.loads(result.stdout)
@@ -62,7 +67,7 @@ def main() -> int:
         return 1
 
     output = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "totals": data.get("totals", {}),
         "repos": data.get("repos", []),
         "languages": data.get("languages", []),

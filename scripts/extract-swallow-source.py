@@ -22,7 +22,7 @@ import ast
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -31,7 +31,8 @@ _SCRIPTS_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _SCRIPTS_DIR.parent
 _CONFIG_DIR = Path(os.environ.get("CI_CONFIG_DIR") or str(_REPO_ROOT / "config"))
 _LIB_DIR = Path(os.environ.get("CI_LIB_DIR") or str(_REPO_ROOT / "lib"))
-_OUTPUT_DIR = Path(os.environ.get("CI_WEB_DATA_DIR") or str(_REPO_ROOT / "web" / "src" / "data"))
+_DEFAULT_DATA_DIR = _REPO_ROOT / "web" / "src" / "data"
+_OUTPUT_DIR = Path(os.environ.get("CI_WEB_DATA_DIR") or str(_DEFAULT_DATA_DIR))
 CONFIG_PATH = _CONFIG_DIR / "silent_swallow_patterns.yaml"
 OUTPUT_PATH = _OUTPUT_DIR / "swallow-detectors.json"
 
@@ -41,12 +42,18 @@ def load_config() -> dict:
         return yaml.safe_load(f)
 
 
-def extract_function_source(source_file: str, func_name: str) -> dict[str, str | None] | None:
+def extract_function_source(
+    source_file: str,
+    func_name: str,
+) -> dict[str, str | None] | None:
     path = Path(source_file)
     if not path.exists():
         path = _LIB_DIR / Path(source_file).name
     if not path.exists():
-        print(f"WARNING: {source_file} not found, skipping {func_name}", file=sys.stderr)
+        print(
+            f"WARNING: {source_file} not found, skipping {func_name}",
+            file=sys.stderr,
+        )
         return None
 
     source_text = path.read_text(encoding="utf-8")
@@ -97,7 +104,7 @@ def main() -> int:
                 entries.append(result)
 
     output = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "source_version": "",
         "detectors": entries,
     }

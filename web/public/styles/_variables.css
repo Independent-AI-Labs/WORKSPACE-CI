@@ -13,7 +13,7 @@
   /* ---- Tier 0: Named palette primitives ----
      Primary palette + muted palette (for supplementary needs). */
   --charcoal: #50514f;
-  --vibrant-coral: #f25f5c;
+  --alert-coral: #f25f5c;
   --royal-gold: #ffe066;
   --cerulean: #247ba0;
   --tropical-teal: #70c1b3;
@@ -36,7 +36,7 @@
   --accent-active: color-mix(in oklab, var(--cerulean) 50%, var(--text));
   --ok: var(--tropical-teal);
   --warn: var(--royal-gold);
-  --error: var(--vibrant-coral);
+  --error: var(--alert-coral);
   --link: var(--tropical-teal);
   --teal: var(--tropical-teal);
   --purple: var(--royal-gold);
@@ -157,7 +157,7 @@
   --accent-active: var(--cerulean);
   --ok: var(--tropical-teal);
   --warn: var(--golden-bronze);
-  --error: var(--vibrant-coral);
+  --error: var(--alert-coral);
   --link: var(--cerulean);
   --teal: var(--tropical-teal);
   --purple: var(--golden-bronze);

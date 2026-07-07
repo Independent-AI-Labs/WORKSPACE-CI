@@ -125,7 +125,7 @@ re-running `scaffold-ci`, and vice versa.
 - Modification of `generate-hooks` itself. `scaffold-ci` produces
   `.pre-commit-config.yaml` in the exact format `generate-hooks` already
   consumes.
-- Generation of `moon.yml`. Each project has bespoke moon task graphs;
+- Generation of `moon.yml`. Each project has custom moon task graphs;
   consumers continue to author `moon.yml` by hand.
 - Touching `project_enforcement.yaml` (the workspace-tier registry). It
   lives at the WORKSPACE-VM root and is autocreated per-machine by
@@ -1077,7 +1077,7 @@ does not check individual entries.
 ## 16. Open Questions
 
 1. **`moon.yml` generation?** SPEC: no. Each project's moon task graph
-   is bespoke. The generator leaves `moon.yml` to the consumer. If a
+   is custom. The generator leaves `moon.yml` to the consumer. If a
    future maintainer wants a `moon.template.yml` stub, that's a separate
    feature gated by its own SPEC.
 

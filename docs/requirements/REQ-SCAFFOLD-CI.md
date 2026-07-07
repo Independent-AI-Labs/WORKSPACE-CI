@@ -68,7 +68,7 @@ filesystem offset.
   `boot_layout.yaml`, or any of the `*_schema.yaml` files: those stay
   workspace-policy, owned by CI.
 - Mandate `moon.yml` generation: each project's moon task graph is
-  bespoke; consumers hand-author `moon.yml`.
+  per-project; consumers hand-author `moon.yml`.
 - Touch the `project_enforcement.yaml` workspace-tier registry: it is
   per-machine, autocreated per SPEC-BOOT-LAYOUT §10.
 

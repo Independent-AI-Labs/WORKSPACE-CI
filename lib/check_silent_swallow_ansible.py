@@ -83,7 +83,8 @@ def _check_ansible_shell_no_register(
     lines: list,
     i: int,
 ) -> str | None:
-    """Detect shell/command task with changed_when:false but no register or failed_when."""
+    """Detect shell/command task with changed_when:false but no register
+    or failed_when."""
     has_register, has_failed_when = _scan_task_flags(lines, i)
     if has_register or has_failed_when:
         return None
@@ -96,7 +97,8 @@ def _check_ansible_shell_no_guard(
     lines: list,
     i: int,
 ) -> str | None:
-    """Detect shell/command task without register, failed_when, or changed_when guard."""
+    """Detect shell/command task without register, failed_when, or
+    changed_when guard."""
     has_register, has_failed_when = _scan_task_flags(lines, i)
     if has_register or has_failed_when:
         return None

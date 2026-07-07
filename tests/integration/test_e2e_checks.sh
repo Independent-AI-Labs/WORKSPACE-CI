@@ -200,3 +200,59 @@ YAML
     ci_check_coverage_thresholds_no_devolution
 }
 _run_test "e2e_coverage_devolution: path changed with lower threshold passes" test_e2e_coverage_devolution_path_changed_passes
+
+# ---------------------------------------------------------------------------
+# ci_check_banned_words e2e: real config AI slop / business bullshit
+# ---------------------------------------------------------------------------
+test_e2e_banned_words_real_ai_slop_blocked() {
+    _source_lib
+    cat > slop.py <<'EOF'
+# We leverage synergy for a paradigm shift
+x = 1
+EOF
+    git add slop.py
+    local rc=0
+    ci_check_banned_words > /dev/null || rc=$?
+    [[ $rc -ne 0 ]]
+}
+_run_test "e2e_banned_words: real config blocks AI slop words" test_e2e_banned_words_real_ai_slop_blocked
+
+test_e2e_banned_words_real_business_bullshit_blocked() {
+    _source_lib
+    cat > bs.py <<'EOF'
+# Pick the low-hanging fruit as our north star
+# Follow best practices to move the needle
+x = 1
+EOF
+    git add bs.py
+    local rc=0
+    ci_check_banned_words > /dev/null || rc=$?
+    [[ $rc -ne 0 ]]
+}
+_run_test "e2e_banned_words: real config blocks business bullshit" test_e2e_banned_words_real_business_bullshit_blocked
+
+test_e2e_banned_words_real_multiword_blocked() {
+    _source_lib
+    cat > phrase.py <<'EOF'
+# harness the power of the platform
+# navigate the complexity of the system
+x = 1
+EOF
+    git add phrase.py
+    local rc=0
+    ci_check_banned_words > /dev/null || rc=$?
+    [[ $rc -ne 0 ]]
+}
+_run_test "e2e_banned_words: real config blocks multi-word AI slop" test_e2e_banned_words_real_multiword_blocked
+
+test_e2e_banned_words_real_technical_term_allowed() {
+    _source_lib
+    cat > tech.py <<'EOF'
+# The underscore char is used for private names
+# Dynamic imports load modules at runtime
+x = 1
+EOF
+    git add tech.py
+    ci_check_banned_words
+}
+_run_test "e2e_banned_words: real config allows technical terms" test_e2e_banned_words_real_technical_term_allowed

@@ -81,6 +81,35 @@ universal_exceptions:
     patterns:
       - '\bpython3?\b'
 
+  # Legitimate technical terms that share spelling with AI slop.
+  # The slop VERB/metaphor sense is caught by phrase patterns (e.g.
+  # "harness the power of", "navigate the complexit"). These
+  # exceptions cover the NOUN/technical sense only:
+  #   underscore  = the _ character (Python private convention)
+  #   harness     = test harness (decades-old testing term)
+  #   navigate    = UI/browser navigation (literal)
+  #   dynamic     = next/dynamic, dynamic imports, dynamic typing
+  - paths: ['.*']
+    patterns:
+      - '\bunderscore\b'
+      - '\bunderscores\b'
+      - '\bharness\b'
+      - '\bharnesses\b'
+      - '\bnavigate\b'
+      - '\bnavigates\b'
+      - '\bnavigating\b'
+      - '\bdynamic\b'
+
+  # AI safety policy data: "frontier AI" / "frontier models" is the
+  # established term in AI governance (Bletchley Declaration, etc.).
+  # "innovative" appears in the official URL slug of the Seoul
+  # Declaration. "value proposition" is a defined term in IEEE 7000.
+  - paths: ['web/src/data/standards\.json$']
+    patterns:
+      - '\bfrontier\b'
+      - '\binnovative\b'
+      - 'value proposition'
+
 banned:
   # === LINTER/TYPE SUPPRESSION ===
 
@@ -132,6 +161,324 @@ banned:
   # | object: makes the entire union equivalent to object
   - pattern: '\|\s*object\b'
     reason: "Union with | object makes the whole type equivalent to object. Remove it or use a proper type."
+
+  # === AI SLOP / BUSINESS BULLSHIT ===
+  # Top AI-slop tells (2026 research): words LLMs overuse vs human writing.
+  # Sources: Kobak et al. 2024 (Science Advances), GPTZero, Crompty,
+  # HumanizeMyAI, LeadDev, Ozigi anti-slop validator. Banning these
+  # keeps commit messages, docs, and comments human.
+  - pattern: '\bdelve\b'
+    reason: "AI slop. Use look at, dig into, or examine."
+  - pattern: '\bdelving\b'
+    reason: "AI slop. Use looking, digging, or examining."
+  - pattern: '\btapestry\b'
+    reason: "AI slop metaphor. Use mix, range, or blend."
+  - pattern: '\brealm\b'
+    reason: "AI slop. Use area, field, or domain."
+  - pattern: '\bleverage\b'
+    reason: "Business bullshit. Use use, apply, or build on."
+  - pattern: '\bleverages\b'
+    reason: "Business bullshit. Use uses, applies, or builds on."
+  - pattern: '\bleveraging\b'
+    reason: "Business bullshit. Use using, applying, or building on."
+  - pattern: '\bsynerg'
+    reason: "Business bullshit. Use work together, combine, or reinforce."
+  - pattern: '\bholistic\b'
+    reason: "Business bullshit. Use full, complete, or end-to-end."
+  - pattern: '\bparadigm\b'
+    reason: "Business bullshit. Use model, pattern, or approach."
+  - pattern: '\bgroundbreaking\b'
+    reason: "AI slop hype. Use new, first, or name the specific advance."
+  - pattern: '\brevolutionary\b'
+    reason: "AI slop hype. Use new, or name what specifically changed."
+  - pattern: '\btransformative\b'
+    reason: "AI slop hype. Name what specifically changed."
+  - pattern: '\binnovative\b'
+    reason: "AI slop hype. Use different, new, or better."
+  - pattern: '\bcutting-edge\b'
+    reason: "AI slop hype. Use new, current, or name the advance."
+  - pattern: '\bgame-changer\b'
+    reason: "AI slop hype. Name the specific impact."
+  - pattern: '\bgame-changing\b'
+    reason: "AI slop hype. Name the specific impact."
+  - pattern: '\bstate-of-the-art\b'
+    reason: "AI slop hype. Use current, or name the advance."
+  - pattern: '\bseamless\b'
+    reason: "AI slop. Use smooth, easy, or name the integration point."
+  - pattern: '\bseamlessly\b'
+    reason: "AI slop. Use smoothly, easily, or name the integration point."
+  - pattern: '\brobust\b'
+    reason: "AI slop. Use reliable, solid, tested, or thorough."
+  - pattern: '\bempower\b'
+    reason: "Business bullshit. Use help, let, or allow."
+  - pattern: '\bempowers\b'
+    reason: "Business bullshit. Use helps, lets, or allows."
+  - pattern: '\bempowering\b'
+    reason: "Business bullshit. Use helping, letting, or allowing."
+  - pattern: '\bunleash\b'
+    reason: "AI slop. Use start, open, or activate."
+  - pattern: '\bunlocks?\b'
+    reason: "AI slop. Use get, start, or open."
+  - pattern: '\bharness\b'
+    reason: "AI slop. Use use, direct, or tap into."
+  - pattern: '\bharnesses\b'
+    reason: "AI slop. Use uses, directs, or taps into."
+  - pattern: '\bharnessing\b'
+    reason: "AI slop. Use using, directing, or tapping into."
+  - pattern: '\belevate\b'
+    reason: "Business bullshit. Use improve, raise, or strengthen."
+  - pattern: '\belevates\b'
+    reason: "Business bullshit. Use improves, raises, or strengthens."
+  - pattern: '\belevating\b'
+    reason: "Business bullshit. Use improving, raising, or strengthening."
+  - pattern: '\bfoster\b'
+    reason: "AI slop. Use build, create, or develop."
+  - pattern: '\bfosters\b'
+    reason: "AI slop. Use builds, creates, or develops."
+  - pattern: '\bfostering\b'
+    reason: "AI slop. Use building, creating, or developing."
+  - pattern: '\bcultivate\b'
+    reason: "AI slop. Use grow, develop, or invest in."
+  - pattern: '\bnurture\b'
+    reason: "AI slop. Use support, invest in, or pay attention to."
+  - pattern: '\bnavigate\b'
+    reason: "AI slop. Use handle, deal with, or work through."
+  - pattern: '\bnavigates\b'
+    reason: "AI slop. Use handles, deals with, or works through."
+  - pattern: '\bnavigating\b'
+    reason: "AI slop. Use handling, dealing with, or working through."
+  - pattern: '\butilize\b'
+    reason: "Business bullshit. Use use."
+  - pattern: '\butilizes\b'
+    reason: "Business bullshit. Use uses."
+  - pattern: '\butilizing\b'
+    reason: "Business bullshit. Use using."
+  - pattern: '\bfacilitate\b'
+    reason: "Business bullshit. Use help, run, or make easier."
+  - pattern: '\bfacilitates\b'
+    reason: "Business bullshit. Use helps, runs, or makes easier."
+  - pattern: '\bfacilitating\b'
+    reason: "Business bullshit. Use helping, running, or making easier."
+  - pattern: '\bmoreover\b'
+    reason: "AI slop transition. Use also, and, or on top of that."
+  - pattern: '\bfurthermore\b'
+    reason: "AI slop transition. Use also, and, or on top of that."
+  - pattern: '\bnevertheless\b'
+    reason: "AI slop transition. Use still, but, or even so."
+  - pattern: '\bunderscore\b'
+    reason: "AI slop. Use show, prove, highlight, or make clear."
+  - pattern: '\bunderscores\b'
+    reason: "AI slop. Use shows, proves, highlights, or makes clear."
+  - pattern: '\bunderscoring\b'
+    reason: "AI slop. Use showing, proving, highlighting, or making clear."
+  - pattern: '\bshowcase\b'
+    reason: "AI slop. Use show, display, or present."
+  - pattern: '\bshowcases\b'
+    reason: "AI slop. Use shows, displays, or presents."
+  - pattern: '\bshowcasing\b'
+    reason: "AI slop. Use showing, displaying, or presenting."
+  - pattern: '\bintricate\b'
+    reason: "AI slop. Use detailed, complex, or specific."
+  - pattern: '\bpivotal\b'
+    reason: "AI slop. Use key, important, or central."
+  - pattern: '\bmultifaceted\b'
+    reason: "AI slop. Use varied, complex, or name the facets."
+  - pattern: '\bmyriad\b'
+    reason: "AI slop. Use many, lots of, or name them."
+  - pattern: '\bplethora\b'
+    reason: "AI slop. Use many, lots of, or name them."
+  - pattern: '\bunprecedented\b'
+    reason: "AI slop. Use new, first, or name the prior baseline."
+  - pattern: '\bunparalleled\b'
+    reason: "AI slop. Use unmatched, or name the comparison."
+  - pattern: '\bparamount\b'
+    reason: "AI slop. Use top priority, critical, or essential."
+  - pattern: '\bbespoke\b'
+    reason: "Business bullshit. Use custom, tailored, or specific."
+  - pattern: '\bactionable\b'
+    reason: "Business bullshit. Use concrete, specific, or practical."
+  - pattern: '\bcomprehensive\b'
+    reason: "AI slop. Use complete, full, or thorough."
+  - pattern: '\bvibrant\b'
+    reason: "AI slop. Use active, lively, or name the evidence."
+  - pattern: '\bdynamic\b'
+    reason: "AI slop. Use active, changing, or name the behavior."
+  - pattern: '\bmeticulous\b'
+    reason: "AI slop. Use careful, thorough, or precise."
+  - pattern: '\bnuanced\b'
+    reason: "AI slop. Use subtle, detailed, or explain the nuance."
+  - pattern: '\btestament\b'
+    reason: "AI slop. Use shows, proves, or demonstrates."
+  - pattern: '\bbeacon\b'
+    reason: "AI slop metaphor. Use signal, guide, or example."
+  - pattern: '\bembark\b'
+    reason: "AI slop. Use start, begin, or launch."
+  - pattern: '\bendeavor\b'
+    reason: "AI slop. Use effort, project, or attempt."
+  - pattern: '\bproactive\b'
+    reason: "Business bullshit. Use anticipatory, or name the action."
+  - pattern: '\bscalable\b'
+    reason: "Business bullshit. Use grows with load, or name the capacity."
+  - pattern: '\bstreamline\b'
+    reason: "Business bullshit. Use simplify, speed up, or cut steps."
+  - pattern: '\bstreamlines\b'
+    reason: "Business bullshit. Use simplifies, speeds up, or cuts steps."
+  - pattern: '\bstreamlining\b'
+    reason: "Business bullshit. Use simplifying, speeding up, or cutting steps."
+  - pattern: '\bethos\b'
+    reason: "Business bullshit. Use culture, values, or character."
+  - pattern: '\bzeitgeist\b'
+    reason: "Business bullshit. Use trend, mood, or spirit of the times."
+  - pattern: '\bcornerstone\b'
+    reason: "AI slop metaphor. Use foundation, basis, or core."
+  - pattern: '\bhallmark\b'
+    reason: "AI slop. Use sign, feature, or characteristic."
+  - pattern: '\bnexus\b'
+    reason: "AI slop. Use hub, link, or connection."
+  - pattern: '\bmosaic\b'
+    reason: "AI slop metaphor. Use mix, patchwork, or collection."
+  - pattern: '\blabyrinth\b'
+    reason: "AI slop metaphor. Use maze, tangle, or complex system."
+  - pattern: '\btrajectory\b'
+    reason: "AI slop. Use path, course, or direction."
+  - pattern: '\bfrontier\b'
+    reason: "AI slop metaphor. Use edge, boundary, or new area."
+  - pattern: '\bwhilst\b'
+    reason: "AI slop. Use while."
+  - pattern: '\bdeep[ -]dive\b'
+    reason: "AI slop. Use examine, look at, or cover."
+  - pattern: '\bunpack\b'
+    reason: "AI slop. Use explain, break down, or cover."
+  - pattern: '\bshed light on\b'
+    reason: "AI slop. Use explain, show, or clarify."
+  - pattern: '\bdisruptive\b'
+    reason: "Business bullshit. Use new, or name the structural change."
+  - pattern: '\bdisrupt\b'
+    reason: "Business bullshit. Use change, replace, or name the impact."
+  - pattern: '\bdisrupts\b'
+    reason: "Business bullshit. Use changes, replaces, or names the impact."
+  - pattern: '\bfrictionless\b'
+    reason: "Business bullshit. Use smooth, easy, or name what was removed."
+  - pattern: '\bmoat\b'
+    reason: "Business bullshit. Use barrier, advantage, or name the asset."
+  - pattern: '\bflywheel\b'
+    reason: "Business bullshit. Use feedback loop, or name the mechanism."
+  - pattern: '\bagentic\b'
+    reason: "AI slop. Use autonomous, agent-driven, or name the behavior."
+  - pattern: '\bvibe[ -]cod'
+    reason: "AI slop. Use AI-assisted coding, or describe the workflow."
+  - pattern: '\bAI-powered\b'
+    reason: "Business bullshit. Name the model, task, and accuracy."
+  - pattern: '\bAI-native\b'
+    reason: "Business bullshit. Name the model, dataset, and workflow."
+  - pattern: '\bshift[ -]left\b'
+    reason: "Business bullshit. Use test earlier, or name the specific move."
+  - pattern: '\b10x\b'
+    reason: "Business bullshit. Name the dimension and baseline."
+  - pattern: '\bunmissable\b'
+    reason: "AI slop hype. Use important, or name why it matters."
+  - pattern: '\beffortless\b'
+    reason: "AI slop. Name what is hard about the alternative."
+  - pattern: '\bcatalyze\b'
+    reason: "AI slop. Use drive, spark, start, or trigger."
+  - pattern: '\bcatalyzes\b'
+    reason: "AI slop. Use drives, sparks, starts, or triggers."
+  - pattern: '\bamplify\b'
+    reason: "AI slop. Use increase, boost, or strengthen."
+  - pattern: '\bamplifies\b'
+    reason: "AI slop. Use increases, boosts, or strengthens."
+  - pattern: '\bbolster\b'
+    reason: "AI slop. Use strengthen, support, or reinforce."
+  - pattern: '\bbolsters\b'
+    reason: "AI slop. Use strengthens, supports, or reinforces."
+  - pattern: '\bspearhead\b'
+    reason: "Business bullshit. Use lead, drive, or head."
+  - pattern: '\bspearheads\b'
+    reason: "Business bullshit. Use leads, drives, or heads."
+  - pattern: '\bunlock\b'
+    reason: "AI slop. Use get, start, or open."
+  - pattern: '\bsmoke\b'
+    reason: "Business bullshit test branding. Use sanity check or basic check."
+  - pattern: '\bload-bearing\b'
+    reason: "Business bullshit metaphor. Use critical, essential, or core."
+
+  # === AI SLOP PHRASES ===
+  - pattern: 'in today.s (fast-paced|modern|digital|ever-evolving)'
+    reason: "AI slop opener. Start with the actual point."
+  - pattern: 'it is (worth noting|important to note|important to remember) that'
+    reason: "AI slop hedge. Just say the thing."
+  - pattern: "it's (worth noting|important to note|important to remember) that"
+    reason: "AI slop hedge. Just say the thing."
+  - pattern: 'in the realm of'
+    reason: "AI slop. Use in, or name the area directly."
+  - pattern: 'when it comes to'
+    reason: "AI slop. Name the thing directly."
+  - pattern: 'at the end of the day'
+    reason: "AI slop hedge. Make the concluding statement directly."
+  - pattern: 'at its core'
+    reason: "AI slop. Use simply, basically, or just define it."
+  - pattern: 'plays a (crucial|vital|significant|key) role'
+    reason: "AI slop. Name the specific contribution."
+  - pattern: 'crucial role in shaping'
+    reason: "AI slop. Name what it actually shapes and how."
+  - pattern: 'navigate the complexit'
+    reason: "AI slop. Use deal with, handle, or work through."
+  - pattern: 'harness the power of'
+    reason: "AI slop. Use use, or name the specific capability."
+  - pattern: 'embark on a journey'
+    reason: "AI slop. Use start, begin, or launch."
+  - pattern: 'unlock (your|its) potential'
+    reason: "AI slop. Name what becomes available."
+  - pattern: 'bridge the gap'
+    reason: "Business bullshit. Name the two things and the connection."
+  - pattern: 'move the needle'
+    reason: "Business bullshit. Name the metric and the change."
+  - pattern: 'low-hanging fruit'
+    reason: "Business bullshit. Name the easy wins specifically."
+  - pattern: 'think outside the box'
+    reason: "Business bullshit. Describe the actual approach."
+  - pattern: 'win-win'
+    reason: "Business bullshit. Name both benefits explicitly."
+  - pattern: 'best practices'
+    reason: "Business bullshit. Use what works, or name the practice."
+  - pattern: 'value proposition'
+    reason: "Business bullshit. Use offer, or name the value."
+  - pattern: 'pain points'
+    reason: "Business bullshit. Use problems, frustrations, or what is broken."
+  - pattern: 'north star'
+    reason: "Business bullshit. Use goal, target, or primary objective."
+  - pattern: 'double-edged sword'
+    reason: "AI slop. State the actual trade-off."
+  - pattern: 'in conclusion'
+    reason: "AI slop. Cut it, or reframe the final point."
+  - pattern: 'to summarize'
+    reason: "AI slop. Cut it; the reader already read it."
+  - pattern: 'to wrap things up'
+    reason: "AI slop. Cut it; the reader already read it."
+  - pattern: 'in summary'
+    reason: "AI slop. Cut it; the reader already read it."
+  - pattern: 'I hope this helps'
+    reason: "AI slop sign-off. Cut it entirely."
+  - pattern: 'feel free to reach out'
+    reason: "AI slop sign-off. Cut it entirely."
+  - pattern: 'do not hesitate to contact'
+    reason: "AI slop sign-off. Cut it entirely."
+  - pattern: 'happy (to help|coding|hacking)'
+    reason: "AI slop sign-off. Cut it entirely."
+  - pattern: 'best of luck'
+    reason: "AI slop sign-off. Cut it entirely."
+  - pattern: 'great question'
+    reason: "AI slop sycophantic opener. Just answer."
+  - pattern: "that's a (fantastic|great|wonderful) point"
+    reason: "AI slop sycophantic opener. Respond directly."
+  - pattern: 'as an AI language model'
+    reason: "Chatbot residue. Cut it entirely."
+  - pattern: 'certainly[!,]'
+    reason: "AI slop sycophantic opener. Cut it."
+  - pattern: 'of course[!,]'
+    reason: "AI slop sycophantic opener. Cut it."
+  - pattern: 'absolutely[!,]'
+    reason: "AI slop sycophantic opener. Cut it."
 
   # === SILENT ERROR SWALLOWING ===
   - pattern: '\bsilent'

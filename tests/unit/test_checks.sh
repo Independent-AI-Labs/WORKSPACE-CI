@@ -237,6 +237,136 @@ EOF
 }
 _run_test "banned_words: directory rule skips other dirs" test_banned_words_directory_rule_skip_other
 
+test_banned_words_ai_slop_single_word() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/banned_words.yaml" <<'EOF'
+version: "4.0.0"
+banned:
+  - pattern: '\bleverage\b'
+    reason: "Business bullshit."
+  - pattern: '\bsynerg'
+    reason: "Business bullshit."
+EOF
+    mkdir -p src
+    cat > src/slop.py <<'EOF'
+# We leverage synergy for results
+x = 1
+EOF
+    ! ci_check_banned_words src/slop.py
+}
+_run_test "banned_words: AI slop single word blocked" test_banned_words_ai_slop_single_word
+
+test_banned_words_multiword_phrase_blocked() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/banned_words.yaml" <<'EOF'
+version: "4.0.0"
+banned:
+  - pattern: 'harness the power of'
+    reason: "AI slop phrase."
+  - pattern: 'move the needle'
+    reason: "Business bullshit phrase."
+EOF
+    mkdir -p src
+    cat > src/phrase.py <<'EOF'
+# harness the power of the platform to move the needle
+x = 1
+EOF
+    ! ci_check_banned_words src/phrase.py
+}
+_run_test "banned_words: multi-word phrase blocked" test_banned_words_multiword_phrase_blocked
+
+test_banned_words_universal_exception_protects() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/banned_words.yaml" <<'EOF'
+version: "4.0.0"
+universal_exceptions:
+  - paths: ['.*']
+    patterns:
+      - '\bunderscore\b'
+banned:
+  - pattern: '\bunderscore\b'
+    reason: "No slop."
+EOF
+    mkdir -p src
+    cat > src/tech.py <<'EOF'
+# The underscore character is used for private vars
+x = 1
+EOF
+    ci_check_banned_words src/tech.py
+}
+_run_test "banned_words: universal exception protects technical term" test_banned_words_universal_exception_protects
+
+test_banned_words_universal_exception_no_leak() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/banned_words.yaml" <<'EOF'
+version: "4.0.0"
+universal_exceptions:
+  - paths: ['tests/']
+    patterns:
+      - '\bunderscore\b'
+banned:
+  - pattern: '\bunderscore\b'
+    reason: "No slop."
+EOF
+    mkdir -p src
+    cat > src/slop.py <<'EOF'
+# The underscore is a special character
+x = 1
+EOF
+    ! ci_check_banned_words src/slop.py
+}
+_run_test "banned_words: scoped exception does not leak to other dirs" test_banned_words_universal_exception_no_leak
+
+test_banned_words_business_bullshit_blocked() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/banned_words.yaml" <<'EOF'
+version: "4.0.0"
+banned:
+  - pattern: 'low-hanging fruit'
+    reason: "Business bullshit."
+  - pattern: 'north star'
+    reason: "Business bullshit."
+  - pattern: 'best practices'
+    reason: "Business bullshit."
+EOF
+    mkdir -p src
+    cat > src/bullshit.py <<'EOF'
+# Pick the low-hanging fruit as our north star
+# Follow best practices for quality
+x = 1
+EOF
+    ! ci_check_banned_words src/bullshit.py
+}
+_run_test "banned_words: business bullshit phrases blocked" test_banned_words_business_bullshit_blocked
+
+test_banned_words_phrase_exempted_word_still_blocked() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/banned_words.yaml" <<'EOF'
+version: "4.0.0"
+universal_exceptions:
+  - paths: ['.*']
+    patterns:
+      - '\bharness\b'
+banned:
+  - pattern: '\bharness\b'
+    reason: "No slop."
+  - pattern: 'harness the power of'
+    reason: "AI slop phrase."
+EOF
+    mkdir -p src
+    cat > src/tech_ok.py <<'EOF'
+# The test harness runs all suites
+x = 1
+EOF
+    cat > src/slop_bad.py <<'EOF'
+# harness the power of the cloud
+x = 1
+EOF
+    ci_check_banned_words src/tech_ok.py
+    ! ci_check_banned_words src/slop_bad.py
+}
+_run_test "banned_words: exempted word in banned phrase still caught" test_banned_words_phrase_exempted_word_still_blocked
+
 # =========================================================================
 # ci_verify_coverage tests (mock runner)
 # =========================================================================

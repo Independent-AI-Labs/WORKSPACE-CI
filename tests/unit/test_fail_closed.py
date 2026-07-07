@@ -28,9 +28,8 @@ from __future__ import annotations
 import io
 from pathlib import Path
 
-import pytest
-
 import check_silent_swallow
+import pytest
 
 
 def _patch_config_missing(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -24,7 +24,7 @@ import json
 import os
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -34,10 +34,12 @@ _REPO_ROOT = _SCRIPTS_DIR.parent
 _CONFIG_DIR = Path(os.environ.get("CI_CONFIG_DIR") or str(_REPO_ROOT / "config"))
 _LIB_DIR = Path(os.environ.get("CI_LIB_DIR") or str(_REPO_ROOT / "lib"))
 _CI_DIR = Path(os.environ.get("CI_CI_DIR") or str(_REPO_ROOT / "ci"))
-_OUTPUT_DIR = Path(os.environ.get("CI_WEB_DATA_DIR") or str(_REPO_ROOT / "web" / "src" / "data"))
+_DEFAULT_DATA_DIR = _REPO_ROOT / "web" / "src" / "data"
+_OUTPUT_DIR = Path(os.environ.get("CI_WEB_DATA_DIR") or str(_DEFAULT_DATA_DIR))
 CONFIG_PATH = _CONFIG_DIR / "required_hooks.yaml"
 MAKEFILE_PATH = _REPO_ROOT / "Makefile"
 OUTPUT_PATH = _OUTPUT_DIR / "hook-descriptions.json"
+_PREVIEW_LIMIT = 80
 
 
 def load_config() -> dict:
@@ -81,7 +83,7 @@ def extract_shell_description(entry: str) -> str:
 
 def extract_python_description(entry: str) -> str:
     """Parse the module-level docstring from a Python entrypoint."""
-    module_part = entry.split()[0]
+    module_part = entry.split(maxsplit=1)[0]
     parts = module_part.split(".")
     py_path = _CI_DIR.joinpath(*parts).with_suffix(".py")
     if not py_path.exists():
@@ -145,7 +147,7 @@ def main() -> int:
             )
 
     output = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "descriptions": descriptions,
     }
 
@@ -156,7 +158,7 @@ def main() -> int:
 
     print(f"Extracted {len(descriptions)} hook descriptions to {OUTPUT_PATH}")
     for hook_id, desc in descriptions.items():
-        preview = desc[:80] + "..." if len(desc) > 80 else desc
+        preview = desc[:_PREVIEW_LIMIT] + "..." if len(desc) > _PREVIEW_LIMIT else desc
         print(f"  {hook_id}: {preview}")
 
     return 0

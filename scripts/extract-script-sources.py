@@ -19,9 +19,8 @@ Usage:
 import ast
 import json
 import os
-import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -139,7 +138,7 @@ def main() -> int:
         sources.append(result)
 
     output = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "sources": sources,
     }
 

@@ -25,7 +25,7 @@ import json
 import os
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -58,6 +58,40 @@ def _first_paragraph(text: str) -> str:
     return paragraphs[0].strip().replace("\n", " ")
 
 
+def _extract_brace_body(lines: list[str], start_idx: int) -> list[str] | None:
+    """Extract the function body from start_idx, tracking brace depth."""
+    depth = 0
+    started = False
+    body: list[str] = []
+    for j in range(start_idx, len(lines)):
+        body.append(lines[j])
+        for ch in lines[j]:
+            if ch == "{":
+                depth += 1
+                started = True
+            elif ch == "}":
+                depth -= 1
+        if started and depth == 0:
+            return body
+    return None
+
+
+def _extract_leading_comments(lines: list[str], start_idx: int) -> str | None:
+    """Scan upward from start_idx for consecutive comment lines."""
+    doc_lines: list[str] = []
+    for k in range(start_idx - 1, -1, -1):
+        stripped = lines[k].lstrip()
+        if stripped.startswith("#"):
+            text = stripped.lstrip("#").strip()
+            if text:
+                doc_lines.insert(0, text)
+        elif stripped == "":
+            continue
+        else:
+            break
+    return " ".join(doc_lines) if doc_lines else None
+
+
 def extract_shell_function(entry: str) -> dict[str, str | None] | None:
     func_re = re.compile(
         r"^(\s*)" + re.escape(entry) + r"\s*\(\)\s*\{"
@@ -75,46 +109,26 @@ def extract_shell_function(entry: str) -> dict[str, str | None] | None:
             if not m:
                 continue
 
-            depth = 0
-            started = False
-            body: list[str] = []
-            for j in range(i, len(lines)):
-                body.append(lines[j])
-                for ch in lines[j]:
-                    if ch == "{":
-                        depth += 1
-                        started = True
-                    elif ch == "}":
-                        depth -= 1
-                if started and depth == 0:
-                    source = "\n".join(body)
-                    rel_path = str(sh_file.relative_to(_REPO_ROOT))
+            body = _extract_brace_body(lines, i)
+            if body is None:
+                continue
 
-                    doc_lines: list[str] = []
-                    for k in range(i - 1, -1, -1):
-                        stripped = lines[k].lstrip()
-                        if stripped.startswith("#"):
-                            text = stripped.lstrip("#").strip()
-                            if text:
-                                doc_lines.insert(0, text)
-                        elif stripped == "":
-                            continue
-                        else:
-                            break
-                    docstring = " ".join(doc_lines) if doc_lines else None
+            source = "\n".join(body)
+            rel_path = str(sh_file.relative_to(_REPO_ROOT))
+            docstring = _extract_leading_comments(lines, i)
 
-                    return {
-                        "name": entry,
-                        "source_file": rel_path,
-                        "docstring": docstring,
-                        "source": source,
-                        "language": "bash",
-                    }
+            return {
+                "name": entry,
+                "source_file": rel_path,
+                "docstring": docstring,
+                "source": source,
+                "language": "bash",
+            }
     return None
 
 
 def extract_python_main(entry: str) -> dict[str, str | None] | None:
-    module_part = entry.split()[0]
+    module_part = entry.split(maxsplit=1)[0]
     parts = module_part.split(".")
     py_path = _CI_DIR.joinpath(*parts).with_suffix(".py")
     if not py_path.exists():
@@ -238,7 +252,7 @@ def main() -> int:
         sources.append(result)
 
     output = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "sources": sources,
     }
 
