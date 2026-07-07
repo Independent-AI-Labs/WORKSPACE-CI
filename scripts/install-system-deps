@@ -1,0 +1,526 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# install-system-deps
+# Unified system-dependency resolver for WORKSPACE-CI consumers (CI, VM, GATEWAY).
+#
+# Reads a config/system-deps.yaml (unified schema; see that file's header) and
+# checks/installs the declared apt-level dependencies. Pure bash + awk: NO
+# Python, because this runs before the Python venv is bootstrapped.
+#
+# Repo-agnostic: auto-detects the CALLER's repo root from CWD's git top-level
+# (so each consumer reads its own config/system-deps.yaml). Override with
+# --root DIR or $REPO_ROOT. The script itself lives in CI (the shared
+# dependency); consumers invoke it as $(CI_DIR)/scripts/install-system-deps.
+#
+# Usage:
+#   install-system-deps --check                # report, exit 1 if any required missing
+#   install-system-deps --print                # report + print apt-get command (no sudo)
+#   install-system-deps --install              # report + run $(sudo) apt-get install
+#   install-system-deps --export-missing FILE  # write missing apt pkgs to FILE
+#   install-system-deps --install-only FILE    # read FILE, run sudo apt-get install
+#
+# Modes map to consumer sudo models:
+#   CI       --install           (inline sudo)
+#   GATEWAY  --print / --check   (no sudo; user runs the printed command)
+#   VM       --export-missing / --install-only  (two-phase sudo)
+#
+# System-deps phase is APT-ONLY. Entries with bootstrap_script (hermetic
+# install path) are flagged as bootstrap-needed and SKIPPED by the apt install
+# phase -- a separate bootstrap phase (install-boot-tools/install-gitleaks/
+# install-cloc) owns hermetic installs.
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# ---------------------------------------------------------------------------
+# Caller repo root detection
+# ---------------------------------------------------------------------------
+REPO_ROOT="${REPO_ROOT:-}"
+if [[ -z "$REPO_ROOT" ]]; then
+    _git_rc=0
+    REPO_ROOT="$(git rev-parse --show-toplevel)" || _git_rc=$?
+    if [[ $_git_rc -ne 0 ]]; then
+        REPO_ROOT="$(pwd)"
+    fi
+fi
+
+DEPS_FILE=""
+BOOT_BIN=""
+MODE=""
+EXPORT_FILE=""
+INSTALL_ONLY_FILE=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --check)         MODE="check"; shift ;;
+        --print)         MODE="print"; shift ;;
+        --install)       MODE="install"; shift ;;
+        --export-missing) MODE="export-missing"; shift; EXPORT_FILE="${1:?--export-missing requires a FILE}"; shift ;;
+        --install-only)  MODE="install-only"; shift; INSTALL_ONLY_FILE="${1:?--install-only requires a FILE}"; shift ;;
+        --root)          REPO_ROOT="${2:?--root requires a DIR}"; shift 2 ;;
+        --config)        DEPS_FILE="${2:?--config requires a FILE}"; shift 2 ;;
+        --boot-dir)      BOOT_BIN="${2:?--boot-dir requires a DIR}"; shift 2 ;;
+        -h|--help)
+            sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//'
+            exit 0 ;;
+        *) echo "Usage: $0 [--check|--print|--install|--export-missing FILE|--install-only FILE] [--root DIR] [--config FILE] [--boot-dir DIR]" >&2; exit 2 ;;
+    esac
+done
+
+[[ -z "$MODE" ]] && MODE="check"
+[[ -z "$DEPS_FILE" ]] && DEPS_FILE="$REPO_ROOT/config/system-deps.yaml"
+[[ -z "$BOOT_BIN" ]] && BOOT_BIN="$REPO_ROOT/.boot-linux/bin"
+
+if [[ ! -f "$DEPS_FILE" ]]; then
+    echo "ERROR: dependencies config not found: $DEPS_FILE" >&2
+    echo "  (override with --config FILE or --root DIR)" >&2
+    exit 1
+fi
+
+# sudo is a no-op when already root (containers, CI agents)
+SUDO=""
+if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+    SUDO="sudo"
+fi
+
+# ---------------------------------------------------------------------------
+# Output helpers (colors only when stdout is a tty)
+# ---------------------------------------------------------------------------
+if [[ -t 1 ]]; then
+    _RED='\033[0;31m'; _GREEN='\033[0;32m'; _YELLOW='\033[0;33m'; _BOLD='\033[1m'; _DIM='\033[2m'; _NC='\033[0m'
+else
+    _RED='' _GREEN='' _YELLOW='' _BOLD='' _DIM='' _NC=''
+fi
+log_ok()   { echo -e "  ${_GREEN}[OK]${_NC}      $*"; }
+log_miss() { echo -e "  ${_RED}[MISSING]${_NC} $*"; }
+log_opt()  { echo -e "  ${_YELLOW}[OPTIONAL]${_NC} $*"; }
+log_warn() { echo -e "${_YELLOW}WARNING:${_NC} $*"; }
+log_info() { echo -e "${_BOLD}$*${_NC}"; }
+
+first_line() { local _out="$1"; echo "${_out%%$'\n'*}"; }
+
+# ---------------------------------------------------------------------------
+# Binary finding
+# ---------------------------------------------------------------------------
+SYSTEM_PATHS="/usr/bin /usr/sbin /usr/local/bin /usr/local/sbin /snap/bin"
+
+find_binary() {
+    local cmd="$1"
+    if command -v "$cmd" >/dev/null 2>&1; then
+        command -v "$cmd"
+        return 0
+    fi
+    local dir
+    for dir in $SYSTEM_PATHS; do
+        if [[ -x "${dir}/${cmd}" ]]; then
+            echo "${dir}/${cmd}"
+            return 0
+        fi
+    done
+    if [[ -x "${BOOT_BIN}/${cmd}" ]]; then
+        echo "${BOOT_BIN}/${cmd}"
+        return 0
+    fi
+    return 1
+}
+
+# Best-effort version string for a found binary (try --version, -V, version).
+version_of() {
+    local bin="$1" raw=""
+    raw="$("$bin" --version 2>&1)" || raw=""
+    [[ -z "$raw" ]] && { raw="$("$bin" -V 2>&1)" || raw=""; }
+    [[ -z "$raw" ]] && { raw="$("$bin" version 2>&1)" || raw=""; }
+    first_line "$raw" | cut -c1-60
+}
+
+# ---------------------------------------------------------------------------
+# Parse config/system-deps.yaml with awk -> TSV: etype|ekey|pkg|desc|optional|bootstrap|component
+# etype: cmd | type
+# ---------------------------------------------------------------------------
+parse_deps() {
+    awk '
+    function emit(    line) {
+        if (etype == "") return
+        # cmd and type share the same TSV shape so check_type: apt-package
+        # (which carries an apt_package) is not stripped of its pkg field.
+        line = etype "|" ekey "|" pkg "|" desc "|" opt "|" boot "|" comp
+        print line
+        etype = ekey = pkg = desc = boot = comp = ""
+        opt = "False"
+    }
+    function kv(s,    m) {
+        if (!match(s, /: /)) { k = s; v = ""; return }
+        k = substr(s, 1, RSTART-1); v = substr(s, RSTART+2)
+        gsub(/^['"'"'"]|['"'"'"]$/, "", v)
+    }
+    /^requires:[[:space:]]*$/ { in_req = 1; next }
+    in_req && /^[^[:space:]-]/ { in_req = 0; next }
+    in_req && /^  - / {
+        emit()
+        rest = $0; sub(/^  - /, "", rest); kv(rest)
+        if (k == "check_cmd") { etype = "cmd"; ekey = v }
+        else if (k == "check_type") { etype = "type"; ekey = v }
+        next
+    }
+    in_req && /^    / {
+        rest = $0; sub(/^    /, "", rest); kv(rest)
+        if (k == "apt_package") pkg = v
+        else if (k == "description") desc = v
+        else if (k == "optional") opt = (v == "true" ? "True" : "False")
+        else if (k == "bootstrap_script") boot = v
+        else if (k == "component") comp = v
+        next
+    }
+    END { emit() }
+    ' "$DEPS_FILE"
+}
+
+# ---------------------------------------------------------------------------
+# Missing collectors
+# ---------------------------------------------------------------------------
+missing_apt_pkgs=()
+missing_bootstrap=()
+missing_unknown=()
+present_count=0
+missing_required_count=0
+optional_missing_count=0
+
+record_apt_missing() {
+    local pkg="$1"
+    local already=false e
+    for e in "${missing_apt_pkgs[@]:-}"; do [[ "$e" == "$pkg" ]] && already=true && break; done
+    [[ "$already" == "false" ]] && missing_apt_pkgs+=("$pkg")
+}
+
+# ---------------------------------------------------------------------------
+# check_cmd entry
+# ---------------------------------------------------------------------------
+check_cmd_entry() {
+    local cmd="$1" pkg="$2" desc="$3" optional="$4" bootstrap="$5" component="$6"
+    local label="$desc"
+    [[ -n "$component" ]] && label="$desc ${_DIM}($component)${_NC}"
+    local found
+    if found=$(find_binary "$cmd"); then
+        local ver
+        ver="$(version_of "$found")"
+        if [[ -n "$ver" ]]; then
+            log_ok "$label ${_DIM}($ver)${_NC}"
+        else
+            log_ok "$label ${_DIM}(at $found)${_NC}"
+        fi
+        present_count=$((present_count + 1))
+        return 0
+    fi
+    if [[ "$optional" == "True" ]]; then
+        log_opt "$label ${_DIM}(optional - not found)${_NC}"
+        optional_missing_count=$((optional_missing_count + 1))
+        return 0
+    fi
+    if [[ -n "$bootstrap" ]]; then
+        log_miss "$label ${_DIM}(not found - bootstrap: $bootstrap)${_NC}"
+        missing_bootstrap+=("$cmd|$bootstrap|$desc")
+    elif [[ -n "$pkg" ]]; then
+        log_miss "$label ${_DIM}(needs: $pkg)${_NC}"
+        record_apt_missing "$pkg"
+    else
+        log_miss "$label ${_DIM}(not found - no apt_package or bootstrap_script)${_NC}"
+        missing_unknown+=("$cmd|$desc")
+    fi
+    missing_required_count=$((missing_required_count + 1))
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# check_type handlers
+# ---------------------------------------------------------------------------
+check_c_compiler() {
+    local desc="$1" component="$2"
+    local label="$desc"; [[ -n "$component" ]] && label="$desc ${_DIM}($component)${_NC}"
+    local c
+    for c in gcc cc clang; do
+        local found
+        if found=$(find_binary "$c"); then
+            log_ok "$label: $(version_of "$found")"
+            present_count=$((present_count + 1))
+            return 0
+        fi
+    done
+    log_miss "$label ${_DIM}(need gcc, cc, or clang)${_NC}"
+    record_apt_missing "gcc"
+    missing_required_count=$((missing_required_count + 1))
+    return 0
+}
+
+check_network_tools() {
+    local desc="$1" component="$2"
+    local label="$desc"; [[ -n "$component" ]] && label="$desc ${_DIM}($component)${_NC}"
+    if find_binary curl >/dev/null 2>&1 || find_binary wget >/dev/null 2>&1; then
+        find_binary curl >/dev/null 2>&1 && log_ok "$label: curl available"
+        find_binary wget >/dev/null 2>&1 && log_ok "$label: wget available"
+        present_count=$((present_count + 1))
+        return 0
+    fi
+    log_miss "$label ${_DIM}(need curl or wget)${_NC}"
+    record_apt_missing "curl"
+    missing_required_count=$((missing_required_count + 1))
+    return 0
+}
+
+check_libolm_headers() {
+    local desc="$1" component="$2"
+    local label="$desc"; [[ -n "$component" ]] && label="$desc ${_DIM}($component)${_NC}"
+    local h
+    for h in /usr/include/olm/olm.h /usr/local/include/olm/olm.h; do
+        if [[ -f "$h" ]]; then
+            log_ok "$label ${_DIM}(at $h)${_NC}"
+            present_count=$((present_count + 1))
+            return 0
+        fi
+    done
+    log_miss "$label ${_DIM}(needs: libolm-dev)${_NC}"
+    record_apt_missing "libolm-dev"
+    missing_required_count=$((missing_required_count + 1))
+    return 0
+}
+
+check_playwright_libs() {
+    local desc="$1" component="$2"
+    local label="$desc"; [[ -n "$component" ]] && label="$desc ${_DIM}($component)${_NC}"
+    local _variants=(
+        "libnss3"
+        "libgbm1"
+        "libatk-bridge2.0-0t64|libatk-bridge2.0-0"
+        "libpango-1.0-0"
+        "libcairo2"
+        "libcups2t64|libcups2"
+        "libdrm2"
+        "libdbus-1-3"
+        "libxkbcommon0"
+        "libxrandr2"
+    )
+    local _any_missing=0 e
+    for e in "${_variants[@]}"; do
+        IFS='|' read -ra alts <<< "$e"
+        local installed=false v
+        for v in "${alts[@]}"; do
+            if dpkg -s "$v" >/dev/null 2>&1; then installed=true; break; fi
+        done
+        if [[ "$installed" == "true" ]]; then continue; fi
+        local avail=""
+        for v in "${alts[@]}"; do
+            if apt-cache show "$v" >/dev/null 2>&1; then avail="$v"; break; fi
+        done
+        if [[ -n "$avail" ]]; then
+            log_miss "Playwright lib: ${alts[0]} ${_DIM}(needs: $avail)${_NC}"
+            record_apt_missing "$avail"
+        else
+            log_miss "Playwright lib: ${alts[0]} ${_DIM}(not available in apt)${_NC}"
+        fi
+        _any_missing=1
+    done
+    if [[ $_any_missing -eq 0 ]]; then
+        log_ok "$label"
+        present_count=$((present_count + 1))
+    else
+        missing_required_count=$((missing_required_count + 1))
+    fi
+}
+
+check_apt_package() {
+    local pkg="$1" desc="$2" optional="$3" component="$4"
+    local label="$desc"; [[ -n "$component" ]] && label="$desc ${_DIM}($component)${_NC}"
+    if dpkg -s "$pkg" >/dev/null 2>&1; then
+        log_ok "$label ${_DIM}($pkg installed)${_NC}"
+        present_count=$((present_count + 1))
+        return 0
+    fi
+    if [[ "$optional" == "True" ]]; then
+        log_opt "$label ${_DIM}(optional - $pkg not installed)${_NC}"
+        optional_missing_count=$((optional_missing_count + 1))
+        return 0
+    fi
+    log_miss "$label ${_DIM}(needs: $pkg)${_NC}"
+    record_apt_missing "$pkg"
+    missing_required_count=$((missing_required_count + 1))
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# Apt probing (warn on unavailable packages)
+# ---------------------------------------------------------------------------
+probe_apt() {
+    [[ ${#missing_apt_pkgs[@]} -eq 0 ]] && return 0
+    local unavailable=() pkg
+    for pkg in "${missing_apt_pkgs[@]}"; do
+        if ! apt-cache show "$pkg" >/dev/null 2>&1; then
+            local already=false e
+            for e in "${unavailable[@]:-}"; do [[ "$e" == "$pkg" ]] && already=true && break; done
+            [[ "$already" == "false" ]] && unavailable+=("$pkg")
+        fi
+    done
+    if [[ ${#unavailable[@]} -gt 0 ]]; then
+        echo ""
+        log_warn "The following packages are not available in apt: ${unavailable[*]}"
+        log_warn "Install these manually."
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Run the apt install for missing_apt_pkgs
+# ---------------------------------------------------------------------------
+do_apt_install() {
+    [[ ${#missing_apt_pkgs[@]} -eq 0 ]] && { log_info "Nothing to install -- all apt dependencies satisfied."; return 0; }
+    probe_apt
+    local installable=() pkg
+    for pkg in "${missing_apt_pkgs[@]}"; do
+        if apt-cache show "$pkg" >/dev/null 2>&1; then
+            local already=false e
+            for e in "${installable[@]:-}"; do [[ "$e" == "$pkg" ]] && already=true && break; done
+            [[ "$already" == "false" ]] && installable+=("$pkg")
+        fi
+    done
+    if [[ ${#installable[@]} -eq 0 ]]; then
+        log_warn "No missing packages are apt-installable."
+        return 0
+    fi
+    log_info "Installing ${#installable[@]} package(s) via apt: ${installable[*]}"
+    if $SUDO apt-get update -qq && $SUDO apt-get install -y "${installable[@]}"; then
+        echo ""
+        log_info "Installed: ${installable[*]}"
+    else
+        echo ""
+        log_warn "apt-get install failed."
+        return 1
+    fi
+}
+
+# ===========================================================================
+# Mode: --install-only FILE (two-phase sudo: read a missing list, install)
+# ===========================================================================
+if [[ "$MODE" == "install-only" ]]; then
+    if [[ ! -f "$INSTALL_ONLY_FILE" ]]; then
+        log_info "No missing-dependencies file ($INSTALL_ONLY_FILE); nothing to install."
+        exit 0
+    fi
+    missing_apt_pkgs=()
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        missing_apt_pkgs+=("$line")
+    done < "$INSTALL_ONLY_FILE"
+    rm -f "$INSTALL_ONLY_FILE"
+    do_apt_install
+    exit 0
+fi
+
+# ===========================================================================
+# Check phase (shared by --check / --print / --install / --export-missing)
+# ===========================================================================
+echo "=== System Dependency Check ==="
+echo "  config: $DEPS_FILE"
+echo "  root:   $REPO_ROOT"
+echo ""
+
+# Parse deps into a temp file (process substitution < <(...) is broken under
+# PRoot/sandboxes per lib/ci.sh §Portable output capture; use a temp file).
+_deps_tmp="$(mktemp)" || exit 1
+trap 'rm -f "$_deps_tmp"' EXIT
+parse_deps > "$_deps_tmp"
+
+while IFS='|' read -r etype ekey pkg desc opt boot comp; do
+    [[ "$etype" == "cmd" ]] && check_cmd_entry "$ekey" "$pkg" "$desc" "$opt" "$boot" "$comp"
+    if [[ "$etype" == "type" ]]; then
+        case "$ekey" in
+            c-compiler)       check_c_compiler "$desc" "$comp" ;;
+            network-tools)    check_network_tools "$desc" "$comp" ;;
+            libolm-headers)   check_libolm_headers "$desc" "$comp" ;;
+            playwright-libs)  check_playwright_libs "$desc" "$comp" ;;
+            apt-package)      check_apt_package "$pkg" "$desc" "$opt" "$comp" ;;
+            *) log_warn "unknown check_type: $ekey (skipped)" ;;
+        esac
+    fi
+done < "$_deps_tmp"
+rm -f "$_deps_tmp"
+trap - EXIT
+
+echo ""
+echo "  Present:          $present_count"
+echo "  Missing required: $missing_required_count"
+[[ "$optional_missing_count" -gt 0 ]] && echo "  Optional missing: $optional_missing_count"
+
+if [[ ${#missing_bootstrap[@]} -gt 0 ]]; then
+    echo ""
+    echo "  Hermetic bootstrap needed (apt phase skips these):"
+    for e in "${missing_bootstrap[@]}"; do
+        IFS='|' read -r cmd script _ <<< "$e"
+        echo "    - $cmd -> $script"
+    done
+fi
+
+if [[ ${#missing_unknown[@]} -gt 0 ]]; then
+    echo ""
+    log_warn "Entries with no apt_package and no bootstrap_script (cannot resolve):"
+    for e in "${missing_unknown[@]}"; do
+        IFS='|' read -r cmd _ <<< "$e"
+        echo "    - $cmd"
+    done
+fi
+
+# ===========================================================================
+# Mode: --export-missing FILE (write missing apt pkgs for two-phase sudo)
+# ===========================================================================
+if [[ "$MODE" == "export-missing" ]]; then
+    if [[ ${#missing_apt_pkgs[@]} -eq 0 && "$missing_required_count" -eq 0 ]]; then
+        log_info "All required system dependencies satisfied."
+        rm -f "$EXPORT_FILE"
+        exit 0
+    fi
+    printf '%s\n' "${missing_apt_pkgs[@]:-}" > "$EXPORT_FILE"
+    # Filter out the empty line when missing_apt_pkgs is empty but file written.
+    if [[ ${#missing_apt_pkgs[@]} -eq 0 ]]; then rm -f "$EXPORT_FILE"; fi
+    log_warn "Wrote ${#missing_apt_pkgs[@]} missing apt package(s) to $EXPORT_FILE for sudo install."
+    exit 0
+fi
+
+# ===========================================================================
+# No missing -> success for all remaining modes
+# ===========================================================================
+if [[ "$missing_required_count" -eq 0 ]]; then
+    echo ""
+    log_info "All required system dependencies satisfied."
+    exit 0
+fi
+
+# ===========================================================================
+# Mode: --check (report only, exit 1 if missing)
+# ===========================================================================
+if [[ "$MODE" == "check" ]]; then
+    echo ""
+    log_warn "Missing $missing_required_count required system dependency(ies)."
+    exit 1
+fi
+
+# ===========================================================================
+# Mode: --print (print the apt command, no sudo)
+# ===========================================================================
+if [[ "$MODE" == "print" ]]; then
+    if [[ ${#missing_apt_pkgs[@]} -gt 0 ]]; then
+        echo ""
+        echo "Install missing apt packages by running:"
+        echo ""
+        echo "  sudo apt-get update && sudo apt-get install -y ${missing_apt_pkgs[*]}"
+        echo ""
+        echo "(install-system-deps does not run sudo in --print mode.)"
+    fi
+    exit 1
+fi
+
+# ===========================================================================
+# Mode: --install (inline sudo apt-get install)
+# ===========================================================================
+if [[ "$MODE" == "install" ]]; then
+    do_apt_install
+    exit 0
+fi
+
+echo "ERROR: unknown mode $MODE" >&2
+exit 2

@@ -69,7 +69,7 @@ DIM = "\033[2m"
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
-# Fail-fast performance knobs (NO silent swallow: every failure surfaces as
+# Fail-fast performance knobs (NO error swallowing: every failure surfaces as
 # a Finding, every timeout / cancellation surfaces as a stderr warning).
 DEFAULT_HTTP_TIMEOUT = 5.0  # per-attempt (each HEAD + GET counts)
 _MD_SUFFIXES = frozenset({".md", ".markdown", ".mdown"})

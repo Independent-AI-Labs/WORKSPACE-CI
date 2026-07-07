@@ -7,6 +7,8 @@ export interface ProjectEntry {
   logoPath?: string
   readmePath: string
   makefilePath: string
+  repoUrl?: string
+  branch: string
 }
 
 export interface ProjectSummary {
@@ -30,4 +32,6 @@ export interface ProjectReadme {
   logoPath?: string
   title: string
   content: string
+  repoUrl?: string
+  branch: string
 }

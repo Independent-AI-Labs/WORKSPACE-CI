@@ -7,26 +7,45 @@ import type { ProjectEntry, ProjectSummary, ProjectReadme } from '@/types/projec
 const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT
   ?? join(process.cwd(), '..', '..')
 
-function getGitHubBaseUrl(): string {
-  const gitConfigPath = join(process.cwd(), '..', '.git', 'config')
-  let config: string
+const DEFAULT_BRANCH = 'main'
+
+function readGitFile(repoDir: string, relativePath: string): string | null {
   try {
-    config = readFileSync(gitConfigPath, 'utf8')
+    return readFileSync(join(repoDir, '.git', relativePath), 'utf8')
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
-    return ''
+    return null
   }
+}
+
+function parseRepoUrl(config: string): string {
   const sectionMatch = config.match(/\[remote "origin"\][^\[]*?url\s*=\s*(\S+)/)
   if (!sectionMatch) return ''
   const remote = sectionMatch[1]
-  const sshMatch = remote.match(/git@([^:]+):([^/]+)\//)
+  const sshMatch = remote.match(/git@([^:]+):([^/]+\/[^/]+?)(?:\.git)?$/)
   if (sshMatch) return `https://${sshMatch[1]}/${sshMatch[2]}`
-  const httpsMatch = remote.match(/https?:\/\/([^/]+\/[^/]+)\//)
+  const httpsMatch = remote.match(/https?:\/\/([^/]+\/[^/]+?)(?:\.git)?$/)
   if (httpsMatch) return `https://${httpsMatch[1]}`
   return ''
 }
 
-const GITHUB_BASE_URL = getGitHubBaseUrl()
+export function getRepoUrl(repoDir: string): string {
+  const config = readGitFile(repoDir, 'config')
+  return config ? parseRepoUrl(config) : ''
+}
+
+export function getDefaultBranch(repoDir: string): string {
+  const head = readGitFile(repoDir, 'HEAD')
+  if (head) {
+    const match = head.trim().match(/^ref:\s*refs\/heads\/(.+)$/)
+    if (match) return match[1]
+  }
+  return DEFAULT_BRANCH
+}
+
+function repoDir(repoName: string): string {
+  return join(PROJECTS_ROOT, repoName)
+}
 
 export const PROJECTS: ProjectEntry[] = [
   {
@@ -38,6 +57,8 @@ export const PROJECTS: ProjectEntry[] = [
     logoPath: '/logos/workspace-ci.png',
     readmePath: join(PROJECTS_ROOT, 'CI', 'README.md'),
     makefilePath: join(PROJECTS_ROOT, 'CI', 'Makefile'),
+    repoUrl: getRepoUrl(repoDir('CI')) || undefined,
+    branch: getDefaultBranch(repoDir('CI')),
   },
   {
     slug: 'workspace-gateway',
@@ -48,6 +69,8 @@ export const PROJECTS: ProjectEntry[] = [
     logoPath: '/logos/workspace-gateway.png',
     readmePath: join(PROJECTS_ROOT, 'WORKSPACE-GATEWAY', 'README.md'),
     makefilePath: join(PROJECTS_ROOT, 'WORKSPACE-GATEWAY', 'Makefile'),
+    repoUrl: getRepoUrl(repoDir('WORKSPACE-GATEWAY')) || undefined,
+    branch: getDefaultBranch(repoDir('WORKSPACE-GATEWAY')),
   },
   {
     slug: 'workspace-guard',
@@ -58,6 +81,8 @@ export const PROJECTS: ProjectEntry[] = [
     logoPath: '/logos/workspace-guard.png',
     readmePath: join(PROJECTS_ROOT, 'WORKSPACE-GUARD', 'README.md'),
     makefilePath: join(PROJECTS_ROOT, 'WORKSPACE-GUARD', 'Makefile'),
+    repoUrl: getRepoUrl(repoDir('WORKSPACE-GUARD')) || undefined,
+    branch: getDefaultBranch(repoDir('WORKSPACE-GUARD')),
   },
 ]
 
@@ -125,6 +150,8 @@ export const loadProjectReadme = cache(
       ...(entry.logoPath ? { logoPath: entry.logoPath } : {}),
       title: extractReadmeTitle(content),
       content,
+      ...(entry.repoUrl ? { repoUrl: entry.repoUrl } : {}),
+      branch: entry.branch,
     }
   },
 )
@@ -162,9 +189,7 @@ export const loadAllProjectSummaries = cache(
           ...(entry.logoPath ? { logoPath: entry.logoPath } : {}),
           title: extractReadmeTitle(content),
           summary: extractReadmeSummary(content),
-          ...(GITHUB_BASE_URL
-            ? { repoUrl: `${GITHUB_BASE_URL}/${entry.displayName}` }
-            : {}),
+          ...(entry.repoUrl ? { repoUrl: entry.repoUrl } : {}),
         }
       }),
     )

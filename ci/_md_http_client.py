@@ -30,7 +30,7 @@ class HttpClient:
     back to GET if the server refuses. Results are cached so repeated
     URL references are probed once per run.
 
-    NO silent swallow:
+    NO error swallowing:
       - Per-probe error  -> recorded as ``(False, "<ExcType>: <msg>")``,
         surfaces as a Finding ("unreachable URL: ...").
       - Global budget exhaustion -> remaining unprobed URLs return

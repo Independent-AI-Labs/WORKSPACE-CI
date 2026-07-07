@@ -41,13 +41,9 @@ help: ## Show this help
 SUDO := $(shell if [ "$$EUID" -eq 0 ]; then echo ""; else echo "sudo"; fi)
 
 .PHONY: init
-init: ## Install all system-level dependencies (apt packages + Rust toolchain)
-	@echo "==> Installing system packages..."
-	$(SUDO) apt-get update -qq
-	$(SUDO) apt-get install -y --no-install-recommends \
-		curl tar ca-certificates \
-		libcap2-bin e2fsprogs file \
-		build-essential pkg-config
+init: ## Install all system-level dependencies (apt packages from config/system-deps.yaml + Rust toolchain)
+	@echo "==> Installing system packages (from config/system-deps.yaml)..."
+	bash scripts/install-system-deps --install
 	@echo "==> Installing Rust toolchain (if missing)..."
 	@if ! command -v cargo > /dev/null 2>&1; then \
 		bash scripts/bootstrap-rust; \
@@ -71,7 +67,7 @@ install-ci: preflight install-deps ## CI install: deps + bootstrap binaries, no 
 	@:
 
 .PHONY: install-deps
-install-deps: install-boot-tools install-python-deps install-gitleaks ## Install boot tools + python .venv deps + gitleaks
+install-deps: install-boot-tools install-python-deps install-gitleaks install-cloc ## Install boot tools + python .venv deps + gitleaks + cloc
 
 .PHONY: install-boot-tools
 install-boot-tools: ## Bootstrap uv + rust toolchain into .boot-linux/bin/ (idempotent)
@@ -85,6 +81,10 @@ install-python-deps: install-boot-tools ## uv sync the Python deps (project-leve
 .PHONY: install-gitleaks
 install-gitleaks: ## Bootstrap the gitleaks binary used by the secret-content scanner
 	bash scripts/bootstrap-gitleaks
+
+.PHONY: install-cloc
+install-cloc: ## Bootstrap the cloc binary (single-file Perl) used by code-stats
+	bash scripts/bootstrap-cloc
 
 .PHONY: install-hooks
 install-hooks: ## (Re)generate native git hooks

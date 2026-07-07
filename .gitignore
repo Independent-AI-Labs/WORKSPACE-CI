@@ -11,6 +11,7 @@ uv.lock
 .venv/
 .boot-linux/
 web/res/
+web/coverage/
 data/feedback/
 web/data/feedback/
 /*.pdf

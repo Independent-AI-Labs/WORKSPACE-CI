@@ -45,7 +45,11 @@ export default async function ProjectReadmePage({
           <h1>{project.displayName}</h1>
           <span className="project-detail__badge">{project.language}</span>
         </div>
-        <ContentRenderer content={project.content} />
+        <ContentRenderer
+          content={project.content}
+          repoUrl={project.repoUrl}
+          branch={project.branch}
+        />
       </div>
     </WikiShell>
   )

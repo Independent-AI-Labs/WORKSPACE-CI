@@ -27,7 +27,7 @@ in_hook {
     if (/^[[:space:]]+args:/)           { args = inline_list(); next }
     if (/^[[:space:]]+types_or:/)      { types_or = inline_list(); next }
     if (/^[[:space:]]+types:/)         { types_or = inline_list(); next }
-    # language, verbose, etc.: silently ignored
+    # language, verbose, etc.: ignored without warning
 }
 
 END { flush() }

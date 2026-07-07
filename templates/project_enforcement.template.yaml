@@ -19,7 +19,7 @@
 #               blocked-history, commit-message format. No
 #               quality_exceptions.yaml required, no lint/type/check.
 #   vendored : wrapper passthrough; no hooks installed at all. Use for
-#               git-subtree mirrors and frozen legacy code.
+#               git-subtree mirrors and frozen inherited code.
 
 version: 1
 

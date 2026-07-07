@@ -73,7 +73,7 @@ ci_verify_coverage() {
         # flags (--min-coverage, --cov-fail-under, --coverage.thresholds, etc.)
         # are appended, regardless of which branch matched. Only the runner's
         # own native args + the test path go through. This prevents the
-        # historical bug where the `*)` fallback appended `--min-coverage=N
+        # historical bug where the `*)` catch-all branch appended `--min-coverage=N
         # --source=...` to bare `cargo test` runners, breaking them with
         # "unexpected argument '--min-coverage'".
         local cmd
@@ -116,7 +116,7 @@ ci_verify_coverage() {
                 cmd="$runner"
                 ;;
             *)
-                # Generic fallback. Only append coverage flags when coverage
+                # Generic catch-all. Only append coverage flags when coverage
                 # is explicitly enabled; for `coverage: false` runs, emit
                 # just the runner + path so non-coverage-aware runners
                 # (bare cargo test, go test, etc.) don't choke on flags

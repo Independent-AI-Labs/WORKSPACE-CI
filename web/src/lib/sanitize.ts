@@ -17,6 +17,7 @@ export function sanitizeHtml(dirty: string): string {
   return createDOMPurify.sanitize(dirty, {
     ALLOWED_TAGS,
     ALLOWED_ATTR,
+    ALLOW_DATA_ATTR: true,
     FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form'],
     FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
   })

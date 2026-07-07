@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+# bootstrap-cloc: fetch the cloc single-file Perl script and place it on PATH.
+#
+# This project depends on `cloc` (Count Lines of Code) for the code-stats
+# script. cloc is distributed as a single self-contained Perl script, so
+# bootstrapping it is a download + checksum verify + drop into the boot bin
+# dir. This script is idempotent: if a compatible binary is already present
+# at the target path, it exits 0 without redownloading.
+#
+# Default install location:
+#   $CI_PROJECT_ROOT/${boot_dir}/bin/cloc
+# where ${boot_dir} is read from config/boot_layout.yaml (single source of
+# truth per SPEC-BOOT-LAYOUT §4.1; default '.boot-linux/').
+# Override with $CLOC_BIN to drop somewhere else.
+#
+# Override the version with $CLOC_VERSION (default below).
+#
+# Supply-chain pinning: SHA256 verification is MANDATORY and always on.
+# Unlike gitleaks, cloc does NOT publish a checksums sidecar file alongside
+# its release assets (verified via the GitHub releases API). The hash below
+# is therefore hardcoded against the pinned CLOC_VERSION. Bumping the
+# version requires recomputing the hash (sha256sum of the .pl asset).
+#
+# cloc is a Perl script; a working `perl` is a runtime dependency and is
+# declared in config/system-deps.yaml. This script verifies perl presence
+# before installing so the failure mode is obvious at bootstrap time.
+#
+# CI_PROJECT_ROOT (this repo's own root) is delegated to lib/ci.sh. Per the
+# boot contract, this script installs to CI's OWN .boot-linux/: NOT the
+# workspace root. Sibling repos (e.g. WORKSPACE-VM) reach this binary via
+# the boot-path resolver (lib/ci.sh::ci_resolve_boot_path) + inherit:
+# declarations in their config/boot_layout.yaml. See:
+#   docs/specifications/SPEC-BOOT-LAYOUT.md
+
+set -euo pipefail
+
+CLOC_VERSION="${CLOC_VERSION:-2.02}"
+# SHA256 of cloc-2.02.pl (759966 bytes), fetched from:
+#   https://github.com/AlDanial/cloc/releases/download/v2.02/cloc-2.02.pl
+# Recompute with: sha256sum <(curl -fsSL <url>)  when bumping CLOC_VERSION.
+CLOC_SHA256="373b4424acdf4bfb38e735a85c8a0e5731ee789e2fd95df2618d254cbdb7f355"
+
+_ci_lib="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
+# shellcheck source=lib/ci.sh
+if ! source "$_ci_lib/ci.sh"; then
+    echo "ERROR: failed to source $_ci_lib/ci.sh" >&2
+    exit 2
+fi
+if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
+    echo "ERROR: CI_PROJECT_ROOT not set after sourcing ci.sh" >&2
+    exit 2
+fi
+
+_log() { printf '[bootstrap-cloc] %s\n' "$*" >&2; }
+
+main() {
+    local target_dir target _boot_dir
+    # Read boot_dir from config/boot_layout.yaml (single source of truth).
+    # Normalize: strip leading "./" and trailing "/".
+    _boot_dir="$(ci_read_yaml "${CI_CONFIG_DIR}/boot_layout.yaml" "boot_dir")" || _boot_dir=".boot-linux"
+    _boot_dir="${_boot_dir#./}"
+    _boot_dir="${_boot_dir%/}"
+    [[ -z "$_boot_dir" ]] && _boot_dir=".boot-linux"
+    target_dir="${CI_PROJECT_ROOT}/${_boot_dir}/bin"
+    target="${CLOC_BIN:-${target_dir}/cloc}"
+
+    if ! mkdir -p "$(dirname "$target")"; then
+        _log "mkdir failed for $(dirname "$target")"
+        return 1
+    fi
+
+    # cloc is a Perl script: refuse to install without a working perl.
+    if ! command -v perl >/dev/null 2>&1; then
+        _log "perl not found on PATH; cloc is a Perl script and requires it"
+        _log "install perl (declared in config/system-deps.yaml) then re-run"
+        return 1
+    fi
+
+    if [[ -x "$target" ]]; then
+        local v_out v_rc=0
+        v_out="$(mktemp)"
+        "$target" --version >"$v_out" 2>&1 || v_rc=$?
+        if [[ "$v_rc" -eq 0 ]]; then
+            local cur
+            cur="$(head -1 "$v_out")"
+            rm -f "$v_out"
+            if [[ "$cur" == *"$CLOC_VERSION"* ]]; then
+                _log "cloc ${CLOC_VERSION} already at $target"
+                return 0
+            fi
+            _log "found existing cloc ($cur), upgrading to ${CLOC_VERSION}"
+        else
+            rm -f "$v_out"
+            _log "existing binary at $target did not respond to '--version' (rc=$v_rc)"
+            _log "re-downloading fresh copy"
+        fi
+    fi
+
+    local asset="cloc-${CLOC_VERSION}.pl"
+    local url="https://github.com/AlDanial/cloc/releases/download/v${CLOC_VERSION}/${asset}"
+
+    local tmp
+    tmp="$(mktemp -d)"
+    # shellcheck disable=SC2064
+    trap "rm -rf \"\${tmp:-$tmp}\"" EXIT
+
+    _log "fetching ${url}"
+    if ! curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/${asset}" "$url"; then
+        _log "curl failed for $url"
+        return 1
+    fi
+
+    # Mandatory SHA256 verification against the pinned hash.
+    local actual_sha
+    actual_sha="$(sha256sum "${tmp}/${asset}" | awk '{print $1}')"
+    if [[ "$actual_sha" != "$CLOC_SHA256" ]]; then
+        _log "checksum mismatch: expected $CLOC_SHA256, got $actual_sha"
+        _log "if you bumped CLOC_VERSION, recompute the hash (see script header)"
+        return 1
+    fi
+    _log "checksum OK ($CLOC_SHA256)"
+
+    if ! install -m 0755 "${tmp}/${asset}" "$target"; then
+        _log "install (copy) failed to $target"
+        return 1
+    fi
+
+    local v_out2 v_rc2=0
+    v_out2="$(mktemp)"
+    "$target" --version >"$v_out2" 2>&1 || v_rc2=$?
+    if [[ "$v_rc2" -ne 0 ]]; then
+        _log "post-install verification failed: '$target --version' returned rc=$v_rc2"
+        rm -f "$v_out2"
+        return 1
+    fi
+    _log "installed: $(head -1 "$v_out2") => $target"
+    rm -f "$v_out2"
+}
+
+main "$@"

@@ -39,6 +39,7 @@ universal_exceptions:
       - '\blegacy\b'
       - '\.parents\['
       - 'reason=.*not implemented yet'
+      - 'eslint-disable'
   - paths: ['.toml$']
     patterns:
       - '\bstubs[?]\b'
@@ -73,7 +74,7 @@ universal_exceptions:
   - paths: ['\.sh$', '\.yaml$', '\.yml$', '\.toml$', 'Makefile$', '\.py$']
     patterns:
       - '\bpython3?\b'
-  - paths: ['lib/', 'tests/']
+  - paths: ['lib/', 'tests/', 'scripts/']
     patterns:
       - '\bpython3?\b'
   - paths: ['config/banned_words.yaml']

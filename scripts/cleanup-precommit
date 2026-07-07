@@ -23,7 +23,7 @@ else
     ci_info "No pre-commit cache found"
 fi
 
-# Remove legacy hook backup
+# Remove old hook backup
 if [[ -f ".git/hooks/pre-commit.legacy" ]]; then
     rm -f ".git/hooks/pre-commit.legacy"
     ci_pass "Removed .git/hooks/pre-commit.legacy"

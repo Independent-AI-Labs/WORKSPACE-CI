@@ -49,6 +49,14 @@ scripts:
     output: "Installs gitleaks to $CI_PROJECT_ROOT/${boot_dir}/bin (boot_dir read from config/boot_layout.yaml; default .boot-linux) if absent/upgrade-needed; no-op otherwise."
     make_target: install-gitleaks
 
+  - id: bootstrap-cloc
+    path: scripts/bootstrap-cloc
+    summary: Fetch the cloc single-file Perl script and place it on PATH (idempotent, SHA256-verified against a pinned hash).
+    usage: bootstrap-cloc
+    category: bootstrap
+    output: "Installs cloc to $CI_PROJECT_ROOT/${boot_dir}/bin/cloc (boot_dir read from config/boot_layout.yaml; default .boot-linux) if absent/upgrade-needed; no-op otherwise. cloc ships no checksum sidecar, so the hash is pinned in-script; perl presence is checked before install."
+    make_target: install-cloc
+
   - id: bootstrap-uv
     path: scripts/bootstrap-uv
     summary: Fetch the uv binary and place it on PATH (idempotent; SHA256 opt-in via UV_VERIFY_SHA256=1).

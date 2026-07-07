@@ -31,10 +31,12 @@ if ! source "$_ci_lib"; then
 fi
 
 # ---------------------------------------------------------------------------
-# Locate cloc: prefer .boot-linux/.boot-macos, fall back to PATH
+# Locate cloc: prefer CI's own .boot-linux (CI owns the cloc bootstrap), then
+# the workspace root's boot dir, then .boot-macos, then fall back to PATH.
 # ---------------------------------------------------------------------------
 _find_cloc() {
     local _cands=(
+        "${CI_PROJECT_ROOT:-}/.boot-linux/bin/cloc"
         "$CI_WORKSPACE_ROOT/.boot-linux/bin/cloc"
         "$CI_WORKSPACE_ROOT/.boot-macos/bin/cloc"
     )
@@ -59,7 +61,7 @@ else
     CLOC=""
 fi
 if [[ -z "$CLOC" ]]; then
-    ci_fail "cloc not found. Install via: bash ami/scripts/bootstrap/bootstrap_cloc.sh"
+    ci_fail "cloc not found. Install via: bash scripts/bootstrap-cloc  (or: make install-cloc)"
     exit 1
 fi
 

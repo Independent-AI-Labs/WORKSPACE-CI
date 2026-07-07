@@ -1,0 +1,178 @@
+/* ============================================================
+   Mermaid diagram frames
+   Translates the wiki design tokens into the rendered diagrams
+   and provides the interactive (zoom/pan/export/fullscreen) shell.
+   ============================================================ */
+
+.mermaid-frame {
+  margin: var(--space-4) 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--code-bg);
+  overflow: hidden;
+  position: relative;
+}
+
+.mermaid-frame__source {
+  display: none;
+}
+
+.mermaid-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklab, var(--panel) 70%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.mermaid-toolbar__sep {
+  width: 1px;
+  height: var(--space-4);
+  background: var(--border);
+  margin: 0 var(--space-1);
+}
+
+.mermaid-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-6);
+  height: var(--space-6);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
+}
+
+.mermaid-btn:hover {
+  background: color-mix(in oklab, var(--text) 10%, transparent);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.mermaid-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.mermaid-btn.is-copied {
+  color: var(--ok);
+  border-color: color-mix(in oklab, var(--ok) 50%, transparent);
+}
+
+/* The <pre class="mermaid"> doubles as the zoom/pan viewport.
+   The canvas is always pannable (grab/grabbing), never a magnifier. */
+.mermaid-viewport {
+  margin: 0;
+  padding: var(--space-4);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 160px;
+  max-height: 70vh;
+  cursor: grab;
+  tab-size: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mermaid-viewport.is-grabbing {
+  cursor: grabbing;
+}
+
+.mermaid-viewport > svg {
+  max-width: none;
+  height: auto;
+  display: block;
+  will-change: transform;
+}
+
+/* Error state when mermaid fails to render: surface the source. */
+.mermaid-frame:not(.is-ready) .mermaid-viewport::before {
+  content: 'Rendering diagram…';
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+/* ---------- Fullscreen overlay ---------- */
+
+.mermaid-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: var(--overlay-backdrop);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4);
+}
+
+.mermaid-toolbar--overlay {
+  align-self: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  margin-bottom: var(--space-3);
+}
+
+.mermaid-fullscreen__stage {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: grab;
+  outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mermaid-fullscreen__stage.is-grabbing {
+  cursor: grabbing;
+}
+
+.mermaid-fullscreen__stage > svg {
+  max-width: none;
+  height: auto;
+  display: block;
+  will-change: transform;
+}
+
+body.is-mermaid-fullscreen {
+  overflow: hidden;
+}
+
+body.is-mermaid-dragging,
+body.is-mermaid-dragging * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+/* Honor the prose pre styling only for non-mermaid code blocks. */
+.prose pre.mermaid-viewport {
+  background: transparent;
+  border: 0;
+  padding: var(--space-4);
+}
+
+@media (max-width: 768px) {
+  .mermaid-viewport {
+    max-height: 55vh;
+  }
+  .mermaid-toolbar {
+    flex-wrap: wrap;
+  }
+}

@@ -48,12 +48,8 @@ exceptions:
     paths: ['docs/', 'README\.md$']
 
 
-  # ── Shell lib / tests / scripts (pre-existing) ───────────────────────
-  # Shell lib files use these words in check function names and messages.
-  - pattern: '\bsilent'
-    paths: ['lib/', 'tests/', 'scripts/', 'ci/check_markdown_docs\.py$', 'ci/_md_http_client\.py$']
   - pattern: '\.suppress'
-    paths: ['lib/', 'tests/']
+    paths: ['tests/']
 
   # The check-tester itself authors heredocs containing the banned
   # "not implemented yet" string as fixture payload; exempt the single
@@ -64,17 +60,7 @@ exceptions:
   # Tests need these words for test descriptions and mocking
   - pattern: '\bmock\b'
     paths: ['tests/']
-  - pattern: '\blegacy\b'
-    paths: ['tests/', 'scripts/', 'templates/']
-  # Extensionless shell scripts in scripts/ reference python-ta-reference and
-  # other python-derived directory names in skip-dirs string lists. Mirrors
-  # the universal lib/ + tests/ exemption at banned_words.yaml:76-78.
-  - pattern: '\bpython3?\b'
-    paths: ['scripts/']
-  - pattern: '\bstubs?\b'
-    paths: ['tests/']
-  - pattern: '\bfallback\b'
-    paths: ['tests/', 'lib/']
+
   # check_silent_swallow.py emits the spec'd `<file>:<line>: <pattern> -- <line>`
   # output format and documents diff/regex syntax containing ` -- `.
   # scripts/ use ` -- ` as section separators in comments (e.g. `# -- Summary --`).
@@ -84,10 +70,7 @@ exceptions:
       - 'lib/checks_silent\.sh$'
       - 'tests/integration/test_silent_swallow\.sh$'
       - 'scripts/'
-  - pattern: '\bbackwards\b'
-    paths: ['tests/']
-  - pattern: '\bcompatibility\b'
-    paths: ['tests/']
+
   - pattern: ':\s*Any\b'
     paths: ['tests/']
   - pattern: '\bxfail\b'
@@ -96,85 +79,6 @@ exceptions:
   # Audit documents reference all banned patterns by name.
   - pattern: '.*'
     paths: ['docs/AUDIT-.*\.md$', 'docs/audits/.*\.md$']
-
-  # ── Wiki web UI (web/) ───────────────────────────────────────────────
-  # The wiki's pattern-detection module and its tests must contain the
-  # exact banned-word strings to test detection logic. The word "python"
-  # is used as a programming-language identifier in types, imports, and
-  # UI labels: not as a CLI invocation.
-  - pattern: '\bpython3?\b'
-    paths:
-      - 'web/src/types/patterns\.ts$'
-      - 'web/src/components/wiki/CheckCard\.tsx$'
-      - 'web/src/components/wiki/PatternCard\.tsx$'
-      - 'web/src/components/wiki/playground/CodeEditor\.tsx$'
-      - 'web/src/components/wiki/playground/LanguageSelector\.tsx$'
-      - 'web/src/hooks/usePlayground\.ts$'
-      - 'web/src/hooks/useHookFilter\.test\.ts$'
-      - 'web/src/hooks/usePlayground\.test\.ts$'
-      - 'web/app/checks/\[id\]/page\.tsx$'
-      - 'web/app/patterns/\[category\]/page\.tsx$'
-      - 'web/app/hooks/page\.tsx$'
-      - 'web/app/patterns/page\.tsx$'
-      - 'web/package\.json$'
-      - 'web/package-lock\.json$'
-  - pattern: '\blegacy\b'
-    paths:
-      - 'web/package\.json$'
-      - 'web/package-lock\.json$'
-      - 'web/src/components/wiki/playground/CodeEditor\.tsx$'
-      - 'web/src/lib/patterns\.test\.ts$'
-      - 'web/src/lib/patterns\.ts$'
-  - pattern: 'eslint-disable'
-    paths:
-      - 'web/src/lib/patterns\.test\.ts$'
-      - 'web/src/lib/search-index\.test\.ts$'
-      - 'web/src/lib/regex-engine\.test\.ts$'
-      - 'web/src/hooks/usePlayground\.test\.ts$'
-  - pattern: '\blist\[object\]'
-    paths: ['web/src/lib/patterns\.test\.ts$']
-  - pattern: '@dataclass'
-    paths: ['web/src/lib/patterns\.test\.ts$']
-  - pattern: '\bxfail\b'
-    paths:
-      - 'web/src/lib/patterns\.test\.ts$'
-      - 'web/src/lib/patterns\.ts$'
-  - pattern: '/home/'
-    paths: ['web/src/lib/patterns\.test\.ts$']
-  - pattern: ':latest\b'
-    paths: ['web/src/lib/patterns\.test\.ts$']
-  - pattern: ' -- '
-    paths: ['web/src/lib/patterns\.test\.ts$']
-  - pattern: '\bgetattr\('
-    paths: ['web/src/lib/regex-engine\.test\.ts$']
-  - pattern: '\bmock\b'
-    paths:
-      - 'web/src/components/wiki/WikiSidebar\.test\.tsx$'
-      - 'web/src/components/wiki/WikiSearch\.test\.tsx$'
-      - 'web/src/components/wiki/ComingSoon\.test\.tsx$'
-      - 'web/src/components/wiki/FeedbackWidget\.test\.tsx$'
-      - 'web/src/hooks/useSearch\.test\.ts$'
-      - 'web/src/hooks/useFeedback\.test\.ts$'
-  - pattern: '\bbackwards\b'
-    paths: ['web/src/lib/patterns\.ts$']
-  - pattern: '\bskeleton\b'
-    paths: ['web/src/lib/patterns\.ts$']
-  - pattern: '\blazy\b'
-    paths: ['web/src/lib/patterns\.ts$']
-  - pattern: '\bmaybe\b'
-    paths: ['web/src/lib/patterns\.ts$']
-  - pattern: '\bimportlib\b'
-    paths: ['web/src/lib/patterns\.ts$']
-  # ErrorBoundary uses the standard React "fallback" prop name (same as
-  # <Suspense> and react-error-boundary). Not "fallback code" -- it is
-  # explicit error UI rendered when the boundary catches an error.
-  - pattern: '\bfallback\b'
-    paths:
-      - 'web/src/components/ui/ErrorBoundary\.tsx$'
-      - 'web/src/components/ui/ErrorBoundary\.test\.tsx$'
-  # CollapsibleSection uses "hidden" to describe WAI-ARIA disclosure state.
-  - pattern: '\bsilent'
-    paths: ['web/src/components/ui/ErrorBoundary\.test\.tsx$']
 
   # swallow-detectors.json is generated data containing Python source code
   # extracts from lib/check_silent_swallow*.py (which are already exempted).
@@ -214,3 +118,60 @@ exceptions:
   # Covers repo res/LOGO.png sources and the wiki public/logos/ build output.
   - pattern: '.*'
     paths: ['\.png$']
+
+  # ── CI infrastructure references ─────────────────────────────────────
+  # cleanup-precommit references the real .git/hooks/pre-commit.legacy
+  # backup filename (a convention used by pre-commit tooling).
+  - pattern: '\blegacy\b'
+    paths: ['scripts/cleanup-precommit$']
+
+  # ci_paths.py and extract-swallow-source.py reference the
+  # silent_swallow_patterns.yaml config filename.
+  - pattern: '\bsilent'
+    paths:
+      - 'lib/ci_paths\.py$'
+      - 'scripts/extract-swallow-source\.py$'
+
+  # ── Web UI source (language names, npm packages, React APIs) ─────────
+  # "python" is a programming-language name in CodeMirror language
+  # selectors, type labels, and UI descriptions -- never a bare invocation.
+  - pattern: '\bpython3?\b'
+    paths:
+      - 'web/src/.*\.(ts|tsx)$'
+      - 'web/app/.*\.(ts|tsx)$'
+      - 'web/package\.json$'
+
+  # @codemirror/legacy-modes is an npm package name (CodeMirror language
+  # support for legacy modes like shell/yaml). Cannot be renamed.
+  - pattern: '\blegacy\b'
+    paths:
+      - 'web/src/.*\.(ts|tsx)$'
+      - 'web/package\.json$'
+
+  # React ErrorBoundary uses the standard `fallback` prop (React API).
+  - pattern: '\bfallback\b'
+    paths: ['web/src/components/ui/ErrorBoundary\.tsx$']
+
+  # Web libs reference the silent_swallow_patterns.yaml config filename.
+  - pattern: '\bsilent'
+    paths:
+      - 'web/src/lib/card-adapters\.ts$'
+      - 'web/src/lib/search-data\.ts$'
+      - 'web/src/lib/yaml-loader\.ts$'
+
+  # patterns.ts categorizes ALL banned patterns by name (string-literal
+  # matching against pattern names like 'fallback', 'legacy', 'silent',
+  # 'skeleton', 'lazy', 'maybe', 'importlib', 'xfail', 'backwards').
+  - pattern: '.*'
+    paths: ['web/src/lib/patterns\.ts$']
+
+  # package-lock.json is a generated file with npm package names.
+  - pattern: '.*'
+    paths: ['web/package-lock\.json$']
+
+  # ── Test fixtures for the banned-words detector ──────────────────────
+  # patterns.test.ts tests the pattern categorization detector with ALL
+  # banned patterns as fixture data (eslint-disable, @dataclass, /home/,
+  # :latest, em-dash, etc.).
+  - pattern: '.*'
+    paths: ['tests/web/lib/patterns\.test\.ts$']

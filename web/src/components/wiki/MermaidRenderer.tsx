@@ -2,32 +2,104 @@
 
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
+import { useThemeStore } from '@/stores/theme-store'
+import {
+  mountMermaidDiagram,
+  type MermaidController,
+  type MermaidRunner,
+} from '@/lib/mermaid-diagram'
+import { getMermaidThemeConfig } from '@/lib/mermaid-theme'
+
+interface MermaidInitializer {
+  initialize(cfg: unknown): void
+}
 
 export function MermaidRenderer() {
   const pathname = usePathname()
-  const initialized = useRef(false)
+  const theme = useThemeStore((s) => s.theme)
+  const runnerRef = useRef<MermaidRunner | null>(null)
+  const controllersRef = useRef<Map<HTMLElement, MermaidController>>(new Map())
+  const initializedThemeRef = useRef<string | null>(null)
+  const themeRef = useRef(theme)
+  themeRef.current = theme
+
+  function initialize(runner: MermaidRunner, themeName: 'dark' | 'light'): void {
+    if (initializedThemeRef.current === themeName) return
+    const initializer = runner as unknown as MermaidInitializer
+    initializer.initialize({
+      startOnLoad: false,
+      securityLevel: 'loose',
+      ...getMermaidThemeConfig(themeName),
+    })
+    initializedThemeRef.current = themeName
+  }
+
+  function pruneDisconnected(): void {
+    const controllers = controllersRef.current
+    for (const [frame, ctrl] of controllers) {
+      if (!frame.isConnected) {
+        ctrl.destroy()
+        controllers.delete(frame)
+      }
+    }
+  }
+
+  function mountPending(): void {
+    const runner = runnerRef.current
+    if (!runner) return
+    pruneDisconnected()
+    initialize(runner, themeRef.current)
+    const controllers = controllersRef.current
+    const frames = document.querySelectorAll<HTMLElement>(
+      '.mermaid-frame:not([data-mermaid-ready])',
+    )
+    for (const frame of Array.from(frames)) {
+      if (controllers.has(frame)) continue
+      const ctrl = mountMermaidDiagram(frame)
+      controllers.set(frame, ctrl)
+      void ctrl.render(runner)
+    }
+  }
+
+  async function rerenderAll(): Promise<void> {
+    const runner = runnerRef.current
+    if (!runner) return
+    pruneDisconnected()
+    initialize(runner, themeRef.current)
+    const controllers = controllersRef.current
+    if (controllers.size === 0) return
+    await Promise.all(
+      Array.from(controllers.values()).map((ctrl) => ctrl.rerender(runner)),
+    )
+  }
 
   useEffect(() => {
     let cancelled = false
-    import('mermaid').then(({ default: mermaid }) => {
+    void import('mermaid').then(({ default: mermaid }) => {
       if (cancelled) return
-      if (!initialized.current) {
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: 'default',
-          securityLevel: 'loose',
-        })
-        initialized.current = true
-      }
-      const elements = document.querySelectorAll('.mermaid')
-      if (elements.length > 0) {
-        mermaid.run({ querySelector: '.mermaid' })
-      }
+      runnerRef.current = mermaid as unknown as MermaidRunner
+      mountPending()
     })
     return () => {
       cancelled = true
     }
+  }, [])
+
+  useEffect(() => {
+    mountPending()
   }, [pathname])
+
+  useEffect(() => {
+    void rerenderAll()
+  }, [theme])
+
+  useEffect(() => {
+    const controllers = controllersRef.current
+    return () => {
+      for (const ctrl of controllers.values()) ctrl.destroy()
+      controllers.clear()
+    }
+  }, [])
 
   return null
 }
