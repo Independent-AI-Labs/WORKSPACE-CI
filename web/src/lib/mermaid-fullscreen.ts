@@ -1,15 +1,21 @@
 import {
-  IDENTITY_TRANSFORM,
   ZOOM_STEP,
   ZOOM_WHEEL_STEP,
-  exportScaleForZoom,
-  applyTransform,
-  clampZoom,
   downloadBlob,
   downloadDataUrl,
-  serializeSvg,
+exportScaleForZoom,
+  applyViewBox,
+  clampOriginToBase,
+  getSvgCssSize,
+  panBy,
+  parseViewBox,
+  readCssVar,
+  serializeSvgForExport,
   svgToPngDataUrl,
-  type Transform,
+  viewBoxScale,
+  zoomAtCenter,
+  zoomAtPoint,
+  type ViewBox,
 } from '@/lib/mermaid-export'
 
 export interface ToolbarAction {
@@ -22,15 +28,13 @@ export interface ToolbarAction {
 export interface PanState {
   startX: number
   startY: number
-  originTx: number
-  originTy: number
+  originVb: ViewBox
   pointerId: number
 }
 
-export function readCssVar(name: string): string {
-  if (typeof document === 'undefined') return ''
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-}
+// Re-export readCssVar so the mermaid-diagram module's existing imports from
+// '@/lib/mermaid-fullscreen' keep working without churn.
+export { readCssVar }
 
 export function createButton(action: ToolbarAction): HTMLButtonElement {
   const btn = document.createElement('button')
@@ -50,13 +54,13 @@ export class FullscreenOverlay {
   private readonly overlay: HTMLDivElement
   private readonly stage: HTMLDivElement
   private readonly svg: SVGSVGElement
-  private transform: Transform
+  private base: ViewBox
+  private vb: ViewBox
   private pan: PanState | null = null
   private readonly cleanups: Array<() => void> = []
 
-  constructor(svg: SVGSVGElement) {
+  constructor(svg: SVGSVGElement, sourceBase: ViewBox) {
     this.svg = svg
-    this.transform = { ...IDENTITY_TRANSFORM }
     this.overlay = document.createElement('div')
     this.overlay.className = 'mermaid-fullscreen'
     this.overlay.setAttribute('role', 'dialog')
@@ -89,20 +93,23 @@ export class FullscreenOverlay {
     this.stage = document.createElement('div')
     this.stage.className = 'mermaid-fullscreen__stage'
     this.stage.setAttribute('tabindex', '0')
+
     svg.style.display = 'block'
-    applyTransform(svg, this.transform)
+    // Strip any inline CSS transform inherited from the live renderer so the
+    // viewBox is the sole source of truth.
+    svg.style.transform = ''
+    svg.style.transformOrigin = ''
+
+    // If the cloned svg already has a parsed viewBox, derive base from it;
+    // otherwise fall back to the source diagram's base.
+    const live = parseViewBox(svg.getAttribute('viewBox'))
+    this.base = live ? live : { ...sourceBase }
+    this.vb = { ...this.base }
+    applyViewBox(svg, this.vb)
     this.stage.appendChild(svg)
 
     this.overlay.appendChild(toolbar)
     this.overlay.appendChild(this.stage)
-
-    toolbar.addEventListener('click', this.onToolbarClick)
-    this.stage.addEventListener('wheel', this.onWheel, { passive: false })
-    this.stage.addEventListener('pointerdown', this.onPointerDown)
-    this.stage.addEventListener('pointermove', this.onPointerMove)
-    this.stage.addEventListener('pointerup', this.onPointerUp)
-    this.stage.addEventListener('pointercancel', this.onPointerUp)
-    this.overlay.addEventListener('click', this.onBackdropClick)
 
     this.cleanups.push(() => {
       toolbar.removeEventListener('click', this.onToolbarClick)
@@ -113,6 +120,13 @@ export class FullscreenOverlay {
       this.stage.removeEventListener('pointercancel', this.onPointerUp)
       this.overlay.removeEventListener('click', this.onBackdropClick)
     })
+    toolbar.addEventListener('click', this.onToolbarClick)
+    this.stage.addEventListener('wheel', this.onWheel, { passive: false })
+    this.stage.addEventListener('pointerdown', this.onPointerDown)
+    this.stage.addEventListener('pointermove', this.onPointerMove)
+    this.stage.addEventListener('pointerup', this.onPointerUp)
+    this.stage.addEventListener('pointercancel', this.onPointerUp)
+    this.overlay.addEventListener('click', this.onBackdropClick)
   }
 
   mount(): void {
@@ -128,65 +142,53 @@ export class FullscreenOverlay {
     document.body.classList.remove('is-mermaid-fullscreen')
   }
 
-  syncTransform(t: Transform): void {
-    this.transform = { ...t }
-    applyTransform(this.svg, this.transform)
+  // ------------------------------------------------------------------
+  private setViewBox(next: ViewBox): void {
+    this.vb = next
+    applyViewBox(this.svg, this.vb)
   }
 
-  private setTransform(t: Transform): void {
-    this.transform = t
-    applyTransform(this.svg, t)
+  private cssSize(): { w: number; h: number } {
+    return getSvgCssSize(this.svg)
   }
 
-  private zoomAroundCenter(factor: number): void {
-    const rect = this.stage.getBoundingClientRect()
-    const cx = rect.width / 2
-    const cy = rect.height / 2
-    const px = (cx - this.transform.tx) / this.transform.scale
-    const py = (cy - this.transform.ty) / this.transform.scale
-    const nextScale = clampZoom(this.transform.scale * factor)
-    this.setTransform({
-      scale: nextScale,
-      tx: cx - px * nextScale,
-      ty: cy - py * nextScale,
-    })
+  private zoomByFactor(
+    factor: number,
+    pivotLocalCssX: number,
+    pivotLocalCssY: number,
+  ): void {
+    const { w, h } = this.cssSize()
+    const next = zoomAtPoint(
+      this.vb,
+      this.base,
+      pivotLocalCssX,
+      pivotLocalCssY,
+      w,
+      h,
+      factor,
+    )
+    this.setViewBox(clampOriginToBase(next, this.base))
   }
 
-  private onToolbarClick = (e: Event): void => {
-    const target = (e.target as HTMLElement).closest<HTMLButtonElement>('.mermaid-btn')
-    if (!target) return
-    switch (target.dataset.action) {
-      case 'zoom-in':
-        this.zoomAroundCenter(1 + ZOOM_STEP)
-        break
-      case 'zoom-out':
-        this.zoomAroundCenter(1 - ZOOM_STEP)
-        break
-      case 'reset':
-        this.setTransform({ ...IDENTITY_TRANSFORM })
-        break
-      case 'download-svg': {
-        const xml = serializeSvg(this.svg)
-        const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' })
-        const url = URL.createObjectURL(blob)
-        downloadBlob(url, 'mermaid-diagram.svg')
-        window.setTimeout(() => URL.revokeObjectURL(url), 1000)
-        break
-      }
-      case 'download-png': {
-        void this.downloadPng()
-        break
-      }
-      case 'close':
-        this.destroy()
-        break
-    }
+  private zoomCentered(factor: number): void {
+    const { w, h } = this.cssSize()
+    const next = zoomAtCenter(this.vb, this.base, w, h, factor)
+    this.setViewBox(clampOriginToBase(next, this.base))
+  }
+
+  private downloadSvg(): void {
+    const xml = serializeSvgForExport(this.svg)
+    const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    downloadBlob(url, 'mermaid-diagram.svg')
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   private async downloadPng(): Promise<void> {
     try {
+      const zoom = viewBoxScale(this.vb, this.base)
       const dataUrl = await svgToPngDataUrl(this.svg, {
-        scale: exportScaleForZoom(this.transform.scale),
+        scale: exportScaleForZoom(zoom),
         background: readCssVar('--bg') || '#181818',
       })
       downloadDataUrl(dataUrl, 'mermaid-diagram.png')
@@ -195,9 +197,39 @@ export class FullscreenOverlay {
     }
   }
 
+  private onToolbarClick = (e: Event): void => {
+    const target = (e.target as HTMLElement).closest<HTMLButtonElement>('.mermaid-btn')
+    if (!target) return
+    switch (target.dataset.action) {
+      case 'zoom-in':
+        this.zoomCentered(1 + ZOOM_STEP)
+        break
+      case 'zoom-out':
+        this.zoomCentered(1 - ZOOM_STEP)
+        break
+      case 'reset':
+        this.setViewBox({ ...this.base })
+        break
+      case 'download-svg':
+        this.downloadSvg()
+        break
+      case 'download-png':
+        void this.downloadPng()
+        break
+      case 'close':
+        this.destroy()
+        break
+    }
+  }
+
   private onWheel = (e: WheelEvent): void => {
     e.preventDefault()
-    this.zoomAroundCenter(Math.exp(-e.deltaY * ZOOM_WHEEL_STEP))
+    const rect = this.svg.getBoundingClientRect()
+    this.zoomByFactor(
+      Math.exp(-e.deltaY * ZOOM_WHEEL_STEP),
+      e.clientX - rect.left,
+      e.clientY - rect.top,
+    )
   }
 
   private onPointerDown = (e: PointerEvent): void => {
@@ -205,8 +237,7 @@ export class FullscreenOverlay {
     this.pan = {
       startX: e.clientX,
       startY: e.clientY,
-      originTx: this.transform.tx,
-      originTy: this.transform.ty,
+      originVb: { ...this.vb },
       pointerId: e.pointerId,
     }
     this.stage.setPointerCapture(e.pointerId)
@@ -216,11 +247,11 @@ export class FullscreenOverlay {
 
   private onPointerMove = (e: PointerEvent): void => {
     if (!this.pan) return
-    this.setTransform({
-      scale: this.transform.scale,
-      tx: this.pan.originTx + (e.clientX - this.pan.startX),
-      ty: this.pan.originTy + (e.clientY - this.pan.startY),
-    })
+    const { w, h } = this.cssSize()
+    const dxCss = e.clientX - this.pan.startX
+    const dyCss = e.clientY - this.pan.startY
+    const next = panBy(this.pan.originVb, dxCss, dyCss, w, h)
+    this.setViewBox(clampOriginToBase(next, this.base))
   }
 
   private onPointerUp = (): void => {

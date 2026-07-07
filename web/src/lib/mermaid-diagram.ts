@@ -1,16 +1,22 @@
 import {
-  IDENTITY_TRANSFORM,
   ZOOM_STEP,
   ZOOM_WHEEL_STEP,
-  exportScaleForZoom,
-  applyTransform,
-  clampZoom,
   copyText,
   downloadBlob,
   downloadDataUrl,
-  serializeSvg,
+  exportScaleForZoom,
+  applyViewBox,
+  clampOriginToBase,
+  deriveBaseViewBox,
+  getSvgCssSize,
+  panBy,
+  parseViewBox,
+  serializeSvgForExport,
   svgToPngDataUrl,
-  type Transform,
+  viewBoxScale,
+  zoomAtCenter,
+  zoomAtPoint,
+  type ViewBox,
 } from '@/lib/mermaid-export'
 import {
   type ToolbarAction,
@@ -65,14 +71,15 @@ function buildToolbar(): HTMLDivElement {
 }
 
 export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
-  const preEl = frame.querySelector<HTMLPreElement>('pre.mermaid')
+  const preEl: HTMLPreElement | null = frame.querySelector<HTMLPreElement>('pre.mermaid')
   if (!preEl) {
     throw new Error('mermaid frame missing <pre class="mermaid">')
   }
   const pre: HTMLPreElement = preEl
   const source = pre.textContent ?? ''
 
-  let transform: Transform = { ...IDENTITY_TRANSFORM }
+  let vb: ViewBox = { x: 0, y: 0, w: 800, h: 600 }
+  let base: ViewBox = { x: 0, y: 0, w: 800, h: 600 }
   let svg: SVGSVGElement | null = null
   let pan: PanState | null = null
   let fullscreenOverlay: FullscreenOverlay | null = null
@@ -88,40 +95,52 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
 
   function syncSvg(): void {
     svg = pre.querySelector<SVGSVGElement>('svg')
-    if (svg) {
-      svg.style.display = 'block'
-      applyTransform(svg, transform)
-    }
+    if (!svg) return
+    svg.style.display = 'block'
+    // Clear any inline transform that might have been applied by earlier
+    // rendering attempts so the viewBox is the single source of truth.
+    svg.style.transform = ''
+    svg.style.transformOrigin = ''
+    base = deriveBaseViewBox(svg)
+    // Preserve any source-supplied viewBox. The source usually sets one
+    // matching base, but in case the platform injected a partial one before
+    // we touched it we prefer the parsed value if present, else derive.
+    const live = parseViewBox(svg.getAttribute('viewBox'))
+    vb = live ? live : { ...base }
+    applyViewBox(svg, vb)
   }
 
-  function setTransform(next: Transform): void {
-    transform = next
-    if (svg) {
-      applyTransform(svg, transform)
-    }
-    fullscreenOverlay?.syncTransform(transform)
+  function setViewBox(next: ViewBox): void {
+    vb = next
+    if (svg) applyViewBox(svg, vb)
   }
 
-  function zoomAroundCenter(factor: number): void {
-    const rect = pre.getBoundingClientRect()
-    const cx = rect.width / 2
-    const cy = rect.height / 2
-    const px = (cx - transform.tx) / transform.scale
-    const py = (cy - transform.ty) / transform.scale
-    const nextScale = clampZoom(transform.scale * factor)
-    setTransform({
-      scale: nextScale,
-      tx: cx - px * nextScale,
-      ty: cy - py * nextScale,
-    })
+  function cssSize(): { w: number; h: number } {
+    return svg ? getSvgCssSize(svg) : { w: 0, h: 0 }
+  }
+
+  function zoomByFactor(
+    factor: number,
+    pivotLocalCssX: number,
+    pivotLocalCssY: number,
+  ): void {
+    const { w, h } = cssSize()
+    const next = zoomAtPoint(vb, base, pivotLocalCssX, pivotLocalCssY, w, h, factor)
+    setViewBox(clampOriginToBase(next, base))
+  }
+
+  function zoomCentered(factor: number): void {
+    const { w, h } = cssSize()
+    const next = zoomAtCenter(vb, base, w, h, factor)
+    setViewBox(clampOriginToBase(next, base))
   }
 
   function stepZoom(direction: 1 | -1): void {
-    zoomAroundCenter(1 + direction * ZOOM_STEP)
+    zoomCentered(1 + direction * ZOOM_STEP)
   }
 
   function resetView(): void {
-    setTransform({ ...IDENTITY_TRANSFORM })
+    setViewBox({ ...base })
   }
 
   function exportBackground(): string {
@@ -130,7 +149,7 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
 
   function downloadSvg(): void {
     if (!svg) return
-    const xml = serializeSvg(svg)
+    const xml = serializeSvgForExport(svg)
     const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     downloadBlob(url, 'mermaid-diagram.svg')
@@ -140,8 +159,9 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
   async function downloadPng(): Promise<void> {
     if (!svg) return
     try {
+      const zoom = viewBoxScale(vb, base)
       const dataUrl = await svgToPngDataUrl(svg, {
-        scale: exportScaleForZoom(transform.scale),
+        scale: exportScaleForZoom(zoom),
         background: exportBackground(),
       })
       downloadDataUrl(dataUrl, 'mermaid-diagram.png')
@@ -167,7 +187,9 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
 
   function openFullscreen(): void {
     if (!svg || fullscreenOverlay) return
-    fullscreenOverlay = new FullscreenOverlay(svg.cloneNode(true) as SVGSVGElement)
+    // Clone the live SVG so the inline renderer keeps its session distinct.
+    const clone = svg.cloneNode(true) as SVGSVGElement
+    fullscreenOverlay = new FullscreenOverlay(clone, base)
     fullscreenOverlay.mount()
   }
 
@@ -208,8 +230,11 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
   function onWheel(e: WheelEvent): void {
     if (!svg) return
     e.preventDefault()
+    const rect = svg.getBoundingClientRect()
+    const pivotX = e.clientX - rect.left
+    const pivotY = e.clientY - rect.top
     const factor = Math.exp(-e.deltaY * ZOOM_WHEEL_STEP)
-    zoomAroundCenter(factor)
+    zoomByFactor(factor, pivotX, pivotY)
   }
 
   function onPointerDown(e: PointerEvent): void {
@@ -218,8 +243,7 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
     pan = {
       startX: e.clientX,
       startY: e.clientY,
-      originTx: transform.tx,
-      originTy: transform.ty,
+      originVb: { ...vb },
       pointerId: e.pointerId,
     }
     pre.setPointerCapture(e.pointerId)
@@ -229,11 +253,11 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
 
   function onPointerMove(e: PointerEvent): void {
     if (!pan) return
-    setTransform({
-      scale: transform.scale,
-      tx: pan.originTx + (e.clientX - pan.startX),
-      ty: pan.originTy + (e.clientY - pan.startY),
-    })
+    const { w, h } = cssSize()
+    const dxCss = e.clientX - pan.startX
+    const dyCss = e.clientY - pan.startY
+    const next = panBy(pan.originVb, dxCss, dyCss, w, h)
+    setViewBox(clampOriginToBase(next, base))
   }
 
   function onPointerUp(): void {

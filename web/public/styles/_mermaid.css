@@ -95,7 +95,6 @@
   max-width: none;
   height: auto;
   display: block;
-  will-change: transform;
 }
 
 /* Error state when mermaid fails to render: surface the source. */
@@ -148,7 +147,6 @@
   max-width: none;
   height: auto;
   display: block;
-  will-change: transform;
 }
 
 body.is-mermaid-fullscreen {
