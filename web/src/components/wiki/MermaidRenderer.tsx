@@ -21,7 +21,9 @@ export function MermaidRenderer() {
   const controllersRef = useRef<Map<HTMLElement, MermaidController>>(new Map())
   const initializedThemeRef = useRef<string | null>(null)
   const themeRef = useRef(theme)
-  themeRef.current = theme
+  useEffect(() => {
+    themeRef.current = theme
+  }, [theme])
 
   function initialize(runner: MermaidRunner, themeName: 'dark' | 'light'): void {
     if (initializedThemeRef.current === themeName) return

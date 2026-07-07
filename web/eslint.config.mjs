@@ -12,7 +12,7 @@ const eslintConfig = [
     },
   },
   {
-    ignores: ['node_modules/', '.next/', 'public/'],
+    ignores: ['node_modules/', '.next/', 'public/', 'coverage/'],
   },
 ]
 
