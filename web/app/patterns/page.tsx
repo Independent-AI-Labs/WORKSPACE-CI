@@ -1,6 +1,6 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
 import { PatternList } from '@/components/wiki/PatternList'
-import { getBannedPatterns, getSwallowPatterns } from '@/lib/yaml-loader'
+import { getBannedPatterns, getSwallowPatterns, getWikiLabels } from '@/lib/yaml-loader'
 import { loadSwallowDetectors } from '@/lib/docs-loader'
 import { classifyAll, classifySwallowPatterns } from '@/lib/patterns'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
@@ -12,6 +12,7 @@ export default async function PatternsPage() {
     getSwallowPatterns(),
   ])
   const detectorData = loadSwallowDetectors()
+  const labels = getWikiLabels()
   const bannedPatterns = classifyAll(config)
   const swallowPatterns = classifySwallowPatterns(swallowConfig, detectorData)
   const allPatterns = [...bannedPatterns, ...swallowPatterns]
@@ -45,6 +46,7 @@ export default async function PatternsPage() {
           patterns={allPatterns}
           highlightedHtml={highlightedHtml}
           feedbackCounts={feedbackCounts}
+          labels={labels}
         />
       )}
     </WikiShell>

@@ -52,6 +52,11 @@ fields:
     required: true
     description: "Human-readable explanation of why the pattern is banned; surfaced to the developer on violation and rendered in the wiki pattern library."
 
+  - path: banned[].category
+    type: string
+    required: false
+    description: "Pattern category ID (e.g. 'linter-suppression', 'ai-slop'). Drives wiki categorization. See config/pattern_categories.yaml for the full list."
+
   - path: directory_rules
     type: map
     description: "Per-directory pattern overrides. Each key is a directory name; the value is a list of {pattern, reason} entries scoped to that directory."

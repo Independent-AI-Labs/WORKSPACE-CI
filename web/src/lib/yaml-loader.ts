@@ -6,6 +6,9 @@ import type { BannedWordsConfig, SwallowPatternConfig } from '@/types/patterns'
 import type { RequiredHooksConfig } from '@/types/hooks'
 import type { ConfigSchema, ConfigEntry, GuardConfigEntry } from '@/types/content'
 import type { ScriptManifest } from '@/types/wiki'
+import type { StandardsConfig } from '@/types/standards'
+import type { WikiLabelsConfig } from '@/types/wiki-labels'
+import type { WikiPagesConfig } from '@/types/wiki-pages'
 
 const CONFIG_ROOT = process.env.WORKSPACE_CI_CONFIG_ROOT
   ?? join(process.cwd(), '..', 'config')
@@ -40,6 +43,26 @@ export const getBannedPatterns = cache(async (): Promise<BannedWordsConfig> => {
   return load(raw) as BannedWordsConfig
 })
 
+export interface PatternCategoryEntry {
+  id: string
+  label: string
+}
+
+export interface PatternCategoriesConfig {
+  version: number
+  categories: PatternCategoryEntry[]
+}
+
+export const getPatternCategories = cache(
+  async (): Promise<PatternCategoriesConfig> => {
+    const raw = readFileSync(
+      join(CONFIG_ROOT, 'pattern_categories.yaml'),
+      'utf8',
+    )
+    return load(raw) as PatternCategoriesConfig
+  },
+)
+
 export const getSwallowPatterns = cache(async (): Promise<SwallowPatternConfig> => {
   const raw = readFileSync(
     join(CONFIG_ROOT, 'silent_swallow_patterns.yaml'),
@@ -47,6 +70,30 @@ export const getSwallowPatterns = cache(async (): Promise<SwallowPatternConfig> 
   )
   return load(raw) as SwallowPatternConfig
 })
+
+export const getStandards = cache(async (): Promise<StandardsConfig> => {
+  const raw = readFileSync(join(CONFIG_ROOT, 'standards.yaml'), 'utf8')
+  return load(raw) as StandardsConfig
+})
+
+export function getStandardsSync(): StandardsConfig {
+  const raw = readFileSync(join(CONFIG_ROOT, 'standards.yaml'), 'utf8')
+  return load(raw) as StandardsConfig
+}
+
+let _wikiLabelsCache: WikiLabelsConfig | null = null
+
+export function getWikiLabels(): WikiLabelsConfig {
+  if (_wikiLabelsCache) return _wikiLabelsCache
+  const raw = readFileSync(join(CONFIG_ROOT, 'wiki_labels.yaml'), 'utf8')
+  _wikiLabelsCache = load(raw) as WikiLabelsConfig
+  return _wikiLabelsCache
+}
+
+export function getWikiPages(): WikiPagesConfig {
+  const raw = readFileSync(join(CONFIG_ROOT, 'wiki_pages.yaml'), 'utf8')
+  return load(raw) as WikiPagesConfig
+}
 
 export const getRequiredHooks = cache(async (): Promise<RequiredHooksConfig> => {
   const raw = readFileSync(join(CONFIG_ROOT, 'required_hooks.yaml'), 'utf8')

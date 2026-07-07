@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
-"""extract-hook-sources: extract hook entrypoint source code.
+"""extract-hook-sources: extract hook entrypoint source code and descriptions.
 
 Reads config/required_hooks.yaml to find all hook entries, then extracts
-the source code of each hook's entrypoint:
+the source code and a human-readable description of each hook's entrypoint:
 
   - shell / shell_inline / shell_with_arg:  bash function body via
-    brace-matching in lib/checks*.sh files.
+    brace-matching in lib/checks*.sh files. Description from the
+    ``# --- <func> ---`` comment block after the marker.
   - python_module / python_module_files:    main() function via AST
     from ci/<module>.py (falls back to module-level docstring + all
-    top-level defs).
+    top-level defs). Description from the module-level docstring
+    (first paragraph).
   - makefile_target:                        recipe block from Makefile.
+    Description from the ``## `` help comment.
 
 Output: web/src/data/hook-sources.json
 
 This JSON is loaded by the wiki at request time to populate the
-EntryPointDialog on Hook cards.
+EntryPointDialog on Hook cards and the description field on Hook cards.
 
 Usage:
     uv run python scripts/extract-hook-sources.py
@@ -32,14 +35,11 @@ import yaml
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _SCRIPTS_DIR.parent
-_CONFIG_DIR = Path(
-    os.environ.get("CI_CONFIG_DIR") or str(_REPO_ROOT / "config")
-)
+_CONFIG_DIR = Path(os.environ.get("CI_CONFIG_DIR") or str(_REPO_ROOT / "config"))
 _LIB_DIR = Path(os.environ.get("CI_LIB_DIR") or str(_REPO_ROOT / "lib"))
 _CI_DIR = Path(os.environ.get("CI_CI_DIR") or str(_REPO_ROOT / "ci"))
 _OUTPUT_DIR = Path(
-    os.environ.get("CI_WEB_DATA_DIR")
-    or str(_REPO_ROOT / "web" / "src" / "data")
+    os.environ.get("CI_WEB_DATA_DIR") or str(_REPO_ROOT / "web" / "src" / "data")
 )
 CONFIG_PATH = _CONFIG_DIR / "required_hooks.yaml"
 MAKEFILE_PATH = _REPO_ROOT / "Makefile"
@@ -93,9 +93,7 @@ def _extract_leading_comments(lines: list[str], start_idx: int) -> str | None:
 
 
 def extract_shell_function(entry: str) -> dict[str, str | None] | None:
-    func_re = re.compile(
-        r"^(\s*)" + re.escape(entry) + r"\s*\(\)\s*\{"
-    )
+    func_re = re.compile(r"^(\s*)" + re.escape(entry) + r"\s*\(\)\s*\{")
 
     sh_files = sorted(_LIB_DIR.glob("checks*.sh"))
     sh_files.extend(sorted(_LIB_DIR.glob("ci.sh")))
@@ -169,9 +167,7 @@ def extract_python_main(entry: str) -> dict[str, str | None] | None:
     return {
         "name": entry,
         "source_file": rel_path,
-        "docstring": _first_paragraph(module_docstring)
-        if module_docstring
-        else None,
+        "docstring": _first_paragraph(module_docstring) if module_docstring else None,
         "source": source_text,
         "language": "python",
     }
@@ -182,12 +178,8 @@ def extract_makefile_target(entry: str) -> dict[str, str | None] | None:
         return None
 
     lines = MAKEFILE_PATH.read_text(encoding="utf-8").splitlines()
-    target_re = re.compile(
-        r"^" + re.escape(entry) + r"\s*:.*?##\s*(.+)$"
-    )
-    target_start_re = re.compile(
-        r"^" + re.escape(entry) + r"\s*:"
-    )
+    target_re = re.compile(r"^" + re.escape(entry) + r"\s*:.*?##\s*(.+)$")
+    target_start_re = re.compile(r"^" + re.escape(entry) + r"\s*:")
 
     for i, line in enumerate(lines):
         m = target_re.match(line)
@@ -232,6 +224,73 @@ def extract_source(hook: dict) -> dict[str, str | None] | None:
     return None
 
 
+def extract_shell_description(entry: str) -> str:
+    """Find the ``# --- <entry> ---`` marker and collect comment lines after it."""
+    marker_re = re.compile(r"^#\s*---\s*" + re.escape(entry) + r"\b")
+
+    sh_files = sorted(_LIB_DIR.glob("checks*.sh"))
+    for sh_file in sh_files:
+        lines = sh_file.read_text(encoding="utf-8").splitlines()
+        for i, line in enumerate(lines):
+            if not marker_re.match(line):
+                continue
+            desc_lines: list[str] = []
+            for j in range(i + 1, len(lines)):
+                stripped = lines[j].lstrip()
+                if stripped.startswith("#"):
+                    text = stripped.lstrip("#").strip()
+                    if text:
+                        desc_lines.append(text)
+                elif stripped == "":
+                    continue
+                else:
+                    break
+            if desc_lines:
+                return " ".join(desc_lines)
+    return ""
+
+
+def extract_python_description(entry: str) -> str:
+    """Parse the module-level docstring (first paragraph) from a Python entrypoint."""
+    module_part = entry.split(maxsplit=1)[0]
+    parts = module_part.split(".")
+    py_path = _CI_DIR.joinpath(*parts).with_suffix(".py")
+    if not py_path.exists():
+        py_path = _REPO_ROOT.joinpath(*parts).with_suffix(".py")
+    if not py_path.exists():
+        return ""
+    source_text = py_path.read_text(encoding="utf-8")
+    tree = ast.parse(source_text, filename=str(py_path))
+    docstring = ast.get_docstring(tree)
+    return _first_paragraph(docstring or "")
+
+
+def extract_makefile_description(entry: str) -> str:
+    """Find ``target: ## description`` in the Makefile."""
+    if not MAKEFILE_PATH.exists():
+        return ""
+    target_re = re.compile(r"^" + re.escape(entry) + r"\s*:.*?##\s*(.+)$")
+    for line in MAKEFILE_PATH.read_text(encoding="utf-8").splitlines():
+        m = target_re.match(line)
+        if m:
+            return m.group(1).strip()
+    return ""
+
+
+def extract_description(hook: dict) -> str:
+    """Extract a clean one-line description for a hook, by kind."""
+    kind = hook.get("kind", "")
+    entry = hook.get("entry", "")
+
+    if kind in ("shell", "shell_inline", "shell_with_arg"):
+        return extract_shell_description(entry)
+    if kind in ("python_module", "python_module_files"):
+        return extract_python_description(entry)
+    if kind == "makefile_target":
+        return extract_makefile_description(entry)
+    return ""
+
+
 def main() -> int:
     config = load_config()
     hooks = config.get("hooks", [])
@@ -249,6 +308,7 @@ def main() -> int:
             )
             continue
         result["id"] = hook_id
+        result["description"] = extract_description(hook)
         sources.append(result)
 
     output = {

@@ -15,6 +15,16 @@ export interface Branding {
   footer_tagline: string
   footer_copyright: string
   contact_email: string
+  grafana_url: string
+  grafana_dashboard_title: string
+  grafana_subtitle: string
+  standards_page_intro: string
+  contact_button_label: string
+  contact_modal_title_template: string
+  contact_body_template: string
+  contact_instruction: string
+  contact_alt_purchase: string
+  contact_issuer_store_template: string
 }
 
 const BRANDING_PATH = join(process.cwd(), 'branding.yaml')

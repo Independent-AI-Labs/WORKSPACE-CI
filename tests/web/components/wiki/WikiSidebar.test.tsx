@@ -30,6 +30,16 @@ const mockBranding: Branding = {
   footer_tagline: 'The AI Workspace Guardrails Wiki',
   footer_copyright: '2026 ◆ Independent AI Labs',
   contact_email: 'independentailabs@gmail.com',
+  grafana_url: 'http://localhost:3030/d/gateway-overview',
+  grafana_dashboard_title: 'LLM Gateway Grafana Dashboard',
+  grafana_subtitle: 'Real-time metrics',
+  standards_page_intro: 'Curated catalogue of AI standards.',
+  contact_button_label: 'Contact for Access',
+  contact_modal_title_template: 'Obtaining {title}',
+  contact_body_template: '{title} is a paid standard from {issuer}.',
+  contact_instruction: 'For inquiries, contact:',
+  contact_alt_purchase: 'Or purchase directly from the issuer:',
+  contact_issuer_store_template: '{issuer} Store',
 }
 
 describe('WikiSidebar', () => {

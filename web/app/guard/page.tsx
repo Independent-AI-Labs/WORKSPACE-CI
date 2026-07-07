@@ -9,6 +9,7 @@ import {
   getGuardConfigSchema,
   getGuardConfigRawYaml,
   getGuardConfig,
+  getWikiLabels,
 } from '@/lib/yaml-loader'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
 import { highlightCode } from '@/lib/highlight'
@@ -18,7 +19,8 @@ import type { ReactNode } from 'react'
 export default async function GuardPage() {
   const names = await getGuardConfigIndex()
   const entries = getGuardConfigEntries(names)
-  const items = guardConfigAdapter(entries)
+  const labels = getWikiLabels()
+  const items = guardConfigAdapter(entries, labels)
   const categories = deriveCategories(items)
   const feedbackCounts = getAllFeedbackCounts('guard')
 

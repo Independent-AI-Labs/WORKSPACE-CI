@@ -1,0 +1,79 @@
+version: 1
+
+hook_stages:
+  pre-commit: Pre-commit
+  commit-msg: Commit-msg
+  pre-push: Pre-push
+
+hook_kinds:
+  shell: Shell
+  shell_inline: Shell (inline)
+  shell_with_arg: Shell (with arg)
+  python_module: Python module
+  python_module_files: Python module (files)
+  makefile_target: Makefile target
+
+standard_types:
+  regulation:
+    label: Regulation
+    icon: ri-government-line
+  standard:
+    label: Standard
+    icon: ri-book-marked-line
+  framework:
+    label: Framework
+    icon: ri-flow-chart
+  declaration:
+    label: Declaration
+    icon: ri-megaphone-line
+  code-of-conduct:
+    label: Code of Conduct
+    icon: ri-shield-check-line
+  executive-order:
+    label: Executive Order
+    icon: ri-stamp-line
+  treaty:
+    label: Treaty
+    icon: ri-scales-3-line
+
+swallow_languages:
+  shell: Shell
+  python: Python
+  js_ts: JS/TS
+  ansible: Ansible
+  cron: Cron
+
+config_categories:
+  banned_words: Content Rules
+  banned_words_exceptions: Content Rules
+  blocked_commit_patterns: Content Rules
+  sensitive_files: Content Rules
+  silent_swallow_patterns: Content Rules
+  coverage_thresholds: Quality Gates
+  dead_code: Quality Gates
+  file_length_limits: Quality Gates
+  dependency_excludes: Dependencies
+  duplicate_dependency_excludes: Dependencies
+  boot_layout: Project Structure
+  markdown_docs: Project Structure
+  required_hooks: Project Structure
+
+guard_categories:
+  guard_config_keys: Access Control
+  guard_protected_branches: Access Control
+  guard_subcommands: Access Control
+  guard_environment: Environment
+  guard_resource_limits: Environment
+  guard_paths: Filesystem
+
+playground_languages:
+  - id: python
+    label: Python
+  - id: javascript
+    label: JavaScript
+  - id: typescript
+    label: TypeScript
+  - id: shell
+    label: Shell
+  - id: yaml
+    label: YAML

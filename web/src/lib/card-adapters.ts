@@ -1,36 +1,12 @@
 import type { CardItem } from '@/types/card'
 import type { ProjectSummary } from '@/types/projects'
 import type { ConfigEntry, GuardConfigEntry } from '@/types/content'
-import type { ClassifiedPattern, SwallowLanguage } from '@/types/patterns'
+import type { ClassifiedPattern } from '@/types/patterns'
 import type { ScriptManifestEntry } from '@/types/wiki'
-import type { HookRecord, HookKind } from '@/types/hooks'
+import type { HookRecord } from '@/types/hooks'
 import type { LanguagePercent } from '@/types/code-stats'
-import type { StandardEntry, StandardType } from '@/types/standards'
-
-const CONFIG_CATEGORY_MAP: Record<string, string> = {
-  banned_words: 'Content Rules',
-  banned_words_exceptions: 'Content Rules',
-  blocked_commit_patterns: 'Content Rules',
-  sensitive_files: 'Content Rules',
-  silent_swallow_patterns: 'Content Rules',
-  coverage_thresholds: 'Quality Gates',
-  dead_code: 'Quality Gates',
-  file_length_limits: 'Quality Gates',
-  dependency_excludes: 'Dependencies',
-  duplicate_dependency_excludes: 'Dependencies',
-  boot_layout: 'Project Structure',
-  markdown_docs: 'Project Structure',
-  required_hooks: 'Project Structure',
-}
-
-const GUARD_CATEGORY_MAP: Record<string, string> = {
-  guard_config_keys: 'Access Control',
-  guard_protected_branches: 'Access Control',
-  guard_subcommands: 'Access Control',
-  guard_environment: 'Environment',
-  guard_resource_limits: 'Environment',
-  guard_paths: 'Filesystem',
-}
+import type { StandardEntry } from '@/types/standards'
+import type { WikiLabelsConfig } from '@/types/wiki-labels'
 
 function capitalizeCategory(cat: string): string {
   return cat
@@ -47,49 +23,6 @@ export function deriveCategories(items: CardItem[]): { id: string; label: string
   return Array.from(seen)
     .sort()
     .map((id) => ({ id, label: id }))
-}
-
-const LANGUAGE_LABELS: Record<SwallowLanguage, string> = {
-  shell: 'Shell',
-  python: 'Python',
-  js_ts: 'JS/TS',
-  ansible: 'Ansible',
-  cron: 'Cron',
-}
-
-const HOOK_KIND_LABELS: Record<HookKind, string> = {
-  shell: 'Shell',
-  shell_inline: 'Shell (inline)',
-  shell_with_arg: 'Shell (with arg)',
-  python_module: 'Python module',
-  python_module_files: 'Python module (files)',
-  makefile_target: 'Makefile target',
-}
-
-const HOOK_STAGE_LABELS: Record<string, string> = {
-  'pre-commit': 'Pre-commit',
-  'commit-msg': 'Commit-msg',
-  'pre-push': 'Pre-push',
-}
-
-const STANDARD_TYPE_ICONS: Record<StandardType, string> = {
-  regulation: 'ri-government-line',
-  standard: 'ri-book-marked-line',
-  framework: 'ri-flow-chart',
-  declaration: 'ri-megaphone-line',
-  'code-of-conduct': 'ri-shield-check-line',
-  'executive-order': 'ri-stamp-line',
-  treaty: 'ri-scales-3-line',
-}
-
-const STANDARD_TYPE_LABELS: Record<StandardType, string> = {
-  regulation: 'Regulation',
-  standard: 'Standard',
-  framework: 'Framework',
-  declaration: 'Declaration',
-  'code-of-conduct': 'Code of Conduct',
-  'executive-order': 'Executive Order',
-  treaty: 'Treaty',
 }
 
 export function projectAdapter(
@@ -125,14 +58,17 @@ export function projectAdapter(
   })
 }
 
-export function configAdapter(configs: ConfigEntry[]): CardItem[] {
+export function configAdapter(
+  configs: ConfigEntry[],
+  labels: WikiLabelsConfig,
+): CardItem[] {
   return configs.map((c) => ({
     id: c.name,
     title: c.name,
     description: c.description ?? '',
     icon: 'ri-settings-3-line',
     monoTitle: true,
-    category: CONFIG_CATEGORY_MAP[c.name] ?? 'Other',
+    category: labels.config_categories[c.name] ?? 'Other',
     meta:
       c.fieldCount !== undefined
         ? [{ label: 'Fields', value: String(c.fieldCount) }]
@@ -140,14 +76,17 @@ export function configAdapter(configs: ConfigEntry[]): CardItem[] {
   }))
 }
 
-export function guardConfigAdapter(entries: GuardConfigEntry[]): CardItem[] {
+export function guardConfigAdapter(
+  entries: GuardConfigEntry[],
+  labels: WikiLabelsConfig,
+): CardItem[] {
   return entries.map((e) => ({
     id: e.name,
     title: e.name,
     description: e.description ?? '',
     icon: 'ri-shield-keyhole-line',
     monoTitle: true,
-    category: GUARD_CATEGORY_MAP[e.name] ?? 'Other',
+    category: labels.guard_categories[e.name] ?? 'Other',
     meta:
       e.fieldCount !== undefined
         ? [{ label: 'Fields', value: String(e.fieldCount) }]
@@ -155,13 +94,16 @@ export function guardConfigAdapter(entries: GuardConfigEntry[]): CardItem[] {
   }))
 }
 
-export function patternAdapter(patterns: ClassifiedPattern[]): CardItem[] {
+export function patternAdapter(
+  patterns: ClassifiedPattern[],
+  labels: WikiLabelsConfig,
+): CardItem[] {
   return patterns.map((p) => {
     const tags: CardItem['tags'] = []
     if (p.languages) {
       for (const lang of p.languages) {
         tags.push({
-          label: LANGUAGE_LABELS[lang] ?? lang,
+          label: labels.swallow_languages[lang] ?? lang,
           variant: 'accent',
         })
       }
@@ -215,15 +157,16 @@ export function scriptAdapter(scripts: ScriptManifestEntry[]): CardItem[] {
 export function hookAdapter(
   hooks: HookRecord[],
   descriptions: Record<string, string>,
+  labels: WikiLabelsConfig,
 ): CardItem[] {
   return hooks.map((h) => {
     const tags: CardItem['tags'] = [
       {
-        label: HOOK_STAGE_LABELS[h.stage] ?? h.stage,
+        label: labels.hook_stages[h.stage] ?? h.stage,
         variant: 'accent',
       },
       {
-        label: HOOK_KIND_LABELS[h.kind] ?? h.kind,
+        label: labels.hook_kinds[h.kind] ?? h.kind,
         variant: 'muted',
       },
       {
@@ -248,12 +191,18 @@ export function hookAdapter(
   })
 }
 
-export function standardAdapter(standards: StandardEntry[]): CardItem[] {
+export function standardAdapter(
+  standards: StandardEntry[],
+  labels: WikiLabelsConfig,
+): CardItem[] {
   return standards.map((s) => {
+    const typeMeta = labels.standard_types[s.type]
+    const typeLabel = typeMeta?.label ?? s.type
+    const typeIcon = typeMeta?.icon ?? 'ri-book-marked-line'
     const tags: CardItem['tags'] = [
       { label: s.jurisdiction, variant: 'accent' },
       {
-        label: STANDARD_TYPE_LABELS[s.type] ?? s.type,
+        label: typeLabel,
         variant: 'muted',
       },
       {
@@ -279,8 +228,8 @@ export function standardAdapter(standards: StandardEntry[]): CardItem[] {
       title: s.title,
       subtitle: s.fullTitle,
       description: s.summary,
-      icon: STANDARD_TYPE_ICONS[s.type] ?? 'ri-book-marked-line',
-      category: STANDARD_TYPE_LABELS[s.type] ?? s.type,
+      icon: typeIcon,
+      category: typeLabel,
       tags,
       meta,
     }

@@ -1,32 +1,17 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
 import { PatternList } from '@/components/wiki/PatternList'
-import { getBannedPatterns, getSwallowPatterns } from '@/lib/yaml-loader'
+import { getBannedPatterns, getSwallowPatterns, getWikiLabels } from '@/lib/yaml-loader'
 import { loadSwallowDetectors } from '@/lib/docs-loader'
 import { classifyAll, classifySwallowPatterns } from '@/lib/patterns'
 import { highlightCode } from '@/lib/highlight'
+import { PATTERN_CATEGORIES } from '@/types/patterns'
 import type { PatternCategory } from '@/types/patterns'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 
-const VALID_CATEGORIES: PatternCategory[] = [
-  'linter-suppression',
-  'deferred-types',
-  'quiet-errors',
-  'obsolete-paths',
-  'suppression',
-  'unsafe-reflection',
-  'data-classes',
-  'test-quality',
-  'path-safety',
-  'uuid',
-  'container-versions',
-  'deprecated-python',
-  'self-methods',
-  'special-chars',
-  'filename-rules',
-  'directory-rules',
-  'error-swallowing',
-]
+const VALID_CATEGORIES: PatternCategory[] = PATTERN_CATEGORIES.map(
+  (c) => c.id,
+)
 
 export async function generateMetadata({
   params,
@@ -55,6 +40,7 @@ export default async function PatternCategoryPage({
     getSwallowPatterns(),
   ])
   const detectorData = loadSwallowDetectors()
+  const labels = getWikiLabels()
   const bannedPatterns = classifyAll(config)
   const swallowPatterns = classifySwallowPatterns(swallowConfig, detectorData)
   const allPatterns = [...bannedPatterns, ...swallowPatterns]
@@ -76,6 +62,7 @@ export default async function PatternCategoryPage({
       <PatternList
         patterns={filtered}
         highlightedHtml={highlightedHtml}
+        labels={labels}
       />
     </WikiShell>
   )

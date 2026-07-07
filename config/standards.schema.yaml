@@ -1,0 +1,105 @@
+# Schema for standards.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+#
+# Field shape:
+#   config:        the config file name (without .yaml)
+#   description:   one-line summary of the config's purpose
+#   fields:        ordered list of field descriptors
+#     path:          dot-notation path; [] suffix denotes a list,
+#                    [].<sub> describes an item field
+#     type:          yaml | string | integer | boolean | list | list<T> | map | object
+#     required:      true | false (defaults to false)
+#     default:       default value when omitted (omit if none)
+#     description:   human-readable description of the field
+config: standards
+description: "Catalog of AI governance standards, regulations, frameworks, and declarations; the single source of truth for the standards page."
+fields:
+  - path: version
+    type: integer
+    required: true
+    description: "Schema version of the standards catalog. Bumped when the YAML shape changes."
+
+  - path: standards
+    type: list
+    required: true
+    description: "The list of AI governance standards rendered on the standards page and indexed for search."
+
+  - path: standards[].id
+    type: string
+    required: true
+    description: "Stable identifier used in anchor links (/standards#<id>) and search indexing."
+
+  - path: standards[].title
+    type: string
+    required: true
+    description: "Short display title shown in card headers and search results."
+
+  - path: standards[].fullTitle
+    type: string
+    required: true
+    description: "Full official title of the standard, shown in the card detail body."
+
+  - path: standards[].issuer
+    type: string
+    required: true
+    description: "Issuing body or authority (e.g. 'NIST', 'European Parliament & Council')."
+
+  - path: standards[].jurisdiction
+    type: string
+    required: true
+    description: "Geographic or organizational scope (e.g. 'EU', 'US', 'International')."
+
+  - path: standards[].date
+    type: string
+    required: true
+    description: "Publication or adoption date in ISO 8601 (YYYY-MM-DD) format."
+
+  - path: standards[].type
+    type: string
+    required: true
+    description: "Document type: regulation, standard, framework, declaration, code-of-conduct, executive-order, or treaty."
+
+  - path: standards[].status
+    type: string
+    required: true
+    description: "Legal status: binding, voluntary, or advisory."
+
+  - path: standards[].summary
+    type: string
+    required: true
+    description: "One-paragraph summary of the standard's scope and key provisions."
+
+  - path: standards[].tags
+    type: list<string>
+    required: true
+    description: "Topic tags used for filtering and grouping (e.g. 'Risk Management', 'Governance')."
+
+  - path: standards[].free
+    type: boolean
+    required: true
+    description: "Whether the full text is freely accessible (true) or requires purchase (false)."
+
+  - path: standards[].downloadPath
+    type: string
+    description: "Path to a locally hosted PDF copy under public/ (only for free standards)."
+
+  - path: standards[].sourceUrl
+    type: string
+    description: "Official source URL for the full text (free standards) or landing page (paid standards)."
+
+  - path: standards[].purchaseUrl
+    type: string
+    description: "Purchase URL for paid standards (only when free is false)."
+
+  - path: standards[].price
+    type: string
+    description: "Approximate purchase price (only when free is false)."
+
+  - path: standards[].pages
+    type: integer
+    description: "Total page count of the document, when known."

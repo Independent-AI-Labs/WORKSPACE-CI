@@ -3,9 +3,9 @@ import { classifyPattern, classifyAll, classifySwallowPatterns } from '@/lib/pat
 import type { BannedWordsConfig, SwallowPatternConfig, SwallowDetectorData } from '@/types/patterns'
 
 describe('classifyPattern', () => {
-  it('classifies a linter suppression pattern', () => {
+  it('uses entry.category for content scope', () => {
     const result = classifyPattern(
-      { pattern: 'eslint-disable', reason: 'ESLint suppression forbidden. Fix the code.' },
+      { pattern: 'eslint-disable', reason: 'ESLint suppression forbidden.', category: 'linter-suppression' },
       'content',
     )
     expect(result.category).toBe('linter-suppression')
@@ -15,7 +15,7 @@ describe('classifyPattern', () => {
 
   it('classifies a deferred types pattern', () => {
     const result = classifyPattern(
-      { pattern: '\\blist\\[object\\]', reason: 'list[object] provides zero type safety.' },
+      { pattern: '\\blist\\[object\\]', reason: 'list[object] provides zero type safety.', category: 'deferred-types' },
       'content',
     )
     expect(result.category).toBe('deferred-types')
@@ -23,7 +23,7 @@ describe('classifyPattern', () => {
 
   it('classifies a quiet errors pattern', () => {
     const result = classifyPattern(
-      { pattern: '\\bsilent', reason: 'No silent anything. Log errors or fail explicitly.' },
+      { pattern: '\\bsilent', reason: 'No silent anything.', category: 'quiet-errors' },
       'content',
     )
     expect(result.category).toBe('quiet-errors')
@@ -31,7 +31,7 @@ describe('classifyPattern', () => {
 
   it('classifies an obsolete paths pattern', () => {
     const result = classifyPattern(
-      { pattern: '\\blegacy\\b', reason: 'No legacy code paths.' },
+      { pattern: '\\blegacy\\b', reason: 'No legacy code paths.', category: 'obsolete-paths' },
       'content',
     )
     expect(result.category).toBe('obsolete-paths')
@@ -39,7 +39,7 @@ describe('classifyPattern', () => {
 
   it('classifies a suppression pattern', () => {
     const result = classifyPattern(
-      { pattern: '\\.suppress', reason: 'No suppression of errors/warnings.' },
+      { pattern: '\\.suppress', reason: 'No suppression of errors/warnings.', category: 'suppression' },
       'content',
     )
     expect(result.category).toBe('suppression')
@@ -47,7 +47,7 @@ describe('classifyPattern', () => {
 
   it('classifies an unsafe reflection pattern', () => {
     const result = classifyPattern(
-      { pattern: '\\bgetattr\\(', reason: 'getattr is unsafe. Use explicit attribute access.' },
+      { pattern: '\\bgetattr\\(', reason: 'getattr is unsafe.', category: 'unsafe-reflection' },
       'content',
     )
     expect(result.category).toBe('unsafe-reflection')
@@ -55,7 +55,7 @@ describe('classifyPattern', () => {
 
   it('classifies a data classes pattern', () => {
     const result = classifyPattern(
-      { pattern: '@dataclass', reason: 'Use Pydantic models instead of dataclasses.' },
+      { pattern: '@dataclass', reason: 'Use Pydantic models.', category: 'data-classes' },
       'content',
     )
     expect(result.category).toBe('data-classes')
@@ -63,7 +63,7 @@ describe('classifyPattern', () => {
 
   it('classifies a test quality pattern', () => {
     const result = classifyPattern(
-      { pattern: '\\bxfail\\b', reason: 'No xfail tests. Fix the code.' },
+      { pattern: '\\bxfail\\b', reason: 'No xfail tests.', category: 'test-quality' },
       'content',
     )
     expect(result.category).toBe('test-quality')
@@ -71,7 +71,7 @@ describe('classifyPattern', () => {
 
   it('classifies a path safety pattern', () => {
     const result = classifyPattern(
-      { pattern: '/home/', reason: 'No hardcoded home paths. Use environment variables.' },
+      { pattern: '/home/', reason: 'No hardcoded home paths.', category: 'path-safety' },
       'content',
     )
     expect(result.category).toBe('path-safety')
@@ -79,7 +79,7 @@ describe('classifyPattern', () => {
 
   it('classifies a UUID pattern', () => {
     const result = classifyPattern(
-      { pattern: 'uuid\\.uuid[134568]\\(', reason: 'Only uuid7 allowed.' },
+      { pattern: 'uuid\\.uuid[134568]\\(', reason: 'Only uuid7 allowed.', category: 'uuid' },
       'content',
     )
     expect(result.category).toBe('uuid')
@@ -87,7 +87,7 @@ describe('classifyPattern', () => {
 
   it('classifies a container versions pattern', () => {
     const result = classifyPattern(
-      { pattern: ':latest\\b', reason: 'Pin container versions. No :latest tags.' },
+      { pattern: ':latest\\b', reason: 'Pin container versions.', category: 'container-versions' },
       'content',
     )
     expect(result.category).toBe('container-versions')
@@ -95,7 +95,7 @@ describe('classifyPattern', () => {
 
   it('classifies a deprecated python pattern', () => {
     const result = classifyPattern(
-      { pattern: '\\bpython3?\\b', reason: 'Use uv run python for hermetic execution.' },
+      { pattern: '\\bpython3?\\b', reason: 'Use uv run python.', category: 'deprecated-python' },
       'content',
     )
     expect(result.category).toBe('deprecated-python')
@@ -103,7 +103,42 @@ describe('classifyPattern', () => {
 
   it('classifies a special chars pattern', () => {
     const result = classifyPattern(
-      { pattern: ' -- ', reason: 'ASCII em-dash punctuation forbidden.' },
+      { pattern: ' -- ', reason: 'ASCII em-dash punctuation forbidden.', category: 'special-chars' },
+      'content',
+    )
+    expect(result.category).toBe('special-chars')
+  })
+
+  it('classifies an AI slop pattern', () => {
+    const result = classifyPattern(
+      { pattern: '\\bdelve\\b', reason: 'AI slop. Use look at.', category: 'ai-slop' },
+      'content',
+    )
+    expect(result.category).toBe('ai-slop')
+    expect(result.categoryLabel).toBe('AI Slop')
+  })
+
+  it('classifies a parasite terms pattern', () => {
+    const result = classifyPattern(
+      { pattern: '\\brobust\\b', reason: 'AI slop. Use reliable.', category: 'parasite-terms' },
+      'content',
+    )
+    expect(result.category).toBe('parasite-terms')
+    expect(result.categoryLabel).toBe('Parasite Terms')
+  })
+
+  it('classifies a corporate waffle pattern', () => {
+    const result = classifyPattern(
+      { pattern: '\\bleverage\\b', reason: 'Business bullshit. Use use.', category: 'corporate-waffle' },
+      'content',
+    )
+    expect(result.category).toBe('corporate-waffle')
+    expect(result.categoryLabel).toBe('Corporate Waffle')
+  })
+
+  it('falls back to special-chars when category is missing', () => {
+    const result = classifyPattern(
+      { pattern: 'unknown-pattern', reason: 'Some reason without a category.' },
       'content',
     )
     expect(result.category).toBe('special-chars')
@@ -111,7 +146,7 @@ describe('classifyPattern', () => {
 
   it('classifies filename rules with filename scope', () => {
     const result = classifyPattern(
-      { pattern: '_v[0-9]+', reason: 'No versioned filenames. Use git.' },
+      { pattern: '_v[0-9]+', reason: 'No versioned filenames.' },
       'filename',
     )
     expect(result.category).toBe('filename-rules')
@@ -120,7 +155,7 @@ describe('classifyPattern', () => {
 
   it('classifies directory rules with directory scope', () => {
     const result = classifyPattern(
-      { pattern: 'reason=.*not implemented yet', reason: 'Implement the test or delete it.' },
+      { pattern: 'reason=.*not implemented yet', reason: 'Implement the test.' },
       'directory',
       'tests',
     )
@@ -134,8 +169,9 @@ describe('classifyAll', () => {
   const config: BannedWordsConfig = {
     version: '4.0.0',
     banned: [
-      { pattern: 'eslint-disable', reason: 'ESLint suppression forbidden.' },
-      { pattern: '\\blegacy\\b', reason: 'No legacy code paths.' },
+      { pattern: 'eslint-disable', reason: 'ESLint suppression forbidden.', category: 'linter-suppression' },
+      { pattern: '\\blegacy\\b', reason: 'No legacy code paths.', category: 'obsolete-paths' },
+      { pattern: '\\bdelve\\b', reason: 'AI slop.', category: 'ai-slop' },
     ],
     directory_rules: {
       tests: [
@@ -149,7 +185,7 @@ describe('classifyAll', () => {
 
   it('classifies all three groups', () => {
     const results = classifyAll(config)
-    expect(results).toHaveLength(4)
+    expect(results).toHaveLength(5)
   })
 
   it('assigns correct scopes', () => {
@@ -157,7 +193,7 @@ describe('classifyAll', () => {
     const contentPatterns = results.filter((p) => p.scope === 'content')
     const directoryPatterns = results.filter((p) => p.scope === 'directory')
     const filenamePatterns = results.filter((p) => p.scope === 'filename')
-    expect(contentPatterns).toHaveLength(2)
+    expect(contentPatterns).toHaveLength(3)
     expect(directoryPatterns).toHaveLength(1)
     expect(filenamePatterns).toHaveLength(1)
   })
@@ -166,6 +202,12 @@ describe('classifyAll', () => {
     const results = classifyAll(config)
     const dirPattern = results.find((p) => p.scope === 'directory')
     expect(dirPattern?.directory).toBe('tests')
+  })
+
+  it('reads category from banned entries', () => {
+    const results = classifyAll(config)
+    const slopPattern = results.find((p) => p.pattern === '\\bdelve\\b')
+    expect(slopPattern?.category).toBe('ai-slop')
   })
 
   it('handles empty config', () => {

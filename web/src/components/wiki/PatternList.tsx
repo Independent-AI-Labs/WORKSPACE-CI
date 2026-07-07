@@ -2,6 +2,7 @@
 
 import type { ClassifiedPattern } from '@/types/patterns'
 import type { FeedbackCounts } from '@/types/feedback'
+import type { WikiLabelsConfig } from '@/types/wiki-labels'
 import { WikiCard } from '@/components/wiki/WikiCard'
 import { CategoryNav } from '@/components/wiki/CategoryNav'
 import { FeedbackWidget } from '@/components/wiki/FeedbackWidget'
@@ -13,12 +14,14 @@ interface PatternListProps {
   patterns: ClassifiedPattern[]
   highlightedHtml: Record<string, string>
   feedbackCounts?: Record<string, FeedbackCounts>
+  labels: WikiLabelsConfig
 }
 
 export function PatternList({
   patterns,
   highlightedHtml,
   feedbackCounts = {},
+  labels,
 }: PatternListProps) {
   const {
     filtered,
@@ -30,7 +33,7 @@ export function PatternList({
     totalCount,
   } = usePatternFilter(patterns)
 
-  const items = patternAdapter(filtered)
+  const items = patternAdapter(filtered, labels)
 
   return (
     <div className="pattern-list">

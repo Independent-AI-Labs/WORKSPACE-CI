@@ -31,7 +31,6 @@
     "clsx": "2.1.1",
     "dompurify": "3.4.11",
     "fuse.js": "7.4.2",
-    "gray-matter": "4.0.3",
     "isomorphic-dompurify": "2.36.0",
     "js-yaml": "4.3.0",
     "marked": "17.0.6",

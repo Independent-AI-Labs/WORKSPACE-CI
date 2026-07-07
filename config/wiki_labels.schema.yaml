@@ -1,0 +1,69 @@
+# Schema for wiki_labels.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: wiki_labels
+description: "Display labels and icons for wiki UI components; the single source of truth for human-readable names of CI domain enums."
+fields:
+  - path: version
+    type: integer
+    required: true
+    description: "Schema version of the wiki labels config. Bumped when the YAML shape changes."
+
+  - path: hook_stages
+    type: map<string, string>
+    required: true
+    description: "Maps hook stage IDs (pre-commit, commit-msg, pre-push) to display labels shown in hook card tags."
+
+  - path: hook_kinds
+    type: map<string, string>
+    required: true
+    description: "Maps hook kind IDs (shell, python_module, makefile_target, etc.) to display labels shown in hook card tags."
+
+  - path: standard_types
+    type: map<string, object>
+    required: true
+    description: "Maps standard type IDs to display metadata (label + icon) used in standard card rendering."
+
+  - path: standard_types.<type>.label
+    type: string
+    required: true
+    description: "Human-readable label for the standard type (e.g. 'Regulation', 'Framework')."
+
+  - path: standard_types.<type>.icon
+    type: string
+    required: true
+    description: "Remix Icon CSS class for the standard type (e.g. 'ri-government-line')."
+
+  - path: swallow_languages
+    type: map<string, string>
+    required: true
+    description: "Maps swallow-detector language IDs (shell, python, js_ts, ansible, cron) to display labels shown in pattern card tags."
+
+  - path: config_categories
+    type: map<string, string>
+    required: true
+    description: "Maps CI config file names to display category labels used for grouping config cards on the config page."
+
+  - path: guard_categories
+    type: map<string, string>
+    required: true
+    description: "Maps guard config file names to display category labels used for grouping guard config cards."
+
+  - path: playground_languages
+    type: list
+    required: true
+    description: "Supported languages for the pattern testing playground, rendered as selector options."
+
+  - path: playground_languages[].id
+    type: string
+    required: true
+    description: "Language identifier used internally and by CodeMirror for syntax highlighting (e.g. 'python', 'shell')."
+
+  - path: playground_languages[].label
+    type: string
+    required: true
+    description: "Human-readable label shown in the language selector dropdown (e.g. 'Python', 'Shell')."

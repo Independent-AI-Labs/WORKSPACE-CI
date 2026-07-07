@@ -3,15 +3,16 @@ import { ContactDialog } from '@/components/wiki/ContactDialog'
 import { FeedbackWidget } from '@/components/wiki/FeedbackWidget'
 import { CardListSection } from '@/components/wiki/CardListSection'
 import { standardAdapter, deriveCategories } from '@/lib/card-adapters'
-import { loadStandards } from '@/lib/docs-loader'
+import { getStandards, getWikiLabels } from '@/lib/yaml-loader'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
 import { getBranding } from '@/lib/branding'
 import { Icon } from '@/components/ui/Icon'
 import type { ReactNode } from 'react'
 
 export default async function StandardsPage() {
-  const standards = loadStandards() ?? []
-  const items = standardAdapter(standards)
+  const { standards } = await getStandards()
+  const labels = getWikiLabels()
+  const items = standardAdapter(standards, labels)
   const categories = deriveCategories(items)
   const feedbackCounts = getAllFeedbackCounts('standard')
   const branding = getBranding()
@@ -54,7 +55,7 @@ export default async function StandardsPage() {
             issuer={std.issuer}
             price={std.price}
             purchaseUrl={std.purchaseUrl}
-            contactEmail={branding.contact_email}
+            branding={branding}
           />
         )}
         <FeedbackWidget
@@ -70,12 +71,7 @@ export default async function StandardsPage() {
   return (
     <WikiShell>
       <h1>Standards &amp; Regulation</h1>
-      <p className="page-intro">
-        Curated catalogue of AI standards, regulations, frameworks, and
-        declarations from around the world. Open documents are available for
-        direct download. Paid standards are listed with contact information
-        for standardisation and audit-related inquiries.
-      </p>
+      <p className="page-intro">{branding.standards_page_intro}</p>
       <CardListSection
         items={items}
         categories={categories}

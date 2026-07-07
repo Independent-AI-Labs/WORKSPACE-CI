@@ -88,11 +88,6 @@ exceptions:
   - pattern: '\bsilent'
     paths: ['web/src/data/swallow-detectors\.json$']
 
-  # hook-descriptions.json is generated data containing descriptions of the
-  # silent-swallow checker itself.
-  - pattern: '\bsilent'
-    paths: ['web/src/data/hook-descriptions\.json$']
-
   # hook-sources.json is generated data containing raw source code of CI
   # hooks, including ci_check_silent_swallow and python module hooks.
   - pattern: '\bsilent'

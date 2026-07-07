@@ -24,58 +24,6 @@ export interface PatternMatch {
   category: string
 }
 
-export interface ExtractedModule {
-  name: string
-  path: string
-  docstring: string | null
-  functions: ExtractedFunction[]
-  classes: ExtractedClass[]
-}
-
-export interface ExtractedFunction {
-  name: string
-  docstring: string | null
-  signature: string
-  decorators: string[]
-  line: number
-  is_async: boolean
-  is_public: boolean
-}
-
-export interface ExtractedClass {
-  name: string
-  docstring: string | null
-  bases: string[]
-  methods: ExtractedFunction[]
-  line: number
-}
-
-export interface ApiDocsOutput {
-  generated_at: string
-  source_version: string
-  modules: ExtractedModule[]
-}
-
-export interface ExtractedShellModule {
-  name: string
-  path: string
-  description: string | null
-  functions: ExtractedShellFunction[]
-}
-
-export interface ExtractedShellFunction {
-  name: string
-  description: string | null
-  line: number
-  is_public: boolean
-}
-
-export interface ShellDocsOutput {
-  generated_at: string
-  source_version: string
-  modules: ExtractedShellModule[]
-}
-
 export interface ScriptManifestEntry {
   id: string
   path: string

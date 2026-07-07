@@ -115,20 +115,26 @@ banned:
 
   - pattern: 'unsafe\s*\{'
     reason: "No unsafe blocks. Use safe abstractions or re-architect."
+    category: linter-suppression
   - pattern: 'mypy: ignore-errors'
     reason: "Global mypy ignores forbidden. Fix the types."
+    category: linter-suppression
 
   - pattern: '#\s*type:\s*ignore'
     reason: "Type ignoring forbidden. Fix the code or architecture."
+    category: linter-suppression
 
   - pattern: '#\s*noqa'
     reason: "Linter suppression forbidden. Fix the code style."
+    category: linter-suppression
 
   - pattern: 'eslint-disable'
     reason: "ESLint suppression forbidden. Fix the code."
+    category: linter-suppression
 
   - pattern: 'eslint-disable-next-line'
     reason: "ESLint suppression forbidden. Fix the code."
+    category: linter-suppression
 
   # === FORBIDDEN LAZY TYPE ANNOTATIONS ===
   # These patterns catch code that avoids proper data models.
@@ -137,30 +143,37 @@ banned:
   # list[object]: the most useless type annotation possible
   - pattern: '\blist\[object\]'
     reason: "list[object] provides zero type safety. Use list[str] or a proper model."
+    category: deferred-types
 
   # dict[str, object] / dict[K, object]: lazy untyped dict
   - pattern: '\bdict\[[^]]+,\s*object\]'
     reason: "dict[..., object] is a lazy untyped dict. Use TypedDict, Pydantic model, or dataclass."
+    category: deferred-types
 
   # dict[str, Any] / dict[K, Any]: lazy untyped dict
   - pattern: '\bdict\[.*,\s*Any\]'
     reason: "dict[..., Any] is a lazy untyped dict. Use TypedDict, Pydantic model, or dataclass."
+    category: deferred-types
 
   # list[dict]: list of completely untyped dicts
   - pattern: '\blist\[dict\]'
     reason: "list[dict] has no type information. Use list[TypedDict] or list[Model]."
+    category: deferred-types
 
   # list[dict[str, object]]: nested lazy dicts
   - pattern: '\blist\[dict\[str,\s*object\]\]'
     reason: "list[dict[str, object]] passes untyped data. Define a proper model or TypedDict."
+    category: deferred-types
 
   # dict[str, list[dict[str, object]]]: deeply nested lazy dicts
   - pattern: '\bdict\[str,\s*list\[dict\[str,\s*object\]\]\]'
     reason: "dict[str, list[dict[str, object]]] passes untyped data. Define proper models."
+    category: deferred-types
 
   # | object: makes the entire union equivalent to object
   - pattern: '\|\s*object\b'
     reason: "Union with | object makes the whole type equivalent to object. Remove it or use a proper type."
+    category: deferred-types
 
   # === AI SLOP / BUSINESS BULLSHIT ===
   # Top AI-slop tells (2026 research): words LLMs overuse vs human writing.
@@ -169,426 +182,614 @@ banned:
   # keeps commit messages, docs, and comments human.
   - pattern: '\bdelve\b'
     reason: "AI slop. Use look at, dig into, or examine."
+    category: ai-slop
   - pattern: '\bdelving\b'
     reason: "AI slop. Use looking, digging, or examining."
+    category: ai-slop
   - pattern: '\btapestry\b'
     reason: "AI slop metaphor. Use mix, range, or blend."
+    category: ai-slop
   - pattern: '\brealm\b'
     reason: "AI slop. Use area, field, or domain."
+    category: ai-slop
   - pattern: '\bleverage\b'
     reason: "Business bullshit. Use use, apply, or build on."
+    category: corporate-waffle
   - pattern: '\bleverages\b'
     reason: "Business bullshit. Use uses, applies, or builds on."
+    category: corporate-waffle
   - pattern: '\bleveraging\b'
     reason: "Business bullshit. Use using, applying, or building on."
+    category: corporate-waffle
   - pattern: '\bsynerg'
     reason: "Business bullshit. Use work together, combine, or reinforce."
+    category: corporate-waffle
   - pattern: '\bholistic\b'
     reason: "Business bullshit. Use full, complete, or end-to-end."
+    category: corporate-waffle
   - pattern: '\bparadigm\b'
     reason: "Business bullshit. Use model, pattern, or approach."
+    category: corporate-waffle
   - pattern: '\bgroundbreaking\b'
     reason: "AI slop hype. Use new, first, or name the specific advance."
+    category: parasite-terms
   - pattern: '\brevolutionary\b'
     reason: "AI slop hype. Use new, or name what specifically changed."
+    category: parasite-terms
   - pattern: '\btransformative\b'
     reason: "AI slop hype. Name what specifically changed."
+    category: parasite-terms
   - pattern: '\binnovative\b'
     reason: "AI slop hype. Use different, new, or better."
+    category: parasite-terms
   - pattern: '\bcutting-edge\b'
     reason: "AI slop hype. Use new, current, or name the advance."
+    category: parasite-terms
   - pattern: '\bgame-changer\b'
     reason: "AI slop hype. Name the specific impact."
+    category: parasite-terms
   - pattern: '\bgame-changing\b'
     reason: "AI slop hype. Name the specific impact."
+    category: parasite-terms
   - pattern: '\bstate-of-the-art\b'
     reason: "AI slop hype. Use current, or name the advance."
+    category: parasite-terms
   - pattern: '\bseamless\b'
     reason: "AI slop. Use smooth, easy, or name the integration point."
+    category: parasite-terms
   - pattern: '\bseamlessly\b'
     reason: "AI slop. Use smoothly, easily, or name the integration point."
+    category: parasite-terms
   - pattern: '\brobust\b'
     reason: "AI slop. Use reliable, solid, tested, or thorough."
+    category: parasite-terms
   - pattern: '\bempower\b'
     reason: "Business bullshit. Use help, let, or allow."
+    category: corporate-waffle
   - pattern: '\bempowers\b'
     reason: "Business bullshit. Use helps, lets, or allows."
+    category: corporate-waffle
   - pattern: '\bempowering\b'
     reason: "Business bullshit. Use helping, letting, or allowing."
+    category: corporate-waffle
   - pattern: '\bunleash\b'
     reason: "AI slop. Use start, open, or activate."
+    category: ai-slop
   - pattern: '\bunlocks?\b'
     reason: "AI slop. Use get, start, or open."
+    category: ai-slop
   - pattern: '\bharness\b'
     reason: "AI slop. Use use, direct, or tap into."
+    category: ai-slop
   - pattern: '\bharnesses\b'
     reason: "AI slop. Use uses, directs, or taps into."
+    category: ai-slop
   - pattern: '\bharnessing\b'
     reason: "AI slop. Use using, directing, or tapping into."
+    category: ai-slop
   - pattern: '\belevate\b'
     reason: "Business bullshit. Use improve, raise, or strengthen."
+    category: corporate-waffle
   - pattern: '\belevates\b'
     reason: "Business bullshit. Use improves, raises, or strengthens."
+    category: corporate-waffle
   - pattern: '\belevating\b'
     reason: "Business bullshit. Use improving, raising, or strengthening."
+    category: corporate-waffle
   - pattern: '\bfoster\b'
     reason: "AI slop. Use build, create, or develop."
+    category: ai-slop
   - pattern: '\bfosters\b'
     reason: "AI slop. Use builds, creates, or develops."
+    category: ai-slop
   - pattern: '\bfostering\b'
     reason: "AI slop. Use building, creating, or developing."
+    category: ai-slop
   - pattern: '\bcultivate\b'
     reason: "AI slop. Use grow, develop, or invest in."
+    category: ai-slop
   - pattern: '\bnurture\b'
     reason: "AI slop. Use support, invest in, or pay attention to."
+    category: ai-slop
   - pattern: '\bnavigate\b'
     reason: "AI slop. Use handle, deal with, or work through."
+    category: ai-slop
   - pattern: '\bnavigates\b'
     reason: "AI slop. Use handles, deals with, or works through."
+    category: ai-slop
   - pattern: '\bnavigating\b'
     reason: "AI slop. Use handling, dealing with, or working through."
+    category: ai-slop
   - pattern: '\butilize\b'
     reason: "Business bullshit. Use use."
+    category: corporate-waffle
   - pattern: '\butilizes\b'
     reason: "Business bullshit. Use uses."
+    category: corporate-waffle
   - pattern: '\butilizing\b'
     reason: "Business bullshit. Use using."
+    category: corporate-waffle
   - pattern: '\bfacilitate\b'
     reason: "Business bullshit. Use help, run, or make easier."
+    category: corporate-waffle
   - pattern: '\bfacilitates\b'
     reason: "Business bullshit. Use helps, runs, or makes easier."
+    category: corporate-waffle
   - pattern: '\bfacilitating\b'
     reason: "Business bullshit. Use helping, running, or making easier."
+    category: corporate-waffle
   - pattern: '\bmoreover\b'
     reason: "AI slop transition. Use also, and, or on top of that."
+    category: ai-slop
   - pattern: '\bfurthermore\b'
     reason: "AI slop transition. Use also, and, or on top of that."
+    category: ai-slop
   - pattern: '\bnevertheless\b'
     reason: "AI slop transition. Use still, but, or even so."
+    category: ai-slop
   - pattern: '\bunderscore\b'
     reason: "AI slop. Use show, prove, highlight, or make clear."
+    category: ai-slop
   - pattern: '\bunderscores\b'
     reason: "AI slop. Use shows, proves, highlights, or makes clear."
+    category: ai-slop
   - pattern: '\bunderscoring\b'
     reason: "AI slop. Use showing, proving, highlighting, or making clear."
+    category: ai-slop
   - pattern: '\bshowcase\b'
     reason: "AI slop. Use show, display, or present."
+    category: ai-slop
   - pattern: '\bshowcases\b'
     reason: "AI slop. Use shows, displays, or presents."
+    category: ai-slop
   - pattern: '\bshowcasing\b'
     reason: "AI slop. Use showing, displaying, or presenting."
+    category: ai-slop
   - pattern: '\bintricate\b'
     reason: "AI slop. Use detailed, complex, or specific."
+    category: ai-slop
   - pattern: '\bpivotal\b'
     reason: "AI slop. Use key, important, or central."
+    category: parasite-terms
   - pattern: '\bmultifaceted\b'
     reason: "AI slop. Use varied, complex, or name the facets."
+    category: ai-slop
   - pattern: '\bmyriad\b'
     reason: "AI slop. Use many, lots of, or name them."
+    category: ai-slop
   - pattern: '\bplethora\b'
     reason: "AI slop. Use many, lots of, or name them."
+    category: ai-slop
   - pattern: '\bunprecedented\b'
     reason: "AI slop. Use new, first, or name the prior baseline."
+    category: parasite-terms
   - pattern: '\bunparalleled\b'
     reason: "AI slop. Use unmatched, or name the comparison."
+    category: parasite-terms
   - pattern: '\bparamount\b'
     reason: "AI slop. Use top priority, critical, or essential."
+    category: parasite-terms
   - pattern: '\bbespoke\b'
     reason: "Business bullshit. Use custom, tailored, or specific."
+    category: corporate-waffle
   - pattern: '\bactionable\b'
     reason: "Business bullshit. Use concrete, specific, or practical."
+    category: corporate-waffle
   - pattern: '\bcomprehensive\b'
     reason: "AI slop. Use complete, full, or thorough."
+    category: parasite-terms
   - pattern: '\bvibrant\b'
     reason: "AI slop. Use active, lively, or name the evidence."
+    category: parasite-terms
   - pattern: '\bdynamic\b'
     reason: "AI slop. Use active, changing, or name the behavior."
+    category: parasite-terms
   - pattern: '\bmeticulous\b'
     reason: "AI slop. Use careful, thorough, or precise."
+    category: ai-slop
   - pattern: '\bnuanced\b'
     reason: "AI slop. Use subtle, detailed, or explain the nuance."
+    category: ai-slop
   - pattern: '\btestament\b'
     reason: "AI slop. Use shows, proves, or demonstrates."
+    category: ai-slop
   - pattern: '\bbeacon\b'
     reason: "AI slop metaphor. Use signal, guide, or example."
+    category: ai-slop
   - pattern: '\bembark\b'
     reason: "AI slop. Use start, begin, or launch."
+    category: ai-slop
   - pattern: '\bendeavor\b'
     reason: "AI slop. Use effort, project, or attempt."
+    category: ai-slop
   - pattern: '\bproactive\b'
     reason: "Business bullshit. Use anticipatory, or name the action."
+    category: corporate-waffle
   - pattern: '\bscalable\b'
     reason: "Business bullshit. Use grows with load, or name the capacity."
+    category: parasite-terms
   - pattern: '\bstreamline\b'
     reason: "Business bullshit. Use simplify, speed up, or cut steps."
+    category: corporate-waffle
   - pattern: '\bstreamlines\b'
     reason: "Business bullshit. Use simplifies, speeds up, or cuts steps."
+    category: corporate-waffle
   - pattern: '\bstreamlining\b'
     reason: "Business bullshit. Use simplifying, speeding up, or cutting steps."
+    category: corporate-waffle
   - pattern: '\bethos\b'
     reason: "Business bullshit. Use culture, values, or character."
+    category: corporate-waffle
   - pattern: '\bzeitgeist\b'
     reason: "Business bullshit. Use trend, mood, or spirit of the times."
+    category: corporate-waffle
   - pattern: '\bcornerstone\b'
     reason: "AI slop metaphor. Use foundation, basis, or core."
+    category: ai-slop
   - pattern: '\bhallmark\b'
     reason: "AI slop. Use sign, feature, or characteristic."
+    category: ai-slop
   - pattern: '\bnexus\b'
     reason: "AI slop. Use hub, link, or connection."
+    category: ai-slop
   - pattern: '\bmosaic\b'
     reason: "AI slop metaphor. Use mix, patchwork, or collection."
+    category: ai-slop
   - pattern: '\blabyrinth\b'
     reason: "AI slop metaphor. Use maze, tangle, or complex system."
+    category: ai-slop
   - pattern: '\btrajectory\b'
     reason: "AI slop. Use path, course, or direction."
+    category: ai-slop
   - pattern: '\bfrontier\b'
     reason: "AI slop metaphor. Use edge, boundary, or new area."
+    category: ai-slop
   - pattern: '\bwhilst\b'
     reason: "AI slop. Use while."
+    category: ai-slop
   - pattern: '\bdeep[ -]dive\b'
     reason: "AI slop. Use examine, look at, or cover."
+    category: ai-slop
   - pattern: '\bunpack\b'
     reason: "AI slop. Use explain, break down, or cover."
+    category: ai-slop
   - pattern: '\bshed light on\b'
     reason: "AI slop. Use explain, show, or clarify."
+    category: ai-slop
   - pattern: '\bdisruptive\b'
     reason: "Business bullshit. Use new, or name the structural change."
+    category: corporate-waffle
   - pattern: '\bdisrupt\b'
     reason: "Business bullshit. Use change, replace, or name the impact."
+    category: corporate-waffle
   - pattern: '\bdisrupts\b'
     reason: "Business bullshit. Use changes, replaces, or names the impact."
+    category: corporate-waffle
   - pattern: '\bfrictionless\b'
     reason: "Business bullshit. Use smooth, easy, or name what was removed."
+    category: parasite-terms
   - pattern: '\bmoat\b'
     reason: "Business bullshit. Use barrier, advantage, or name the asset."
+    category: corporate-waffle
   - pattern: '\bflywheel\b'
     reason: "Business bullshit. Use feedback loop, or name the mechanism."
+    category: corporate-waffle
   - pattern: '\bagentic\b'
     reason: "AI slop. Use autonomous, agent-driven, or name the behavior."
+    category: ai-slop
   - pattern: '\bvibe[ -]cod'
     reason: "AI slop. Use AI-assisted coding, or describe the workflow."
+    category: ai-slop
   - pattern: '\bAI-powered\b'
     reason: "Business bullshit. Name the model, task, and accuracy."
+    category: corporate-waffle
   - pattern: '\bAI-native\b'
     reason: "Business bullshit. Name the model, dataset, and workflow."
+    category: corporate-waffle
   - pattern: '\bshift[ -]left\b'
     reason: "Business bullshit. Use test earlier, or name the specific move."
+    category: corporate-waffle
   - pattern: '\b10x\b'
     reason: "Business bullshit. Name the dimension and baseline."
+    category: corporate-waffle
   - pattern: '\bunmissable\b'
     reason: "AI slop hype. Use important, or name why it matters."
+    category: parasite-terms
   - pattern: '\beffortless\b'
     reason: "AI slop. Name what is hard about the alternative."
+    category: parasite-terms
   - pattern: '\bcatalyze\b'
     reason: "AI slop. Use drive, spark, start, or trigger."
+    category: ai-slop
   - pattern: '\bcatalyzes\b'
     reason: "AI slop. Use drives, sparks, starts, or triggers."
+    category: ai-slop
   - pattern: '\bamplify\b'
     reason: "AI slop. Use increase, boost, or strengthen."
+    category: ai-slop
   - pattern: '\bamplifies\b'
     reason: "AI slop. Use increases, boosts, or strengthens."
+    category: ai-slop
   - pattern: '\bbolster\b'
     reason: "AI slop. Use strengthen, support, or reinforce."
+    category: ai-slop
   - pattern: '\bbolsters\b'
     reason: "AI slop. Use strengthens, supports, or reinforces."
+    category: ai-slop
   - pattern: '\bspearhead\b'
     reason: "Business bullshit. Use lead, drive, or head."
+    category: corporate-waffle
   - pattern: '\bspearheads\b'
     reason: "Business bullshit. Use leads, drives, or heads."
+    category: corporate-waffle
   - pattern: '\bunlock\b'
     reason: "AI slop. Use get, start, or open."
+    category: ai-slop
   - pattern: '\bsmoke\b'
     reason: "Business bullshit test branding. Use sanity check or basic check."
+    category: corporate-waffle
   - pattern: '\bload-bearing\b'
     reason: "Business bullshit metaphor. Use critical, essential, or core."
+    category: corporate-waffle
 
   # === AI SLOP PHRASES ===
   - pattern: 'in today.s (fast-paced|modern|digital|ever-evolving)'
     reason: "AI slop opener. Start with the actual point."
+    category: ai-slop
   - pattern: 'it is (worth noting|important to note|important to remember) that'
     reason: "AI slop hedge. Just say the thing."
+    category: ai-slop
   - pattern: "it's (worth noting|important to note|important to remember) that"
     reason: "AI slop hedge. Just say the thing."
+    category: ai-slop
   - pattern: 'in the realm of'
     reason: "AI slop. Use in, or name the area directly."
+    category: ai-slop
   - pattern: 'when it comes to'
     reason: "AI slop. Name the thing directly."
+    category: ai-slop
   - pattern: 'at the end of the day'
     reason: "AI slop hedge. Make the concluding statement directly."
+    category: ai-slop
   - pattern: 'at its core'
     reason: "AI slop. Use simply, basically, or just define it."
+    category: ai-slop
   - pattern: 'plays a (crucial|vital|significant|key) role'
     reason: "AI slop. Name the specific contribution."
+    category: ai-slop
   - pattern: 'crucial role in shaping'
     reason: "AI slop. Name what it actually shapes and how."
+    category: ai-slop
   - pattern: 'navigate the complexit'
     reason: "AI slop. Use deal with, handle, or work through."
+    category: ai-slop
   - pattern: 'harness the power of'
     reason: "AI slop. Use use, or name the specific capability."
+    category: ai-slop
   - pattern: 'embark on a journey'
     reason: "AI slop. Use start, begin, or launch."
+    category: ai-slop
   - pattern: 'unlock (your|its) potential'
     reason: "AI slop. Name what becomes available."
+    category: ai-slop
   - pattern: 'bridge the gap'
     reason: "Business bullshit. Name the two things and the connection."
+    category: corporate-waffle
   - pattern: 'move the needle'
     reason: "Business bullshit. Name the metric and the change."
+    category: corporate-waffle
   - pattern: 'low-hanging fruit'
     reason: "Business bullshit. Name the easy wins specifically."
+    category: corporate-waffle
   - pattern: 'think outside the box'
     reason: "Business bullshit. Describe the actual approach."
+    category: corporate-waffle
   - pattern: 'win-win'
     reason: "Business bullshit. Name both benefits explicitly."
+    category: corporate-waffle
   - pattern: 'best practices'
     reason: "Business bullshit. Use what works, or name the practice."
+    category: corporate-waffle
   - pattern: 'value proposition'
     reason: "Business bullshit. Use offer, or name the value."
+    category: corporate-waffle
   - pattern: 'pain points'
     reason: "Business bullshit. Use problems, frustrations, or what is broken."
+    category: corporate-waffle
   - pattern: 'north star'
     reason: "Business bullshit. Use goal, target, or primary objective."
+    category: corporate-waffle
   - pattern: 'double-edged sword'
     reason: "AI slop. State the actual trade-off."
+    category: ai-slop
   - pattern: 'in conclusion'
     reason: "AI slop. Cut it, or reframe the final point."
+    category: ai-slop
   - pattern: 'to summarize'
     reason: "AI slop. Cut it; the reader already read it."
+    category: ai-slop
   - pattern: 'to wrap things up'
     reason: "AI slop. Cut it; the reader already read it."
+    category: ai-slop
   - pattern: 'in summary'
     reason: "AI slop. Cut it; the reader already read it."
+    category: ai-slop
   - pattern: 'I hope this helps'
     reason: "AI slop sign-off. Cut it entirely."
+    category: ai-slop
   - pattern: 'feel free to reach out'
     reason: "AI slop sign-off. Cut it entirely."
+    category: ai-slop
   - pattern: 'do not hesitate to contact'
     reason: "AI slop sign-off. Cut it entirely."
+    category: ai-slop
   - pattern: 'happy (to help|coding|hacking)'
     reason: "AI slop sign-off. Cut it entirely."
+    category: ai-slop
   - pattern: 'best of luck'
     reason: "AI slop sign-off. Cut it entirely."
+    category: ai-slop
   - pattern: 'great question'
     reason: "AI slop sycophantic opener. Just answer."
+    category: ai-slop
   - pattern: "that's a (fantastic|great|wonderful) point"
     reason: "AI slop sycophantic opener. Respond directly."
+    category: ai-slop
   - pattern: 'as an AI language model'
     reason: "Chatbot residue. Cut it entirely."
+    category: ai-slop
   - pattern: 'certainly[!,]'
     reason: "AI slop sycophantic opener. Cut it."
+    category: ai-slop
   - pattern: 'of course[!,]'
     reason: "AI slop sycophantic opener. Cut it."
+    category: ai-slop
   - pattern: 'absolutely[!,]'
     reason: "AI slop sycophantic opener. Cut it."
+    category: ai-slop
 
   # === SILENT ERROR SWALLOWING ===
   - pattern: '\bsilent'
     reason: "No silent anything. Log errors or fail explicitly."
+    category: quiet-errors
 
   # === LEGACY/FALLBACK CODE ===
   - pattern: '\bfallback\b'
     reason: "No fallback code. Fix properly or fail explicitly."
+    category: obsolete-paths
 
   - pattern: '\bfalling\b'
     reason: "Avoid 'falling back' patterns."
+    category: obsolete-paths
 
   - pattern: '\bbackwards\b'
     reason: "No backwards compatibility hacks."
+    category: obsolete-paths
 
   - pattern: '\bcompatibility\b'
     reason: "No compatibility shims."
+    category: obsolete-paths
 
   - pattern: '\bdegradation\b'
     reason: "No graceful degradation. Fail fast."
+    category: obsolete-paths
 
   - pattern: '\blegacy\b'
     reason: "No legacy code paths."
+    category: obsolete-paths
 
   - pattern: '\bshims[?]\b'
     reason: "No shim layers."
+    category: obsolete-paths
 
   - pattern: '\bstubs[?]\b'
     reason: "No stub implementations."
+    category: obsolete-paths
 
   - pattern: '\bskeleton\b'
     reason: "No skeleton code."
+    category: obsolete-paths
 
   - pattern: '\bplaceholders[?]\b'
     reason: "No placeholder code."
+    category: obsolete-paths
 
   - pattern: '\bmock\b'
     reason: "No mock objects in production code."
+    category: obsolete-paths
 
   - pattern: '\blazy\b'
     reason: "No lazy evaluation hacks."
+    category: obsolete-paths
 
   - pattern: '\bmaybe\b'
     reason: "No uncertain code paths."
+    category: obsolete-paths
 
   # === SUPPRESSION PATTERNS ===
   - pattern: '\.suppress'
     reason: "No suppression of errors/warnings."
+    category: suppression
 
   # === UNSAFE REFLECTION ===
   - pattern: '\bgetattr\('
     reason: "getattr is unsafe. Use explicit attribute access."
+    category: unsafe-reflection
 
   - pattern: '\bsetattr\('
     reason: "setattr is unsafe. Use explicit attribute assignment."
+    category: unsafe-reflection
 
   - pattern: '\bhasattr\('
     reason: "hasattr is unsafe. Use explicit checks or protocols."
+    category: unsafe-reflection
 
   - pattern: '\.__dict__'
     reason: "Direct __dict__ access forbidden. Use proper interfaces."
+    category: unsafe-reflection
 
   - pattern: '\bvars\('
     reason: "vars() is unsafe reflection."
+    category: unsafe-reflection
 
   - pattern: '\bimportlib\b'
     reason: "Dynamic imports forbidden. Use explicit imports."
+    category: unsafe-reflection
 
   # === DATA CLASSES ===
   - pattern: '@dataclass'
     reason: "Use Pydantic models instead of dataclasses."
+    category: data-classes
 
   # === TEST QUALITY ===
   - pattern: '\bxfail\b'
     reason: "No xfail tests. Fix the code, remove the test, or write a proper assertion."
+    category: test-quality
 
   # === PATH SAFETY ===
   - pattern: '/home/'
     reason: "No hardcoded home paths. Use environment variables."
+    category: path-safety
 
   - pattern: '\.parent\.parent'
     reason: "Fragile path navigation. Use explicit paths."
+    category: path-safety
 
   - pattern: '\.parents\['
     reason: "Fragile path navigation. Use explicit paths."
+    category: path-safety
 
   - pattern: '\.parent\.resolve'
     reason: "Fragile path navigation. Use explicit paths."
+    category: path-safety
 
   # === UUID (only uuid7 allowed) ===
   - pattern: 'uuid\.uuid[134568]\('
     reason: "Only uuid7 allowed. Use uuid_utils.uuid7()."
+    category: uuid
 
   - pattern: '\buuid[134568]\(\)'
     reason: "Only uuid7 allowed. Use uuid_utils.uuid7()."
+    category: uuid
 
   # === CONTAINER VERSIONS ===
   - pattern: ':latest\b'
     reason: "Pin container versions. No :latest tags."
+    category: container-versions
 
   # === DEPRECATED: bare python / python3 ===
   - pattern: '\bpython3?\b'
     reason: "Use uv run python for hermetic execution. No bare python/python3 calls."
+    category: deprecated-python
 
   # === SELF METHOD PATTERNS ===
   - pattern: 'self\.get\('
     reason: "Avoid dict-like self.get(). Use explicit attributes."
+    category: self-methods
 
   - pattern: 'self\.set\('
     reason: "Avoid dict-like self.set(). Use explicit attributes."
+    category: self-methods
 
   # === SPECIAL CHARACTERS ===
   # ASCII em-dash-as-punctuation in prose. Shell / Makefile / TOML /
@@ -598,14 +799,17 @@ banned:
   # the prose case is fully captured by the spaced form.
   - pattern: ' -- '
     reason: "ASCII em-dash punctuation forbidden. Use commas, colons, or parentheses."
+    category: special-chars
   # Unicode em-dash (U+2014) and en-dash (U+2013). Non-ASCII typographic
   # characters have no place in technical source code, documentation, or
   # config files. Use ASCII punctuation: commas, colons, semicolons, or
   # parentheses for em-dash; ASCII hyphen (-) for en-dash in ranges.
   - pattern: '\u2014'
     reason: "Unicode em-dash (U+2014) forbidden. Use commas, colons, or parentheses."
+    category: special-chars
   - pattern: '\u2013'
     reason: "Unicode en-dash (U+2013) forbidden. Use ASCII hyphen (-) for ranges."
+    category: special-chars
 
 directory_rules:
   tests:
@@ -613,34 +817,45 @@ directory_rules:
     # Only ban explicit "not implemented" placeholders
     - pattern: 'reason=.*not implemented yet'
       reason: "Implement the test or delete it."
+      category: directory-rules
 
 filename_rules:
   - pattern: '_v[0-9]+'
     reason: "No versioned filenames. Use git."
+    category: filename-rules
 
   - pattern: '_old\.'
     reason: "No _old files. Delete or rename properly."
+    category: filename-rules
 
   - pattern: '_new\.'
     reason: "No _new files. Rename to final name."
+    category: filename-rules
 
   - pattern: '_fixed\.'
     reason: "No _fixed files. Replace original."
+    category: filename-rules
 
   - pattern: '_temp\.'
     reason: "No temp files in repo."
+    category: filename-rules
 
   - pattern: '_tmp\.'
     reason: "No tmp files in repo."
+    category: filename-rules
 
   - pattern: '_backup\.'
     reason: "No backup files. Use git."
+    category: filename-rules
 
   - pattern: '_copy\.'
     reason: "No copy files. Consolidate."
+    category: filename-rules
 
   - pattern: '_final\.'
     reason: "No _final files. Just use the real name."
+    category: filename-rules
 
   - pattern: '\.(old|new|backup|bak|orig)$'
     reason: "No backup extensions. Use git."
+    category: filename-rules

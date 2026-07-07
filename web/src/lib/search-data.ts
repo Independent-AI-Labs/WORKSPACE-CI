@@ -16,8 +16,10 @@ import {
   getScriptsRoot,
   getGuardConfigRoot,
   getGuardConfigEntries,
+  getStandardsSync,
+  getWikiPages,
 } from '@/lib/yaml-loader'
-import { loadSwallowDetectors, loadHookDescriptions, loadStandards } from '@/lib/docs-loader'
+import { loadSwallowDetectors, loadHookSources } from '@/lib/docs-loader'
 import { PROJECTS } from '@/lib/project-registry'
 
 function loadPatterns(): SearchIndexEntry[] {
@@ -56,10 +58,14 @@ function loadHooks(): SearchIndexEntry[] {
       'utf8',
     )
     const config = load(raw) as RequiredHooksConfig
-    const descriptions = loadHookDescriptions()
+    const sourceData = loadHookSources()
+    const descriptions: Record<string, string> = {}
+    for (const s of sourceData?.sources ?? []) {
+      if (s.description) descriptions[s.id] = s.description
+    }
     return buildSearchIndexFromHooks(
       config.hooks,
-      descriptions?.descriptions ?? undefined,
+      descriptions,
     )
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') return []
@@ -123,7 +129,7 @@ function loadGuardConfigs(): SearchIndexEntry[] {
 }
 
 function loadStandardsSearch(): SearchIndexEntry[] {
-  const standards = loadStandards()
+  const { standards } = getStandardsSync()
   if (!standards) return []
   return standards.map((s) => ({
     id: `standard-${s.id}`,
@@ -165,114 +171,10 @@ function loadScriptsSearch(): SearchIndexEntry[] {
 }
 
 const staticPages: SearchIndexEntry[] = [
-  {
-    id: 'page-home',
-    title: 'Guardrail Ecosystem',
-    section: 'Pages',
-    content: 'Project catalogue: browse READMEs for all backend projects',
-    href: '/',
-    type: 'page',
-    keywords: ['home', 'catalogue', 'projects', 'readme'],
-  },
-  {
-    id: 'page-patterns',
-    title: 'Code Anti-Patterns',
-    section: 'Pages',
-    content: 'Banned words and patterns reference',
-    href: '/patterns',
-    type: 'page',
-    keywords: ['patterns', 'banned', 'words'],
-  },
-  {
-    id: 'page-hooks',
-    title: 'Git Hooks',
-    section: 'Pages',
-    content: 'Required git hooks reference',
-    href: '/hooks',
-    type: 'page',
-    keywords: ['hooks', 'pre-commit', 'git'],
-  },
-  {
-    id: 'page-config',
-    title: 'Config Files',
-    section: 'Pages',
-    content: 'Configuration files reference',
-    href: '/config',
-    type: 'page',
-    keywords: ['config', 'configuration'],
-  },
-  {
-    id: 'page-guard',
-    title: 'Guard Policies',
-    section: 'Pages',
-    content: 'Guard configurations reference',
-    href: '/guard',
-    type: 'page',
-    keywords: ['guard', 'config'],
-  },
-  {
-    id: 'page-runtime-hooks',
-    title: 'Runtime Hooks',
-    section: 'Pages',
-    content: 'Runtime hooks for AI agent execution monitoring',
-    href: '/runtime-hooks',
-    type: 'page',
-    keywords: ['runtime', 'hooks', 'monitoring', 'audit'],
-  },
-  {
-    id: 'page-llm-gateway',
-    title: 'LLM Gateway',
-    section: 'Pages',
-    content: 'Gateway for routing, auditing, and governing LLM API calls',
-    href: '/llm-gateway',
-    type: 'page',
-    keywords: ['llm', 'gateway', 'routing', 'audit', 'token'],
-  },
-  {
-    id: 'page-checks',
-    title: 'Static Analysis',
-    section: 'Pages',
-    content: 'CI checks reference',
-    href: '/checks',
-    type: 'page',
-    keywords: ['checks', 'ci'],
-  },
-  {
-    id: 'page-tooling',
-    title: 'Tools & Scripts',
-    section: 'Pages',
-    content: 'Tooling and scripts reference',
-    href: '/tooling',
-    type: 'page',
-    keywords: ['tooling', 'scripts', 'make'],
-  },
-  {
-    id: 'page-standards',
-    title: 'Standards & Regulation',
-    section: 'Pages',
-    content: 'AI standards, regulations, frameworks, and declarations',
-    href: '/standards',
-    type: 'page',
-    keywords: ['standards', 'regulations', 'eu ai act', 'nist', 'oecd', 'unesco', 'iso', 'ieee', 'g7', 'un', 'coe'],
-  },
-  {
-    id: 'page-integration',
-    title: 'Integration Guide',
-    section: 'Pages',
-    content: 'Integration guide',
-    href: '/integration',
-    type: 'page',
-    keywords: ['integration', 'ci', 'setup'],
-  },
-  {
-    id: 'page-playground',
-    title: 'Playground',
-    section: 'Pages',
-    content: 'Pattern testing playground',
-    href: '/playground',
-    type: 'page',
-    keywords: ['playground', 'test', 'regex'],
-  },
+  ...getWikiPages().pages.map((p) => ({
+    ...p,
+    type: 'page' as const,
+  })),
   ...PROJECTS.map((p) => ({
     id: `project-${p.slug}`,
     title: p.displayName,

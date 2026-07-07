@@ -1,0 +1,49 @@
+# Schema for wiki_pages.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: wiki_pages
+description: "Static wiki page entries for the search index; the single source of truth for page-level search metadata."
+fields:
+  - path: version
+    type: integer
+    required: true
+    description: "Schema version of the wiki pages config. Bumped when the YAML shape changes."
+
+  - path: pages
+    type: list
+    required: true
+    description: "Static wiki page entries indexed for search. Each entry describes one wiki page route."
+
+  - path: pages[].id
+    type: string
+    required: true
+    description: "Unique identifier for the search entry (e.g. 'page-home')."
+
+  - path: pages[].title
+    type: string
+    required: true
+    description: "Display title shown in search results."
+
+  - path: pages[].section
+    type: string
+    required: true
+    description: "Section grouping label (e.g. 'Pages')."
+
+  - path: pages[].content
+    type: string
+    required: true
+    description: "Searchable content text for the page."
+
+  - path: pages[].href
+    type: string
+    required: true
+    description: "URL path for the wiki page (e.g. '/patterns')."
+
+  - path: pages[].keywords
+    type: list<string>
+    required: true
+    description: "Additional search keywords for fuzzy matching."

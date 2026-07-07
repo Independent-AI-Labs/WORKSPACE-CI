@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Icon } from '@/components/ui/Icon'
+import type { Branding } from '@/lib/branding'
 
 interface ContactDialogProps {
   title: string
@@ -10,7 +11,11 @@ interface ContactDialogProps {
   issuer: string
   price?: string
   purchaseUrl?: string
-  contactEmail: string
+  branding: Branding
+}
+
+function fillTemplate(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
 }
 
 export function ContactDialog({
@@ -19,9 +24,10 @@ export function ContactDialog({
   issuer,
   price,
   purchaseUrl,
-  contactEmail,
+  branding,
 }: ContactDialogProps) {
   const [open, setOpen] = useState(false)
+  const contactEmail = branding.contact_email
 
   return (
     <>
@@ -32,20 +38,19 @@ export function ContactDialog({
         aria-label={`Contact for access to ${title}`}
       >
         <Icon name="ri-mail-line" size="sm" />
-        Contact for Access
+        {branding.contact_button_label}
       </button>
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title={`Obtaining ${title}`}
+        title={fillTemplate(branding.contact_modal_title_template, { title })}
         titleId={`contact-${title}`}
         ariaLabel={`Contact information for ${title}`}
         className="contact-dialog"
       >
         <p className="contact-dialog__full-title">{fullTitle}</p>
         <p className="contact-dialog__body">
-          <strong>{title}</strong> is a paid standard from{' '}
-          <strong>{issuer}</strong>.
+          {fillTemplate(branding.contact_body_template, { title, issuer })}
         </p>
         {price && (
           <p className="contact-dialog__price">
@@ -53,9 +58,7 @@ export function ContactDialog({
           </p>
         )}
         <p className="contact-dialog__body">
-          For standardisation and audit-related inquiries, including
-          assistance with purchasing, compliance assessment, and
-          implementation guidance, contact:
+          {branding.contact_instruction}
         </p>
         <a
           href={`mailto:${contactEmail}`}
@@ -67,7 +70,7 @@ export function ContactDialog({
         {purchaseUrl && (
           <>
             <p className="contact-dialog__body">
-              Or purchase directly from the issuer:
+              {branding.contact_alt_purchase}
             </p>
             <a
               href={purchaseUrl}
@@ -75,7 +78,7 @@ export function ContactDialog({
               rel="noopener noreferrer"
               className="contact-dialog__purchase"
             >
-              {issuer} Store
+              {fillTemplate(branding.contact_issuer_store_template, { issuer })}
               <Icon name="ri-external-link-line" size="sm" />
             </a>
           </>

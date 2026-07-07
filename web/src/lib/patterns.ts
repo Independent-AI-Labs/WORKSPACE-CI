@@ -12,61 +12,14 @@ import type {
 } from '@/types/patterns'
 import { getCategoryLabel } from '@/types/patterns'
 
-function classifyByReason(
-  pattern: string,
-  reason: string,
+function resolveCategory(
+  entry: PatternEntry,
+  scope: PatternScope,
 ): PatternCategory {
-  const lower = reason.toLowerCase()
-
-  if (lower.includes('linter') || lower.includes('eslint') || lower.includes('noqa') || lower.includes('mypy') || lower.includes('type') && lower.includes('ignor')) {
-    return 'linter-suppression'
-  }
-  if (lower.includes('untyped') || lower.includes('lazy') || lower.includes('zero type') || lower.includes('proper') && lower.includes('model')) {
-    return 'deferred-types'
-  }
-  if (lower.includes('silent') || lower.includes('log') || lower.includes('swallow') || lower.includes('error') && lower.includes('explicit')) {
-    return 'quiet-errors'
-  }
-  if (lower.includes('fallback') || lower.includes('backwards') || lower.includes('compat') || lower.includes('degrad') || lower.includes('legacy') || lower.includes('shim') || lower.includes('stub') || lower.includes('skeleton') || lower.includes('placeholder')) {
-    return 'obsolete-paths'
-  }
-  if (lower.includes('suppress')) {
-    return 'suppression'
-  }
-  if (lower.includes('getattr') || lower.includes('setattr') || lower.includes('hasattr') || lower.includes('dict') && lower.includes('access') || lower.includes('reflection') || lower.includes('importlib') || lower.includes('vars')) {
-    return 'unsafe-reflection'
-  }
-  if (lower.includes('dataclass')) {
-    return 'data-classes'
-  }
-  if (lower.includes('xfail')) {
-    return 'test-quality'
-  }
-  if (lower.includes('home') || lower.includes('path') && lower.includes('navigation') || lower.includes('fragile') || lower.includes('parent')) {
-    return 'path-safety'
-  }
-  if (lower.includes('uuid')) {
-    return 'uuid'
-  }
-  if (lower.includes('latest') || lower.includes('container') || lower.includes('pin')) {
-    return 'container-versions'
-  }
-  if (lower.includes('python3') || lower.includes('bare') || lower.includes('uv run')) {
-    return 'deprecated-python'
-  }
-  if (lower.includes('self.') || lower.includes('dict-like') || lower.includes('self.get') || lower.includes('self.set')) {
-    return 'self-methods'
-  }
-  if (lower.includes('em-dash') || lower.includes('en-dash') || lower.includes('unicode') || lower.includes('ascii') || lower.includes('dash')) {
-    return 'special-chars'
-  }
-  if (lower.includes('filename') || lower.includes('versioned') || lower.includes('backup') || lower.includes('temp') || lower.includes('_old') || lower.includes('_new') || lower.includes('_fixed') || lower.includes('_tmp') || lower.includes('_copy') || lower.includes('_final')) {
-    return 'filename-rules'
-  }
-  if (lower.includes('uncertain') || lower.includes('maybe')) {
-    return 'obsolete-paths'
-  }
-
+  if (scope === 'filename') return 'filename-rules'
+  if (scope === 'directory') return 'directory-rules'
+  const cat = entry.category as PatternCategory | undefined
+  if (cat) return cat
   return 'special-chars'
 }
 
@@ -75,12 +28,7 @@ export function classifyPattern(
   scope: PatternScope,
   directory?: string,
 ): ClassifiedPattern {
-  const category =
-    scope === 'filename'
-      ? 'filename-rules'
-      : scope === 'directory'
-        ? 'directory-rules'
-        : classifyByReason(entry.pattern, entry.reason)
+  const category = resolveCategory(entry, scope)
 
   return {
     pattern: entry.pattern,

@@ -1,0 +1,20 @@
+version: 1
+projects:
+  - slug: workspace-ci
+    displayName: WORKSPACE-CI
+    language: Python
+    repoName: CI
+    icon: ri-terminal-box-line
+    logoPath: /logos/workspace-ci.png
+  - slug: workspace-gateway
+    displayName: WORKSPACE-GATEWAY
+    language: Lua
+    repoName: WORKSPACE-GATEWAY
+    icon: ri-router-line
+    logoPath: /logos/workspace-gateway.png
+  - slug: workspace-guard
+    displayName: WORKSPACE-GUARD
+    language: Rust
+    repoName: WORKSPACE-GUARD
+    icon: ri-shield-keyhole-line
+    logoPath: /logos/workspace-guard.png

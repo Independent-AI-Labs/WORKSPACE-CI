@@ -18,6 +18,9 @@ export type PatternCategory =
   | 'filename-rules'
   | 'directory-rules'
   | 'error-swallowing'
+  | 'ai-slop'
+  | 'parasite-terms'
+  | 'corporate-waffle'
 
 export type DetectionType = 'inline' | 'custom' | 'multiline'
 
@@ -50,6 +53,7 @@ export interface BannedWordsConfig {
 export interface PatternEntry {
   pattern: string
   reason: string
+  category?: string
 }
 
 export interface UniversalException {
@@ -119,6 +123,9 @@ export const PATTERN_CATEGORIES: { id: PatternCategory; label: string }[] = [
   { id: 'filename-rules', label: 'Filename Rules' },
   { id: 'directory-rules', label: 'Directory Rules' },
   { id: 'error-swallowing', label: 'Error Swallowing' },
+  { id: 'ai-slop', label: 'AI Slop' },
+  { id: 'parasite-terms', label: 'Parasite Terms' },
+  { id: 'corporate-waffle', label: 'Corporate Waffle' },
 ]
 
 export function getCategoryLabel(category: PatternCategory): string {

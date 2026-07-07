@@ -27,11 +27,6 @@ export interface RequiredHooksConfig {
   hooks: HookRecord[]
 }
 
-export interface HookDescriptionData {
-  generated_at: string
-  descriptions: Record<string, string>
-}
-
 export type HookTier = 'strict' | 'poc'
 
 function assertNever(value: never): never {

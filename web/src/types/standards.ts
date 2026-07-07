@@ -27,3 +27,8 @@ export interface StandardEntry {
   price?: string
   pages?: number
 }
+
+export interface StandardsConfig {
+  version: number
+  standards: StandardEntry[]
+}

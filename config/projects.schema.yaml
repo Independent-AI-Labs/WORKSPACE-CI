@@ -1,0 +1,48 @@
+# Schema for projects.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: projects
+description: "Registry of workspace projects displayed on the wiki home page and project pages; the single source of truth for project display metadata."
+fields:
+  - path: version
+    type: integer
+    required: true
+    description: "Schema version of the projects registry. Bumped when the YAML shape changes."
+
+  - path: projects
+    type: list
+    required: true
+    description: "The list of workspace projects rendered on the wiki home page and individual project pages."
+
+  - path: projects[].slug
+    type: string
+    required: true
+    description: "URL slug for the project page (e.g. 'workspace-ci' renders at /workspace-ci)."
+
+  - path: projects[].displayName
+    type: string
+    required: true
+    description: "Display name shown in project card titles and page headers."
+
+  - path: projects[].language
+    type: string
+    required: true
+    description: "Primary programming language label shown in project card tags."
+
+  - path: projects[].repoName
+    type: string
+    required: true
+    description: "Repository directory name under the workspace root; used to locate README.md, Makefile, and .git/ at runtime."
+
+  - path: projects[].icon
+    type: string
+    required: true
+    description: "Remix Icon CSS class for the project card (e.g. 'ri-terminal-box-line')."
+
+  - path: projects[].logoPath
+    type: string
+    description: "Path to the project logo image under public/ (e.g. '/logos/workspace-ci.png')."

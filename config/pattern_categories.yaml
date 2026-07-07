@@ -1,0 +1,53 @@
+# Pattern category definitions.
+#
+# Single source of truth for pattern category IDs and human-readable
+# labels. Read by the CI checker (for grouped violation reporting) and
+# by the wiki UI (for the /patterns category navigation and labels).
+#
+# The web app's PatternCategory TypeScript union is kept in sync with
+# the ids listed here. If a new category is added, update both this
+# file and web/src/types/patterns.ts.
+
+version: 1
+
+categories:
+  - id: linter-suppression
+    label: Linter Suppression
+  - id: deferred-types
+    label: Deferred Types
+  - id: quiet-errors
+    label: Quiet Errors
+  - id: obsolete-paths
+    label: Obsolete Paths
+  - id: suppression
+    label: Suppression
+  - id: unsafe-reflection
+    label: Unsafe Reflection
+  - id: data-classes
+    label: Data Classes
+  - id: test-quality
+    label: Test Quality
+  - id: path-safety
+    label: Path Safety
+  - id: uuid
+    label: UUID
+  - id: container-versions
+    label: Container Versions
+  - id: deprecated-python
+    label: Deprecated Python
+  - id: self-methods
+    label: Self Methods
+  - id: special-chars
+    label: Special Characters
+  - id: filename-rules
+    label: Filename Rules
+  - id: directory-rules
+    label: Directory Rules
+  - id: error-swallowing
+    label: Error Swallowing
+  - id: ai-slop
+    label: AI Slop
+  - id: parasite-terms
+    label: Parasite Terms
+  - id: corporate-waffle
+    label: Corporate Waffle

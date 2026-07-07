@@ -16,6 +16,62 @@ import type { ScriptManifestEntry } from '@/types/wiki'
 import type { HookRecord } from '@/types/hooks'
 import type { LanguagePercent } from '@/types/code-stats'
 import type { StandardEntry } from '@/types/standards'
+import type { WikiLabelsConfig } from '@/types/wiki-labels'
+
+const labels: WikiLabelsConfig = {
+  version: 1,
+  hook_stages: {
+    'pre-commit': 'Pre-commit',
+    'commit-msg': 'Commit-msg',
+    'pre-push': 'Pre-push',
+  },
+  hook_kinds: {
+    shell: 'Shell',
+    shell_inline: 'Shell (inline)',
+    shell_with_arg: 'Shell (with arg)',
+    python_module: 'Python Module',
+    python_module_files: 'Python Module (files)',
+    makefile_target: 'Makefile Target',
+  },
+  standard_types: {
+    regulation: { label: 'Regulation', icon: 'ri-government-line' },
+    framework: { label: 'Framework', icon: 'ri-book-marked-line' },
+    'executive-order': { label: 'Executive Order', icon: 'ri-stamp-line' },
+    standard: { label: 'Standard', icon: 'ri-book-marked-line' },
+    declaration: { label: 'Declaration', icon: 'ri-quill-pen-line' },
+    'code-of-conduct': { label: 'Code of Conduct', icon: 'ri-book-marked-line' },
+    treaty: { label: 'Treaty', icon: 'ri-scales-line' },
+  },
+  swallow_languages: {
+    python: 'Python',
+    js_ts: 'JavaScript/TypeScript',
+    shell: 'Shell',
+    ansible: 'Ansible',
+    cron: 'Cron',
+  },
+  config_categories: {
+    banned_words: 'Content Rules',
+    quality_exceptions: 'Quality Exceptions',
+    required_hooks: 'Hook Configuration',
+    blocked_commit_patterns: 'Commit Policy',
+    boot_layout: 'Boot Layout',
+  },
+  guard_categories: {
+    guard_config_keys: 'Access Control',
+    guard_protected_branches: 'Access Control',
+    guard_subcommands: 'Access Control',
+    guard_environment: 'Environment',
+    guard_resource_limits: 'Environment',
+    guard_paths: 'Filesystem',
+  },
+  playground_languages: [
+    { id: 'python', label: 'Python' },
+    { id: 'javascript', label: 'JavaScript' },
+    { id: 'typescript', label: 'TypeScript' },
+    { id: 'shell', label: 'Shell' },
+    { id: 'yaml', label: 'YAML' },
+  ],
+}
 
 describe('projectAdapter', () => {
   const project: ProjectSummary = {
@@ -103,7 +159,7 @@ describe('configAdapter', () => {
   }
 
   it('converts config to CardItem with mono title', () => {
-    const [item] = configAdapter([config])
+    const [item] = configAdapter([config], labels)
     expect(item.id).toBe('banned_words')
     expect(item.title).toBe('banned_words')
     expect(item.monoTitle).toBe(true)
@@ -114,7 +170,7 @@ describe('configAdapter', () => {
   })
 
   it('omits meta when fieldCount is undefined', () => {
-    const [item] = configAdapter([{ ...config, fieldCount: undefined }])
+    const [item] = configAdapter([{ ...config, fieldCount: undefined }], labels)
     expect(item.meta).toBeUndefined()
   })
 })
@@ -129,7 +185,7 @@ describe('guardConfigAdapter', () => {
   }
 
   it('converts guard config to CardItem with shield icon', () => {
-    const [item] = guardConfigAdapter([entry])
+    const [item] = guardConfigAdapter([entry], labels)
     expect(item.id).toBe('guard_paths')
     expect(item.title).toBe('guard_paths')
     expect(item.monoTitle).toBe(true)
@@ -153,7 +209,7 @@ describe('patternAdapter', () => {
   }
 
   it('converts pattern to CardItem with raw pattern id and no href', () => {
-    const [item] = patternAdapter([pattern])
+    const [item] = patternAdapter([pattern], labels)
     expect(item.id).toBe('\\.parent\\.parent')
     expect(item.title).toBe('\\.parent\\.parent')
     expect(item.monoTitle).toBe(true)
@@ -163,7 +219,7 @@ describe('patternAdapter', () => {
   })
 
   it('creates accent tags for languages and muted tags for extensions', () => {
-    const [item] = patternAdapter([pattern])
+    const [item] = patternAdapter([pattern], labels)
     expect(item.tags).toEqual([
       { label: 'Python', variant: 'accent' },
       { label: '.py', variant: 'muted' },
@@ -174,7 +230,7 @@ describe('patternAdapter', () => {
   it('includes scope meta when scope is not content', () => {
     const [item] = patternAdapter([
       { ...pattern, scope: 'filename' as const },
-    ])
+    ], labels)
     expect(item.meta).toEqual([
       { label: 'Scope', value: 'Filename match' },
     ])
@@ -232,7 +288,7 @@ describe('hookAdapter', () => {
   }
 
   it('converts hook to CardItem with description and mono title', () => {
-    const [item] = hookAdapter([hook], descriptions)
+    const [item] = hookAdapter([hook], descriptions, labels)
     expect(item.id).toBe('check-unstaged')
     expect(item.title).toBe('check-unstaged')
     expect(item.monoTitle).toBe(true)
@@ -242,7 +298,7 @@ describe('hookAdapter', () => {
   })
 
   it('creates stage, kind, and tier tags', () => {
-    const [item] = hookAdapter([hook], descriptions)
+    const [item] = hookAdapter([hook], descriptions, labels)
     expect(item.tags).toEqual([
       { label: 'Pre-commit', variant: 'accent' },
       { label: 'Shell', variant: 'muted' },
@@ -251,19 +307,19 @@ describe('hookAdapter', () => {
   })
 
   it('uses warn variant for strict-only hooks', () => {
-    const [item] = hookAdapter([{ ...hook, safety: false }], descriptions)
+    const [item] = hookAdapter([{ ...hook, safety: false }], descriptions, labels)
     expect(item.tags![2]).toEqual({ label: 'Strict only', variant: 'warn' })
   })
 
   it('includes applicable_to in meta', () => {
-    const [item] = hookAdapter([hook], descriptions)
+    const [item] = hookAdapter([hook], descriptions, labels)
     expect(item.meta).toEqual([
       { label: 'Applicable to', value: 'any' },
     ])
   })
 
   it('uses entry as description when no description is available', () => {
-    const [item] = hookAdapter([hook], {})
+    const [item] = hookAdapter([hook], {}, labels)
     expect(item.description).toBe('ci_check_unstaged')
   })
 
@@ -271,6 +327,7 @@ describe('hookAdapter', () => {
     const [item] = hookAdapter(
       [{ ...hook, kind: 'python_module' }],
       descriptions,
+      labels,
     )
     expect(item.icon).toBe('ri-git-commit-line')
   })
@@ -279,6 +336,7 @@ describe('hookAdapter', () => {
     const [item] = hookAdapter(
       [{ ...hook, kind: 'makefile_target' }],
       descriptions,
+      labels,
     )
     expect(item.icon).toBe('ri-git-commit-line')
   })
@@ -302,7 +360,7 @@ describe('standardAdapter', () => {
   }
 
   it('converts standard to CardItem with category from type', () => {
-    const [item] = standardAdapter([standard])
+    const [item] = standardAdapter([standard], labels)
     expect(item.id).toBe('eu-ai-act')
     expect(item.title).toBe('EU AI Act')
     expect(item.subtitle).toBe('Regulation (EU) 2024/1689')
@@ -311,7 +369,7 @@ describe('standardAdapter', () => {
   })
 
   it('creates jurisdiction, type, free/paid, and topic tags', () => {
-    const [item] = standardAdapter([standard])
+    const [item] = standardAdapter([standard], labels)
     expect(item.tags).toEqual([
       { label: 'EU', variant: 'accent' },
       { label: 'Regulation', variant: 'muted' },
@@ -321,12 +379,12 @@ describe('standardAdapter', () => {
   })
 
   it('uses PAID warn tag for paid standards', () => {
-    const [item] = standardAdapter([{ ...standard, free: false, price: '$50' }])
+    const [item] = standardAdapter([{ ...standard, free: false, price: '$50' }], labels)
     expect(item.tags![2]).toEqual({ label: 'PAID', variant: 'warn' })
   })
 
   it('uses stamp icon for executive-order type', () => {
-    const [item] = standardAdapter([{ ...standard, type: 'executive-order' }])
+    const [item] = standardAdapter([{ ...standard, type: 'executive-order' }], labels)
     expect(item.icon).toBe('ri-stamp-line')
     expect(item.category).toBe('Executive Order')
   })

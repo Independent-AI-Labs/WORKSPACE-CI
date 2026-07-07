@@ -3,7 +3,7 @@ import { ConfigDialog } from '@/components/wiki/ConfigDialog'
 import { FeedbackWidget } from '@/components/wiki/FeedbackWidget'
 import { CardListSection } from '@/components/wiki/CardListSection'
 import { configAdapter, deriveCategories } from '@/lib/card-adapters'
-import { getConfigIndex, getConfigSchema, getConfigRawYaml, getConfigValue } from '@/lib/yaml-loader'
+import { getConfigIndex, getConfigSchema, getConfigRawYaml, getConfigValue, getWikiLabels } from '@/lib/yaml-loader'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
 import { highlightCode } from '@/lib/highlight'
 import type { ConfigSchema } from '@/types/content'
@@ -11,7 +11,8 @@ import type { ReactNode } from 'react'
 
 export default async function ConfigPage() {
   const configs = await getConfigIndex()
-  const items = configAdapter(configs)
+  const labels = getWikiLabels()
+  const items = configAdapter(configs, labels)
   const categories = deriveCategories(items)
   const feedbackCounts = getAllFeedbackCounts('config')
 

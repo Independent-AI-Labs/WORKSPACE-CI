@@ -3,6 +3,7 @@
 import type { HookRecord } from '@/types/hooks'
 import type { FeedbackCounts } from '@/types/feedback'
 import type { EntryPointSource } from '@/types/entry-point'
+import type { WikiLabelsConfig } from '@/types/wiki-labels'
 import { WikiCard } from '@/components/wiki/WikiCard'
 import { StageFilter } from '@/components/wiki/StageFilter'
 import { TierFilter } from '@/components/wiki/TierFilter'
@@ -17,6 +18,7 @@ interface HookListProps {
   sourceMap: Map<string, EntryPointSource>
   highlightedHtml: Record<string, string>
   feedbackCounts?: Record<string, FeedbackCounts>
+  labels: WikiLabelsConfig
 }
 
 export function HookList({
@@ -25,6 +27,7 @@ export function HookList({
   sourceMap,
   highlightedHtml,
   feedbackCounts = {},
+  labels,
 }: HookListProps) {
   const {
     filtered,
@@ -36,7 +39,7 @@ export function HookList({
     tierCounts,
   } = useHookFilter(hooks)
 
-  const items = hookAdapter(filtered, descriptions)
+  const items = hookAdapter(filtered, descriptions, labels)
 
   return (
     <div className="hook-list">

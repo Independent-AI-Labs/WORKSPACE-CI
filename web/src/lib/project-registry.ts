@@ -2,12 +2,53 @@ import { cache } from 'react'
 import { readFile } from 'fs/promises'
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { load } from 'js-yaml'
 import type { ProjectEntry, ProjectSummary, ProjectReadme } from '@/types/projects'
 
 const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT
   ?? join(process.cwd(), '..', '..')
 
+const CONFIG_ROOT = process.env.WORKSPACE_CI_CONFIG_ROOT
+  ?? join(process.cwd(), '..', 'config')
+
 const DEFAULT_BRANCH = 'main'
+
+interface ProjectConfigEntry {
+  slug: string
+  displayName: string
+  language: string
+  repoName: string
+  icon: string
+  logoPath?: string
+}
+
+interface ProjectsConfig {
+  version: number
+  projects: ProjectConfigEntry[]
+}
+
+function loadProjectsConfig(): ProjectsConfig {
+  const raw = readFileSync(join(CONFIG_ROOT, 'projects.yaml'), 'utf8')
+  return load(raw) as ProjectsConfig
+}
+
+function buildProjectEntry(cfg: ProjectConfigEntry): ProjectEntry {
+  const repoDirPath = join(PROJECTS_ROOT, cfg.repoName)
+  return {
+    slug: cfg.slug,
+    displayName: cfg.displayName,
+    language: cfg.language,
+    repoName: cfg.repoName,
+    icon: cfg.icon,
+    ...(cfg.logoPath ? { logoPath: cfg.logoPath } : {}),
+    readmePath: join(repoDirPath, 'README.md'),
+    makefilePath: join(repoDirPath, 'Makefile'),
+    repoUrl: getRepoUrl(repoDirPath) || undefined,
+    branch: getDefaultBranch(repoDirPath),
+  }
+}
+
+export const PROJECTS: ProjectEntry[] = loadProjectsConfig().projects.map(buildProjectEntry)
 
 function readGitFile(repoDir: string, relativePath: string): string | null {
   try {
@@ -42,49 +83,6 @@ export function getDefaultBranch(repoDir: string): string {
   }
   return DEFAULT_BRANCH
 }
-
-function repoDir(repoName: string): string {
-  return join(PROJECTS_ROOT, repoName)
-}
-
-export const PROJECTS: ProjectEntry[] = [
-  {
-    slug: 'workspace-ci',
-    displayName: 'WORKSPACE-CI',
-    language: 'Python',
-    repoName: 'CI',
-    icon: 'ri-terminal-box-line',
-    logoPath: '/logos/workspace-ci.png',
-    readmePath: join(PROJECTS_ROOT, 'CI', 'README.md'),
-    makefilePath: join(PROJECTS_ROOT, 'CI', 'Makefile'),
-    repoUrl: getRepoUrl(repoDir('CI')) || undefined,
-    branch: getDefaultBranch(repoDir('CI')),
-  },
-  {
-    slug: 'workspace-gateway',
-    displayName: 'WORKSPACE-GATEWAY',
-    language: 'Lua',
-    repoName: 'WORKSPACE-GATEWAY',
-    icon: 'ri-router-line',
-    logoPath: '/logos/workspace-gateway.png',
-    readmePath: join(PROJECTS_ROOT, 'WORKSPACE-GATEWAY', 'README.md'),
-    makefilePath: join(PROJECTS_ROOT, 'WORKSPACE-GATEWAY', 'Makefile'),
-    repoUrl: getRepoUrl(repoDir('WORKSPACE-GATEWAY')) || undefined,
-    branch: getDefaultBranch(repoDir('WORKSPACE-GATEWAY')),
-  },
-  {
-    slug: 'workspace-guard',
-    displayName: 'WORKSPACE-GUARD',
-    language: 'Rust',
-    repoName: 'WORKSPACE-GUARD',
-    icon: 'ri-shield-keyhole-line',
-    logoPath: '/logos/workspace-guard.png',
-    readmePath: join(PROJECTS_ROOT, 'WORKSPACE-GUARD', 'README.md'),
-    makefilePath: join(PROJECTS_ROOT, 'WORKSPACE-GUARD', 'Makefile'),
-    repoUrl: getRepoUrl(repoDir('WORKSPACE-GUARD')) || undefined,
-    branch: getDefaultBranch(repoDir('WORKSPACE-GUARD')),
-  },
-]
 
 export function getProjectBySlug(slug: string): ProjectEntry | undefined {
   return PROJECTS.find((p) => p.slug === slug)
