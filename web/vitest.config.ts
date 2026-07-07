@@ -28,7 +28,7 @@ export default defineConfig({
     },
     setupFiles: [path.resolve(configDir, '../tests/web/setup.ts')],
     include: ['../tests/web/**/*.test.{ts,tsx}'],
-    exclude: ['**/node_modules/**', '**/dist/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', '../tests/web/node_modules/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],

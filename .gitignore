@@ -11,6 +11,7 @@ uv.lock
 .venv/
 .boot-linux/
 node_modules/
+tests/web/node_modules
 web/res/
 web/coverage/
 data/feedback/
