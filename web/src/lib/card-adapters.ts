@@ -115,7 +115,7 @@ export function patternAdapter(
       tags.push({ label: p.detectionType, variant: 'muted' })
     }
 
-    const meta: CardItem['meta'] = []
+    const meta: CardItem['meta'] = [{ label: 'Category', value: p.categoryLabel }]
     if (p.scope !== 'content') {
       meta.push({
         label: 'Scope',

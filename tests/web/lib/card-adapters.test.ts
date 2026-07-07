@@ -227,12 +227,20 @@ describe('patternAdapter', () => {
     ])
   })
 
-  it('includes scope meta when scope is not content', () => {
+  it('always includes Category meta, with Scope appended when scope is not content', () => {
     const [item] = patternAdapter([
       { ...pattern, scope: 'filename' as const },
     ], labels)
     expect(item.meta).toEqual([
+      { label: 'Category', value: 'Obsolete Paths' },
       { label: 'Scope', value: 'Filename match' },
+    ])
+  })
+
+  it('includes only Category meta when scope is content', () => {
+    const [item] = patternAdapter([pattern], labels)
+    expect(item.meta).toEqual([
+      { label: 'Category', value: 'Obsolete Paths' },
     ])
   })
 })
