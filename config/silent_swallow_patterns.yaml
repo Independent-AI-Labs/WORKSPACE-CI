@@ -178,7 +178,7 @@ inline_patterns:
     language: python
     description: 'strip() or literal hides parse failures by returning a default value.'
 
-  # ── Ansible patterns (4) ────────────────────────────────────────────
+  # ── Ansible patterns (5) ────────────────────────────────────────────
   - id: ansible-shell-or-true
     regex: '\|\|\s*true\b'
     language: ansible
@@ -198,6 +198,11 @@ inline_patterns:
     regex: '2>\s*/dev/null(?!\s*\|\|\s*(?:echo|printf)\b)'
     language: ansible
     description: 'Ansible shell redirects stderr to /dev/null without a log redirect.'
+
+  - id: ansible-failed-when-false
+    regex: '^\s*failed_when:\s*false\s*(?:#.*)?$'
+    language: ansible
+    description: 'failed_when: false makes a task never fail; non-zero exit codes silently become ok.'
 
 custom_detectors:
   - id: cron-no-log-redirect
@@ -302,4 +307,4 @@ multiline_detectors:
     source_function: _check_ansible_register_output_swallowed
     source_file: lib/check_silent_swallow_ansible.py
     language: ansible
-    description: 'Ansible task registers output but only displays it on failure; success output is discarded.'
+    description: 'Ansible task registers output but only displays it on failure, or never displays it at all; the output is silently discarded.'

@@ -12,8 +12,12 @@ references in the YAML config.
 
 import re
 
-_SHELL_RE = re.compile(r"^\s+(?:ansible\.builtin\.)?shell:\s*(\||>|['\"])?\s*$")
-_COMMAND_RE = re.compile(r"^\s+(?:ansible\.builtin\.)?command:\s*(\||>|['\"])?\s*$")
+_SHELL_RE = re.compile(
+    r"^\s+(?:ansible\.builtin\.)?shell:\s*(?:\||>|['\"]|$|\S)"
+)
+_COMMAND_RE = re.compile(
+    r"^\s+(?:ansible\.builtin\.)?command:\s*(?:\||>|['\"]|$|\S)"
+)
 _REGISTER_RE = re.compile(r"^\s+register:\s*\S")
 _FAILED_WHEN_RE = re.compile(r"^\s+failed_when:\s")
 _CHANGED_WHEN_FALSE_RE = re.compile(r"^\s+changed_when:\s*false\s*$")
@@ -129,7 +133,7 @@ REGISTERED_VAR_RE = re.compile(r"^\s+register:\s*(\S+)")
 DEBUG_STDOUT_RE = re.compile(r"^\s+ansible\.builtin\.debug:\s*$|^\s+debug:\s*$")
 STDOUT_REF_RE = re.compile(r"\{\{\s*(\w+)\.stdout\s*(?:\||\}\})")
 WHEN_RC_NONZERO_RE = re.compile(
-    r"when:\s*.*rc\s*!=\s*0|when:\s*.*rc\s*>\s*0|when:\s*.*not\b.*\brc\b.*\b==\s*0"
+    r"^\s*when:\s*.*(?:rc\s*!=\s*0|rc\s*>\s*0|not\b.*\brc\b.*\b==\s*0)"
 )
 
 _REG_VAR_BLOCKLIST = ("item", "ansible_facts", "results")
@@ -165,7 +169,12 @@ def _has_unconditional_display(
     i: int,
     reg_var: str,
 ) -> bool:
-    """Check if reg_var's stdout is displayed without a when guard."""
+    """Check if reg_var's stdout is displayed without a when guard.
+
+    Scans across task boundaries so a debug task in a follow-up block
+    (e.g. ``- name: Show results`` referencing ``reg_var.stdout_lines``)
+    still counts as display. The scan is bounded by _DISPLAY_SCAN_WINDOW.
+    """
     scan_end = min(i + _DISPLAY_SCAN_WINDOW, len(lines))
     for j in range(i + 1, scan_end):
         nt = lines[j].text
@@ -182,8 +191,6 @@ def _has_unconditional_display(
                         break
             if not has_when_guard:
                 return True
-        if _TASK_NAME_RE.match(nt):
-            break
     return False
 
 
@@ -191,14 +198,15 @@ def _check_ansible_register_output_swallowed(
     lines: list,
     i: int,
 ) -> str | None:
-    """Detect task that registers output but only displays it on failure.
+    """Detect task that registers output but only displays it on failure
+    (or never displays it at all).
 
-    The output is silently discarded on success.
+    The output is silently discarded on success. When failed_when:false is
+    also present, the task never fails, so conditional display-on-failure
+    never triggers and the output is completely invisible.
     """
-    reg_var, has_tolerant = _find_registered_var(lines, i)
+    reg_var, _ = _find_registered_var(lines, i)
     if not reg_var or reg_var in _REG_VAR_BLOCKLIST:
-        return None
-    if has_tolerant:
         return None
     if not _has_unconditional_display(lines, i, reg_var):
         return "ansible-register-output-swallowed"
