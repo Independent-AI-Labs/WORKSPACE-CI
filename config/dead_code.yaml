@@ -8,8 +8,11 @@ ignore_paths:
   - ci/__pycache__
 
 # Modules that are entry points (called directly, not imported).
+# All ci/check_*.py scripts are git-hook entry points invoked via
+# `python -m ci.<name>` from .pre-commit-config.yaml / .git/hooks/.
 # Override per-project via config/dead_code_overrides.yaml.
-entry_points: []
+entry_points:
+  - "ci/check_*.py"
 
 # Names to never report as dead (regardless of references)
 ignored_names:

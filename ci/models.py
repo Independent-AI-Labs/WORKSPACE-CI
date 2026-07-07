@@ -58,34 +58,6 @@ class DependencyCheckResult(NamedTuple):
     toml_data: object  # parsed TOML data
 
 
-class VersionUpdate(NamedTuple):
-    """A version update from old to new."""
-
-    old: str
-    new: str
-
-
-class VersionEntry(NamedTuple):
-    """Package name paired with version string."""
-
-    package: str
-    version: str
-
-
-class UpdateEntry(NamedTuple):
-    """Package name paired with version update info."""
-
-    package: str
-    update: VersionUpdate
-
-
-class PackageUpdateCheck(NamedTuple):
-    """Result from checking for package updates."""
-
-    latest_versions: list[VersionEntry]
-    updates_needed: list[UpdateEntry]
-
-
 class ImageRef(NamedTuple):
     """Parsed Docker image reference (image name + optional tag)."""
 

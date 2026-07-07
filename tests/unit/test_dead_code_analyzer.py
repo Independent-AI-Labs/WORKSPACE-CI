@@ -208,6 +208,23 @@ class TestReferenceCollector:
         ref_names = {r.name for r in c.references}
         assert "np" in ref_names
 
+    def test_import_as_tracks_original_name(self) -> None:
+        # `import x as y` must record references to BOTH the local alias
+        # `y` and the original name `x` so external aliasing does not
+        # hide live code from the cross-reference graph.
+        c = self._collect("import ci.operators as ops")
+        ref_names = {r.name for r in c.references}
+        assert "ops" in ref_names
+        assert "ci.operators" in ref_names or "operators" in ref_names
+
+    def test_from_import_as_tracks_original_name(self) -> None:
+        # `from x import y as z` must keep `y` alive in the graph
+        # (mirrors the `_boot_layout_helpers` aliasing pattern).
+        c = self._collect("from ci._boot_layout_helpers import emit as _emit")
+        ref_names = {r.name for r in c.references}
+        assert "_emit" in ref_names
+        assert "emit" in ref_names
+
     def test_from_import(self) -> None:
         c = self._collect("from os.path import join")
         assert "os.path" in c.imports

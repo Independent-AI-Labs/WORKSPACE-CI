@@ -194,7 +194,17 @@ class ReferenceCollector(ast.NodeVisitor):
     def visit_Import(self, node: ast.Import) -> None:
         for alias in node.names:
             self.imports.append(alias.name)
+            # When `asname` is present (e.g. `import numpy as np`), the
+            # local ref is the alias, but the original name must also
+            # count as a reference so that `import x as y` patterns keep
+            # the source module's exported names alive in dead-code
+            # analysis. Tracked conservatively (the original name may
+            # not be a Definition we scan, in which case the extra ref
+            # is harmless); matches the docstring's "better to miss dead
+            # code than to flag live code" stance.
             self._add_ref(alias.asname or alias.name, node.lineno)
+            if alias.asname:
+                self._add_ref(alias.name, node.lineno)
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
@@ -203,7 +213,12 @@ class ReferenceCollector(ast.NodeVisitor):
             for alias in node.names:
                 # "from X import Y" may import sub-module X.Y
                 self.imports.append(f"{node.module}.{alias.name}")
+                # See comment in visit_Import: track the original name
+                # alongside the alias so `from x import y as z` keeps
+                # `y` alive in the cross-reference graph.
                 self._add_ref(alias.asname or alias.name, node.lineno)
+                if alias.asname:
+                    self._add_ref(alias.name, node.lineno)
         self.generic_visit(node)
 
     def visit_Name(self, node: ast.Name) -> None:
