@@ -23,8 +23,19 @@ const REPOS = [
 
 const DEST_DIR = path.resolve(WEB_DIR, 'public', 'logos')
 
+// Local branding logos (themed variants) copied from this repo's res/ dir
+// into public/ so branding.yaml paths resolve. Named explicitly so a stale
+// file in public/ never survives a sync.
+const LOCAL_LOGOS = [
+  { src: 'res/LOGO.png', dest: 'public/LOGO.png' },
+  { src: 'res/LOGO_DARK_THEME.png', dest: 'public/LOGO_DARK_THEME.png' },
+  { src: 'res/LOGO_LIGHT_THEME.png', dest: 'public/LOGO_LIGHT_THEME.png' },
+]
+
 async function syncLogos() {
   await fs.mkdir(DEST_DIR, { recursive: true })
+
+  // Per-repo project logos -> public/logos/<slug>.png
   const results = await Promise.all(
     REPOS.map(async ({ slug, repoName }) => {
       const src = path.resolve(PROJECTS_ROOT, repoName, 'res', 'LOGO.png')
@@ -46,6 +57,18 @@ async function syncLogos() {
   const failures = results.filter((r) => !r.ok)
   if (failures.length > 0) {
     console.warn(`[sync-logos] ${failures.length} repo(s) had no logo; wiki will fall back to icons.`)
+  }
+
+  // Local branding logos (themed variants) -> public/
+  for (const { src, dest } of LOCAL_LOGOS) {
+    const srcAbs = path.resolve(WEB_DIR, src)
+    const destAbs = path.resolve(WEB_DIR, dest)
+    if (!existsSync(srcAbs)) {
+      console.warn(`[sync-logos] local logo missing: ${src}`)
+      continue
+    }
+    await fs.copyFile(srcAbs, destAbs)
+    console.log(`[sync-logos] local: ${src} -> ${path.relative(WEB_DIR, destAbs)}`)
   }
 }
 

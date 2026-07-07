@@ -53,6 +53,8 @@ export function WikiSidebar({ stats, branding }: WikiSidebarProps) {
       <div className="wiki-sidebar__header">
         <ThemeLogo
           src={branding.logo_path}
+          srcDark={branding.logo_path_dark}
+          srcLight={branding.logo_path_light}
           className="wiki-sidebar__logo"
           alt={`${branding.sidebar_title_thin}${branding.sidebar_title_bold} logo`}
           colorVar="var(--text)"

@@ -19,10 +19,20 @@
 }
 
 .wiki-sidebar__logo {
-  width: 32px;
-  height: 30px;
+  width: 3rem;
+  height: 3rem;
   flex-shrink: 0;
 }
+
+/* Theme-aware full-color logos: show one, hide the other per data-theme.
+   The wrapper element's own width/height (e.g. .wiki-sidebar__logo) controls
+   the rendered size; the imgs fill that box via object-fit:contain. */
+.theme-logo--themed { display: inline-flex; }
+.theme-logo--themed .theme-logo__light,
+.theme-logo--themed .theme-logo__dark { width: 100%; height: 100%; object-fit: contain; display: block; }
+.theme-logo--themed .theme-logo__dark { display: none; }
+[data-theme='dark'] .theme-logo--themed .theme-logo__light { display: none; }
+[data-theme='dark'] .theme-logo--themed .theme-logo__dark { display: block; }
 
 .wiki-sidebar__title {
   font-weight: 700;
@@ -88,9 +98,9 @@
 }
 
 .wiki-sidebar__link.is-active {
-  color: var(--accent);
+  color: var(--accent-active);
   background: var(--surface-1);
-  border-right: 3px solid var(--accent);
+  border-right: 3px solid var(--accent-active);
 }
 
 .wiki-sidebar__link i {
@@ -119,11 +129,12 @@
 
   [data-sidebar-collapsed='true'] .wiki-sidebar__logo,
   [data-sidebar-collapsed='true'] .wiki-sidebar__title {
-    display: none;
+    display: none !important;
   }
 
   [data-sidebar-collapsed='true'] .wiki-sidebar__toggle {
     margin-left: 0;
+    width: 100%;
   }
 
   [data-sidebar-collapsed='true'] .wiki-sidebar__link {

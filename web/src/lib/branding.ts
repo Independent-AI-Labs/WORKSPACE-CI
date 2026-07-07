@@ -8,6 +8,8 @@ export interface Branding {
   sidebar_title_thin: string
   sidebar_title_bold: string
   logo_path: string
+  logo_path_dark: string
+  logo_path_light: string
   metadata_title: string
   metadata_description: string
   footer_tagline: string

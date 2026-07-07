@@ -10,20 +10,38 @@
    ============================================================ */
 
 :root {
-  /* ---- Tier 1: Color primitives (unchanged) ---- */
-  --bg: #0b0c0f;
-  --panel: #111319;
-  --text: #e6e9ef;
-  --muted: #9aa3b2;
-  --accent: #7aa2f7;
-  --ok: #10b981;
-  --warn: #f97316;
-  --error: #ef4444;
-  --link: #7dcfff;
-  --teal: #2dd4bf;
-  --purple: #a855f7;
-  --border: #242832;
-  --code-bg: #0d1117;
+  /* ---- Tier 0: Named palette primitives ----
+     Primary palette + muted palette (for supplementary needs). */
+  --charcoal: #50514f;
+  --vibrant-coral: #f25f5c;
+  --royal-gold: #ffe066;
+  --cerulean: #247ba0;
+  --tropical-teal: #70c1b3;
+  --celadon: #a5d0a8;
+  --muted-teal: #8cada7;
+  --coffee-bean: #110b11;
+  --golden-bronze: #b7990d;
+  --cream: #f2f4cb;
+
+  /* ---- Tier 1: Color semantic primitives (dark) ----
+     Readability rule: content bg ~90% black, panel = pure black,
+     text ~90% white (mandated literals). All other neutrals are
+     derived mathematically via color-mix from those three. Palette
+     colors are reserved for accents only. */
+  --bg: #181818;            /* 90% black (mandated) */
+  --panel: #000000;         /* pure black (mandated) */
+  --text: #ededed;          /* ~92% white (mandated) */
+  --muted: color-mix(in oklab, var(--text) 55%, var(--bg));
+  --accent: var(--cerulean);
+  --accent-active: color-mix(in oklab, var(--cerulean) 50%, var(--text));
+  --ok: var(--tropical-teal);
+  --warn: var(--royal-gold);
+  --error: var(--vibrant-coral);
+  --link: var(--tropical-teal);
+  --teal: var(--tropical-teal);
+  --purple: var(--royal-gold);
+  --border: color-mix(in oklab, var(--bg) 85%, var(--text));
+  --code-bg: color-mix(in oklab, var(--bg) 85%, var(--panel));
 
   /* ---- Tier 2: Color semantic aliases ---- */
   --surface-1: color-mix(in oklab, var(--bg) 95%, var(--text) 5%);
@@ -131,19 +149,20 @@
 [data-theme='light'] {
   /* Colors only (typography/spacing/radius/shadow scales are theme-invariant),
      but shadow alpha must soften so the dark-theme black veil does not bleed. */
-  --bg: #ffffff;
-  --panel: #f7f7f9;
-  --text: #1f2937;
-  --muted: #6b7280;
-  --accent: #1d4ed8;
-  --ok: #16a34a;
-  --warn: #ea580c;
-  --error: #dc2626;
-  --link: #2563eb;
-  --teal: #0d9488;
-  --purple: #7c3aed;
-  --border: #e5e7eb;
-  --code-bg: #f3f4f6;
+  --bg: #f0f0f0;            /* ~92% white (mandated) */
+  --panel: #ffffff;         /* pure white (mandated) */
+  --text: #1a1a1a;          /* ~90% black (mandated) */
+  --muted: color-mix(in oklab, var(--text) 55%, var(--bg));
+  --accent: var(--cerulean);
+  --accent-active: var(--cerulean);
+  --ok: var(--tropical-teal);
+  --warn: var(--golden-bronze);
+  --error: var(--vibrant-coral);
+  --link: var(--cerulean);
+  --teal: var(--tropical-teal);
+  --purple: var(--golden-bronze);
+  --border: color-mix(in oklab, var(--bg) 80%, var(--text));
+  --code-bg: color-mix(in oklab, var(--bg) 90%, var(--text));
 
   /* Adaptive shadows for light theme (softer alpha) */
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
@@ -160,6 +179,7 @@
   --color-text: var(--text);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
+  --color-accent-active: var(--accent-active);
   --color-ok: var(--ok);
   --color-warn: var(--warn);
   --color-error: var(--error);
