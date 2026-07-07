@@ -75,7 +75,7 @@ export function formatValueHtml(value: unknown, indent = 0): string {
 
 export function pageTitle(path: string): string {
   const map: Record<string, string> = {
-    '/': 'Guardrail Ecosystem',
+    '/': 'Open Source',
     '/patterns': 'Code Anti-Patterns',
     '/hooks': 'Git Hooks',
     '/config': 'Config Files',

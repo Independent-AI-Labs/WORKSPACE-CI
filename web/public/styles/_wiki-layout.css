@@ -93,6 +93,10 @@
   .wiki-header__left {
     padding-left: calc(44px + var(--space-2));
   }
+
+  .wiki-header__actions {
+    margin-left: auto;
+  }
 }
 
 @media (max-width: 768px) {

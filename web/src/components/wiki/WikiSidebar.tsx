@@ -17,14 +17,14 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/', label: 'Guardrail Ecosystem', icon: 'ri-dna-line' },
+  { href: '/', label: 'Open Source', icon: 'ri-dna-line' },
   { href: '/hooks', label: 'Git Hooks', icon: 'ri-git-commit-line', count: 'hooks' },
   { href: '/runtime-hooks', label: 'Runtime Hooks', icon: 'ri-pulse-line', count: 'runtimeHooks' },
   { href: '/patterns', label: 'Code Anti-Patterns', icon: 'ri-error-warning-line', count: 'patterns' },
   { href: '/config', label: 'Config Files', icon: 'ri-settings-3-line', count: 'configs' },
   { href: '/tooling', label: 'Tools & Scripts', icon: 'ri-tools-line', count: 'scripts' },
   { href: '/guard', label: 'Guard Policies', icon: 'ri-shield-keyhole-line', count: 'guards' },
-  { href: '/standards', label: 'Standards & Regulation', icon: 'ri-book-marked-line', count: 'standards' },
+  { href: '/standards', label: 'AI Governance', icon: 'ri-book-marked-line', count: 'standards' },
   { href: '/llm-gateway', label: 'LLM Gateway', icon: 'ri-router-line', divider: true },
   { href: '/checks', label: 'Static Analysis', icon: 'ri-check-double-line' },
   { href: '/playground', label: 'Playground', icon: 'ri-code-box-line' },

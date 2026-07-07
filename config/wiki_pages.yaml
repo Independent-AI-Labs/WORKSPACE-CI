@@ -1,7 +1,7 @@
 version: 1
 pages:
   - id: page-home
-    title: Guardrail Ecosystem
+    title: Open Source
     section: Pages
     content: "Project catalogue: browse READMEs for all backend projects"
     href: /
@@ -83,7 +83,7 @@ pages:
       - scripts
       - make
   - id: page-standards
-    title: Standards & Regulation
+    title: AI Governance
     section: Pages
     content: AI standards, regulations, frameworks, and declarations
     href: /standards

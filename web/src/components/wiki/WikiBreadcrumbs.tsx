@@ -9,7 +9,7 @@ function getBreadcrumbs(pathname: string): { label: string; href: string }[] {
   const crumbs: { label: string; href: string }[] = []
 
   if (parts.length === 0) {
-    return [{ label: 'Guardrail Ecosystem', href: '/' }]
+    return [{ label: 'Open Source', href: '/' }]
   }
 
   let href = ''
@@ -20,7 +20,7 @@ function getBreadcrumbs(pathname: string): { label: string; href: string }[] {
     crumbs.push({ label, href })
   }
 
-  return [{ label: 'Guardrail Ecosystem', href: '/' }, ...crumbs]
+  return [{ label: 'Open Source', href: '/' }, ...crumbs]
 }
 
 function buildJsonLd(crumbs: { label: string; href: string }[]) {

@@ -59,7 +59,7 @@ describe('WikiSidebar', () => {
 
   it('renders all nav items', () => {
     render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
-    expect(screen.getByText('Guardrail Ecosystem')).toBeInTheDocument()
+    expect(screen.getByText('Open Source')).toBeInTheDocument()
     expect(screen.getByText('Runtime Hooks')).toBeInTheDocument()
     expect(screen.getByText('Guard Policies')).toBeInTheDocument()
     expect(screen.getByText('LLM Gateway')).toBeInTheDocument()
@@ -89,22 +89,22 @@ describe('WikiSidebar', () => {
     expect(toggle).toBeInTheDocument()
   })
 
-  it('places Standards & Regulation before LLM Gateway', () => {
+  it('places AI Governance before LLM Gateway', () => {
     const { container } = render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
     const links = container.querySelectorAll('.wiki-sidebar__link')
     const labels = Array.from(links).map((l) => l.textContent?.replace(/\[\d+\]/g, '').trim())
-    const standardsIdx = labels.indexOf('Standards & Regulation')
+    const standardsIdx = labels.indexOf('AI Governance')
     const llmIdx = labels.indexOf('LLM Gateway')
     expect(standardsIdx).toBeGreaterThan(-1)
     expect(llmIdx).toBeGreaterThan(-1)
     expect(standardsIdx).toBeLessThan(llmIdx)
   })
 
-  it('places Standards & Regulation after Guard Policies', () => {
+  it('places AI Governance after Guard Policies', () => {
     const { container } = render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
     const links = container.querySelectorAll('.wiki-sidebar__link')
     const labels = Array.from(links).map((l) => l.textContent?.replace(/\[\d+\]/g, '').trim())
-    const standardsIdx = labels.indexOf('Standards & Regulation')
+    const standardsIdx = labels.indexOf('AI Governance')
     const guardIdx = labels.indexOf('Guard Policies')
     expect(standardsIdx).toBeGreaterThan(guardIdx)
   })

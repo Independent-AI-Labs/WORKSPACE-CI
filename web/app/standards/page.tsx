@@ -70,7 +70,7 @@ export default async function StandardsPage() {
 
   return (
     <WikiShell>
-      <h1>Standards &amp; Regulation</h1>
+      <h1>AI Governance</h1>
       <p className="page-intro">{branding.standards_page_intro}</p>
       <CardListSection
         items={items}
