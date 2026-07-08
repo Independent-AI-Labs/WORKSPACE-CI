@@ -4,7 +4,9 @@
 # Takes a consumer directory + ci-profile.yaml and emits:
 #   .pre-commit-config.yaml, Makefile, config/*.yaml, quality_exceptions.yaml
 #
-# Usage: scaffold-ci --consumer PATH [--profile PATH] [--dry-run] [--force]
+# Usage: scaffold-ci --consumer PATH [--profile PATH] [--dry-run]
+#                   [--force-precommit] [--force-makefile] [--force-configs]
+#                   [--force-all] [--yes] [--no-backup]
 #        scaffold-ci --emit-template
 set -euo pipefail
 
@@ -28,26 +30,69 @@ _CONFIG_DIR="$_CI_ROOT/config"
 _consumer=""
 _profile=""
 _dry_run=0
-_force=0
+_force_pc=0
+_force_mf=0
+_force_cfg=0
+_force_all=0
+_make_backup=1
+_assume_yes=0
 _emit_template=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --consumer)      _consumer="$2"; shift 2 ;;
-        --profile)       _profile="$2"; shift 2 ;;
-        --dry-run)       _dry_run=1; shift ;;
-        --force)         _force=1; shift ;;
-        --emit-template) _emit_template=1; shift ;;
+        --consumer)        _consumer="$2"; shift 2 ;;
+        --profile)         _profile="$2"; shift 2 ;;
+        --dry-run)         _dry_run=1; shift ;;
+        --force-precommit) _force_pc=1; shift ;;
+        --force-makefile)  _force_mf=1; shift ;;
+        --force-configs)   _force_cfg=1; shift ;;
+        --force-all)       _force_all=1; shift ;;
+        --yes)             _assume_yes=1; shift ;;
+        --no-backup)       _make_backup=0; shift ;;
+        --emit-template)   _emit_template=1; shift ;;
+        --force)
+            cat >&2 <<'MSG'
+ERROR: --force is removed. The single --force flag could overwrite a
+hand-edited Makefile and customised config/*.yaml in one shot, with no backup
+and no confirmation. Use a granular flag instead:
+
+  --force-precommit   Overwrite .pre-commit-config.yaml only.
+  --force-makefile    Overwrite Makefile only. REFUSES if the existing
+                      Makefile is customised (differs from the template);
+                      you must delete the file by hand to proceed.
+  --force-configs     Overwrite config/*.yaml (6 files) only.
+  --force-all         All of the above combined. Requires --yes in non-TTY.
+
+Add --yes to skip the interactive confirmation prompt (required when stdout
+is not a TTY, e.g. piped to a file). Backups (*.scaffold-bak.<epoch>) are
+written by default; pass --no-backup to disable.
+MSG
+            exit 1
+            ;;
         -h|--help)
             cat <<'USAGE'
-Usage: scaffold-ci --consumer PATH [--profile PATH] [--dry-run] [--force]
+Usage: scaffold-ci --consumer PATH [--profile PATH] [--dry-run]
+                   [--force-precommit] [--force-makefile] [--force-configs]
+                   [--force-all] [--yes] [--no-backup]
        scaffold-ci --emit-template
 
-  --consumer PATH   Consumer project directory (required for scaffolding).
-  --profile PATH    Profile YAML path (default: <consumer>/ci-profile.yaml).
-  --dry-run         Print intended file content without writing.
-  --force           Overwrite existing .pre-commit-config.yaml / Makefile.
-  --emit-template   Regenerate templates/ci-profile.template.yaml.
+  --consumer PATH        Consumer project directory (required for scaffolding).
+  --profile PATH         Profile YAML (default: <consumer>/ci-profile.yaml).
+  --dry-run              Print intended file content without writing.
+
+  Overwrite flags (granular; the old blanket --force is removed):
+  --force-precommit      Overwrite .pre-commit-config.yaml only.
+  --force-makefile       Overwrite Makefile only. REFUSES if the existing
+                         Makefile has been customised (differs from the
+                         template); delete the file by hand to regenerate.
+  --force-configs        Overwrite config/*.yaml (6 files) only.
+  --force-all            Equivalent to all three --force-* flags.
+
+  --yes                  Skip the interactive confirmation prompt (required
+                         when stdout is not a TTY).
+  --no-backup            Do not write *.scaffold-bak.<epoch> backups before
+                         overwriting (backups are on by default).
+  --emit-template        Regenerate templates/ci-profile.template.yaml.
 USAGE
             exit 0
             ;;
@@ -206,7 +251,7 @@ _c_errors=()
 case "$_pf_tier" in strict|poc|vendored) ;; *) _c_errors+=("tier must be strict|poc|vendored, got '$_pf_tier'") ;; esac
 _has_any=0
 for _lang in "${_pf_languages[@]}"; do
-    case "$_lang" in any) _has_any=1 ;; python|rust|node) ;; *) _c_errors+=("unknown language: $_lang") ;; esac
+    case "$_lang" in any) _has_any=1 ;; python|rust|node|shell|lua|go|ruby) ;; *) _c_errors+=("unknown language: $_lang") ;; esac
 done
 if [[ $_has_any -eq 1 && ${#_pf_languages[@]} -gt 1 ]]; then
     _c_errors+=("language 'any' cannot coexist with other languages")
@@ -323,12 +368,46 @@ for _rid in "${!_reg_id[@]}"; do
     fi
 done
 
+# ── Force-flag confirmation ────────────────────────────────────────────────
+_any_force=$(( _force_pc + _force_mf + _force_cfg + _force_all ))
+_backups_written=()
+if [[ $_any_force -gt 0 && $_assume_yes -eq 0 ]]; then
+    if [[ -t 1 ]]; then
+        _to_overwrite=()
+        for _f in "$_consumer/.pre-commit-config.yaml" "$_consumer/Makefile" \
+                  "$_consumer/config/coverage_thresholds.yaml" \
+                  "$_consumer/config/file_length_limits.yaml" \
+                  "$_consumer/config/dead_code.yaml" \
+                  "$_consumer/config/dependency_excludes.yaml" \
+                  "$_consumer/config/duplicate_dependency_excludes.yaml" \
+                  "$_consumer/config/markdown_docs.yaml"; do
+            if [[ -f "$_f" ]]; then _to_overwrite+=("$_f"); fi
+        done
+        if [[ ${#_to_overwrite[@]} -gt 0 ]]; then
+            echo "WARNING: the following existing files would be overwritten:" >&2
+            printf '  %s\n' "${_to_overwrite[@]}" >&2
+            echo "Backups (*.scaffold-bak.<epoch>) will be written unless --no-backup." >&2
+        else
+            echo "WARNING: --force-* given but no existing files to overwrite (fresh scaffold)." >&2
+        fi
+        printf 'Proceed? [y/N] ' >&2
+        IFS= read -r _answer || _answer=""
+        case "$_answer" in
+            y|Y|yes|YES) ;;
+            *) echo "Aborted; no files changed."; exit 1 ;;
+        esac
+    else
+        ci_fail "Force flags set but --yes not given and stdout is not a TTY; cannot confirm interactively. Re-run with --yes to proceed non-interactively."
+        exit 1
+    fi
+fi
+
 # ── Generation ─────────────────────────────────────────────────────────────
 ci_info "==> scaffolding CI integration for $_consumer (tier=$_pf_tier, languages=${_pf_languages[*]}, REL_CI=$REL_CI)"
 
 _pc_target="$_consumer/.pre-commit-config.yaml"
-if [[ -f "$_pc_target" && $_force -eq 0 ]]; then
-    _skipped+=("$_pc_target (exists, use --force)")
+if [[ -f "$_pc_target" && $_force_pc -eq 0 && $_force_all -eq 0 ]]; then
+    _skipped+=("$_pc_target (exists, use --force-precommit)")
 else
     _pc_content="$(_scl_gen_precommit)"
     if [[ $_dry_run -eq 1 ]]; then
@@ -337,16 +416,42 @@ else
         echo "================================================================================"
         printf '%s\n' "$_pc_content"
     else
+        _scl_backup "$_pc_target" "$_make_backup" _backups_written
         printf '%s\n' "$_pc_content" > "$_pc_target"
         _generated+=("$_pc_target")
     fi
 fi
 
 _mf_target="$_consumer/Makefile"
-if [[ -f "$_mf_target" && $_force -eq 0 ]]; then
-    _skipped+=("$_mf_target (exists, use --force)")
+_mf_content="$(_scl_gen_makefile)"
+if [[ -f "$_mf_target" && $_force_mf -eq 0 && $_force_all -eq 0 ]]; then
+    _skipped+=("$_mf_target (exists, use --force-makefile)")
+elif [[ -f "$_mf_target" ]]; then
+    # 5a guard: refuse to overwrite a customised Makefile. Only safe to
+    # refresh when the existing file matches the template modulo the
+    # auto-generated timestamp comment (FR-SC-13.1/13.2: consecutive runs
+    # may differ ONLY by the embedded timestamp). Strip that line from both
+    # sides before comparing, so an un-customised Makefile can be refreshed
+    # while a hand-edited one is still protected.
+    _mf_rendered_cleaned="$(printf '%s\n' "$_mf_content" | grep -v '^# AUTO-GENERATED by .* \[' )"
+    _mf_existing_cleaned="$(grep -v '^# AUTO-GENERATED by .* \[' "$_mf_target" )"
+    if [[ "$_mf_rendered_cleaned" != "$_mf_existing_cleaned" ]]; then
+        ci_fail "Makefile is customised (differs from scaffold template modulo the auto-generated timestamp). scaffold-ci refuses to overwrite a hand-edited Makefile."
+        echo "  To inspect the template: scaffold-ci --consumer <path> --dry-run (look for the Makefile block)." >&2
+        echo "  To regenerate: delete the Makefile by hand (scaffold-ci offers no auto-override for customised Makefiles), then re-run --force-makefile." >&2
+        exit 1
+    fi
+    if [[ $_dry_run -eq 1 ]]; then
+        echo "================================================================================"
+        echo "Would refresh: $_mf_target (matches template modulo timestamp, no customisation lost)"
+        echo "================================================================================"
+        printf '%s\n' "$_mf_content"
+    else
+        _scl_backup "$_mf_target" "$_make_backup" _backups_written
+        printf '%s\n' "$_mf_content" > "$_mf_target"
+        _generated+=("$_mf_target")
+    fi
 else
-    _mf_content="$(_scl_gen_makefile)"
     if [[ $_dry_run -eq 1 ]]; then
         echo "================================================================================"
         echo "Would write: $_mf_target"
@@ -358,12 +463,14 @@ else
     fi
 fi
 
-_scl_copy_config "$_CONFIG_DIR/coverage_thresholds.yaml" "$_consumer/config/coverage_thresholds.yaml" "coverage"
-_scl_copy_config "$_CONFIG_DIR/file_length_limits.yaml" "$_consumer/config/file_length_limits.yaml" ""
-_scl_copy_config "$_CONFIG_DIR/dead_code.yaml" "$_consumer/config/dead_code.yaml" "dead_code"
-_scl_copy_config "$_CONFIG_DIR/dependency_excludes.yaml" "$_consumer/config/dependency_excludes.yaml" ""
-_scl_copy_config "$_CONFIG_DIR/duplicate_dependency_excludes.yaml" "$_consumer/config/duplicate_dependency_excludes.yaml" ""
-_scl_copy_config "$_CONFIG_DIR/markdown_docs.yaml" "$_consumer/config/markdown_docs.yaml" ""
+_force_cfg_or_all=0
+[[ $_force_cfg -eq 1 || $_force_all -eq 1 ]] && _force_cfg_or_all=1
+_scl_copy_config "$_CONFIG_DIR/coverage_thresholds.yaml" "$_consumer/config/coverage_thresholds.yaml" "coverage"         "$_force_cfg_or_all" "$_make_backup"
+_scl_copy_config "$_CONFIG_DIR/file_length_limits.yaml"   "$_consumer/config/file_length_limits.yaml"   ""                "$_force_cfg_or_all" "$_make_backup"
+_scl_copy_config "$_CONFIG_DIR/dead_code.yaml"           "$_consumer/config/dead_code.yaml"           "dead_code"       "$_force_cfg_or_all" "$_make_backup"
+_scl_copy_config "$_CONFIG_DIR/dependency_excludes.yaml" "$_consumer/config/dependency_excludes.yaml"  ""                "$_force_cfg_or_all" "$_make_backup"
+_scl_copy_config "$_CONFIG_DIR/duplicate_dependency_excludes.yaml" "$_consumer/config/duplicate_dependency_excludes.yaml" "" "$_force_cfg_or_all" "$_make_backup"
+_scl_copy_config "$_CONFIG_DIR/markdown_docs.yaml"       "$_consumer/config/markdown_docs.yaml"       ""                "$_force_cfg_or_all" "$_make_backup"
 
 _scl_gen_qe
 
@@ -377,6 +484,9 @@ if [[ ${#_skipped[@]} -gt 0 ]]; then
 fi
 if [[ ${#_auto_inserted[@]} -gt 0 ]]; then
     ci_warn "Auto-inserted mandatory hooks: ${_auto_inserted[*]}"
+fi
+if [[ ${#_backups_written[@]} -gt 0 ]]; then
+    ci_warn "Backups written (restore with cp): ${_backups_written[*]}"
 fi
 
 exit 0

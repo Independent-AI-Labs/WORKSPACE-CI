@@ -229,7 +229,7 @@ hooks:
     always_run: true
     mandatory: true
     safety: false
-    applicable_to: [python, node]
+    applicable_to: [any]
 
   - id: check-duplicate-dependencies
     kind: python_module

@@ -299,7 +299,7 @@ cp ../CI/templates/ci-profile.template.yaml myproject/ci-profile.yaml
 
 # 2. Edit: set project name, tier, languages, trim hooks as needed
 # 3. Generate CI integration files
-make -C ../CI scaffold-ci ARGS="--consumer myproject --force"
+make -C ../CI scaffold-ci ARGS="--consumer myproject --yes"
 
 # 4. Install native git hooks
 cd myproject && make install-hooks
@@ -318,12 +318,20 @@ cd myproject && make install-hooks
 
 ### What scaffold-ci Generates
 
-| File | Overwritten by `--force`? | Purpose |
-|------|--------------------------|---------|
-| `.pre-commit-config.yaml` | Yes | Hook configuration (consumed by `generate-hooks`) |
-| `Makefile` | Yes | 10-target contract with vacuous stubs |
-| `config/*.yaml` | Yes (new files only) | 6 default CI config files |
+| File | Overwritten by? | Purpose |
+|------|-----------------|---------|
+| `.pre-commit-config.yaml` | `--force-precommit` or `--force-all` | Hook configuration (consumed by `generate-hooks`) |
+| `Makefile` | `--force-makefile` (**refuses if customised**) | 10-target contract with vacuous stubs |
+| `config/*.yaml` | `--force-configs` or `--force-all` (new files only otherwise) | 6 default CI config files |
 | `quality_exceptions.yaml` | **Never** | Per-project exception declarations |
+
+The blanket `--force` flag is **removed**. Use granular flags instead:
+`--force-precommit`, `--force-makefile`, `--force-configs`, or `--force-all`.
+Add `--yes` for non-interactive runs (required when stdout is not a TTY).
+Backups (`*.scaffold-bak.<epoch>`) are written by default; pass `--no-backup`
+to suppress. A customised Makefile (differs from the template modulo the
+auto-generated timestamp) is never overwritten automatically; you must
+delete it by hand to regenerate.
 
 ### Mandatory Hook Auto-Insertion
 

@@ -30,7 +30,7 @@ hooks:
     - ci-check-push
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$consumer" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$consumer" > "$TEST_TMP/out" 2>&1
 
     [[ -f "$consumer/.pre-commit-config.yaml" ]] || { echo "no .pre-commit-config.yaml"; return 1; }
     [[ -f "$consumer/Makefile" ]] || { echo "no Makefile"; return 1; }
@@ -96,13 +96,21 @@ EOF
     echo "old makefile" > "$consumer/Makefile"
 
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$consumer" --force > "$TEST_TMP/out" 2>&1
-
+    # --force-precommit overwrites the pre-commit config (a backup is written);
+    # the customised Makefile is NOT touched by --force-precommit.
+    bash "$_SCI_SCRIPT" --consumer "$consumer" --force-precommit --yes > "$TEST_TMP/out" 2>&1
     grep -q 'old content' "$consumer/.pre-commit-config.yaml" && { echo "config not overwritten"; return 1; } || true
-    grep -q 'old makefile' "$consumer/Makefile" && { echo "Makefile not overwritten"; return 1; } || true
     grep -q 'AUTO-GENERATED' "$consumer/.pre-commit-config.yaml" || { echo "config not generated"; return 1; }
+    # Makefile preserved (force-precommit must not touch it).
+    grep -q 'old makefile' "$consumer/Makefile" || { echo "Makefile was touched by --force-precommit"; return 1; }
+    # A customised Makefile must REFUSE --force-all (5a guard).
+    local rc=0
+    bash "$_SCI_SCRIPT" --consumer "$consumer" --force-all --yes > "$TEST_TMP/out2" 2>&1 || rc=$?
+    [[ $rc -ne 0 ]] || { echo "customised Makefile was overwritten by --force-all"; return 1; }
+    grep -q 'customised' "$TEST_TMP/out2" || { echo "missing customised refusal"; return 1; }
+    grep -q 'old makefile' "$consumer/Makefile" || { echo "Makefile changed despite refusal"; return 1; }
 }
-_run_test "scaffold_force: overwrites config and Makefile" test_scaffold_force_overwrites
+_run_test "scaffold_force: granular force + customised Makefile refused" test_scaffold_force_overwrites
 
 # ── No --force preserves existing files ────────────────────────────────────
 
@@ -145,7 +153,7 @@ EOF
     echo "custom exceptions" > "$consumer/quality_exceptions.yaml"
 
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$consumer" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$consumer" > "$TEST_TMP/out" 2>&1
 
     grep -q 'custom exceptions' "$consumer/quality_exceptions.yaml" || { echo "quality_exceptions was overwritten"; return 1; }
     grep -q 'quality_exceptions' "$TEST_TMP/out" || { echo "missing skip message"; return 1; }
@@ -222,7 +230,7 @@ hooks:
   pre-commit: [check-unstaged]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$consumer" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$consumer" > "$TEST_TMP/out" 2>&1
 
     grep -q 'auto-inserted' "$TEST_TMP/out" || { echo "missing auto-insert message"; return 1; }
     grep -q 'block-sensitive-files' "$consumer/.pre-commit-config.yaml" || { echo "missing block-sensitive-files"; return 1; }
@@ -246,7 +254,7 @@ hooks:
   pre-commit: [check-unstaged]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$consumer" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$consumer" > "$TEST_TMP/out" 2>&1
 
     grep -q 'check-unstaged' "$consumer/.pre-commit-config.yaml" || { echo "missing user hook"; return 1; }
     grep -q 'gitleaks' "$consumer/.pre-commit-config.yaml" || { echo "missing safety hook gitleaks"; return 1; }
@@ -291,7 +299,7 @@ hooks:
   pre-commit: [check-unstaged]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$consumer" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$consumer" > "$TEST_TMP/out" 2>&1
 
     for t in init install install-ci install-hooks sync check lint type-check test clean preflight; do
         if ! grep -q "^$t:" "$consumer/Makefile"; then
@@ -320,7 +328,7 @@ hooks:
   pre-commit: [check-unstaged]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$consumer" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$consumer" > "$TEST_TMP/out" 2>&1
 
     local rel_ci
     rel_ci="$(realpath --relative-to="$consumer" "$PROJECT_DIR")"
@@ -348,7 +356,7 @@ overrides:
     entry: "my-custom-entry --flag"
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$consumer" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$consumer" > "$TEST_TMP/out" 2>&1
 
     grep -q 'my-custom-entry --flag' "$consumer/.pre-commit-config.yaml" || { echo "missing override entry"; return 1; }
 }
@@ -368,7 +376,7 @@ hooks:
   pre-commit: [check-unstaged]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$consumer" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$consumer" > "$TEST_TMP/out" 2>&1
 
     grep -q 'scan_paths: \[\]' "$consumer/config/dead_code.yaml" || { echo "missing empty scan_paths"; return 1; }
 }
@@ -388,7 +396,7 @@ hooks:
   pre-commit: [check-unstaged]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$consumer" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$consumer" > "$TEST_TMP/out" 2>&1
 
     grep -q 'scan_paths: \[src\]' "$consumer/config/dead_code.yaml" || { echo "missing [src] scan_paths"; return 1; }
 }
@@ -408,13 +416,13 @@ hooks:
   pre-commit: [check-unstaged]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$consumer" --force > "$TEST_TMP/out1" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$consumer" --force-precommit --yes > "$TEST_TMP/out1" 2>&1
     local first_hash
     first_hash="$(grep -v 'AUTO-GENERATED' "$consumer/.pre-commit-config.yaml" | md5sum)"
-    bash "$_SCI_SCRIPT" --consumer "$consumer" --force > "$TEST_TMP/out2" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$consumer" --force-precommit --yes > "$TEST_TMP/out2" 2>&1
     local second_hash
     second_hash="$(grep -v 'AUTO-GENERATED' "$consumer/.pre-commit-config.yaml" | md5sum)"
 
     [[ "$first_hash" == "$second_hash" ]] || { echo "not idempotent: $first_hash != $second_hash"; return 1; }
 }
-_run_test "scaffold_idempotent: --force twice produces same output" test_scaffold_idempotent
+_run_test "scaffold_idempotent: --force-precommit twice produces same output" test_scaffold_idempotent

@@ -24,7 +24,7 @@ dev = [
     "pytest-xdist==3.8.0",
     "black==26.5.1",
     "ruff==0.15.20",
-    "mypy==2.1.0",
+    "mypy==2.2.0",
     "types-PyYAML==6.0.12.20260518",
 ]
 lint = [
@@ -32,7 +32,7 @@ lint = [
     "black==26.5.1",
 ]
 type-check = [
-    "mypy==2.1.0",
+    "mypy==2.2.0",
     "pydantic==2.13.4",
 ]
 test = [

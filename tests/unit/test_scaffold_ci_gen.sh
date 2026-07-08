@@ -20,7 +20,7 @@ hooks:
     - check-commit-message
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-gen" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-gen" > "$TEST_TMP/out" 2>&1
     [[ -f "$TEST_TMP/sci-gen/.pre-commit-config.yaml" ]] || { echo "no .pre-commit-config.yaml"; return 1; }
     grep -q 'check-unstaged' "$TEST_TMP/sci-gen/.pre-commit-config.yaml" || { echo "missing hook"; return 1; }
     grep -q 'repos:' "$TEST_TMP/sci-gen/.pre-commit-config.yaml" || { echo "missing repos"; return 1; }
@@ -38,7 +38,7 @@ hooks:
   pre-commit: [check-unstaged]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-mf" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-mf" > "$TEST_TMP/out" 2>&1
     [[ -f "$TEST_TMP/sci-mf/Makefile" ]] || { echo "no Makefile"; return 1; }
     for t in init install install-ci install-hooks sync check lint type-check test clean preflight; do
         grep -q "^$t:" "$TEST_TMP/sci-mf/Makefile" || { echo "missing target: $t"; return 1; }
@@ -57,7 +57,7 @@ hooks:
   pre-commit: [check-unstaged]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-cfg" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-cfg" > "$TEST_TMP/out" 2>&1
     for f in coverage_thresholds.yaml file_length_limits.yaml dead_code.yaml \
              dependency_excludes.yaml duplicate_dependency_excludes.yaml markdown_docs.yaml; do
         [[ -f "$TEST_TMP/sci-cfg/config/$f" ]] || { echo "missing config/$f"; return 1; }
@@ -76,7 +76,7 @@ hooks:
   pre-commit: [check-unstaged]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-cov" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-cov" > "$TEST_TMP/out" 2>&1
     grep -q 'source_path: cov-test' "$TEST_TMP/sci-cov/config/coverage_thresholds.yaml" || { echo "missing substitution"; return 1; }
     grep -q 'source_path: ci' "$TEST_TMP/sci-cov/config/coverage_thresholds.yaml" && { echo "old value still present"; return 1; } || true
 }
@@ -93,7 +93,7 @@ hooks:
   pre-commit: [check-unstaged]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-dc" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-dc" > "$TEST_TMP/out" 2>&1
     grep -q 'scan_paths: \[src\]' "$TEST_TMP/sci-dc/config/dead_code.yaml" || { echo "missing src scan_paths"; return 1; }
 }
 _run_test "scaffold: dead_code rust gets [src]" test_scaffold_dead_code_rust
@@ -109,7 +109,7 @@ hooks:
   pre-commit: [check-unstaged]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-dcp" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-dcp" > "$TEST_TMP/out" 2>&1
     grep -q 'scan_paths: \[\]' "$TEST_TMP/sci-dcp/config/dead_code.yaml" || { echo "missing empty scan_paths"; return 1; }
 }
 _run_test "scaffold: dead_code python gets []" test_scaffold_dead_code_python
@@ -125,7 +125,7 @@ hooks:
   pre-commit: [check-unstaged]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-qe" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-qe" > "$TEST_TMP/out" 2>&1
     [[ -f "$TEST_TMP/sci-qe/quality_exceptions.yaml" ]] || { echo "no quality_exceptions.yaml"; return 1; }
     grep -q 'project: qe-test' "$TEST_TMP/sci-qe/quality_exceptions.yaml" || { echo "missing project name"; return 1; }
 }
@@ -143,7 +143,7 @@ hooks:
 EOF
     echo "existing qe file" > "$TEST_TMP/sci-qe2/quality_exceptions.yaml"
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-qe2" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-qe2" > "$TEST_TMP/out" 2>&1
     grep -q 'existing qe file' "$TEST_TMP/sci-qe2/quality_exceptions.yaml" || { echo "qe was overwritten"; return 1; }
 }
 _run_test "scaffold: quality_exceptions.yaml never overwritten" test_scaffold_qe_not_overwritten
@@ -159,7 +159,7 @@ hooks:
   pre-commit: [check-unstaged]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-auto" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-auto" > "$TEST_TMP/out" 2>&1
     grep -q 'block-sensitive-files' "$TEST_TMP/sci-auto/.pre-commit-config.yaml" || { echo "missing auto-inserted block-sensitive-files"; return 1; }
     grep -q 'ci-lint' "$TEST_TMP/sci-auto/.pre-commit-config.yaml" || { echo "missing auto-inserted ci-lint"; return 1; }
     grep -q 'check-commit-message' "$TEST_TMP/sci-auto/.pre-commit-config.yaml" || { echo "missing auto-inserted check-commit-message"; return 1; }
@@ -201,7 +201,7 @@ EOF
 }
 _run_test "scaffold: no --force skips existing" test_scaffold_no_force_skips
 
-test_scaffold_force_overwrites() {
+test_scaffold_force_precommit_overwrites_backup() {
     mkdir -p "$TEST_TMP/sci-fc"
     cat > "$TEST_TMP/sci-fc/ci-profile.yaml" <<'EOF'
 version: 1
@@ -213,11 +213,18 @@ hooks:
 EOF
     echo "old content" > "$TEST_TMP/sci-fc/.pre-commit-config.yaml"
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-fc" --force > "$TEST_TMP/out" 2>&1
-    grep -q 'old content' "$TEST_TMP/sci-fc/.pre-commit-config.yaml" && { echo "file not overwritten with --force"; return 1; } || true
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-fc" --force-precommit --yes > "$TEST_TMP/out" 2>&1
+    grep -q 'old content' "$TEST_TMP/sci-fc/.pre-commit-config.yaml" && { echo "file not overwritten with --force-precommit"; return 1; } || true
     grep -q 'AUTO-GENERATED' "$TEST_TMP/sci-fc/.pre-commit-config.yaml" || { echo "file not generated"; return 1; }
+    # A backup of the old content must exist on disk (backups default on).
+    local _bak
+    _bak="$(ls "$TEST_TMP/sci-fc"/.pre-commit-config.yaml.scaffold-bak.* 2>/dev/null | head -1)"
+    [[ -n "$_bak" ]] || { echo "no .scaffold-bak backup written"; return 1; }
+    grep -q 'old content' "$_bak" || { echo "backup does not contain old content"; return 1; }
+    # Summary must mention the backup.
+    grep -q 'Backups written' "$TEST_TMP/out" || { echo "missing backups summary"; return 1; }
 }
-_run_test "scaffold: --force overwrites" test_scaffold_force_overwrites
+_run_test "scaffold: --force-precommit overwrites and writes backup" test_scaffold_force_precommit_overwrites_backup
 
 test_scaffold_entry_shell_kind() {
     mkdir -p "$TEST_TMP/sci-kind"
@@ -230,7 +237,7 @@ hooks:
   pre-commit: [check-unstaged]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-kind" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-kind" > "$TEST_TMP/out" 2>&1
     grep -q "bash -c" "$TEST_TMP/sci-kind/.pre-commit-config.yaml" || { echo "missing shell entry"; return 1; }
     grep -q "checks.sh" "$TEST_TMP/sci-kind/.pre-commit-config.yaml" || { echo "missing checks.sh source"; return 1; }
 }
@@ -249,7 +256,7 @@ hooks:
     - ci-lint
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-mk" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-mk" > "$TEST_TMP/out" 2>&1
     grep -q 'make lint' "$TEST_TMP/sci-mk/.pre-commit-config.yaml" || { echo "missing make lint entry"; return 1; }
 }
 _run_test "scaffold: makefile_target renders make entry" test_scaffold_entry_makefile_target
@@ -267,7 +274,7 @@ hooks:
     - check-required-hooks-present
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-pm" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-pm" > "$TEST_TMP/out" 2>&1
     grep -q 'python -m ci.check_required_hooks_present' "$TEST_TMP/sci-pm/.pre-commit-config.yaml" || { echo "missing python module entry"; return 1; }
 }
 _run_test "scaffold: python_module renders venv python entry" test_scaffold_entry_python_module
@@ -284,7 +291,7 @@ hooks:
   commit-msg: [check-commit-message]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-swa" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-swa" > "$TEST_TMP/out" 2>&1
     grep -q 'check-commit-message' "$TEST_TMP/sci-swa/.pre-commit-config.yaml" || { echo "missing commit-msg hook"; return 1; }
     grep -q '"\$1"' "$TEST_TMP/sci-swa/.pre-commit-config.yaml" || { echo "missing \$1 arg"; return 1; }
 }
@@ -304,7 +311,7 @@ overrides:
     entry: "custom-command-here"
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-ov" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-ov" > "$TEST_TMP/out" 2>&1
     grep -q 'custom-command-here' "$TEST_TMP/sci-ov/.pre-commit-config.yaml" || { echo "missing override entry"; return 1; }
     grep -q 'ci_check_unstaged' "$TEST_TMP/sci-ov/.pre-commit-config.yaml" && { echo "original entry should not be present"; return 1; } || true
 }
@@ -321,7 +328,7 @@ hooks:
   pre-commit: [check-unstaged]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-poc" --force > "$TEST_TMP/out" 2>&1
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-poc" > "$TEST_TMP/out" 2>&1
     [[ -f "$TEST_TMP/sci-poc/.pre-commit-config.yaml" ]] || { echo "no output for poc"; return 1; }
     grep -q 'ci-lint' "$TEST_TMP/sci-poc/.pre-commit-config.yaml" && { echo "ci-lint should not be in poc tier"; return 1; } || true
     grep -q 'check-unstaged' "$TEST_TMP/sci-poc/.pre-commit-config.yaml" || { echo "missing safety hook"; return 1; }
