@@ -232,7 +232,7 @@ EOF
     cd "$PROJECT_DIR"
     bash "$_SCI_SCRIPT" --consumer "$consumer" > "$TEST_TMP/out" 2>&1
 
-    grep -q 'auto-inserted' "$TEST_TMP/out" || { echo "missing auto-insert message"; return 1; }
+    grep -qi 'auto-inserted' "$TEST_TMP/out" || { echo "missing auto-insert message"; return 1; }
     grep -q 'block-sensitive-files' "$consumer/.pre-commit-config.yaml" || { echo "missing block-sensitive-files"; return 1; }
     grep -q 'ci-lint' "$consumer/.pre-commit-config.yaml" || { echo "missing ci-lint"; return 1; }
     grep -q 'block-coauthored' "$consumer/.pre-commit-config.yaml" || { echo "missing block-coauthored"; return 1; }

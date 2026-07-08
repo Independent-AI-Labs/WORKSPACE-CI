@@ -10,3 +10,4 @@ extensions:
   - ".tsx"
   - ".rs"
   - ".css"
+  - ".lua"

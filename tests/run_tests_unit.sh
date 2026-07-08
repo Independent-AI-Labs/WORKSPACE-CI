@@ -15,6 +15,7 @@ source "$TESTS_DIR/unit/test_checks.sh"
 source "$TESTS_DIR/unit/test_portable_shell.sh"
 source "$TESTS_DIR/unit/test_scaffold_ci.sh"
 source "$TESTS_DIR/unit/test_scaffold_ci_gen.sh"
+source "$TESTS_DIR/unit/test_scaffold_ci_inspect.sh"
 source "$TESTS_DIR/unit/test_scaffold_ci_force.sh"
 
 # Summary

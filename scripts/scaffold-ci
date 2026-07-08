@@ -5,9 +5,15 @@
 #   .pre-commit-config.yaml, Makefile, config/*.yaml, quality_exceptions.yaml
 #
 # Usage: scaffold-ci --consumer PATH [--profile PATH] [--dry-run]
-#                   [--force-precommit] [--force-makefile] [--force-configs]
-#                   [--force-all] [--yes] [--no-backup]
+#                   [--apply-precommit] [--apply-makefile] [--apply-configs]
+#                   [--apply-all] [--append-makefile] [--analyze] [--diff]
+#                   [--json] [--yes] [--no-backup] [--lax-applicable]
 #        scaffold-ci --emit-template
+# Default (no flag): generate MISSING files only; print analyze table.
+# --analyze: print state of every file, write nothing.
+# --apply-* / --force-*: overwrite existing customized files (Makefile has
+#   a 5a guard refusing hand-edited files; --append-makefile adds missing
+#   targets without clobbering existing recipes).
 set -euo pipefail
 
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -37,63 +43,35 @@ _force_all=0
 _make_backup=1
 _assume_yes=0
 _emit_template=0
+_analyze_only=0
+_diff_only=0
+_json_only=0
+_append_mf=0
+_strict_applicable=1
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --consumer)        _consumer="$2"; shift 2 ;;
         --profile)         _profile="$2"; shift 2 ;;
         --dry-run)         _dry_run=1; shift ;;
-        --force-precommit) _force_pc=1; shift ;;
-        --force-makefile)  _force_mf=1; shift ;;
-        --force-configs)   _force_cfg=1; shift ;;
-        --force-all)       _force_all=1; shift ;;
+        --force-precommit|--apply-precommit) _force_pc=1; shift ;;
+        --force-makefile|--apply-makefile)   _force_mf=1; shift ;;
+        --force-configs|--apply-configs)    _force_cfg=1; shift ;;
+        --force-all|--apply-all)             _force_all=1; shift ;;
+        --append-makefile) _append_mf=1; shift ;;
+        --analyze)         _analyze_only=1; shift ;;
+        --diff)           _diff_only=1; shift ;;
+        --json)           _json_only=1; shift ;;
+        --lax-applicable) _strict_applicable=0; shift ;;
         --yes)             _assume_yes=1; shift ;;
         --no-backup)       _make_backup=0; shift ;;
         --emit-template)   _emit_template=1; shift ;;
-        --force)
-            cat >&2 <<'MSG'
-ERROR: --force is removed. The single --force flag could overwrite a
-hand-edited Makefile and customised config/*.yaml in one shot, with no backup
-and no confirmation. Use a granular flag instead:
-
-  --force-precommit   Overwrite .pre-commit-config.yaml only.
-  --force-makefile    Overwrite Makefile only. REFUSES if the existing
-                      Makefile is customised (differs from the template);
-                      you must delete the file by hand to proceed.
-  --force-configs     Overwrite config/*.yaml (6 files) only.
-  --force-all         All of the above combined. Requires --yes in non-TTY.
-
-Add --yes to skip the interactive confirmation prompt (required when stdout
-is not a TTY, e.g. piped to a file). Backups (*.scaffold-bak.<epoch>) are
-written by default; pass --no-backup to disable.
-MSG
+--force)
+            _scl_force_error_msg
             exit 1
             ;;
-        -h|--help)
-            cat <<'USAGE'
-Usage: scaffold-ci --consumer PATH [--profile PATH] [--dry-run]
-                   [--force-precommit] [--force-makefile] [--force-configs]
-                   [--force-all] [--yes] [--no-backup]
-       scaffold-ci --emit-template
-
-  --consumer PATH        Consumer project directory (required for scaffolding).
-  --profile PATH         Profile YAML (default: <consumer>/ci-profile.yaml).
-  --dry-run              Print intended file content without writing.
-
-  Overwrite flags (granular; the old blanket --force is removed):
-  --force-precommit      Overwrite .pre-commit-config.yaml only.
-  --force-makefile       Overwrite Makefile only. REFUSES if the existing
-                         Makefile has been customised (differs from the
-                         template); delete the file by hand to regenerate.
-  --force-configs        Overwrite config/*.yaml (6 files) only.
-  --force-all            Equivalent to all three --force-* flags.
-
-  --yes                  Skip the interactive confirmation prompt (required
-                         when stdout is not a TTY).
-  --no-backup            Do not write *.scaffold-bak.<epoch> backups before
-                         overwriting (backups are on by default).
-  --emit-template        Regenerate templates/ci-profile.template.yaml.
-USAGE
+-h|--help)
+            _scl_help_msg
             exit 0
             ;;
         *) ci_fail "Unknown option: $1"; exit 1 ;;
@@ -314,7 +292,11 @@ _scl_validate_ids() {
             if [[ $_found -eq 1 ]]; then break; fi
         done
         if [[ $_found -eq 0 ]]; then
-            _d_warnings+=("hook '$_id': applicable_to=[$_app] does not intersect languages=[${_pf_languages[*]}]")
+            if [[ $_strict_applicable -eq 1 ]]; then
+                _d_errors+=("hook '$_id': applicable_to=[$_app] does not intersect languages=[${_pf_languages[*]}] (wiring anyway would fail at commit time with no diagnostic; pass --lax-applicable to downgrade to warning)")
+            else
+                _d_warnings+=("hook '$_id': applicable_to=[$_app] does not intersect languages=[${_pf_languages[*]}] (--lax-applicable; hook may fail at commit time)")
+            fi
         fi
     done
     return 0
@@ -364,9 +346,28 @@ for _rid in "${!_reg_id[@]}"; do
             pre-push)   _pf_hooks_pre_push+=("$_rid") ;;
         esac
         _auto_inserted+=("$_rid")
-        ci_warn "auto-inserted required hook '$_rid' into stage '$_mstage'"
     fi
 done
+
+# ── Render generated content once (used by analyze/diff/apply/append) ──────
+_pc_target="$_consumer/.pre-commit-config.yaml"
+_mf_target="$_consumer/Makefile"
+_pc_content="$(_scl_gen_precommit)"
+_mf_content="$(_scl_gen_makefile)"
+
+# ── Inspection-only dispatch (no writes, no confirmation needed) ───────────
+if [[ $_json_only -eq 1 ]]; then
+    _scl_analyze_json
+    exit 0
+fi
+if [[ $_diff_only -eq 1 ]]; then
+    _scl_diff_mode
+    exit 0
+fi
+if [[ $_analyze_only -eq 1 ]]; then
+    _scl_analyze_text
+    exit 0
+fi
 
 # ── Force-flag confirmation ────────────────────────────────────────────────
 _any_force=$(( _force_pc + _force_mf + _force_cfg + _force_all ))
@@ -405,11 +406,10 @@ fi
 # ── Generation ─────────────────────────────────────────────────────────────
 ci_info "==> scaffolding CI integration for $_consumer (tier=$_pf_tier, languages=${_pf_languages[*]}, REL_CI=$REL_CI)"
 
-_pc_target="$_consumer/.pre-commit-config.yaml"
 if [[ -f "$_pc_target" && $_force_pc -eq 0 && $_force_all -eq 0 ]]; then
-    _skipped+=("$_pc_target (exists, use --force-precommit)")
+    _pcs="$(_scl_state "$_pc_content" "$_pc_target")"
+    _skipped+=("$_pc_target ($_pcs; refresh with --force-precommit, diff with --diff)")
 else
-    _pc_content="$(_scl_gen_precommit)"
     if [[ $_dry_run -eq 1 ]]; then
         echo "================================================================================"
         echo "Would write: $_pc_target  (REL_CI=$REL_CI)"
@@ -419,47 +419,46 @@ else
         _scl_backup "$_pc_target" "$_make_backup" _backups_written
         printf '%s\n' "$_pc_content" > "$_pc_target"
         _generated+=("$_pc_target")
+        ci_warn ".pre-commit-config.yaml updated; run 'make install-hooks' to propagate to .git/hooks/pre-commit"
     fi
 fi
 
-_mf_target="$_consumer/Makefile"
-_mf_content="$(_scl_gen_makefile)"
-if [[ -f "$_mf_target" && $_force_mf -eq 0 && $_force_all -eq 0 ]]; then
-    _skipped+=("$_mf_target (exists, use --force-makefile)")
-elif [[ -f "$_mf_target" ]]; then
-    # 5a guard: refuse to overwrite a customised Makefile. Only safe to
-    # refresh when the existing file matches the template modulo the
-    # auto-generated timestamp comment (FR-SC-13.1/13.2: consecutive runs
-    # may differ ONLY by the embedded timestamp). Strip that line from both
-    # sides before comparing, so an un-customised Makefile can be refreshed
-    # while a hand-edited one is still protected.
-    _mf_rendered_cleaned="$(printf '%s\n' "$_mf_content" | grep -v '^# AUTO-GENERATED by .* \[' )"
-    _mf_existing_cleaned="$(grep -v '^# AUTO-GENERATED by .* \[' "$_mf_target" )"
-    if [[ "$_mf_rendered_cleaned" != "$_mf_existing_cleaned" ]]; then
-        ci_fail "Makefile is customised (differs from scaffold template modulo the auto-generated timestamp). scaffold-ci refuses to overwrite a hand-edited Makefile."
-        echo "  To inspect the template: scaffold-ci --consumer <path> --dry-run (look for the Makefile block)." >&2
-        echo "  To regenerate: delete the Makefile by hand (scaffold-ci offers no auto-override for customised Makefiles), then re-run --force-makefile." >&2
-        exit 1
-    fi
-    if [[ $_dry_run -eq 1 ]]; then
-        echo "================================================================================"
-        echo "Would refresh: $_mf_target (matches template modulo timestamp, no customisation lost)"
-        echo "================================================================================"
-        printf '%s\n' "$_mf_content"
-    else
-        _scl_backup "$_mf_target" "$_make_backup" _backups_written
-        printf '%s\n' "$_mf_content" > "$_mf_target"
-        _generated+=("$_mf_target")
-    fi
+if [[ $_append_mf -eq 1 ]]; then
+    _scl_append_makefile "$_mf_content"
 else
-    if [[ $_dry_run -eq 1 ]]; then
-        echo "================================================================================"
-        echo "Would write: $_mf_target"
-        echo "================================================================================"
-        printf '%s\n' "$_mf_content"
+    if [[ -f "$_mf_target" && $_force_mf -eq 0 && $_force_all -eq 0 ]]; then
+        _mfs="$(_scl_state "$_mf_content" "$_mf_target")"
+        _skipped+=("$_mf_target ($_mfs; refresh with --force-makefile, append new targets with --append-makefile)")
+    elif [[ -f "$_mf_target" ]]; then
+        # 5a guard: refuse to overwrite a customised Makefile.
+        _mf_rendered_cleaned="$(printf '%s\n' "$_mf_content" | _scl_strip_ts)"
+        _mf_existing_cleaned="$(_scl_strip_ts < "$_mf_target")"
+        if [[ "$_mf_rendered_cleaned" != "$_mf_existing_cleaned" ]]; then
+            ci_fail "Makefile is customised (differs from scaffold template modulo the auto-generated timestamp). scaffold-ci refuses to overwrite a hand-edited Makefile."
+            echo "  To inspect the template: scaffold-ci --consumer <path> --dry-run (look for the Makefile block)." >&2
+            echo "  To regenerate: delete the Makefile by hand (scaffold-ci offers no auto-override for customised Makefiles), then re-run --force-makefile." >&2
+            exit 1
+        fi
+        if [[ $_dry_run -eq 1 ]]; then
+            echo "================================================================================"
+            echo "Would refresh: $_mf_target (matches template modulo timestamp, no customisation lost)"
+            echo "================================================================================"
+            printf '%s\n' "$_mf_content"
+        else
+            _scl_backup "$_mf_target" "$_make_backup" _backups_written
+            printf '%s\n' "$_mf_content" > "$_mf_target"
+            _generated+=("$_mf_target")
+        fi
     else
-        printf '%s\n' "$_mf_content" > "$_mf_target"
-        _generated+=("$_mf_target")
+        if [[ $_dry_run -eq 1 ]]; then
+            echo "================================================================================"
+            echo "Would write: $_mf_target"
+            echo "================================================================================"
+            printf '%s\n' "$_mf_content"
+        else
+            printf '%s\n' "$_mf_content" > "$_mf_target"
+            _generated+=("$_mf_target")
+        fi
     fi
 fi
 

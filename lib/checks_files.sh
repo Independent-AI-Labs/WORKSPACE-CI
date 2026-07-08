@@ -119,15 +119,15 @@ ci_block_sensitive_files() {
 # config/file_length_limits.yaml.
 # The default limit is 512 lines with support for per-file overrides in the
 # config.
-# Scans .py, .sh, .js, .ts, .tsx, .rs, and .css files, skipping ignored
-# directories.
+# Scans .py, .sh, .js, .ts, .tsx, .rs, .css, and .lua files, skipping
+# ignored directories.
 ci_check_file_length() {
     local config="./config/file_length_limits.yaml"
     if [[ ! -f "$config" ]]; then
         config="${CI_CONFIG_DIR}/file_length_limits.yaml"
     fi
     local max_lines=512
-    local exts=(.py .sh .js .ts .tsx .rs .css)
+    local exts=(.py .sh .js .ts .tsx .rs .css .lua)
     local errors=0
 
     # Read config if available
