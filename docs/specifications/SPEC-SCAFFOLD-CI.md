@@ -337,11 +337,20 @@ For every hook ID listed in `hooks.<stage>`:
              the profile.
    ```
 3. Cross-check `applicable_to`: the hook's `applicable_to` MUST intersect
-   the profile's `languages`. A hook declared `applicable_to: [python]`
-   is a WARNING (not failure) when the profile declares `languages: [rust]`
-   -- the user may deliberately include it. The warning is surfaced via
-   `ci_warn` to stderr and listed in the post-run summary, but the
-   generator proceeds.
+   the profile's `languages`. By default (`--strict-applicable`, the
+   default), a mismatch is a **hard error** (the hook would fail at commit
+   time with no diagnostic; wiring it would be a disservice). The error
+   message includes a hint to pass `--lax-applicable`:
+   ```
+   FAILED: hook '$ID': applicable_to=[$APP] does not intersect
+            languages=[$LANGS] (wiring anyway would fail at commit
+            time with no diagnostic; pass --lax-applicable to downgrade
+            to warning)
+   ```
+   When `--lax-applicable` is given, the error is downgraded to a
+   `ci_warn` warning to stderr and listed in the post-run summary, but the
+   generator proceeds. This preserves the original behaviour for users
+   who deliberately include a cross-language hook.
 
 ### 4.5 Phase E: Mandatory-Hook Completeness Check
 
@@ -710,16 +719,27 @@ catches missing files).
 ### 8.3 Overwrite Policy
 
 - If `<consumer>/config/<file>` does not exist: copy unconditionally.
-- If it exists AND its contents match the canonical CI default: copy
-  (effectively a no-op refresh, no user-visible change).
-- If it exists AND its contents differ from CI default AND `--force` is
-  NOT set: skip with a `ci_warn` listing the file. The user is told they
-  can force the overwrite with `--force` or accept that their local
-  override will diverge (per Rule 13: no silent overwrite).
-- If it exists AND its contents differ from CI default AND `--force` IS
-  set: overwrite, but the script prints a summary of the overwritten
-  files at the end so the user can `git diff` and re-apply any
-  intentional local edits.
+- If it exists AND its contents match the canonical CI default (modulo the
+  auto-generated timestamp header): copy (effectively a no-op refresh, no
+  user-visible change). The comparison strips the timestamp line so an
+  un-customised config file rotated by a `--force-configs` refresh is
+  detected as `IN_SYNC` rather than spuriously flagged as customised.
+- If it exists AND its contents differ from the rendered template AND
+  `--force-configs` / `--apply-configs` is NOT set: skip with a `ci_warn`
+  listing the file and suggesting `--force-configs` to refresh or `--diff`
+  to inspect the differences (per Rule 13: no silent overwrite).
+- If it exists AND its contents differ from the rendered template AND
+  `--force-configs` / `--apply-configs` IS set: overwrite, but the script
+  prints a summary of the overwritten files at the end so the user can
+  `git diff` and re-apply any intentional local edits.
+
+The overwrite comparison now honours existing on-disk customisations
+during rendering: when the `dead_code` postproc detects an existing
+non-empty `scan_paths` value on disk, it preserves that value instead of
+resetting it to the language-based guess. Likewise, the `coverage`
+postproc preserves existing `unit.*` fields from the on-disk copy rather
+than letting the `source_path` sed substitution clobber per-stack test
+runner config.
 
 ### 8.4 Manifest Validation
 
@@ -819,28 +839,114 @@ ARGS=--emit-template` passes the flag through via the existing
 
 ---
 
+## 10.1 Inspection Modes (`--analyze`, `--diff`, `--json`)
+
+Three read-only modes report state without touching disk:
+
+| Flag | Output format | Use case |
+|------|---------------|----------|
+| `--analyze` | Text table: per-file state (MISSING / IN_SYNC / CUSTOMIZED), Makefile target diff (missing / common / extra), hook-wiring drift, override path checks | Pre-flight audit before a CI upgrade |
+| `--diff` | Unified diffs of each file that differs from the rendered template; MISSING files show the full rendered content | Review customisations before force-refreshing |
+| `--json` | Single JSON object: `consumer`, `profile`, `files[]` (path + state), `makefile_targets` (missing / common / extra arrays), `hook_drift` (state + config/exec counts) | Dashboard / CI-pipeline consumption; pipe to `jq` |
+
+All three render the generated content in-memory (via the same
+`_scl_gen_precommit`, `_scl_gen_makefile`, and `_scl_render_config`
+functions used by the apply path) and compare against on-disk state.
+State detection strips the volatile `# AUTO-GENERATED` timestamp line
+before comparing, so a file that matches the template modulo the
+timestamp is reported as `IN_SYNC`, not `CUSTOMIZED`.
+
+The `--json` output is emitted on stdout; all warnings (auto-insert
+notices, applicability hints) are printed to stderr so they do not
+corrupt the JSON payload.
+
+## 10.2 Append Mode (`--append-makefile`)
+
+```bash
+scaffold-ci --consumer <path> --append-makefile --yes
+```
+
+Parses target names from the existing `Makefile` at `<path>/Makefile`
+and from the rendered template content. For each template target absent
+from the existing Makefile, the entire target block (header line + recipe
+lines starting with TAB) is appended to the existing file. A marker
+comment is inserted before the appended blocks:
+
+```makefile
+# -- Appended by scaffold-ci --append-makefile [<timestamp>] --
+```
+
+Targets present in both the template and the existing Makefile are
+skipped (assumed in sync or intentionally customised). If no targets
+are missing, the script reports "no missing targets" and the Makefile is
+not modified.
+
+This mode is the safe alternative to `--force-makefile` for consumers
+with a hand-edited Makefile: existing recipes are preserved, and only
+new contract targets are added.
+
+---
+
 ## 11. CLI: `scripts/scaffold-ci`
 
 ### 11.1 Usage
 
 ```
-Usage: scaffold-ci --consumer PATH [--profile PATH] [--dry-run] [--force]
-                   scaffold-ci --emit-template
+Usage: scaffold-ci --consumer PATH [--profile PATH] [--dry-run]
+                   [--force-precommit|--apply-precommit]
+                   [--force-makefile|--apply-makefile]
+                   [--force-configs|--apply-configs]
+                   [--force-all|--apply-all]
+                   [--append-makefile] [--analyze] [--diff] [--json]
+                   [--yes] [--no-backup] [--lax-applicable]
+       scaffold-ci --emit-template
 
-  --consumer PATH   Consumer project directory (required for scaffolding).
-                    MUST exist on disk; need not be a git repo.
-  --profile PATH    Profile YAML path. Default: <consumer>/ci-profile.yaml.
-                    The file MUST exist; the script does not create it.
-  --dry-run         Print every file's intended content via `cat` to stdout;
-                    do not write any file. Output is prefixed with a
-                    per-file header suitable for diffing.
-  --force           Overwrite existing .pre-commit-config.yaml and Makefile
-                    unconditionally. Does NOT touch existing quality_exceptions.yaml
-                    (§9.2) or already-customised config/ files (§8.3 c rule 3).
-  --emit-template   Regenerate CI/templates/ci-profile.template.yaml from
-                    config/required_hooks.yaml and exit. Maintenance-only mode;
-                    ignores all other flags.
-  -h | --help       Show this usage.
+  Default (no flags):    Print analyze table; generate any MISSING file;
+                         leave existing files untouched. Fresh-scaffold
+                         (all files missing) writes everything.
+  --consumer PATH        Consumer project directory (required for scaffolding).
+                         MUST exist on disk; need not be a git repo.
+  --profile PATH         Profile YAML path. Default: <consumer>/ci-profile.yaml.
+                         The file MUST exist; the script does not create it.
+  --dry-run              Print every file's intended content via `cat` to stdout;
+                         do not write any file. Output is prefixed with a
+                         per-file header suitable for diffing.
+
+  Overwrite flags (granular; --apply-* are aliases of --force-*):
+  --force-precommit      Overwrite .pre-commit-config.yaml only.
+  --force-makefile       Overwrite Makefile only. REFUSES if the existing
+                         Makefile has been customised (differs from the
+                         template); delete the file by hand to regenerate.
+  --force-configs        Overwrite config/*.yaml (6 files) only.
+  --force-all            Equivalent to all three --force-* flags.
+
+  Append mode:
+  --append-makefile      Append any template targets missing from the existing
+                         Makefile without touching existing recipes. Reports
+                         what was added; useful for wiring in new scaffold
+                         targets into a hand-edited Makefile.
+
+  Inspection flags (never write):
+  --analyze              Print per-file state table (MISSING/IN_SYNC/
+                         CUSTOMIZED) and exit; no writes, including missing
+                         files.
+  --diff                 Print unified diffs against on-disk files and exit.
+  --json                 Print machine-readable analyze JSON. Implies
+                         --analyze semantics (no writes). Pipe to jq or a
+                         dashboard consumer.
+
+  Hooks:
+  --yes                  Skip the interactive confirmation prompt (required
+                         when stdout is not a TTY).
+  --no-backup            Do not write *.scaffold-bak.<epoch> backups before
+                         overwriting (backups are on by default).
+  --lax-applicable       Downgrade applicable_to mismatch from hard error to
+                         warning (default is strict: refuse to wire a hook
+                         the registry says does not apply to these languages).
+  --emit-template        Regenerate CI/templates/ci-profile.template.yaml from
+                         config/required_hooks.yaml and exit. Maintenance-only mode;
+                         ignores all other flags.
+  -h | --help            Show this usage.
 ```
 
 ### 11.2 Strict-Mode Compliance (per AGENTS.md Rule 14)

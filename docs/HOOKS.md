@@ -320,18 +320,57 @@ cd myproject && make install-hooks
 
 | File | Overwritten by? | Purpose |
 |------|-----------------|---------|
-| `.pre-commit-config.yaml` | `--force-precommit` or `--force-all` | Hook configuration (consumed by `generate-hooks`) |
-| `Makefile` | `--force-makefile` (**refuses if customised**) | 10-target contract with vacuous stubs |
-| `config/*.yaml` | `--force-configs` or `--force-all` (new files only otherwise) | 6 default CI config files |
+| `.pre-commit-config.yaml` | `--force-precommit` / `--apply-precommit` or `--force-all` / `--apply-all` | Hook configuration (consumed by `generate-hooks`) |
+| `Makefile` | `--force-makefile` / `--apply-makefile` (**refuses if customised**) | 10-target contract with vacuous stubs |
+| `config/*.yaml` | `--force-configs` / `--apply-configs` or `--force-all` / `--apply-all` (new files only otherwise) | 6 default CI config files |
 | `quality_exceptions.yaml` | **Never** | Per-project exception declarations |
 
 The blanket `--force` flag is **removed**. Use granular flags instead:
 `--force-precommit`, `--force-makefile`, `--force-configs`, or `--force-all`.
+Each `--force-*` flag has an `--apply-*` alias (`--apply-precommit`,
+`--apply-makefile`, `--apply-configs`, `--apply-all`) with identical
+behaviour; the aliases are provided for naming clarity in CI pipelines
+where "force" connotes danger.
 Add `--yes` for non-interactive runs (required when stdout is not a TTY).
 Backups (`*.scaffold-bak.<epoch>`) are written by default; pass `--no-backup`
 to suppress. A customised Makefile (differs from the template modulo the
 auto-generated timestamp) is never overwritten automatically; you must
-delete it by hand to regenerate.
+delete it by hand to regenerate, or use `--append-makefile` to add missing
+targets without clobbering existing recipes.
+
+### Inspection Modes (read-only, write nothing)
+
+scaffold-ci offers three inspection flags that analyse state without
+touching disk:
+
+| Flag | Output | Use case |
+|------|--------|----------|
+| `--analyze` | Per-file state table (MISSING / IN_SYNC / CUSTOMIZED), Makefile target diff, hook-wiring status, override path checks | Pre-flight audit before a CI upgrade |
+| `--diff` | Unified diffs of each file that differs from the rendered template | Review customisations before force-refreshing |
+| `--json` | Machine-readable JSON (consumer, profile, per-file states, makefile target sets, hook-drift counts) | Dashboard / CI-pipeline consumption; pipe to `jq` |
+
+### Append Mode
+
+```bash
+make -C ../CI scaffold-ci ARGS="--consumer myproject --append-makefile --yes"
+```
+
+Adds any template targets missing from the existing `Makefile` without
+clobbering existing recipes. Useful when a new CI release adds contract
+targets (e.g. `preflight`, `clean-precommit`) and the consumer has a
+hand-edited Makefile. Each appended block is marked with an
+`# -- Appended by scaffold-ci --append-makefile [<timestamp>] --` comment.
+
+### Applicability Strictness
+
+By default, a hook whose `applicable_to` does not intersect the profile's
+`languages` is a **hard error** (the hook would fail at commit time with
+no diagnostic). Pass `--lax-applicable` to downgrade this to a warning
+and proceed with scaffolding:
+
+```bash
+make -C ../CI scaffold-ci ARGS="--consumer myproject --lax-applicable --yes"
+```
 
 ### Mandatory Hook Auto-Insertion
 
