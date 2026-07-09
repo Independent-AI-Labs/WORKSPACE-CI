@@ -169,7 +169,7 @@ repos:
 
       - id: check-dead-code
         name: Dead Code Analysis (non-blocking)
-        entry: ".venv/bin/python -m ci.check_dead_code"
+        entry: "bash -c 'source lib/checks.sh && ci_check_dead_code'"
         language: system
         stages: [pre-push]
         pass_filenames: false

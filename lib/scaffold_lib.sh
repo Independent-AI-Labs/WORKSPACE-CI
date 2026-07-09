@@ -159,7 +159,12 @@ $_preserved"
     elif [[ "$_pp" == "dead_code" ]]; then
         local _scan_val="[]"
         for _lang in "${_pf_languages[@]}"; do
-            case "$_lang" in rust) _scan_val="[src]" ;; esac
+            case "$_lang" in
+                rust)   _scan_val="[src]" ;;
+                python) _scan_val="[ci]" ;;
+                lua)    _scan_val="[src]" ;;
+                shell)  _scan_val="[lib bin scripts]" ;;
+            esac
         done
         # Prefer existing on-disk scan_paths if the value is non-empty.
         if [[ -n "$_consumer_dir" && -f "$_consumer_dir/config/dead_code.yaml" ]]; then

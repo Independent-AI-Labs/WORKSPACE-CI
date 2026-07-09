@@ -177,10 +177,10 @@ languages: [rust]
 hooks:
   pre-commit:
     - check-unstaged
-    - check-dead-code
+    - check-duplicate-dependencies
 EOF
     cd "$PROJECT_DIR"
-    # Without --lax-applicable this is a hard error (check-dead-code is [python], profile is rust).
+    # Without --lax-applicable this is a hard error (check-duplicate-dependencies is [python], profile is rust).
     local rc=0
     bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-la" > "$TEST_TMP/out" 2>&1 || rc=$?
     [[ $rc -ne 0 ]] || { echo "strict applicable should error"; return 1; }

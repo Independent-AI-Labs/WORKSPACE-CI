@@ -110,7 +110,7 @@ hooks:
 EOF
     cd "$PROJECT_DIR"
     bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-dcp" > "$TEST_TMP/out" 2>&1
-    grep -q 'scan_paths: \[\]' "$TEST_TMP/sci-dcp/config/dead_code.yaml" || { echo "missing empty scan_paths"; return 1; }
+    grep -q 'scan_paths: \[ci\]' "$TEST_TMP/sci-dcp/config/dead_code.yaml" || { echo "missing scan_paths [ci]"; return 1; }
 }
 _run_test "scaffold: dead_code python gets []" test_scaffold_dead_code_python
 

@@ -1,5 +1,5 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
-import { GrafanaEmbed } from '@/components/wiki/GrafanaEmbed'
+import { GatewayTabs } from '@/components/wiki/GatewayTabs'
 import { getBranding } from '@/lib/branding'
 
 export default function LLMGatewayPage() {
@@ -13,10 +13,7 @@ export default function LLMGatewayPage() {
       </section>
 
       <div className="gateway-dashboard">
-        <GrafanaEmbed
-          src={branding.grafana_url}
-          title={branding.grafana_dashboard_title}
-        />
+        <GatewayTabs dashboards={branding.grafana_dashboards} />
       </div>
     </WikiShell>
   )

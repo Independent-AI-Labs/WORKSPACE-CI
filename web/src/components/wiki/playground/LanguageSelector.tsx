@@ -1,14 +1,14 @@
 'use client'
 
-import { getWikiLabels } from '@/lib/yaml-loader'
+import type { PlaygroundLanguage } from '@/types/wiki-labels'
 
 interface LanguageSelectorProps {
   value: string
   onChange: (lang: string) => void
+  languages: PlaygroundLanguage[]
 }
 
-export function LanguageSelector({ value, onChange }: LanguageSelectorProps) {
-  const languages = getWikiLabels().playground_languages
+export function LanguageSelector({ value, onChange, languages }: LanguageSelectorProps) {
   return (
     <select
       className="language-selector"

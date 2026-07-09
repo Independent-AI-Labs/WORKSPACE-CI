@@ -212,14 +212,14 @@ hooks:
   # ─────────────────────────────────────────────────────────────────────
 
   - id: check-dead-code
-    kind: python_module
-    entry: ci.check_dead_code
+    kind: shell
+    entry: ci_check_dead_code
     stage: pre-push
     pass_filenames: false
     always_run: true
     mandatory: false
     safety: false
-    applicable_to: [python]
+    applicable_to: [any]
 
   - id: check-dependency-versions
     kind: python_module

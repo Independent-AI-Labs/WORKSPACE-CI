@@ -96,7 +96,7 @@ jobs:
         continue-on-error: true
 
       - name: Dead code analysis (non-blocking)
-        run: .venv/bin/python -m ci.check_dead_code
+        run: bash -c 'source lib/checks.sh && ci_check_dead_code'
         continue-on-error: true
 
   # ─────────────────────────────────────────────────────────────────────

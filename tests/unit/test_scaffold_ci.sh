@@ -225,7 +225,7 @@ test_parser_registry_applicable() {
     [[ -n "$line" ]] || { echo "check-dead-code line missing"; return 1; }
     local _app
     _app="$(echo "$line" | awk -F'\034' '{print $9}')"
-    _assert_eq "python" "$_app" "applicable_to for check-dead-code"
+    _assert_eq "any" "$_app" "applicable_to for check-dead-code"
 }
 _run_test "parser_registry: applicable_to field" test_parser_registry_applicable
 

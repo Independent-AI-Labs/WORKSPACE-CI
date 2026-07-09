@@ -3,6 +3,11 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { load } from 'js-yaml'
 
+export interface GrafanaDashboardConfig {
+  title: string
+  url: string
+}
+
 export interface Branding {
   name: string
   sidebar_title_thin: string
@@ -15,8 +20,7 @@ export interface Branding {
   footer_tagline: string
   footer_copyright: string
   contact_email: string
-  grafana_url: string
-  grafana_dashboard_title: string
+  grafana_dashboards: GrafanaDashboardConfig[]
   grafana_subtitle: string
   standards_page_intro: string
   contact_button_label: string

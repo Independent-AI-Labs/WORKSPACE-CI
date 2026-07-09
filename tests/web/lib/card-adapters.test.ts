@@ -66,9 +66,16 @@ const labels: WikiLabelsConfig = {
   },
   playground_languages: [
     { id: 'python', label: 'Python' },
+    { id: 'shell', label: 'Shell' },
+    { id: 'js_ts', label: 'JS/TS' },
+    { id: 'ansible', label: 'Ansible' },
+    { id: 'cron', label: 'Cron' },
+    { id: 'bash', label: 'Bash' },
     { id: 'javascript', label: 'JavaScript' },
     { id: 'typescript', label: 'TypeScript' },
-    { id: 'shell', label: 'Shell' },
+    { id: 'rust', label: 'Rust' },
+    { id: 'go', label: 'Go' },
+    { id: 'lua', label: 'Lua' },
     { id: 'yaml', label: 'YAML' },
   ],
 }

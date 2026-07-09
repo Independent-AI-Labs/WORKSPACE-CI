@@ -362,7 +362,7 @@ EOF
 }
 _run_test "scaffold_override: entry written verbatim" test_scaffold_override_verbatim
 
-# ── Python language gets empty dead_code scan_paths ────────────────────────
+# ── Python language gets [ci] dead_code scan_paths ──────────────────────────
 
 test_scaffold_python_dead_code() {
     local consumer="$TEST_TMP/workspace/projects/PY-DC-TEST"
@@ -378,9 +378,9 @@ EOF
     cd "$PROJECT_DIR"
     bash "$_SCI_SCRIPT" --consumer "$consumer" > "$TEST_TMP/out" 2>&1
 
-    grep -q 'scan_paths: \[\]' "$consumer/config/dead_code.yaml" || { echo "missing empty scan_paths"; return 1; }
+    grep -q 'scan_paths: \[ci\]' "$consumer/config/dead_code.yaml" || { echo "missing [ci] scan_paths"; return 1; }
 }
-_run_test "scaffold_python: dead_code gets empty scan_paths" test_scaffold_python_dead_code
+_run_test "scaffold_python: dead_code gets [ci] scan_paths" test_scaffold_python_dead_code
 
 # ── Rust language gets [src] dead_code scan_paths ──────────────────────────
 

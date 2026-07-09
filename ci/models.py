@@ -1,4 +1,4 @@
-"""CI-specific result types for dependency checking and dead code analysis.
+"""CI-specific result types for dependency checking.
 
 Provides NamedTuples that support tuple unpacking while adding named field access.
 """
@@ -30,24 +30,6 @@ class ParsedDependency(NamedTuple):
     extras: str | None
     operator: str | None
     version: str | None
-
-
-class DeadCodeEntry(NamedTuple):
-    """Dead code item with line count."""
-
-    name: str
-    kind: str
-    file: str
-    line: int
-    reason: str
-    line_count: int
-
-
-class LoadedConfig(NamedTuple):
-    """Result from loading a dead code config file."""
-
-    raw: object  # config file raw data
-    config: object  # DeadCodeConfig
 
 
 class DependencyCheckResult(NamedTuple):

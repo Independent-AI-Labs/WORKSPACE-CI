@@ -121,8 +121,8 @@ def _manifest_with_one_exemptable() -> HooksManifest:
         hooks=[
             HookEntry(
                 id="check-dead-code",
-                kind="python_module",
-                entry="ci.check_dead_code",
+                kind="shell",
+                entry="ci_check_dead_code",
                 stage="pre-push",
                 mandatory=False,
             ),

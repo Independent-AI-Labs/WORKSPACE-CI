@@ -6,12 +6,13 @@ import { PatternCategoryFilter } from '@/components/wiki/playground/PatternCateg
 import { MatchPanel } from '@/components/wiki/playground/MatchPanel'
 import { CodeEditor } from '@/components/wiki/playground/CodeEditor'
 import type { ClassifiedPattern } from '@/types/patterns'
+import type { PlaygroundLanguage } from '@/types/wiki-labels'
 
 interface EditorApi {
   scrollToLine: (line: number) => void
 }
 
-export function PlaygroundShell({ patterns }: { patterns: ClassifiedPattern[] }) {
+export function PlaygroundShell({ patterns, languages }: { patterns: ClassifiedPattern[]; languages: PlaygroundLanguage[] }) {
   const {
     matches,
     setMatches,
@@ -25,7 +26,7 @@ export function PlaygroundShell({ patterns }: { patterns: ClassifiedPattern[] })
   return (
     <div className="playground-shell">
       <div className="playground-toolbar">
-        <LanguageSelector value={language} onChange={setLanguage} />
+        <LanguageSelector value={language} onChange={setLanguage} languages={languages} />
         <PatternCategoryFilter
           active={activeCategories}
           onToggle={toggleCategory}

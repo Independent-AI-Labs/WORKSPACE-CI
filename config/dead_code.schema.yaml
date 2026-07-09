@@ -6,30 +6,26 @@
 # pages (FR-7.3). This file is the canonical source for field descriptions;
 # the wiki derives documentation from it, never hand-maintaining prose.
 config: dead_code
-description: "AST-based dead code analysis configuration: scan paths, entry points, and ignore rules for check_dead_code.py."
+description: "Dead code analysis configuration consumed by lib/checks_dead_code.sh (the ci_check_dead_code shell function). Wraps the `dangle` Rust binary, which scans git-tracked files for unreferenced functions, classes, variables, and modules across 13 languages (Python, Lua, Bash/Shell, JavaScript, TypeScript incl. TSX, Rust, Go, and more). The keys below narrow which candidates dangle reports are surfaced as warnings."
 fields:
   - path: scan_paths
     type: list<string>
     required: true
-    description: "Directories scanned for Python source files. All .py files under these paths are parsed and analyzed for dead code."
+    description: "Paths (directories or files) under which dead-code candidates are reported. Items whose file is not under a scan_paths entry are dropped from the report (dangle itself still scans the whole git-tracked repo and uses those files as reference sources). Defaults to ['ci'] when the key is absent."
 
   - path: ignore_paths
     type: list<string>
-    description: "Paths excluded from scanning entirely (not parsed, not counted for references)."
-
-  - path: entry_points
-    type: list<string>
-    default: "[]"
-    description: "Modules that are entry points (called directly from CLI or external callers, not imported). These are never reported as dead. Override per-project via config/dead_code_overrides.yaml."
-
-  - path: ignored_names
-    type: list<string>
-    description: "Specific names never reported as dead, regardless of reference count (e.g. 'main', 'cli')."
-
-  - path: ignored_name_patterns
-    type: list<string>
-    description: "Regex patterns for names to ignore. Matches against function, class, and variable names."
+    description: "Paths excluded from REPORTING. Files under these paths are still scanned for references by dangle but never appear in the dead-code report. Use for generated/vendored trees where the unreferenced-symbol noise is known and intentional."
 
   - path: reference_only_paths
     type: list<string>
-    description: "Files excluded from REPORTING dead code but still scanned for references. Used for test files and conftest modules that are never 'dead' but whose imports matter."
+    description: "Files excluded from REPORTING but still scanned for references. Used for test files and conftest modules that are never 'dead' themselves but whose imports matter. dangle's own test-file heuristic (test_ prefix or /tests/ segment) already suppresses reporting for most test files; reference_only_paths covers any remaining stragglers."
+
+  - path: ignored_names
+    type: list<string>
+    default: "['main', 'cli', 'WORKSPACE_MARKERS']"
+    description: "Specific names never reported as dead, regardless of reference count. Useful for module-level constants referenced only from test files (which dangle intentionally skips) and for conventional entry-point names."
+
+  - path: ignored_name_patterns
+    type: list<string>
+    description: "Extended regex (ERE) patterns for names to ignore. Matched against the function/class/variable name reported by dangle before the trailing 'is not referenced' phrase."

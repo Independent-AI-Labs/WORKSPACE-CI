@@ -13,6 +13,9 @@ import {
 } from '@codemirror/language'
 import { shell as shellMode } from '@codemirror/legacy-modes/mode/shell'
 import { yaml as yamlMode } from '@codemirror/legacy-modes/mode/yaml'
+import { go as goMode } from '@codemirror/legacy-modes/mode/go'
+import { lua as luaMode } from '@codemirror/legacy-modes/mode/lua'
+import { rust as rustMode } from '@codemirror/legacy-modes/mode/rust'
 import type { ClassifiedPattern, PatternCategory } from '@/types/patterns'
 import type { PatternMatch } from '@/types/wiki'
 import { runPatterns } from '@/lib/regex-engine'
@@ -57,13 +60,29 @@ export const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
     }))
 
     const getLanguageExtension = (lang: string) => {
-      if (lang === 'python') return [python()]
-      if (lang === 'javascript' || lang === 'typescript') {
-        return [javascript()]
+      switch (lang) {
+        case 'python':
+        case 'bash':
+          return [python()]
+        case 'javascript':
+        case 'typescript':
+        case 'js_ts':
+          return [javascript()]
+        case 'shell':
+        case 'cron':
+          return [StreamLanguage.define(shellMode)]
+        case 'ansible':
+        case 'yaml':
+          return [StreamLanguage.define(yamlMode)]
+        case 'go':
+          return [StreamLanguage.define(goMode)]
+        case 'lua':
+          return [StreamLanguage.define(luaMode)]
+        case 'rust':
+          return [StreamLanguage.define(rustMode)]
+        default:
+          return []
       }
-      if (lang === 'shell') return [StreamLanguage.define(shellMode)]
-      if (lang === 'yaml') return [StreamLanguage.define(yamlMode)]
-      return []
     }
 
     useEffect(() => {
