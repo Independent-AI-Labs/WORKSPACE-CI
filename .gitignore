@@ -10,6 +10,7 @@ uv.lock
 .coverage
 .venv/
 .boot-linux/
+.boot-macos/
 node_modules/
 tests/web/node_modules
 web/res/

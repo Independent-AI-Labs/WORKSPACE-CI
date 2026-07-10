@@ -381,7 +381,7 @@ ci_compliance_score() {
     local _ws_root="" _registry="" _rel="" _tier="strict"
     local _cur_dir="$project_dir"
     while [[ "$_cur_dir" != "/" ]]; do
-        if [[ -d "$_cur_dir/.boot-linux" && -d "$_cur_dir/projects/CI" ]]; then
+        if [[ (-d "$_cur_dir/.boot-linux" || -d "$_cur_dir/.boot-macos") && -d "$_cur_dir/projects/CI" ]]; then
             _ws_root="$_cur_dir"
             break
         fi

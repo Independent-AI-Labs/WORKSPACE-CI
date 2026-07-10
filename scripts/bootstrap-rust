@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # bootstrap-rust: bootstrap a $RUST_TOOLCHAIN Rust toolchain into CI's own
-# .boot-linux/rust/ and create symlinks in .boot-linux/bin/.
+# $CI_BOOT_NAME/rust/ and create symlinks in $CI_BOOT_NAME/bin/.
 #
 # This project uses `rustc`/`cargo` for any native-Rust tooling. This script
 # is idempotent: if $CI_PROJECT_ROOT/${boot_dir}/rust/bin/rustc AND cargo
@@ -10,17 +10,17 @@
 # reinstalled from scratch.
 #
 # Default install location:
-#   $CI_PROJECT_ROOT/${boot_dir}/rust/
+#   $CI_PROJECT_ROOT/$CI_BOOT_NAME/rust/
 # with symlinks in:
-#   $CI_PROJECT_ROOT/${boot_dir}/bin/
-# where ${boot_dir} is read from config/boot_layout.yaml (single source of
-# truth per SPEC-BOOT-LAYOUT §4.1; default '.boot-linux/').
+#   $CI_PROJECT_ROOT/$CI_BOOT_NAME/bin/
+# where $CI_BOOT_NAME is platform-aware (.boot-linux on Linux, .boot-macos
+# on macOS), set at source-time by lib/ci.sh.
 #
 # Repo-private: does NOT touch $HOME/.rustup or $HOME/.cargo: the toolchain
 # is fully isolated via RUSTUP_HOME / CARGO_HOME env exports pointing at
-# ${boot_dir}/rust. Sibling repos reach these binaries via the boot-path
-# resolver (lib/ci.sh::ci_resolve_boot_path) + inherit: declarations in
-# their config/boot_layout.yaml.
+# $CI_BOOT_NAME/rust. Sibling repos reach these binaries via the boot-path
+# resolver (lib/ci.sh::ci_resolve_boot_path) which reads
+# moon.yml::project.inherited_boot_dirs.
 #
 # Reference spec: docs/specifications/SPEC-BOOT-LAYOUT.md
 #
@@ -44,11 +44,11 @@ fi
 
 _log() { printf '[bootstrap-rust] %s\n' "$*" >&2; }
 
-# _create_symlinks <boot_dir> <target_dir> <rust_home>
+# _create_symlinks <target_dir> <rust_home>
 #   Mirror active-toolchain bin + llvm-tools-preview bin into ${target_dir}
 #   via relative symlinks so the tree is relocatable.
 _create_symlinks() {
-    local _bd="$1" _td="$2" _rh="$3"
+    local _td="$1" _rh="$2"
     local tc_out tc_err tc_rc=0
     tc_out="$(mktemp)"; tc_err="$(mktemp)"
     "$_rh/bin/rustup" show active-toolchain >"$tc_out" 2>"$tc_err" || tc_rc=$?
@@ -63,11 +63,34 @@ _create_symlinks() {
     rm -f "$tc_out" "$tc_err"
     if [[ -z "$toolchain_name" ]]; then
         # Reasonable default: rustup names toolchains <channel>-<host-triple>.
-        toolchain_name="${RUST_TOOLCHAIN}-$(uname -m)-unknown-linux-gnu"
+        local _rust_arch
+        case "$(uname -m)" in
+            x86_64|amd64) _rust_arch="x86_64" ;;
+            aarch64|arm64) _rust_arch="aarch64" ;;
+            *)             _rust_arch="$(uname -m)" ;;
+        esac
+        local _host_vendor
+        case "$(uname -s)" in
+            Linux)  _host_vendor="unknown-linux-gnu" ;;
+            Darwin) _host_vendor="apple-darwin" ;;
+            *)      _host_vendor="unknown-linux-gnu" ;;
+        esac
+        toolchain_name="${RUST_TOOLCHAIN}-${_rust_arch}-${_host_vendor}"
     fi
 
-    local toolchain_dir toolchain_bin toolchain_llvm_bin host_triple
-    host_triple="$(uname -m)-unknown-linux-gnu"
+    local host_triple
+    local _rust_arch
+    case "$(uname -m)" in
+        x86_64|amd64) _rust_arch="x86_64" ;;
+        aarch64|arm64) _rust_arch="aarch64" ;;
+        *)             _rust_arch="$(uname -m)" ;;
+    esac
+    case "$(uname -s)" in
+        Linux)  host_triple="$_rust_arch-unknown-linux-gnu" ;;
+        Darwin) host_triple="$_rust_arch-apple-darwin" ;;
+        *)      host_triple="$_rust_arch-unknown-linux-gnu" ;;
+    esac
+    local toolchain_dir toolchain_bin toolchain_llvm_bin
     toolchain_dir="rust/toolchains/${toolchain_name}"
     toolchain_bin="${toolchain_dir}/bin"
     toolchain_llvm_bin="${toolchain_dir}/lib/rustlib/${host_triple}/bin"
@@ -78,12 +101,12 @@ _create_symlinks() {
     local bin
     for bin in cargo rustc rustfmt cargo-clippy cargo-fmt \
                clippy-driver rustdoc; do
-        if [[ -x "${CI_PROJECT_ROOT}/${_bd}/${toolchain_bin}/${bin}" ]]; then
+        if [[ -x "${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/${toolchain_bin}/${bin}" ]]; then
             ln -sf "../${toolchain_bin}/${bin}" "${_td}/${bin}"
         fi
     done
 
-    local llvm_dir="${CI_PROJECT_ROOT}/${_bd}/${toolchain_llvm_bin}"
+    local llvm_dir="${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/${toolchain_llvm_bin}"
     if [[ -d "$llvm_dir" ]]; then
         local entry bin_name
         for entry in "$llvm_dir"/*; do
@@ -99,10 +122,10 @@ _create_symlinks() {
     _log "Rust symlinks created in ${_td}"
 }
 
-# _install_components <boot_dir> <target_dir> <rust_home>
+# _install_components <target_dir> <rust_home>
 #   Add the extra components the workspace relies on (coverage + source).
 _install_components() {
-    local _bd="$1" _td="$2" _rh="$3"
+    local _td="$1" _rh="$2"
     local c_out c_err c_rc=0
     c_out="$(mktemp)"; c_err="$(mktemp)"
     "$_rh/bin/rustup" component add llvm-tools-preview rust-src \
@@ -118,19 +141,18 @@ _install_components() {
 }
 
 main() {
-    local _boot_dir target_dir rust_home
-    # Read boot_dir from config/boot_layout.yaml (single source of truth).
-    # Normalize: strip leading "./" and trailing "/".
-    _boot_dir="$(ci_read_yaml "${CI_CONFIG_DIR}/boot_layout.yaml" \
-        "boot_dir")" || _boot_dir=".boot-linux"
-    _boot_dir="${_boot_dir#./}"
-    _boot_dir="${_boot_dir%/}"
-    [[ -z "$_boot_dir" ]] && _boot_dir=".boot-linux"
-    target_dir="${CI_PROJECT_ROOT}/${_boot_dir}/bin"
-    rust_home="${CI_PROJECT_ROOT}/${_boot_dir}/rust"
+    local target_dir rust_home
+    target_dir="${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/bin"
+    rust_home="${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/rust"
 
     mkdir -p "$target_dir"
     mkdir -p "$rust_home"
+
+    # Isolate rustup/cargo state inside $CI_BOOT_NAME/rust (NOT $HOME).
+    # Exported BEFORE the idempotency check so rustup shims (rustc/cargo)
+    # can resolve their home directory and find the active toolchain.
+    export RUSTUP_HOME="$rust_home"
+    export CARGO_HOME="$rust_home"
 
     # Idempotency: existing toolchain must actually respond to --version.
     if [[ -x "$rust_home/bin/rustc" && -x "$rust_home/bin/cargo" ]]; then
@@ -140,8 +162,8 @@ main() {
         if [[ $v_rc -eq 0 ]]; then
             _log "Rust already installed: $(head -1 "$v_out")"
             rm -f "$v_out" "$v_err"
-            _create_symlinks "$_boot_dir" "$target_dir" "$rust_home"
-            _install_components "$_boot_dir" "$target_dir" "$rust_home"
+            _create_symlinks "$target_dir" "$rust_home"
+            _install_components "$target_dir" "$rust_home"
             return 0
         fi
         _log "toolchain broken (rc=$v_rc): $(head -1 "$v_err")"
@@ -150,10 +172,6 @@ main() {
         rm -rf "$rust_home"
         mkdir -p "$rust_home"
     fi
-
-    # Isolate rustup/cargo state inside ${boot_dir}/rust (NOT $HOME).
-    export RUSTUP_HOME="$rust_home"
-    export CARGO_HOME="$rust_home"
 
     # Rust needs a C linker. Short-circuit AND of absent compilers is the
     # real check: `command -v` returning nonzero IS the signal, not a swallow.
@@ -223,8 +241,8 @@ main() {
     _log "cargo: $(head -1 "$p_out")"
     rm -f "$p_out" "$p_err"
 
-    _create_symlinks "$_boot_dir" "$target_dir" "$rust_home"
-    _install_components "$_boot_dir" "$target_dir" "$rust_home"
+    _create_symlinks "$target_dir" "$rust_home"
+    _install_components "$target_dir" "$rust_home"
 }
 
 main "$@"

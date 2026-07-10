@@ -5,8 +5,12 @@ set -euo pipefail
 # Unified system-dependency resolver for WORKSPACE-CI consumers (CI, VM, GATEWAY).
 #
 # Reads a config/system-deps.yaml (unified schema; see that file's header) and
-# checks/installs the declared apt-level dependencies. Pure bash + awk: NO
-# Python, because this runs before the Python venv is bootstrapped.
+# checks/installs the declared system-level dependencies. Pure bash + awk:
+# NO Python, because this runs before the Python venv is bootstrapped.
+#
+# PLATFORM-AWARE:
+#   Linux  → apt/dpkg (apt-get install)
+#   macOS  → Homebrew (brew install)
 #
 # Repo-agnostic: auto-detects the CALLER's repo root from CWD's git top-level
 # (so each consumer reads its own config/system-deps.yaml). Override with
@@ -15,22 +19,32 @@ set -euo pipefail
 #
 # Usage:
 #   install-system-deps --check                # report, exit 1 if any required missing
-#   install-system-deps --print                # report + print apt-get command (no sudo)
-#   install-system-deps --install              # report + run $(sudo) apt-get install
-#   install-system-deps --export-missing FILE  # write missing apt pkgs to FILE
-#   install-system-deps --install-only FILE    # read FILE, run sudo apt-get install
+#   install-system-deps --print                # report + print install command (no sudo)
+#   install-system-deps --install              # report + run apt-get / brew install
+#   install-system-deps --export-missing FILE  # write missing apt pkgs to FILE (Linux only)
+#   install-system-deps --install-only FILE    # read FILE, run sudo apt-get install (Linux only)
 #
 # Modes map to consumer sudo models:
-#   CI       --install           (inline sudo)
+#   CI       --install           (inline sudo on Linux; brew is never sudo)
 #   GATEWAY  --print / --check   (no sudo; user runs the printed command)
-#   VM       --export-missing / --install-only  (two-phase sudo)
+#   VM       --export-missing / --install-only  (two-phase sudo; Linux only)
 #
-# System-deps phase is APT-ONLY. Entries with bootstrap_script (hermetic
-# install path) are flagged as bootstrap-needed and SKIPPED by the apt install
-# phase -- a separate bootstrap phase (install-boot-tools/install-gitleaks/
-# install-cloc) owns hermetic installs.
+# System-deps phase covers system packages. Entries with bootstrap_script
+# (hermetic install path) are flagged as bootstrap-needed and SKIPPED by the
+# install phase -- a separate bootstrap phase (install-boot-tools) owns
+# hermetic installs.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# ---------------------------------------------------------------------------
+# Platform detection
+# ---------------------------------------------------------------------------
+CI_OS="$(uname -s)"
+case "$CI_OS" in
+    Linux)  CI_PLATFORM="linux" ;;
+    Darwin) CI_PLATFORM="darwin" ;;
+    *)      CI_PLATFORM="unknown" ;;
+esac
 
 # ---------------------------------------------------------------------------
 # Caller repo root detection
@@ -69,7 +83,14 @@ done
 
 [[ -z "$MODE" ]] && MODE="check"
 [[ -z "$DEPS_FILE" ]] && DEPS_FILE="$REPO_ROOT/config/system-deps.yaml"
-[[ -z "$BOOT_BIN" ]] && BOOT_BIN="$REPO_ROOT/.boot-linux/bin"
+
+# Platform-aware boot bin dir
+if [[ -z "$BOOT_BIN" ]]; then
+    case "$CI_PLATFORM" in
+        darwin) BOOT_BIN="$REPO_ROOT/.boot-macos/bin" ;;
+        *)      BOOT_BIN="$REPO_ROOT/.boot-linux/bin" ;;
+    esac
+fi
 
 if [[ ! -f "$DEPS_FILE" ]]; then
     echo "ERROR: dependencies config not found: $DEPS_FILE" >&2
@@ -77,10 +98,21 @@ if [[ ! -f "$DEPS_FILE" ]]; then
     exit 1
 fi
 
-# sudo is a no-op when already root (containers, CI agents)
+# sudo is a no-op when already root (containers, CI agents).
+# On macOS (brew), sudo is never needed.
 SUDO=""
-if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+if [[ "$CI_PLATFORM" != "darwin" && "${EUID:-$(id -u)}" -ne 0 ]]; then
     SUDO="sudo"
+fi
+
+# --- Homebrew detection (macOS) ---
+BREW=""
+if [[ "$CI_PLATFORM" == "darwin" ]]; then
+    if [[ -x /opt/homebrew/bin/brew ]]; then
+        BREW="/opt/homebrew/bin/brew"
+    elif [[ -x /usr/local/bin/brew ]]; then
+        BREW="/usr/local/bin/brew"
+    fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -94,6 +126,7 @@ fi
 log_ok()   { echo -e "  ${_GREEN}[OK]${_NC}      $*"; }
 log_miss() { echo -e "  ${_RED}[MISSING]${_NC} $*"; }
 log_opt()  { echo -e "  ${_YELLOW}[OPTIONAL]${_NC} $*"; }
+log_skip() { echo -e "  ${_DIM}[SKIPPED]${_NC} $*"; }
 log_warn() { echo -e "${_YELLOW}WARNING:${_NC} $*"; }
 log_info() { echo -e "${_BOLD}$*${_NC}"; }
 
@@ -102,7 +135,7 @@ first_line() { local _out="$1"; echo "${_out%%$'\n'*}"; }
 # ---------------------------------------------------------------------------
 # Binary finding
 # ---------------------------------------------------------------------------
-SYSTEM_PATHS="/usr/bin /usr/sbin /usr/local/bin /usr/local/sbin /snap/bin"
+SYSTEM_PATHS="/usr/bin /usr/sbin /usr/local/bin /usr/local/sbin /snap/bin /opt/homebrew/bin /opt/homebrew/sbin"
 
 find_binary() {
     local cmd="$1"
@@ -134,24 +167,49 @@ version_of() {
 }
 
 # ---------------------------------------------------------------------------
-# Parse config/system-deps.yaml with awk -> TSV: etype|ekey|pkg|desc|optional|bootstrap|component
+# Platform helpers
+# ---------------------------------------------------------------------------
+
+# platform_applies <platforms_field>
+#   Returns 0 (true) if the entry should be checked on the current platform.
+#   Empty platforms_field = all platforms.
+platform_applies() {
+    local platforms="${1:-}"
+    [[ -z "$platforms" ]] && return 0
+    echo "$platforms" | grep -qw "$CI_PLATFORM"
+}
+
+# apt_pkg_installed <pkg>
+apt_pkg_installed() {
+    dpkg -s "$1" >/dev/null 2>&1
+}
+
+# brew_pkg_installed <pkg>
+brew_pkg_installed() {
+    [[ -z "$BREW" ]] && return 1
+    "$BREW" list --versions "$1" >/dev/null 2>&1
+}
+
+# ---------------------------------------------------------------------------
+# Parse config/system-deps.yaml with awk -> TSV:
+#   etype|ekey|pkg|brewpkg|desc|optional|bootstrap|comp|platforms
 # etype: cmd | type
 # ---------------------------------------------------------------------------
 parse_deps() {
     awk '
     function emit(    line) {
         if (etype == "") return
-        # cmd and type share the same TSV shape so check_type: apt-package
-        # (which carries an apt_package) is not stripped of its pkg field.
-        line = etype "|" ekey "|" pkg "|" desc "|" opt "|" boot "|" comp
+        line = etype "|" ekey "|" pkg "|" brewpkg "|" desc "|" opt "|" boot "|" comp "|" plats
         print line
-        etype = ekey = pkg = desc = boot = comp = ""
+        etype = ekey = pkg = brewpkg = desc = boot = comp = plats = ""
         opt = "False"
     }
     function kv(s,    m) {
         if (!match(s, /: /)) { k = s; v = ""; return }
         k = substr(s, 1, RSTART-1); v = substr(s, RSTART+2)
         gsub(/^['"'"'"]|['"'"'"]$/, "", v)
+        sub(/ #.*$/, "", v)
+        gsub(/[[:space:]]+$/, "", v)
     }
     /^requires:[[:space:]]*$/ { in_req = 1; next }
     in_req && /^[^[:space:]-]/ { in_req = 0; next }
@@ -165,10 +223,16 @@ parse_deps() {
     in_req && /^    / {
         rest = $0; sub(/^    /, "", rest); kv(rest)
         if (k == "apt_package") pkg = v
+        else if (k == "brew_package") brewpkg = v
         else if (k == "description") desc = v
         else if (k == "optional") opt = (v == "true" ? "True" : "False")
         else if (k == "bootstrap_script") boot = v
         else if (k == "component") comp = v
+        else if (k == "platforms") {
+            gsub(/[\[\]]/, "", v)
+            gsub(/,[[:space:]]*/, ",", v)
+            plats = v
+        }
         next
     }
     END { emit() }
@@ -179,11 +243,13 @@ parse_deps() {
 # Missing collectors
 # ---------------------------------------------------------------------------
 missing_apt_pkgs=()
+missing_brew_pkgs=()
 missing_bootstrap=()
 missing_unknown=()
 present_count=0
 missing_required_count=0
 optional_missing_count=0
+skipped_count=0
 
 record_apt_missing() {
     local pkg="$1"
@@ -192,11 +258,18 @@ record_apt_missing() {
     [[ "$already" == "false" ]] && missing_apt_pkgs+=("$pkg")
 }
 
+record_brew_missing() {
+    local pkg="$1"
+    local already=false e
+    for e in "${missing_brew_pkgs[@]:-}"; do [[ "$e" == "$pkg" ]] && already=true && break; done
+    [[ "$already" == "false" ]] && missing_brew_pkgs+=("$pkg")
+}
+
 # ---------------------------------------------------------------------------
 # check_cmd entry
 # ---------------------------------------------------------------------------
 check_cmd_entry() {
-    local cmd="$1" pkg="$2" desc="$3" optional="$4" bootstrap="$5" component="$6"
+    local cmd="$1" pkg="$2" brewpkg="$3" desc="$4" optional="$5" bootstrap="$6" component="$7"
     local label="$desc"
     [[ -n "$component" ]] && label="$desc ${_DIM}($component)${_NC}"
     local found
@@ -219,11 +292,14 @@ check_cmd_entry() {
     if [[ -n "$bootstrap" ]]; then
         log_miss "$label ${_DIM}(not found - bootstrap: $bootstrap)${_NC}"
         missing_bootstrap+=("$cmd|$bootstrap|$desc")
-    elif [[ -n "$pkg" ]]; then
+    elif [[ "$CI_PLATFORM" == "darwin" && -n "$brewpkg" ]]; then
+        log_miss "$label ${_DIM}(needs: $brewpkg)${_NC}"
+        record_brew_missing "$brewpkg"
+    elif [[ "$CI_PLATFORM" == "linux" && -n "$pkg" ]]; then
         log_miss "$label ${_DIM}(needs: $pkg)${_NC}"
         record_apt_missing "$pkg"
     else
-        log_miss "$label ${_DIM}(not found - no apt_package or bootstrap_script)${_NC}"
+        log_miss "$label ${_DIM}(not found - no package for $CI_PLATFORM)${_NC}"
         missing_unknown+=("$cmd|$desc")
     fi
     missing_required_count=$((missing_required_count + 1))
@@ -246,7 +322,11 @@ check_c_compiler() {
         fi
     done
     log_miss "$label ${_DIM}(need gcc, cc, or clang)${_NC}"
-    record_apt_missing "gcc"
+    if [[ "$CI_PLATFORM" == "darwin" ]]; then
+        missing_unknown+=("c-compiler|$desc")
+    else
+        record_apt_missing "gcc"
+    fi
     missing_required_count=$((missing_required_count + 1))
     return 0
 }
@@ -261,7 +341,11 @@ check_network_tools() {
         return 0
     fi
     log_miss "$label ${_DIM}(need curl or wget)${_NC}"
-    record_apt_missing "curl"
+    if [[ "$CI_PLATFORM" == "darwin" ]]; then
+        record_brew_missing "curl"
+    else
+        record_apt_missing "curl"
+    fi
     missing_required_count=$((missing_required_count + 1))
     return 0
 }
@@ -270,7 +354,7 @@ check_libolm_headers() {
     local desc="$1" component="$2"
     local label="$desc"; [[ -n "$component" ]] && label="$desc ${_DIM}($component)${_NC}"
     local h
-    for h in /usr/include/olm/olm.h /usr/local/include/olm/olm.h; do
+    for h in /usr/include/olm/olm.h /usr/local/include/olm/olm.h /opt/homebrew/include/olm/olm.h; do
         if [[ -f "$h" ]]; then
             log_ok "$label ${_DIM}(at $h)${_NC}"
             present_count=$((present_count + 1))
@@ -278,7 +362,11 @@ check_libolm_headers() {
         fi
     done
     log_miss "$label ${_DIM}(needs: libolm-dev)${_NC}"
-    record_apt_missing "libolm-dev"
+    if [[ "$CI_PLATFORM" == "darwin" ]]; then
+        record_brew_missing "libolm"
+    else
+        record_apt_missing "libolm-dev"
+    fi
     missing_required_count=$((missing_required_count + 1))
     return 0
 }
@@ -326,27 +414,40 @@ check_playwright_libs() {
     fi
 }
 
-check_apt_package() {
-    local pkg="$1" desc="$2" optional="$3" component="$4"
+check_package() {
+    local pkg="$1" brewpkg="$2" desc="$3" optional="$4" component="$5"
     local label="$desc"; [[ -n "$component" ]] && label="$desc ${_DIM}($component)${_NC}"
-    if dpkg -s "$pkg" >/dev/null 2>&1; then
-        log_ok "$label ${_DIM}($pkg installed)${_NC}"
-        present_count=$((present_count + 1))
-        return 0
+    if [[ "$CI_PLATFORM" == "darwin" ]]; then
+        if brew_pkg_installed "$brewpkg"; then
+            log_ok "$label ${_DIM}($brewpkg installed)${_NC}"
+            present_count=$((present_count + 1))
+            return 0
+        fi
+    else
+        if apt_pkg_installed "$pkg"; then
+            log_ok "$label ${_DIM}($pkg installed)${_NC}"
+            present_count=$((present_count + 1))
+            return 0
+        fi
     fi
     if [[ "$optional" == "True" ]]; then
-        log_opt "$label ${_DIM}(optional - $pkg not installed)${_NC}"
+        log_opt "$label ${_DIM}(optional - not installed)${_NC}"
         optional_missing_count=$((optional_missing_count + 1))
         return 0
     fi
-    log_miss "$label ${_DIM}(needs: $pkg)${_NC}"
-    record_apt_missing "$pkg"
+    if [[ "$CI_PLATFORM" == "darwin" ]]; then
+        log_miss "$label ${_DIM}(needs: $brewpkg)${_NC}"
+        record_brew_missing "$brewpkg"
+    else
+        log_miss "$label ${_DIM}(needs: $pkg)${_NC}"
+        record_apt_missing "$pkg"
+    fi
     missing_required_count=$((missing_required_count + 1))
     return 0
 }
 
 # ---------------------------------------------------------------------------
-# Apt probing (warn on unavailable packages)
+# Apt probing (warn on unavailable packages; Linux only)
 # ---------------------------------------------------------------------------
 probe_apt() {
     [[ ${#missing_apt_pkgs[@]} -eq 0 ]] && return 0
@@ -366,8 +467,34 @@ probe_apt() {
 }
 
 # ---------------------------------------------------------------------------
-# Run the apt install for missing_apt_pkgs
+# Run the system install for missing packages (platform-aware)
 # ---------------------------------------------------------------------------
+do_install() {
+    if [[ "$CI_PLATFORM" == "darwin" ]]; then
+        do_brew_install
+    else
+        do_apt_install
+    fi
+}
+
+do_brew_install() {
+    [[ ${#missing_brew_pkgs[@]} -eq 0 ]] && { log_info "Nothing to install -- all brew dependencies satisfied."; return 0; }
+    if [[ -z "$BREW" ]]; then
+        log_warn "Homebrew not found; cannot install: ${missing_brew_pkgs[*]}"
+        log_warn "Run 'make init' first to bootstrap Homebrew."
+        return 1
+    fi
+    log_info "Installing ${#missing_brew_pkgs[@]} package(s) via brew: ${missing_brew_pkgs[*]}"
+    if "$BREW" install "${missing_brew_pkgs[@]}"; then
+        echo ""
+        log_info "Installed: ${missing_brew_pkgs[*]}"
+    else
+        echo ""
+        log_warn "brew install failed."
+        return 1
+    fi
+}
+
 do_apt_install() {
     [[ ${#missing_apt_pkgs[@]} -eq 0 ]] && { log_info "Nothing to install -- all apt dependencies satisfied."; return 0; }
     probe_apt
@@ -396,8 +523,13 @@ do_apt_install() {
 
 # ===========================================================================
 # Mode: --install-only FILE (two-phase sudo: read a missing list, install)
+#       Linux only. On macOS, exit 0 (brew runs without sudo).
 # ===========================================================================
 if [[ "$MODE" == "install-only" ]]; then
+    if [[ "$CI_PLATFORM" == "darwin" ]]; then
+        log_info "install-only mode is Linux-specific; skipped on macOS."
+        exit 0
+    fi
     if [[ ! -f "$INSTALL_ONLY_FILE" ]]; then
         log_info "No missing-dependencies file ($INSTALL_ONLY_FILE); nothing to install."
         exit 0
@@ -416,8 +548,9 @@ fi
 # Check phase (shared by --check / --print / --install / --export-missing)
 # ===========================================================================
 echo "=== System Dependency Check ==="
-echo "  config: $DEPS_FILE"
-echo "  root:   $REPO_ROOT"
+echo "  config:   $DEPS_FILE"
+echo "  root:     $REPO_ROOT"
+echo "  platform: $CI_PLATFORM"
 echo ""
 
 # Parse deps into a temp file (process substitution < <(...) is broken under
@@ -426,15 +559,21 @@ _deps_tmp="$(mktemp)" || exit 1
 trap 'rm -f "$_deps_tmp"' EXIT
 parse_deps > "$_deps_tmp"
 
-while IFS='|' read -r etype ekey pkg desc opt boot comp; do
-    [[ "$etype" == "cmd" ]] && check_cmd_entry "$ekey" "$pkg" "$desc" "$opt" "$boot" "$comp"
+while IFS='|' read -r etype ekey pkg brewpkg desc opt boot comp plats; do
+    # Platform filtering: skip entries not applicable to this platform
+    if [[ -n "$plats" ]] && ! platform_applies "$plats"; then
+        log_skip "$desc ${_DIM}(platform: $plats)${_NC}"
+        skipped_count=$((skipped_count + 1))
+        continue
+    fi
+    [[ "$etype" == "cmd" ]] && check_cmd_entry "$ekey" "$pkg" "$brewpkg" "$desc" "$opt" "$boot" "$comp"
     if [[ "$etype" == "type" ]]; then
         case "$ekey" in
             c-compiler)       check_c_compiler "$desc" "$comp" ;;
             network-tools)    check_network_tools "$desc" "$comp" ;;
             libolm-headers)   check_libolm_headers "$desc" "$comp" ;;
             playwright-libs)  check_playwright_libs "$desc" "$comp" ;;
-            apt-package)      check_apt_package "$pkg" "$desc" "$opt" "$comp" ;;
+            apt-package)      check_package "$pkg" "$brewpkg" "$desc" "$opt" "$comp" ;;
             *) log_warn "unknown check_type: $ekey (skipped)" ;;
         esac
     fi
@@ -445,11 +584,12 @@ trap - EXIT
 echo ""
 echo "  Present:          $present_count"
 echo "  Missing required: $missing_required_count"
+echo "  Skipped (plat):   $skipped_count"
 [[ "$optional_missing_count" -gt 0 ]] && echo "  Optional missing: $optional_missing_count"
 
 if [[ ${#missing_bootstrap[@]} -gt 0 ]]; then
     echo ""
-    echo "  Hermetic bootstrap needed (apt phase skips these):"
+    echo "  Hermetic bootstrap needed (system-deps phase skips these):"
     for e in "${missing_bootstrap[@]}"; do
         IFS='|' read -r cmd script _ <<< "$e"
         echo "    - $cmd -> $script"
@@ -458,7 +598,7 @@ fi
 
 if [[ ${#missing_unknown[@]} -gt 0 ]]; then
     echo ""
-    log_warn "Entries with no apt_package and no bootstrap_script (cannot resolve):"
+    log_warn "Entries with no package for $CI_PLATFORM (cannot resolve):"
     for e in "${missing_unknown[@]}"; do
         IFS='|' read -r cmd _ <<< "$e"
         echo "    - $cmd"
@@ -467,15 +607,19 @@ fi
 
 # ===========================================================================
 # Mode: --export-missing FILE (write missing apt pkgs for two-phase sudo)
+#       Linux only. On macOS, brew runs without sudo.
 # ===========================================================================
 if [[ "$MODE" == "export-missing" ]]; then
+    if [[ "$CI_PLATFORM" == "darwin" ]]; then
+        log_info "export-missing mode is Linux-specific; on macOS use --install."
+        exit 0
+    fi
     if [[ ${#missing_apt_pkgs[@]} -eq 0 && "$missing_required_count" -eq 0 ]]; then
         log_info "All required system dependencies satisfied."
         rm -f "$EXPORT_FILE"
         exit 0
     fi
     printf '%s\n' "${missing_apt_pkgs[@]:-}" > "$EXPORT_FILE"
-    # Filter out the empty line when missing_apt_pkgs is empty but file written.
     if [[ ${#missing_apt_pkgs[@]} -eq 0 ]]; then rm -f "$EXPORT_FILE"; fi
     log_warn "Wrote ${#missing_apt_pkgs[@]} missing apt package(s) to $EXPORT_FILE for sudo install."
     exit 0
@@ -500,25 +644,35 @@ if [[ "$MODE" == "check" ]]; then
 fi
 
 # ===========================================================================
-# Mode: --print (print the apt command, no sudo)
+# Mode: --print (print the install command, no sudo)
 # ===========================================================================
 if [[ "$MODE" == "print" ]]; then
-    if [[ ${#missing_apt_pkgs[@]} -gt 0 ]]; then
-        echo ""
-        echo "Install missing apt packages by running:"
-        echo ""
-        echo "  sudo apt-get update && sudo apt-get install -y ${missing_apt_pkgs[*]}"
-        echo ""
-        echo "(install-system-deps does not run sudo in --print mode.)"
+    if [[ "$CI_PLATFORM" == "darwin" ]]; then
+        if [[ ${#missing_brew_pkgs[@]} -gt 0 ]]; then
+            echo ""
+            echo "Install missing brew packages by running:"
+            echo ""
+            echo "  $BREW install ${missing_brew_pkgs[*]}"
+            echo ""
+        fi
+    else
+        if [[ ${#missing_apt_pkgs[@]} -gt 0 ]]; then
+            echo ""
+            echo "Install missing apt packages by running:"
+            echo ""
+            echo "  sudo apt-get update && sudo apt-get install -y ${missing_apt_pkgs[*]}"
+            echo ""
+            echo "(install-system-deps does not run sudo in --print mode.)"
+        fi
     fi
     exit 1
 fi
 
 # ===========================================================================
-# Mode: --install (inline sudo apt-get install)
+# Mode: --install (inline install: apt-get on Linux, brew on macOS)
 # ===========================================================================
 if [[ "$MODE" == "install" ]]; then
-    do_apt_install
+    do_install
     exit 0
 fi
 

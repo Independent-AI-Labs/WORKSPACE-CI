@@ -6,18 +6,18 @@
 # target path, it exits 0 without redownloading.
 #
 # Default install location:
-#   $CI_PROJECT_ROOT/${boot_dir}/bin/gitleaks
-# where ${boot_dir} is read from config/boot_layout.yaml (single source of
-# truth per SPEC-BOOT-LAYOUT §4.1; default '.boot-linux/').
+#   $CI_PROJECT_ROOT/$CI_BOOT_NAME/bin/gitleaks
+# where $CI_BOOT_NAME is platform-aware (.boot-linux on Linux, .boot-macos
+# on macOS), set at source-time by lib/ci.sh.
 # Override with $GITLEAKS_BIN to drop somewhere else.
 #
 # Override the version with $GITLEAKS_VERSION (default below).
 #
 # CI_PROJECT_ROOT (this repo's own root) is delegated to lib/ci.sh. Per the
-# new contract, this script installs to CI's OWN .boot-linux/: NOT the
-# workspace root. Sibling repos (e.g. WORKSPACE-GUARD) reach this binary via
-# the boot-path resolver (lib/ci.sh::ci_resolve_boot_path) + inherit:
-# declarations in their config/boot_layout.yaml. See:
+# boot contract, this script installs to CI's own boot dir: NOT the
+# workspace root. Sibling repos reach this binary via the
+# boot-path resolver (lib/ci.sh::ci_resolve_boot_path) which reads
+# moon.yml::project.inherited_boot_dirs. See:
 #   docs/specifications/SPEC-BOOT-LAYOUT.md
 
 set -euo pipefail
@@ -44,14 +44,8 @@ fi
 _log() { printf '[bootstrap-gitleaks] %s\n' "$*" >&2; }
 
 main() {
-    local target_dir target arch tarball url _boot_dir
-    # Read boot_dir from config/boot_layout.yaml (single source of truth).
-    # Normalize: strip leading "./" and trailing "/".
-    _boot_dir="$(ci_read_yaml "${CI_CONFIG_DIR}/boot_layout.yaml" "boot_dir")" || _boot_dir=".boot-linux"
-    _boot_dir="${_boot_dir#./}"
-    _boot_dir="${_boot_dir%/}"
-    [[ -z "$_boot_dir" ]] && _boot_dir=".boot-linux"
-    target_dir="${CI_PROJECT_ROOT}/${_boot_dir}/bin"
+    local target_dir target arch tarball url
+    target_dir="${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/bin"
     target="${GITLEAKS_BIN:-${target_dir}/gitleaks}"
 
     if ! mkdir -p "$(dirname "$target")"; then
@@ -88,7 +82,13 @@ main() {
         *) _log "unsupported arch: $(uname -m)"; return 1 ;;
     esac
 
-    tarball="gitleaks_${GITLEAKS_VERSION}_linux_${arch}.tar.gz"
+    case "$(uname -s)" in
+        Linux) goos="linux" ;;
+        Darwin) goos="darwin" ;;
+        *) _log "unsupported platform: $(uname -s)"; return 1 ;;
+    esac
+
+    tarball="gitleaks_${GITLEAKS_VERSION}_${goos}_${arch}.tar.gz"
     url="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${tarball}"
 
     local tmp
@@ -127,7 +127,7 @@ main() {
     fi
 
     local actual_sha
-    actual_sha="$(sha256sum "${tmp}/${tarball}" | awk '{print $1}')"
+    actual_sha="$(ci_sha256 "${tmp}/${tarball}")"
     if [[ "$actual_sha" != "$expected_sha" ]]; then
         _log "checksum mismatch: expected $expected_sha, got $actual_sha"
         return 1

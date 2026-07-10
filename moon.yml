@@ -8,9 +8,12 @@ $schema: 'https://moonrepo.dev/schemas/project.json'
 project:
   name: 'ci'
   description: 'CI hooks, banned-pattern checks, coverage gates'
-  # Boot-layout metadata (descriptive; mirrors config/boot_layout.yaml).
-  # Compliance check (ci/check_boot_venv_layout.py) verifies consistency.
-  bootDir: '.boot-linux'
+  # Boot-layout inheritance: project-root paths whose $CI_BOOT_NAME/bin
+  # should be prepended to PATH via ci_resolve_boot_path(). Entries are
+  # project roots (e.g. '../CI'), NOT boot-dir paths. The resolver
+  # appends /$CI_BOOT_NAME/bin at runtime → platform-aware.
+  # CI is the root: no inherited boot dirs.
+  inherited_boot_dirs: []
 
 language: 'python'
 layer: 'library'

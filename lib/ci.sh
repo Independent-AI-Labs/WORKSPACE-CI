@@ -5,6 +5,39 @@
 
 
 # ---------------------------------------------------------------------------
+# Platform detection
+# ---------------------------------------------------------------------------
+
+# ci_platform_name
+#   Returns: "linux" or "darwin" (lowercase, derived from uname -s).
+ci_platform_name() {
+    uname -s | tr 'A-Z' 'a-z'
+}
+
+# ci_boot_name [platform]
+#   Maps platform name to boot directory name.
+#   Defaults to ci_platform_name if no argument given.
+ci_boot_name() {
+    local _platform="${1:-$(ci_platform_name)}"
+    case "$_platform" in
+        darwin) echo ".boot-macos" ;;
+        *)      echo ".boot-linux" ;;
+    esac
+}
+
+# ci_boot_dir [project_root] [platform]
+#   Resolves the boot directory path for the current platform.
+#   Accepts optional explicit project_root and platform overrides.
+#   Otherwise echoes $CI_PROJECT_ROOT/$boot_name. Caller validates existence.
+ci_boot_dir() {
+    local _ws="${1:-${CI_PROJECT_ROOT:-}}"
+    local _platform="${2:-$(ci_platform_name)}"
+    local _boot_name
+    _boot_name="$(ci_boot_name "$_platform")"
+    echo "$_ws/$_boot_name"
+}
+
+# ---------------------------------------------------------------------------
 # Workspace detection
 # ---------------------------------------------------------------------------
 CI_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -25,6 +58,46 @@ if [[ -z "${CI_WORKSPACE_ROOT:-}" ]]; then
     done
     CI_WORKSPACE_ROOT="${CI_WORKSPACE_ROOT:-$(cd "$CI_PROJECT_ROOT/.." && pwd)}"
 fi
+
+# ---------------------------------------------------------------------------
+# Path utilities
+# ---------------------------------------------------------------------------
+
+# ci_relative_path <from_dir> <to_dir>
+#   Computes the relative path from from_dir to to_dir using pure bash.
+#   No external tools (no realpath, no readlink). Bash 3.2+ compatible.
+ci_relative_path() {
+    local _from="$1" _to="$2"
+
+    # Normalize: strip trailing slashes, split on /
+    _from="${_from%/}"
+    _to="${_to%/}"
+
+    local _from_parts _to_parts
+    IFS='/' read -ra _from_parts <<< "${_from#"/"}"
+    IFS='/' read -ra _to_parts <<< "${_to#"/"}"
+
+    # Find common prefix length
+    local _i=0
+    while [[ $_i -lt ${#_from_parts[@]} && $_i -lt ${#_to_parts[@]} ]]; do
+        [[ "${_from_parts[$_i]}" == "${_to_parts[$_i]}" ]] || break
+        ((_i++))
+    done
+
+    # Build result: ../ for each remaining from_part, then append to_parts
+    local _result=""
+    local _ups=$((${#_from_parts[@]} - _i))
+    for ((; _ups > 0; _ups--)); do
+        _result="../${_result}"
+    done
+    for ((; _i < ${#_to_parts[@]}; _i++)); do
+        _result="${_result}${_to_parts[$_i]}/"
+    done
+
+    _result="${_result%/}"
+    [[ -z "$_result" ]] && _result="."
+    echo "$_result"
+}
 
 # ---------------------------------------------------------------------------
 # Colors (disabled when stdout is not a terminal)
@@ -56,6 +129,38 @@ ci_error() {
     echo -e "  Pattern: ${_YELLOW}${pattern}${_NC}"
     echo -e "  Reason:  ${_CYAN}${reason}${_NC}"
     [[ -n "$content" ]] && echo "  > ${content:0:80}"
+}
+
+# ---------------------------------------------------------------------------
+# Source-time boot directory variables (set once when ci.sh is sourced).
+# ---------------------------------------------------------------------------
+CI_BOOT_NAME="$(ci_boot_name)"
+CI_BOOT_DIR="$CI_PROJECT_ROOT/$CI_BOOT_NAME"
+
+# ---------------------------------------------------------------------------
+# Portable sha256 helper
+# ---------------------------------------------------------------------------
+
+# ci_sha256 <file>
+#   Prints the SHA-256 hash (lowercase hex, no filename) of <file>.
+#   Tries sha256sum (GNU coreutils / Darwin port), then shasum -a 256
+#   (macOS built-in), then python3 as last resort. Returns 1 if all fail.
+ci_sha256() {
+    local file="$1"
+    if [[ ! -r "$file" ]]; then
+        echo "ci_sha256: cannot read '$file'" >&2
+        return 1
+    fi
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$file" | awk '{print $1}'
+    elif command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$file" | awk '{print $1}'
+    elif command -v python3 >/dev/null 2>&1; then
+        python3 -c "import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$file"
+    else
+        echo "ci_sha256: no checksum tool available (sha256sum, shasum, python3)" >&2
+        return 1
+    fi
 }
 
 # ---------------------------------------------------------------------------
@@ -142,6 +247,7 @@ ci_read_yaml() {
 
 # ci_read_yaml_list <file> <key>
 #   Reads a YAML list under a key, one item per line (unquoted).
+#   Supports flat keys (dependsOn) and one-level dotpath (project.inherited_boot_dirs).
 ci_read_yaml_list() {
     local file="$1" key="$2"
 
@@ -149,17 +255,35 @@ ci_read_yaml_list() {
         return 1
     fi
 
-    awk -v key="$key" '
-        /^[^ #]/ { in_key = ($0 ~ "^" key ":") ; next }
-        in_key && /^  - / {
-            val = $0
-            sub(/^  - /, "", val)
-            gsub(/^["'\'']|["'\'']$/, "", val)
-            gsub(/^[[:space:]]+|[[:space:]]+$/, "", val)
-            print val
-        }
-        in_key && /^[^ ]/ { exit }
-    ' "$file"
+    if [[ "$key" == *.* ]]; then
+        local section="${key%%.*}"
+        local subkey="${key#*.}"
+        awk -v section="$section" -v key="$subkey" '
+            /^[^ #]/ { in_section = ($0 ~ "^" section ":") ; in_key = 0 ; next }
+            in_section && $0 ~ "^  " key ":" { in_key = 1 ; next }
+            in_key && /^    - / {
+                val = $0
+                sub(/^    - /, "", val)
+                gsub(/^["'\'']|["'\'']$/, "", val)
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", val)
+                print val
+            }
+            in_key && /^  [^ ]/ && $0 !~ "^  " key ":" { exit }
+            in_section && /^[^ ]/ && $0 !~ "^" section ":" { in_key = 0 }
+        ' "$file"
+    else
+        awk -v key="$key" '
+            /^[^ #]/ { in_key = ($0 ~ "^" key ":") ; next }
+            in_key && /^  - / {
+                val = $0
+                sub(/^  - /, "", val)
+                gsub(/^["'\'']|["'\'']$/, "", val)
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", val)
+                print val
+            }
+            in_key && /^[^ ]/ { exit }
+        ' "$file"
+    fi
 }
 
 # ---------------------------------------------------------------------------
@@ -292,71 +416,62 @@ ci_run_python_checker() {
 }
 
 # ---------------------------------------------------------------------------
-# Boot-path resolver (hierarchical .boot-linux/ + .venv/ contract per SPEC-BOOT-LAYOUT)
+# Boot-path resolver (hierarchical $CI_BOOT_NAME/ contract per SPEC-BOOT-LAYOUT)
 # ---------------------------------------------------------------------------
 
 # ci_resolve_boot_path <start-dir>
 #   Pure function. Walks up from <start-dir> to /. At each level that
-#   contains .boot-linux/python-env/bin, prepends it to the accumulator;
-#   at each level that contains .boot-linux/bin, prepends it after the
+#   contains $CI_BOOT_NAME/python-env/bin, prepends it to the accumulator;
+#   at each level that contains $CI_BOOT_NAME/bin, prepends it after the
 #   python-env entry. Returns the accumulated string (colon-separated
 #   entries, no trailing colon: caller prepends ":$PATH").
 #
-#   Then reads config/boot_layout.yaml (if present at <start-dir>) and
-#   prepends each inherit: entry's bin subdir AFTER the walk-up results.
-#   inherit entries are relative to <start-dir> (repo root), NOT CWD.
-#   They are resolved via `cd <start>; cd <entry>; pwd -P` (physical
-#   path, no symlink expansion in intermediate components).
-#
-#   Walk-up produces: child (closer to <start-dir>) prepended leftmost
-#   within the walk-up phase. inherit entries prepend AFTER walk-up, so
-#   inherit entries are LEFTMOST overall = highest precedence. Among
-#   inherit entries, LATER-listed entries are prepended later → they
-#   land leftmost → they win (see §3.3 precedence rule).
+#   Then reads moon.yml at <start-dir> (if present) for
+#   project.inherited_boot_dirs -- a list of PROJECT-ROOT paths (not
+#   boot-dir paths). Each entry is resolved to a project root, then
+#   /$CI_BOOT_NAME/bin is appended and checked for existence. Valid
+#   entries are prepended AFTER the walk-up results so declared
+#   inheritance wins (leftmost = highest precedence). Among
+#   inherited_boot_dirs entries, LATER-listed entries are prepended
+#   later → they land leftmost → they win.
 #
 #   Pure: no side effects, no network. The `cd ... && pwd -P` subshells
 #   do not mutate the parent shell's CWD.
 #
 #   NO SILENT ERROR SUPPRESSION. A failed `cd "$entry"` emits its native
 #   `bash: cd: <path>: No such file or directory` to stderr: that IS
-#   the visible signal per FR-BL-3.3. `|| continue` propagates the skip;
-#   the stderr keeps the trace honest. No stderr redirection to the
-#   null device, no exit-code-masking fallbacks.
+#   the visible signal. `|| continue` propagates the skip; the stderr
+#   keeps the trace honest. No stderr redirection to the null device.
 ci_resolve_boot_path() {
-    local start="$1" walk accum=""
+    local start="$1" walk accum="" _boot_name="${CI_BOOT_NAME:-$(ci_boot_name)}"
     walk="$start"
     while [[ "$walk" != "/" && "$walk" != "." ]]; do
-        if [[ -d "$walk/.boot-linux/python-env/bin" ]]; then
-            accum="$walk/.boot-linux/python-env/bin:$accum"
+        if [[ -d "$walk/$_boot_name/python-env/bin" ]]; then
+            accum="$walk/$_boot_name/python-env/bin:$accum"
         fi
-        if [[ -d "$walk/.boot-linux/bin" ]]; then
-            accum="$walk/.boot-linux/bin:$accum"
+        if [[ -d "$walk/$_boot_name/bin" ]]; then
+            accum="$walk/$_boot_name/bin:$accum"
         fi
         walk="$(dirname "$walk")"
     done
-    # Explicit inherit: entries: prepended AFTER walk-up; later-listed = leftmost = wins.
-    # Entries are relative to the repo root (= $start), NOT to CWD. Resolve
-    # them by prefixing $start before the existence check and the accum prepend.
-    # Use `cd "$start" && cd "$entry"` to resolve relative paths portably
-    # (pwd -P avoids symlink expansion in the resolved path; we want the
-    # literal directory, not its symlink target, for PATH-prepend stability).
-    local layout="$start/config/boot_layout.yaml"
-    if [[ -f "$layout" ]]; then
+    # Explicit inherited_boot_dirs entries from moon.yml.
+    # Entries are PROJECT-ROOT paths (e.g., '../CI'), NOT boot-dir paths.
+    # The resolver appends /$CI_BOOT_NAME/bin at runtime → platform-aware.
+    local moon="$start/moon.yml"
+    if [[ -f "$moon" ]]; then
         local inherited=()
-        if ci_capture_lines inherited -- ci_read_yaml_list "$layout" "inherit"; then
-            local entry resolved
+        if ci_capture_lines inherited -- ci_read_yaml_list "$moon" "project.inherited_boot_dirs"; then
+            local entry resolved_project
             for entry in "${inherited[@]}"; do
-                # Strip trailing slash. Entries point at .boot-linux/ dirs.
                 entry="${entry%/}"
-                # Resolve relative to $start (repo root), not CWD.
-                # On failure (non-existent path) cd emits its native stderr
-                # (visible, not swallowed) and || continue propagates the skip.
-                resolved="$(cd "$start" && cd "$entry" && pwd -P)" || continue
-                if [[ -d "$resolved/bin" ]]; then
-                    accum="$resolved/bin:$accum"
+                [[ -z "$entry" ]] && continue
+                resolved_project="$(cd "$start" && cd "$entry" && pwd -P)" || continue
+                if [[ -d "$resolved_project/$_boot_name/bin" ]]; then
+                    accum="$resolved_project/$_boot_name/bin:$accum"
                 fi
             done
         fi
     fi
-    printf '%s' "$accum"
+    # Strip trailing colon (accum always ends with ':' due to prepend pattern)
+    printf '%s' "${accum%:}"
 }

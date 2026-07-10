@@ -5,41 +5,51 @@
 # UNIFIED SCHEMA (shared with WORKSPACE-VM and WORKSPACE-GATEWAY):
 # Each entry under requires: has exactly one of:
 #   check_cmd   - binary name to verify via find_binary (command -v, then
-#                 system paths, then <root>/.boot-linux/bin). Missing -> needs
-#                 apt_package (or bootstrap_script if no apt_package).
+#                 system paths, then <root>/$(BOOT_NAME)/bin). Missing -> needs
+#                 apt_package on Linux or brew_package on macOS (or
+#                 bootstrap_script if neither is set).
 #   check_type  - semantic check, one of:
 #                   c-compiler       (gcc/cc/clang any-of)
 #                   network-tools    (curl OR wget)
-#                   playwright-libs  (dpkg probe of browser libs)
-#                   libolm-headers   (/usr/include/olm/olm.h probe)
-#                   apt-package      (dpkg -s <apt_package>; for meta-packages
-#                                      with no single binary, e.g. ca-certificates,
-#                                      build-essential)
+#                   playwright-libs  (dpkg probe of browser libs; Linux only)
+#                   libolm-headers   (/usr/include/olm/olm.h probe; Linux only)
+#                   apt-package      (dpkg -s <apt_package> on Linux;
+#                                      brew list <brew_package> on macOS)
 # Plus optional fields:
 #   apt_package      - Debian package for apt-get install. Omit for hermetic-only
 #                      tools (those are bootstrapped via bootstrap_script by a
-#                      separate phase; the system-deps phase is apt-only).
+#                      separate phase).
+#   brew_package      - macOS ONLY. Homebrew formula for `brew install` on
+#                       macOS (darwin). Ignored on Linux. If unset and the
+#                       entry is not filtered by `platforms: [linux]`, the
+#                       entry is treated as "not installable on macOS" and
+#                       reported as missing.
 #   description      - human-readable text shown in check output.
 #   optional         - true|false (default false). Optional misses warn but do
 #                      not fail the check or get installed.
+#   platforms         - list of supported platforms (e.g. [linux], [darwin]).
+#                       If set, entry is skipped on non-listed platforms.
+#                       Omit = all platforms.
 #   bootstrap_script - hermetic install script path (informational; flags the
-#                      entry as bootstrap-needed so the apt install phase SKIPS
-#                      it -- a separate bootstrap phase owns hermetic installs).
+#                      entry as bootstrap-needed so the system install phase
+#                      SKIPS it -- a separate bootstrap phase owns hermetic
+#                      installs).
 #   component        - traceability tag for deps flattened out of a consumer's
 #                      bootstrap-components.yaml component-embedded requires:.
 #
 # The resolver (scripts/install-system-deps) is pure bash+awk: no Python, since
 # it runs before the Python venv is bootstrapped. Modes:
 #   --check            report only, exit 1 if any required dep missing
-#   --print            report + print the apt-get command (no sudo)
-#   --install          report + run $(sudo) apt-get install inline
-#   --export-missing F write missing apt pkgs to F (two-phase sudo)
-#   --install-only F   read F, run sudo apt-get install
+#   --print            report + print the install command (no sudo)
+#   --install          report + run $(sudo) apt-get / brew install inline
+#   --export-missing F write missing apt pkgs to F (two-phase sudo; Linux only)
+#   --install-only F   read F, run sudo apt-get install (Linux only)
 
 requires:
   # --- bootstrap prerequisites (curl/tar needed by the bootstrap scripts) ---
   - check_cmd: curl
-    apt_package: curl
+    apt_package: curl                    # Linux (apt)
+    brew_package: curl                   # macOS (Homebrew)
     description: curl (HTTP client for bootstrap fetches and tests)
 
   - check_cmd: tar
@@ -49,14 +59,17 @@ requires:
   - check_type: apt-package
     apt_package: ca-certificates
     description: ca-certificates (TLS root certs for https fetches)
+    platforms: [linux]
 
   # --- build toolchain ---
   - check_type: apt-package
     apt_package: build-essential
     description: build-essential (gcc/g++/make/headers for native compiles)
+    platforms: [linux]
 
   - check_cmd: pkg-config
-    apt_package: pkg-config
+    apt_package: pkg-config               # Linux (apt)
+    brew_package: pkg-config              # macOS (Homebrew)
     description: pkg-config (library detection for native builds)
 
   - check_cmd: file
@@ -67,22 +80,27 @@ requires:
   - check_cmd: capsh
     apt_package: libcap2-bin
     description: libcap2-bin (capsh/setcap/getcap capability tools)
+    platforms: [linux]
 
   - check_cmd: mke2fs
     apt_package: e2fsprogs
     description: e2fsprogs (mke2fs/resize2fs filesystem tools)
+    platforms: [linux]
 
   # --- declared gap deps (previously undeclared, used by CI scripts) ---
   - check_cmd: pkill
     apt_package: procps
     description: procps (pkill used by bootstrap-podman to clean up conmon/podman)
+    platforms: [linux]
 
   - check_cmd: iptables
     apt_package: iptables
     description: iptables (required by netavark for podman networking)
+    platforms: [linux]
 
   - check_cmd: realpath
-    apt_package: coreutils
+    apt_package: coreutils               # Linux (apt)
+    brew_package: coreutils              # macOS (Homebrew)
     description: coreutils (realpath --relative-to used by generate-hooks, scaffold-ci, checks_compliance)
 
   # --- cloc runtime dependency (cloc is a Perl script, bootstrapped hermetically) ---

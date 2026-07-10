@@ -1,0 +1,180 @@
+#!/usr/bin/env bash
+# bootstrap-homebrew: Install Homebrew on macOS (idempotent).
+#
+# Homebrew is the package manager for macOS. This script installs it
+# from the official source (https://brew.sh) and then brew-installs the
+# essential GNU/Linux-equivalent tools that the CI toolkit needs:
+#
+#   bash         -- bash 5.x (macOS ships 3.2, which lacks `local -n`
+#                  namerefs used by lib/ci.sh::ci_capture_lines)
+#   coreutils    -- realpath, sha256sum, ghead, gtail, etc. (non-prefixed
+#                  via libexec/gnubin)
+#   gnu-sed      -- GNU sed (macOS ships BSD sed which breaks `t` label)
+#   findutils    -- GNU find (macOS ships BSD find)
+#   pkg-config   -- library detection for native builds
+#
+# After install, the gnubin directories are available at:
+#   /opt/homebrew/opt/coreutils/libexec/gnubin
+#   /opt/homebrew/opt/gnu-sed/libexec/gnubin
+#   /opt/homebrew/opt/findutils/libexec/gnubin
+#
+# The Makefile prepends these to PATH so GNU tools shadow BSD ones.
+#
+# This script is a NO-OP on Linux (exits 0 immediately).
+#
+# The Homebrew installer requires sudo ONLY if Homebrew itself is not yet
+# installed. Once Homebrew exists, `brew install` runs without sudo.
+# The installer will prompt for the password interactively when run from
+# a TTY. If no TTY is available and passwordless sudo is not configured,
+# the script exits with a clear error.
+#
+# Reference: https://docs.brew.sh/Installation
+
+set -euo pipefail
+
+# ---------------------------------------------------------------------------
+# Platform guard
+# ---------------------------------------------------------------------------
+if [[ "$(uname -s)" != "Darwin" ]]; then
+    echo "[bootstrap-homebrew] Not macOS (uname -s=$(uname -s)), skipping."
+    exit 0
+fi
+
+_log() { printf '[bootstrap-homebrew] %s\n' "$*" >&2; }
+
+# ---------------------------------------------------------------------------
+# Detect Homebrew (Apple Silicon: /opt/homebrew; Intel: /usr/local)
+# ---------------------------------------------------------------------------
+BREW=""
+BREW_PREFIX=""
+if [[ -x /opt/homebrew/bin/brew ]]; then
+    BREW="/opt/homebrew/bin/brew"
+    BREW_PREFIX="/opt/homebrew"
+elif [[ -x /usr/local/bin/brew ]]; then
+    BREW="/usr/local/bin/brew"
+    BREW_PREFIX="/usr/local"
+fi
+
+# ---------------------------------------------------------------------------
+# Install Homebrew itself if not present. Once Homebrew exists, all
+# subsequent package installs run without sudo.
+# ---------------------------------------------------------------------------
+if [[ -z "$BREW" ]]; then
+    # -----------------------------------------------------------------------
+    # Check for Xcode Command Line Tools (Homebrew prerequisite)
+    # -----------------------------------------------------------------------
+    if ! xcode-select -p >/dev/null 2>&1; then
+        _log "Xcode Command Line Tools not found; installing..."
+        if ! xcode-select --install; then
+            _log "xcode-select --install returned non-zero (may still be in progress)"
+        fi
+        _log "Waiting for Xcode CLT installation to complete..."
+        _clt_wait=0
+        while ! xcode-select -p >/dev/null 2>&1; do
+            ((_clt_wait++))
+            if [[ $_clt_wait -gt 120 ]]; then
+                _log "Xcode CLT installation timed out after 120s."
+                _log "Please run 'xcode-select --install' manually, then re-run."
+                exit 1
+            fi
+            sleep 1
+        done
+        _log "Xcode CLT installed."
+    else
+        _log "Xcode CLT already installed."
+    fi
+
+    # -----------------------------------------------------------------------
+    # Check sudo availability (only needed for the Homebrew installer)
+    # -----------------------------------------------------------------------
+    if ! sudo -n true; then
+        if [[ ! -t 0 ]]; then
+            _log "ERROR: Homebrew installation requires sudo, but no TTY for password prompt."
+            _log "  Run 'sudo -v' first to cache credentials, or run from an interactive terminal."
+            exit 1
+        fi
+        _log "Homebrew installer will prompt for your sudo password..."
+    fi
+
+    # -----------------------------------------------------------------------
+    # Download and run the official Homebrew installer
+    # Source: https://github.com/Homebrew/install (official repository)
+    # -----------------------------------------------------------------------
+    HOMEBREW_INSTALL_URL="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+    _log "Downloading Homebrew installer from $HOMEBREW_INSTALL_URL ..."
+
+    _installer_tmp="$(mktemp)"
+    trap 'rm -f "$_installer_tmp"' EXIT
+
+    if ! curl -fsSL --retry 3 --retry-delay 2 -o "$_installer_tmp" "$HOMEBREW_INSTALL_URL"; then
+        _log "ERROR: failed to download Homebrew installer from $HOMEBREW_INSTALL_URL"
+        exit 1
+    fi
+
+    _log "Running Homebrew installer..."
+    NONINTERACTIVE=1 /bin/bash "$_installer_tmp"
+
+    rm -f "$_installer_tmp"
+    trap - EXIT
+
+    # Detect the newly installed Homebrew
+    if [[ -x /opt/homebrew/bin/brew ]]; then
+        BREW="/opt/homebrew/bin/brew"
+        BREW_PREFIX="/opt/homebrew"
+    elif [[ -x /usr/local/bin/brew ]]; then
+        BREW="/usr/local/bin/brew"
+        BREW_PREFIX="/usr/local"
+    else
+        _log "ERROR: Homebrew installed but brew binary not found"
+        exit 1
+    fi
+    _log "Homebrew installed at $BREW_PREFIX"
+else
+    _log "Homebrew already at $BREW_PREFIX"
+fi
+
+# ---------------------------------------------------------------------------
+# Install essential GNU tools via brew (no sudo needed)
+# ---------------------------------------------------------------------------
+ESSENTIAL_PACKAGES=("bash" "coreutils" "gnu-sed" "findutils" "pkg-config")
+
+_needs_brew_install=()
+for pkg in "${ESSENTIAL_PACKAGES[@]}"; do
+    if "$BREW" list --versions "$pkg" >/dev/null 2>&1; then
+        _pkg_info="$("$BREW" list --versions "$pkg")"
+        _log "$pkg already installed: ${_pkg_info%%$'\n'*}"
+    else
+        _needs_brew_install+=("$pkg")
+    fi
+done
+
+if [[ ${#_needs_brew_install[@]} -gt 0 ]]; then
+    _log "Installing: ${_needs_brew_install[*]}"
+    "$BREW" install "${_needs_brew_install[@]}"
+    _log "Installed: ${_needs_brew_install[*]}"
+else
+    _log "All essential packages already installed."
+fi
+
+# ---------------------------------------------------------------------------
+# Verify bash 5.x
+# ---------------------------------------------------------------------------
+if [[ -x "$BREW_PREFIX/bin/bash" ]]; then
+    _bash_out="$("$BREW_PREFIX/bin/bash" --version)"
+    _bash_ver="${_bash_out%%$'\n'*}"
+    _log "bash: $_bash_ver"
+    if ! "$BREW_PREFIX/bin/bash" -c '[[ ${BASH_VERSINFO[0]} -ge 5 ]]'; then
+        _log "WARNING: Homebrew bash is not version 5+: $_bash_ver"
+    fi
+else
+    _log "WARNING: Homebrew bash not found at $BREW_PREFIX/bin/bash"
+fi
+
+# ---------------------------------------------------------------------------
+# Output PATH guidance
+# ---------------------------------------------------------------------------
+_log "Done. GNU tools available at:"
+_log "  $BREW_PREFIX/opt/coreutils/libexec/gnubin"
+_log "  $BREW_PREFIX/opt/gnu-sed/libexec/gnubin"
+_log "  $BREW_PREFIX/opt/findutils/libexec/gnubin"
+_log "The Makefile prepends these to PATH automatically."

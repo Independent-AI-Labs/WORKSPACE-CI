@@ -126,8 +126,10 @@ preflight_check() {
 
 build_guard_binary() {
     log_info "Building workspace-guard Rust binary..."
-    local boot_rust="${WORKSPACE_ROOT}/.boot-linux/bin"
-    local rust_home="${WORKSPACE_ROOT}/.boot-linux/rust"
+    local _boot_name
+    case "$(uname -s | tr 'A-Z' 'a-z')" in darwin) _boot_name=".boot-macos" ;; *) _boot_name=".boot-linux" ;; esac
+    local boot_rust="${WORKSPACE_ROOT}/$_boot_name/bin"
+    local rust_home="${WORKSPACE_ROOT}/$_boot_name/rust"
     export PATH="$boot_rust:$PATH"
     export RUSTUP_HOME="$rust_home"
     export CARGO_HOME="$rust_home"
@@ -479,9 +481,11 @@ EOF
         chmod 755 /usr/lib/workspace-guard/apt-check.sh
     fi
 
-    if [[ -f "$WORKSPACE_ROOT/.boot-linux/bin/git" ]]; then
-        rm -f "$WORKSPACE_ROOT/.boot-linux/bin/git"
-        log_info "Removed previous bash wrapper at .boot-linux/bin/git"
+    local _cleanup_boot_name
+    case "$(uname -s | tr 'A-Z' 'a-z')" in darwin) _cleanup_boot_name=".boot-macos" ;; *) _cleanup_boot_name=".boot-linux" ;; esac
+    if [[ -f "$WORKSPACE_ROOT/$_cleanup_boot_name/bin/git" ]]; then
+        rm -f "$WORKSPACE_ROOT/$_cleanup_boot_name/bin/git"
+        log_info "Removed previous bash wrapper at $_cleanup_boot_name/bin/git"
     fi
     hash -r
 

@@ -7,9 +7,9 @@
 # the target path, it exits 0 without redownloading.
 #
 # Default install location:
-#   $CI_PROJECT_ROOT/${boot_dir}/bin/uv
-# where ${boot_dir} is read from config/boot_layout.yaml (single source of
-# truth per SPEC-BOOT-LAYOUT §4.1; default '.boot-linux/').
+#   $CI_PROJECT_ROOT/$CI_BOOT_NAME/bin/uv
+# where $CI_BOOT_NAME is platform-aware (.boot-linux on Linux, .boot-macos
+# on macOS), set at source-time by lib/ci.sh.
 # Override with $UV_BIN to drop somewhere else.
 #
 # Override the version with $UV_VERSION (default below).
@@ -48,15 +48,8 @@ fi
 _log() { printf '[bootstrap-uv] %s\n' "$*" >&2; }
 
 main() {
-    local target_dir target arch platform tarball url subdir _boot_dir
-    # Read boot_dir from config/boot_layout.yaml (single source of truth).
-    # Normalize: strip leading "./" and trailing "/".
-    _boot_dir="$(ci_read_yaml "${CI_CONFIG_DIR}/boot_layout.yaml" \
-        "boot_dir")" || _boot_dir=".boot-linux"
-    _boot_dir="${_boot_dir#./}"
-    _boot_dir="${_boot_dir%/}"
-    [[ -z "$_boot_dir" ]] && _boot_dir=".boot-linux"
-    target_dir="${CI_PROJECT_ROOT}/${_boot_dir}/bin"
+    local target_dir target arch platform tarball url subdir
+    target_dir="${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/bin"
     target="${UV_BIN:-${target_dir}/uv}"
 
     if ! mkdir -p "$(dirname "$target")"; then
@@ -141,7 +134,7 @@ main() {
     fi
 
     local actual_sha
-    actual_sha="$(sha256sum "${tmp}/${tarball}" | awk '{print $1}')"
+    actual_sha="$(ci_sha256 "${tmp}/${tarball}")"
     if [[ "$actual_sha" != "$expected_sha" ]]; then
         _log "checksum mismatch: expected $expected_sha, got $actual_sha"
         return 1

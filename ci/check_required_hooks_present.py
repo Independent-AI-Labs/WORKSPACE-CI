@@ -22,7 +22,7 @@ EXIT_VIOLATION = 1
 EXIT_INFRA_ERROR = 2
 
 REASON_MIN_LEN = 20
-WORKSPACE_MARKERS = (".boot-linux",)
+WORKSPACE_MARKERS = (".boot-linux", ".boot-macos")
 
 RED = "\033[91m"
 YELLOW = "\033[93m"
@@ -82,7 +82,7 @@ def _find_workspace_root(start: Path) -> Path | None:
     """
     cur = start.resolve()
     while cur != cur.parent:
-        if (cur / ".boot-linux").is_dir():
+        if (cur / ".boot-linux").is_dir() or (cur / ".boot-macos").is_dir():
             return cur
         if (cur / "config" / "required_hooks.yaml").is_file():
             return cur

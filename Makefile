@@ -1,8 +1,21 @@
 # workspace-ci Makefile
 # Aliases for all CI operations.
 
-SHELL := /bin/bash
 .DEFAULT_GOAL := help
+
+# Platform detection. On macOS, prefer Homebrew bash 5.x over /bin/bash
+# (3.2) for nameref support (ci_capture_lines / ci_capture_pipe). The
+# Homebrew gnubin directories are prepended to PATH so GNU coreutils,
+# gnu-sed, and findutils shadow the BSD equivalents. These parse-time
+# PATH entries are harmless if Homebrew is not yet installed (directories
+# simply don't exist); after `make init` installs Homebrew, subsequent
+# make invocations pick them up automatically.
+_OS := $(shell uname -s)
+_HB_PREFIX := $(if $(wildcard /opt/homebrew),/opt/homebrew,$(if $(wildcard /usr/local),/usr/local))
+
+SHELL := $(if $(wildcard $(_HB_PREFIX)/bin/bash),$(_HB_PREFIX)/bin/bash,/bin/bash)
+
+export PATH := $(_HB_PREFIX)/opt/coreutils/libexec/gnubin:$(_HB_PREFIX)/opt/gnu-sed/libexec/gnubin:$(_HB_PREFIX)/opt/findutils/libexec/gnubin:$(_HB_PREFIX)/bin:$(PATH)
 
 # uv is used for dependency installation (uv sync). Verification tools
 # (ruff, pytest, mypy) are invoked directly from .venv/bin per AGENTS.md §4.1.
@@ -11,12 +24,14 @@ RUFF := .venv/bin/ruff
 PYTEST := .venv/bin/python -m pytest
 MYPY := .venv/bin/mypy
 
-# .boot-linux/bin/ holds bootstrapped tools (uv, cargo, rustup, gitleaks).
-# After `make install` creates it, prepend to PATH so make targets use
-# bootstrapped tools, not system-installed ones. Parse-time check: if
-# .boot-linux/bin/uv doesn't exist yet (fresh install), PATH is not
-# modified: install-python-deps handles it in its recipe.
-BOOT_BIN := $(CURDIR)/.boot-linux/bin
+# $(BOOT_NAME)/bin/ holds bootstrapped tools (uv, cargo, rustup, gitleaks).
+# On macOS BOOT_NAME=.boot-macos, on Linux .boot-linux--platform-aware via
+# ci_boot_name() in lib/ci.sh. After `make install` creates it, prepend
+# to PATH so make targets use bootstrapped tools, not system-installed
+# ones. Parse-time check: if the boot dir/bin/uv doesn't exist yet
+# (fresh install), PATH is not modified: install-python-deps handles it.
+BOOT_NAME := $(if $(filter Darwin,$(_OS)),.boot-macos,.boot-linux)
+BOOT_BIN := $(CURDIR)/$(BOOT_NAME)/bin
 ifneq ($(wildcard $(BOOT_BIN)/uv),)
     export PATH := $(BOOT_BIN):$(PATH)
 endif
@@ -41,7 +56,9 @@ help: ## Show this help
 SUDO := $(shell if [ "$$EUID" -eq 0 ]; then echo ""; else echo "sudo"; fi)
 
 .PHONY: init
-init: ## Install all system-level dependencies (apt packages from config/system-deps.yaml + Rust toolchain)
+init: ## Install all system-level dependencies (Homebrew on macOS + apt packages on Linux + Rust toolchain)
+	@echo "==> Installing Homebrew + GNU tools (macOS only)..."
+	@bash scripts/bootstrap-homebrew
 	@echo "==> Installing system packages (from config/system-deps.yaml)..."
 	bash scripts/install-system-deps --install
 	@echo "==> Installing Rust toolchain (if missing)..."
@@ -54,8 +71,8 @@ init: ## Install all system-level dependencies (apt packages from config/system-
 preflight: ## Verify environment (curl + tar for bootstrapping; uv is bootstrapped by install-boot-tools)
 	@command -v curl > /dev/null 2>&1 || { echo "ERROR: curl not found"; exit 1; }
 	@command -v tar > /dev/null 2>&1 || { echo "ERROR: tar not found"; exit 1; }
-	@bash -c '[ "$${BASH_VERSINFO[0]}" -gt 4 ] || ([ "$${BASH_VERSINFO[0]}" -eq 4 ] && [ "$${BASH_VERSINFO[1]}" -ge 3 ])' \
-		|| { echo "ERROR: bash 4.3+ required (nameref support for portable I/O helpers)"; exit 1; }
+	@$(SHELL) -c '[ "$${BASH_VERSINFO[0]}" -gt 4 ] || ([ "$${BASH_VERSINFO[0]}" -eq 4 ] && [ "$${BASH_VERSINFO[1]}" -ge 3 ])' \
+		|| { echo "ERROR: bash 4.3+ required (nameref support for portable I/O helpers)."; echo "  On macOS: run 'make init' to install Homebrew bash 5.x, then re-run."; echo "  On Linux: install bash 4.3+ via your package manager."; exit 1; }
 	@echo "✓ Preflight OK"
 
 .PHONY: install
@@ -70,7 +87,7 @@ install-ci: preflight install-deps ## CI install: deps + bootstrap binaries, no 
 install-deps: install-boot-tools install-python-deps install-gitleaks install-cloc ## Install boot tools + python .venv deps + gitleaks + cloc
 
 .PHONY: install-boot-tools
-install-boot-tools: ## Bootstrap uv + rust toolchain into .boot-linux/bin/ (idempotent)
+install-boot-tools: ## Bootstrap uv + rust toolchain into $(BOOT_NAME)/bin/ (idempotent)
 	bash scripts/bootstrap-uv
 	bash scripts/bootstrap-rust
 

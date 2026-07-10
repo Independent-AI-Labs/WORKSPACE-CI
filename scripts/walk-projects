@@ -23,7 +23,7 @@ if [[ -z "$_workspace_root" ]]; then
     # Walk up from CWD looking for the three workspace markers
     _cur="$(pwd)"
     while [[ "$_cur" != "/" ]]; do
-        if [[ -d "$_cur/.boot-linux" \
+        if [[ (-d "$_cur/.boot-linux" || -d "$_cur/.boot-macos") \
               && -d "$_cur/projects" ]]; then
             _workspace_root="$_cur"
             break

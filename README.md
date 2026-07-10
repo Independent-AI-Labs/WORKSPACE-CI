@@ -96,7 +96,7 @@ Scope describes which files the check scans when triggered.
 | Markdown link integrity (internal anchors + external URLs) | pre-commit | doc files |
 | Hook manifest completeness (self-check) | pre-commit | `.pre-commit-config.yaml` |
 | Compliance score (17-dimension A-F audit) | pre-commit | project config |
-| `.venv` hierarchy tracking for monorepos (`.boot-linux/` + `.venv/` alignment) | pre-commit | layout config |
+| `.venv` hierarchy tracking for monorepos (`.boot-linux/`/`.boot-macos/` + `.venv/` alignment) | pre-commit | layout config |
 
 Every check has configurable `always_run` / `files:` / `stages:` / `types_or:`
 gates in `.pre-commit-config.yaml` and an enforcement tier (`strict` / `poc` /
@@ -109,7 +109,7 @@ All rules are config-driven. Patterns live in [`config/banned_words.yaml`](confi
 file rules in [`config/sensitive_files.yaml`](config/sensitive_files.yaml),
 coverage gates in [`config/coverage_thresholds.yaml`](config/coverage_thresholds.yaml),
 hook registry in [`config/required_hooks.yaml`](config/required_hooks.yaml),
-boot layout in [`config/boot_layout.yaml`](config/boot_layout.yaml),
+boot layout in [`moon.yml`](moon.yml) (`project.inherited_boot_dirs`),
 file length limits in [`config/file_length_limits.yaml`](config/file_length_limits.yaml),
 dead code rules in [`config/dead_code.yaml`](config/dead_code.yaml),
 markdown doc targets in [`config/markdown_docs.yaml`](config/markdown_docs.yaml),
@@ -170,7 +170,7 @@ the enforcement layer above them.
 |-----|-------------|
 | [`docs/HOOKS.md`](docs/HOOKS.md) | Hook generation, configuration, migration from pre-commit |
 | [`docs/PORTABILITY.md`](docs/PORTABILITY.md) | Shell portability contract: process-substitution ban, temp-file capture helpers |
-| [`docs/requirements/REQ-BOOT-LAYOUT.md`](docs/requirements/REQ-BOOT-LAYOUT.md) | Hierarchical `.boot-linux/` and `.venv/` toolchain layout requirements |
+| [`docs/requirements/REQ-BOOT-LAYOUT.md`](docs/requirements/REQ-BOOT-LAYOUT.md) | Platform-aware boot directory layout (`.boot-linux/`/`.boot-macos/`) and `.venv/` toolchain requirements |
 | [`docs/specifications/SPEC-BOOT-LAYOUT.md`](docs/specifications/SPEC-BOOT-LAYOUT.md) | Boot layout implementation: walk-up PATH resolution, config schema, compliance check |
 | [`docs/requirements/REQ-WIKI.md`](docs/requirements/REQ-WIKI.md) | Interactive wiki UI requirements |
 | [`docs/specifications/SPEC-WIKI.md`](docs/specifications/SPEC-WIKI.md) | Wiki implementation specification |

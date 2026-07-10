@@ -2,8 +2,8 @@
 
 Extracted from check_boot_venv_layout.py to keep that module under the
 512-line file-length limit. Provides pydantic schema models, path
-resolution helpers, inherit-owner derivation, pre-commit --project
-ref scanner, and the YAML loader.
+resolution helpers, moon-id derivation from inherited_boot_dirs entries,
+pre-commit --project ref scanner, and the YAML loader.
 """
 
 from __future__ import annotations
@@ -27,33 +27,21 @@ RESET = "\033[0m"
 
 
 # ---------------------------------------------------------------------------
-# Schema (SPEC §4.1)
+# Schema: moon.yml (single source of truth for boot-layout inheritance)
 # ---------------------------------------------------------------------------
 
 
-class BootLayout(BaseModel):
-    """Parsed ``config/boot_layout.yaml``."""
-
-    model_config = ConfigDict(extra="ignore")
-    version: int = 1
-    boot_dir: str | None = None
-    venv_dir: str | None = None
-    inherit: list[str] = Field(default_factory=list)
-    comment: str | None = None
-
-
 class MoonProject(BaseModel):
-    """Subset of ``moon.yml::project`` relevant to boot-layout consistency."""
+    """Subset of ``moon.yml::project`` relevant to boot-layout audit."""
 
     model_config = ConfigDict(extra="allow")
     name: str | None = None
     description: str | None = None
-    bootDir: str | None = None
-    parentBoot: list[str] = Field(default_factory=list)
+    inherited_boot_dirs: list[str] = Field(default_factory=list)
 
 
 class MoonYml(BaseModel):
-    """Subset of ``moon.yml`` relevant to boot-layout consistency."""
+    """Subset of ``moon.yml`` relevant to boot-layout audit."""
 
     model_config = ConfigDict(extra="allow")
     project: MoonProject | None = None
@@ -97,17 +85,6 @@ def resolve_rel(start: Path, rel: str) -> Path:
     return p.resolve(strict=False)
 
 
-def normalize_boot_dir(s: str | None) -> str | None:
-    """Strip leading ``./`` and trailing ``/`` from a boot_dir string."""
-    if s is None:
-        return None
-    s = s.strip()
-    if not s:
-        return None
-    s = s.removeprefix("./").rstrip("/")
-    return s or None
-
-
 def is_world_writable(p: Path) -> bool:
     """Return True if path's directory's mode has the world-write bit set."""
     try:
@@ -121,20 +98,38 @@ def is_world_writable(p: Path) -> bool:
 # Inherit-owner derivation (SPEC §8.2)
 # ---------------------------------------------------------------------------
 
+_INHERIT_OWNER_RE = re.compile(r"(?:^|/)([A-Za-z0-9_-]+)$")
 
-_INHERIT_OWNER_RE = re.compile(r"(?:^|/)(WORKSPACE-([A-Z0-9_-]+))/")
 
+def derive_moon_id_from_inherited(
+    entry: str, workspace_yml: dict | None = None
+) -> str | None:
+    """Derive the moon project id that owns the inherited_boot_dirs entry.
 
-def derive_moon_id_from_inherit(entry: str) -> str | None:
-    """Derive the moon project id (``<NAME>.lower()``) that owns the inherit entry.
+    Entries are PROJECT-ROOT paths (e.g. '../CI'). The owner is derived
+    from the last path component (directory name), lowercased.
 
-    Pattern: ``<...>/WORKSPACE-<NAME>/<rest>`` -> return ``<NAME>.lower()``.
-    Returns None for entries that do not match this shape (ancestor-only).
+    If a workspace.yml mapping is provided, the directory name is matched
+    against its values (project paths) to resolve the moon project id.
+    Otherwise, the directory name itself is lowercased and returned.
+
+    Returns None for entries that are absolute paths outside the workspace
+    (ancestor-only inheritance via walk-up, not sibling inheritance).
     """
-    m = _INHERIT_OWNER_RE.search(entry)
-    if not m:
+    e = entry.strip().rstrip("/")
+    if not e:
         return None
-    return m.group(2).lower()
+    if e.startswith("/"):
+        return None
+    parts = e.split("/")
+    last = parts[-1]
+    if not last or last in {"..", "."}:
+        return None
+    if workspace_yml:
+        for moon_id, path in workspace_yml.items():
+            if path.endswith(last) or last in path.split("/"):
+                return moon_id
+    return last.lower()
 
 
 # ---------------------------------------------------------------------------
