@@ -29,7 +29,11 @@ def _has_shell_shebang(path: str) -> bool:
 
 def is_shell_file(path: str) -> bool:
     base = path.rsplit("/", 1)[-1]
-    if path.endswith((".sh", ".bash", ".zsh")) or base in {"Makefile", "shell-setup"}:
+    if path.endswith((".sh", ".bash", ".zsh")) or base in {
+        "Makefile",
+        "shell-setup",
+        ".pre-commit-config.yaml",
+    }:
         return True
     # Extensionless scripts (e.g. scripts/bootstrap-uv, scripts/audit-workspace)
     # must ALSO be scanned per the §3.7 "hooks scan ALL files" rule. Sniff the

@@ -48,14 +48,14 @@ repos:
 
       - id: check-dependency-versions
         name: Check Dependency Versions (strict pinning + latest)
-        entry: bash -c '.venv/bin/python -c "import ci" || { echo "FAILED: ci not installed: run: make sync" >&2; exit 1; }; exec .venv/bin/python -m ci.check_dependency_versions "$@"' --
+        entry: "bash -c '.venv/bin/python -c \"import ci\" || { echo \"FAILED: ci not installed: run: make sync\" >&2; exit 1; }; exec .venv/bin/python -m ci.check_dependency_versions \"$@\"' --"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-duplicate-dependencies
         name: Check Duplicate/Redundant Dependencies
-        entry: bash -c '.venv/bin/python -c "import ci" || { echo "FAILED: ci not installed: run: make sync" >&2; exit 1; }; exec .venv/bin/python -m ci.check_duplicate_dependencies "$@"' --
+        entry: "bash -c '.venv/bin/python -c \"import ci\" || { echo \"FAILED: ci not installed: run: make sync\" >&2; exit 1; }; exec .venv/bin/python -m ci.check_duplicate_dependencies \"$@\"' --"
         language: system
         pass_filenames: false
         always_run: true
