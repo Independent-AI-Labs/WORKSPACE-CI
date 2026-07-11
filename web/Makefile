@@ -4,16 +4,19 @@
 
 SHELL := /bin/bash
 
-# Wiki lives at WORKSPACE-VM/projects/CI/web (3 levels under WORKSPACE-VM),
-# so .boot-linux/node-env (which holds Node) is reached via ../../.. .
-# WORKSPACE-PORTAL uses ../.. because it sits at projects/WORKSPACE-PORTAL (2 levels).
-AGENTS_ROOT := $(abspath ../../..)
-AGENTS_BOOT := $(AGENTS_ROOT)/.boot-linux
-NODE_BIN := $(AGENTS_BOOT)/node-env/bin
-NODE := $(NODE_BIN)/node
-NPM := $(NODE_BIN)/npm
+# Wiki lives at projects/CI/web. Node.js is bootstrapped by CI into
+# CI's own boot dir (projects/CI/.boot-macos or .boot-linux), reached
+# via ../.. from here. This follows the boot contract: NO workspace-root
+# dependencies.
+_OS := $(shell uname -s)
+_BOOT_NAME := $(if $(filter Darwin,$(_OS)),.boot-macos,.boot-linux)
+CI_ROOT := $(abspath ../..)
+NODE_ENV_BIN := $(CI_ROOT)/$(_BOOT_NAME)/node-env/bin
+BOOT_BIN := $(CI_ROOT)/$(_BOOT_NAME)/bin
+NODE := $(NODE_ENV_BIN)/node
+NPM := $(NODE_ENV_BIN)/npm
 
-export PATH := $(NODE_BIN):$(PATH)
+export PATH := $(NODE_ENV_BIN):$(BOOT_BIN):$(PATH)
 
 DEV_PORT := 3001
 SYSTEMD_UNIT := wiki-ci-dev.service
@@ -50,14 +53,14 @@ help: ## Show this help
 dev-start: ## Start dev server (Next.js HMR)
 	@if [ ! -x "$(NODE)" ]; then \
 		echo "ERROR: Bootstrapped Node.js not found at $(NODE)"; \
-		echo "  Run the workspace bootstrap (cd $(AGENTS_ROOT) && ...), or fix AGENTS_ROOT in this Makefile."; \
+		echo "  Run 'make -C $(CI_ROOT) install-node' from the workspace root."; \
 		exit 1; \
 	fi
 	@mkdir -p $(SYSTEMD_DIR)
 	@echo "[dev-start] Installing systemd user unit -> $(SYSTEMD_DIR)/$(SYSTEMD_UNIT)"
 	@sed \
 		-e 's|__PROJECT_ROOT__|$(PROJECT_ROOT)|g' \
-		-e 's|__NODE_BIN__|$(NODE_BIN)|g' \
+		-e 's|__NODE_BIN__|$(NODE_ENV_BIN)|g' \
 		-e 's|__NODE__|$(NODE)|g' \
 		-e 's|__DEV_PORT__|$(DEV_PORT)|g' \
 		res/wiki-ci-dev.service.tmpl > $(SYSTEMD_DIR)/$(SYSTEMD_UNIT)

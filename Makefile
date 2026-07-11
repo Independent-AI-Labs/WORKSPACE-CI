@@ -84,7 +84,7 @@ install-ci: preflight install-deps ## CI install: deps + bootstrap binaries, no 
 	@:
 
 .PHONY: install-deps
-install-deps: install-boot-tools install-python-deps install-gitleaks install-cloc install-moon install-ansible ## Install boot tools + python .venv deps + gitleaks + cloc + moon + ansible
+install-deps: install-boot-tools install-python-deps install-gitleaks install-cloc install-moon install-ansible install-node install-web-deps ## Install boot tools + python .venv deps + gitleaks + cloc + moon + ansible + node + web deps
 
 .PHONY: install-boot-tools
 install-boot-tools: ## Bootstrap uv + rust toolchain into $(BOOT_NAME)/bin/ (idempotent)
@@ -110,6 +110,14 @@ install-moon: ## Bootstrap the moon binary (workspace task runner) into $(BOOT_N
 .PHONY: install-ansible
 install-ansible: install-boot-tools ## Bootstrap ansible + passlib into $(BOOT_NAME)/bin
 	bash scripts/bootstrap-ansible
+
+.PHONY: install-node
+install-node: ## Bootstrap Node.js + npm into $(BOOT_NAME)/node-env/ (idempotent)
+	bash scripts/bootstrap-node
+
+.PHONY: install-web-deps
+install-web-deps: install-node ## npm install web/ dependencies (Next.js wiki)
+	cd web && PATH="$(BOOT_BIN):$$PATH" npm install
 
 .PHONY: install-hooks
 install-hooks: ## (Re)generate native git hooks

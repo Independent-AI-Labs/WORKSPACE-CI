@@ -136,7 +136,7 @@ build_guard_binary() {
 
     if ! command -v cargo >/dev/null; then
         log_warn "cargo not on PATH: bootstrapping Rust..."
-        bash "${WORKSPACE_ROOT}/workspace/scripts/bootstrap/bootstrap_rust.sh" || {
+        bash "${_CI_ROOT}/scripts/bootstrap-rust" || {
             log_error "Rust installation failed"
             return 1
         }

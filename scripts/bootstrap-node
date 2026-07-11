@@ -1,0 +1,198 @@
+#!/usr/bin/env bash
+# bootstrap-node: fetch the Node.js runtime and place it on PATH.
+#
+# Node.js is required by the CI wiki (web/ directory, a Next.js app).
+# The pre-push quality gate runs eslint, tsc, and vitest against web/,
+# all of which require a working Node.js + npm + node_modules.
+#
+# This script installs Node.js into CI's own boot dir (NOT the workspace
+# root), following the same pattern as bootstrap-uv, bootstrap-moon, etc.
+# The extracted tree lives at $CI_BOOT_DIR/node-env/ and the bin/
+# entries (node, npm, npx) are symlinked into $CI_BOOT_DIR/bin/ for
+# PATH discovery.
+#
+# Idempotent: if a compatible binary is already present, exits 0.
+#
+# Default install location:
+#   $CI_PROJECT_ROOT/$CI_BOOT_NAME/node-env/   (full Node.js tree)
+#   $CI_PROJECT_ROOT/$CI_BOOT_NAME/bin/node    (symlink)
+#   $CI_PROJECT_ROOT/$CI_BOOT_NAME/bin/npm    (symlink)
+#   $CI_PROJECT_ROOT/$CI_BOOT_NAME/bin/npx    (symlink)
+#
+# Overrideable env vars:
+#   $NODE_VERSION  : Node.js version to fetch (default: 24.11.1).
+#   $NODE_ENV_DIR  : override install target directory.
+#
+# Supply-chain pinning: SHA256 verification is MANDATORY and always on.
+# The checksum is fetched at runtime from the SHASUMS256.txt file
+# published alongside the release on nodejs.org. No hardcoded hashes
+# are used -- the sidecar is the trusted source of truth, fetched from
+# the same origin as the tarball.
+#
+# CI_PROJECT_ROOT (this repo's own root) is delegated to lib/ci.sh. Per
+# the boot contract, this script installs to CI's OWN boot dir: NOT the
+# workspace root. See: docs/specifications/SPEC-BOOT-LAYOUT.md
+
+set -euo pipefail
+
+NODE_VERSION="${NODE_VERSION:-24.11.1}"
+
+_ci_lib="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
+# shellcheck source=lib/ci.sh
+if ! source "$_ci_lib/ci.sh"; then
+    echo "ERROR: failed to source $_ci_lib/ci.sh" >&2
+    exit 2
+fi
+if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
+    echo "ERROR: CI_PROJECT_ROOT not set after sourcing ci.sh" >&2
+    exit 2
+fi
+
+_log() { printf '[bootstrap-node] %s\n' "$*" >&2; }
+
+main() {
+    local boot_dir bin_dir node_env target_dir
+    boot_dir="${CI_PROJECT_ROOT}/${CI_BOOT_NAME}"
+    bin_dir="${boot_dir}/bin"
+    node_env="${NODE_ENV_DIR:-${boot_dir}/node-env}"
+
+    if ! mkdir -p "$bin_dir"; then
+        _log "mkdir failed for $bin_dir"
+        return 1
+    fi
+
+    # Idempotency: check if the right version is already installed.
+    local node_bin="${node_env}/bin/node"
+    if [[ -x "$node_bin" ]]; then
+        local v_out v_rc=0
+        v_out="$(mktemp)"
+        "$node_bin" --version >"$v_out" 2>&1 || v_rc=$?
+        if [[ "$v_rc" -eq 0 ]]; then
+            local cur
+            cur="$(head -1 "$v_out")"
+            rm -f "$v_out"
+            if [[ "$cur" == "v${NODE_VERSION}" ]]; then
+                _log "node v${NODE_VERSION} already at $node_bin"
+                # Ensure symlinks exist even if node-env was pre-existing.
+                ln -sf "$node_env/bin/node" "${bin_dir}/node"
+                ln -sf "$node_env/bin/npm" "${bin_dir}/npm"
+                ln -sf "$node_env/bin/npx" "${bin_dir}/npx"
+                return 0
+            fi
+            _log "found existing node ($cur), upgrading to v${NODE_VERSION}"
+        else
+            rm -f "$v_out"
+            _log "existing binary at $node_bin did not respond to '--version' (rc=$v_rc)"
+            _log "re-downloading fresh copy"
+        fi
+    fi
+
+    # Platform + arch detection.
+    local arch platform tarball
+    case "$(uname -m)" in
+        x86_64|amd64)  arch="x64" ;;
+        aarch64|arm64) arch="arm64" ;;
+        *) _log "unsupported arch: $(uname -m)"; return 1 ;;
+    esac
+
+    case "$(uname -s)" in
+        Linux)  platform="linux" ;;
+        Darwin) platform="darwin" ;;
+        *) _log "unsupported platform: $(uname -s)"; return 1 ;;
+    esac
+
+    tarball="node-v${NODE_VERSION}-${platform}-${arch}.tar.gz"
+    local base_url="https://nodejs.org/dist/v${NODE_VERSION}"
+    local tarball_url="${base_url}/${tarball}"
+    local shasums_url="${base_url}/SHASUMS256.txt"
+
+    local tmp
+    tmp="$(mktemp -d)"
+    # shellcheck disable=SC2064
+    trap "rm -rf \"\${tmp:-$tmp}\"" EXIT
+
+    _log "fetching ${tarball_url}"
+    local dl_rc=0
+    curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/${tarball}" "$tarball_url" || dl_rc=$?
+    if [[ "$dl_rc" -ne 0 ]]; then
+        _log "curl failed for $tarball_url (rc=$dl_rc)"
+        return 1
+    fi
+
+    # Mandatory SHA256 verification: fetch SHASUMS256.txt from the same
+    # release directory on nodejs.org and extract the line matching our
+    # tarball.  The file contains "<hash>  <filename>" for every asset.
+    _log "fetching checksums: ${shasums_url}"
+    local sha_rc=0
+    curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/SHASUMS256.txt" "$shasums_url" || sha_rc=$?
+    if [[ "$sha_rc" -ne 0 ]]; then
+        _log "failed to fetch SHASUMS256.txt from $shasums_url (rc=$sha_rc)"
+        _log "cannot verify tarball integrity; refusing to install"
+        return 1
+    fi
+
+    local expected_sha
+    expected_sha="$(awk -v f="$tarball" '$2 == f {print $1; exit}' "${tmp}/SHASUMS256.txt")"
+    if [[ -z "$expected_sha" ]]; then
+        _log "no checksum entry for $tarball in SHASUMS256.txt; refusing to install"
+        return 1
+    fi
+
+    local actual_sha
+    actual_sha="$(ci_sha256 "${tmp}/${tarball}")"
+    if [[ "$actual_sha" != "$expected_sha" ]]; then
+        _log "checksum mismatch: expected $expected_sha, got $actual_sha"
+        return 1
+    fi
+    _log "checksum OK ($expected_sha)"
+
+    # Extract into a clean node-env/ directory inside the boot dir.
+    if [[ -d "$node_env" ]]; then
+        _log "removing existing node-env at $node_env"
+        rm -rf "$node_env"
+    fi
+
+    _log "extracting to $node_env"
+    # Node.js tarballs extract into a top-level directory
+    # node-v<version>-<platform>-<arch>/; we strip the first path component
+    # and land the contents directly into node-env/.
+    if ! mkdir -p "$node_env"; then
+        _log "mkdir failed for $node_env"
+        return 1
+    fi
+    if ! tar -xzf "${tmp}/${tarball}" -C "$node_env" --strip-components=1; then
+        _log "tar extraction failed"
+        return 1
+    fi
+
+    # Symlink the executables into the boot bin dir for PATH discovery.
+    ln -sf "$node_env/bin/node" "${bin_dir}/node"
+    ln -sf "$node_env/bin/npm" "${bin_dir}/npm"
+    ln -sf "$node_env/bin/npx" "${bin_dir}/npx"
+
+    # Post-install verification.
+    local v_out2 v_rc2=0
+    v_out2="$(mktemp)"
+    "$node_env/bin/node" --version >"$v_out2" 2>&1 || v_rc2=$?
+    if [[ "$v_rc2" -ne 0 ]]; then
+        _log "post-install verification failed: '$node_env/bin/node --version' rc=$v_rc2"
+        rm -f "$v_out2"
+        return 1
+    fi
+    _log "installed: $(head -1 "$v_out2") => $node_env/bin/node"
+    rm -f "$v_out2"
+
+    # Also verify npm works.
+    local npm_out npm_rc=0
+    npm_out="$(mktemp)"
+    "$node_env/bin/npm" --version >"$npm_out" 2>&1 || npm_rc=$?
+    if [[ "$npm_rc" -ne 0 ]]; then
+        _log "post-install verification failed: 'npm --version' rc=$npm_rc"
+        rm -f "$npm_out"
+        return 1
+    fi
+    _log "npm $(head -1 "$npm_out") available at $bin_dir/npm"
+    rm -f "$npm_out"
+}
+
+main "$@"
