@@ -8,11 +8,14 @@ set -euo pipefail
 # FORCE INSTALLS TO .boot-linux - NO FALLBACKS, NO .venv, ONLY .boot-linux
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Script is in ami/scripts/bootstrap/, project root is 3 levels up
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
-# Use BOOT_LINUX_DIR env var if set, otherwise default
-VENV_DIR="${BOOT_LINUX_DIR:-${PROJECT_ROOT}/.boot-linux}"
+_ci_lib="$(cd "${SCRIPT_DIR}/../lib" && pwd)"
+# shellcheck source=lib/ci.sh
+if ! source "$_ci_lib/ci.sh"; then
+    echo "ERROR: failed to source $_ci_lib/ci.sh" >&2
+    exit 1
+fi
+VENV_DIR="${CI_BOOT_DIR}"
 
 PODMAN_DIR="${VENV_DIR}/podman"
 PODMAN_VERSION="5.6.2"
@@ -95,9 +98,81 @@ if [[ "$DO_RESET" == "true" ]]; then
     reset_podman_state
 fi
 
-# Check if running on Linux
+# macOS: Homebrew podman + workspace podman-guard wrapper
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    log_info "Bootstrapping Podman on macOS via Homebrew..."
+
+    if ! command -v brew &>/dev/null; then
+        log_error "Homebrew is required. Install from https://brew.sh"
+        exit 1
+    fi
+
+    if ! brew list podman &>/dev/null; then
+        log_info "Installing podman via Homebrew..."
+        brew install podman
+    else
+        log_info "podman $(brew list --versions podman | awk '{print $2}') already installed via Homebrew"
+    fi
+
+    PODMAN_BIN="$(brew --prefix podman)/bin/podman"
+    if [[ ! -x "$PODMAN_BIN" ]]; then
+        log_error "podman binary not found at $PODMAN_BIN after brew install"
+        exit 1
+    fi
+
+    mkdir -p "${VENV_DIR}/bin"
+    ln -sf "$PODMAN_BIN" "${VENV_DIR}/bin/real-podman"
+
+    GUARD_SCRIPT="${CI_WORKSPACE_ROOT}/workspace/scripts/utils/podman-guard"
+    if [[ -f "$GUARD_SCRIPT" ]]; then
+        rm -f "${VENV_DIR}/bin/podman"
+        cp "$GUARD_SCRIPT" "${VENV_DIR}/bin/podman"
+        chmod +x "${VENV_DIR}/bin/podman"
+        log_info "Installed podman-guard as ${VENV_DIR}/bin/podman"
+    else
+        log_error "Guard script not found at $GUARD_SCRIPT"
+        exit 1
+    fi
+
+    CONTAINERS_CONF_DIR="${HOME}/.config/containers"
+    mkdir -p "${CONTAINERS_CONF_DIR}"
+
+    cat > "${CONTAINERS_CONF_DIR}/registries.conf" <<'EOF'
+unqualified-search-registries = ["docker.io"]
+
+[[registry]]
+location = "docker.io"
+EOF
+
+    cat > "${CONTAINERS_CONF_DIR}/policy.json" <<'EOF'
+{
+  "default": [
+    {
+      "type": "insecureAcceptAnything"
+    }
+  ],
+  "transports": {
+    "docker-daemon": {
+      "": [{"type": "insecureAcceptAnything"}]
+    }
+  }
+}
+EOF
+
+    if "${VENV_DIR}/bin/real-podman" --version; then
+        log_info "Podman macOS bootstrap complete"
+    else
+        log_error "Podman installation verification failed"
+        exit 1
+    fi
+
+    log_warn "Podman on macOS requires a Linux VM: podman machine init && podman machine start"
+    exit 0
+fi
+
+# Linux: static binary install
 if [[ "$(uname -s)" != "Linux" ]]; then
-    log_error "This script only supports Linux. For other platforms, install Podman manually."
+    log_error "Unsupported OS: $(uname -s)"
     exit 1
 fi
 

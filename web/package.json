@@ -29,7 +29,7 @@
     "@codemirror/state": "6.7.1",
     "@codemirror/view": "6.43.6",
     "clsx": "2.1.1",
-    "dompurify": "3.4.11",
+    "dompurify": "3.4.12",
     "fuse.js": "7.4.2",
     "isomorphic-dompurify": "2.36.0",
     "js-yaml": "4.3.0",
