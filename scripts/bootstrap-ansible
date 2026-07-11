@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# bootstrap-ansible: install ansible + passlib executables into the boot bin dir.
+#
+# This script uses `uv tool install` to create an isolated Python
+# environment for ansible, exposing only the executables (ansible,
+# ansible-playbook, ansible-galaxy, ansible-vault, etc.) into
+# $CI_BOOT_NAME/bin/ via UV_TOOL_BIN_DIR.
+#
+# Default install location:
+#   $CI_PROJECT_ROOT/$CI_BOOT_NAME/bin/
+# where $CI_BOOT_NAME is platform-aware (.boot-linux on Linux,
+# .boot-macos on macOS), set at source-time by lib/ci.sh.
+#
+# Override $UV_TOOL_BIN_DIR to install elsewhere.
+#
+# CI_PROJECT_ROOT (this repo's own root) is delegated to lib/ci.sh.
+# Sibling repos reach these executables via ci_resolve_boot_path().
+# See: docs/specifications/SPEC-BOOT-LAYOUT.md
+
+set -euo pipefail
+
+_ci_lib="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
+# shellcheck source=lib/ci.sh
+if ! source "$_ci_lib/ci.sh"; then
+    echo "ERROR: failed to source $_ci_lib/ci.sh" >&2
+    exit 2
+fi
+if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
+    echo "ERROR: CI_PROJECT_ROOT not set after sourcing ci.sh" >&2
+    exit 2
+fi
+
+_log() { printf '[bootstrap-ansible] %s\n' "$*" >&2; }
+
+main() {
+    local target_dir uv_bin
+    target_dir="${UV_TOOL_BIN_DIR:-${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/bin}"
+    uv_bin="${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/bin/uv"
+
+    if [[ ! -x "$uv_bin" ]]; then
+        _log "ERROR: uv not found at $uv_bin -- run 'make install-boot-tools' first"
+        return 1
+    fi
+
+    # Idempotency: skip if ansible-playbook already works.
+    if [[ -x "$target_dir/ansible-playbook" ]]; then
+        if "$target_dir/ansible-playbook" --version > /dev/null 2>&1; then
+            local v
+            v="$("$target_dir/ansible-playbook" --version 2>&1)"
+            v="${v%%$'\n'*}"
+            _log "ansible already installed: $v"
+            return 0
+        fi
+        _log "existing ansible-playbook at $target_dir is broken; re-installing"
+    fi
+
+    _log "installing ansible + passlib via uv tool..."
+    if ! mkdir -p "$target_dir"; then
+        _log "mkdir failed for $target_dir"
+        return 1
+    fi
+
+    # ansible-core provides the executables (ansible-playbook, ansible, etc.).
+    # `ansible` (the meta-package) only provides `ansible-community`.
+    # Installing ansible-core as the tool and adding `ansible --with passlib`
+    # as extras includes the collections and passlib in the same environment.
+    UV_TOOL_BIN_DIR="$target_dir" "$uv_bin" tool install ansible-core --with ansible --with passlib --force
+
+    # Post-install verification.
+    local v_out v_rc=0
+    v_out="$("$target_dir/ansible-playbook" --version 2>&1)" || v_rc=$?
+    if [[ "$v_rc" -ne 0 ]]; then
+        _log "post-install verification failed: ansible-playbook --version returned rc=$v_rc"
+        _log "$v_out"
+        return 1
+    fi
+    _log "installed: ${v_out%%$'\n'*} => $target_dir/ansible-playbook"
+}
+
+main "$@"

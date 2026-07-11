@@ -180,7 +180,11 @@ def _has_unconditional_display(
     scan_end = min(i + _DISPLAY_SCAN_WINDOW, len(lines))
     for j in range(i + 1, scan_end):
         nt = lines[j].text
-        if f"{reg_var}.stdout" in nt or f"{reg_var}.stderr" in nt:
+        if (
+            f"{reg_var}.stdout" in nt
+            or f"{reg_var}.stderr" in nt
+            or f"{reg_var}.results" in nt
+        ):
             has_when_guard = False
             for k in range(
                 j - _WHEN_GUARD_WINDOW,

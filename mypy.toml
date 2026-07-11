@@ -1,0 +1,180 @@
+[tool.mypy]
+strict = true
+plugins = ["pydantic.mypy"]
+warn_unused_configs = true
+namespace_packages = true
+explicit_package_bases = true
+exclude = [
+    "(?x)(^tmp/|^.venv/|^venv/|^dist/|^build/|^.eggs/|^__pycache__/|.*\\.egg-info/|^.pytest_cache/|^.git/|^\\.boot-linux/|^\\.boot-macos/)"
+]
+
+# Third-party libraries without type stubs.
+# Only ignore_missing_imports is allowed here. No disallow_* relaxations.
+
+[[tool.mypy.overrides]]
+module = "sklearn.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "scipy.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "matplotlib.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "seaborn.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tqdm.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "fitz.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "psutil.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "boto3.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "botocore.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "questionary"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "questionary.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "rich.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "transformers.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "datasets.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "accelerate.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["googleapiclient", "googleapiclient.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["google_auth_oauthlib", "google_auth_oauthlib.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["rust_ta", "rust_ta.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "mlflow.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "uuid_utils.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "ahocorasick"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "ahocorasick.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "torch"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "torch.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "torch.xpu.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "intel_extension_for_pytorch"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["optimum", "optimum.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pydgraph", "pydgraph.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["asyncpg", "asyncpg.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "yaml"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["hvac", "hvac.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["fastapi", "fastapi.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["prefect", "prefect.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["httpx", "httpx.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["aiohttp", "aiohttp.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pandas", "pandas.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tabulate"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["sqlalchemy", "sqlalchemy.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["bcrypt", "jwt", "jwt.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pydantic", "pydantic.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "loguru"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "art"
+ignore_missing_imports = true
