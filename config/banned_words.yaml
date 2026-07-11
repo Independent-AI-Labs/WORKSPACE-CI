@@ -21,7 +21,7 @@ universal_exceptions:
       - ':\s*Any\b'
       - '\bdict\[.*,\s*Any\]'
       - '\bfallback\b'
-      - '\bstubs[?]\b'
+      - '\bstubs?\b'
       - '\bmock\b'
       - '\bsilent'
       - '\.suppress'
@@ -42,7 +42,7 @@ universal_exceptions:
       - 'eslint-disable'
   - paths: ['.toml$']
     patterns:
-      - '\bstubs[?]\b'
+      - '\bstubs?\b'
       - '\bmock\b'
   # The ASCII em-dash pattern ` -- ` is legitimate syntax in these
   # contexts (cargo fmt -- --check; Makefile command separators; YAML
@@ -678,11 +678,11 @@ banned:
     reason: "No legacy code paths."
     category: obsolete-paths
 
-  - pattern: '\bshims[?]\b'
+  - pattern: '\bshims?\b'
     reason: "No shim layers."
     category: obsolete-paths
 
-  - pattern: '\bstubs[?]\b'
+  - pattern: '\bstubs?\b'
     reason: "No stub implementations."
     category: obsolete-paths
 
@@ -690,7 +690,7 @@ banned:
     reason: "No skeleton code."
     category: obsolete-paths
 
-  - pattern: '\bplaceholders[?]\b'
+  - pattern: '\bplaceholders?\b'
     reason: "No placeholder code."
     category: obsolete-paths
 

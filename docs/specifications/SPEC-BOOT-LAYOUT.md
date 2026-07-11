@@ -704,7 +704,7 @@ fi
 ### 11.4 `bootstrap-rust` Idempotency
 
 `bootstrap-rust` exports `RUSTUP_HOME` and `CARGO_HOME` BEFORE the
-idempotency version check, so rustup shims can resolve their home
+idempotency version check, so rustup proxies can resolve their home
 directory and find the active toolchain:
 
 ```bash

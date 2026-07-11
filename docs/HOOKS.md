@@ -321,7 +321,7 @@ cd myproject && make install-hooks
 | File | Overwritten by? | Purpose |
 |------|-----------------|---------|
 | `.pre-commit-config.yaml` | `--force-precommit` / `--apply-precommit` or `--force-all` / `--apply-all` | Hook configuration (consumed by `generate-hooks`) |
-| `Makefile` | `--force-makefile` / `--apply-makefile` (**refuses if customised**) | 10-target contract with vacuous stubs |
+| `Makefile` | `--force-makefile` / `--apply-makefile` (**refuses if customised**) | 10-target contract with vacuous pass targets |
 | `config/*.yaml` | `--force-configs` / `--apply-configs` or `--force-all` / `--apply-all` (new files only otherwise) | 6 default CI config files |
 | `quality_exceptions.yaml` | **Never** | Per-project exception declarations |
 

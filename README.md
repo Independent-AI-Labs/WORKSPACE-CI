@@ -149,8 +149,8 @@ admission for pre-commit's hook scheduling.
 
 | What is added | Why no off-the-shelf tool does this |
 | ------------- | ----------------------------------- |
-| Banned patterns (60 semantic prohibitions) | No linter bans `fallback`, `getattr`, `@dataclass`, or `self.get(`. These are architectural policy decisions, not style rules. |
-| Error-swallow detection (Python, JS, Shell, Ansible, Cron) | No tool spans five languages looking for silent-error patterns in unified diffs. Each language's linter only sees its own syntax. |
+| Banned patterns (60 semantic prohibitions) | No linter encodes the repo's architectural policy list from `banned_words.yaml`. These are policy decisions, not style rules. |
+| Error-swallow detection (Python, JS, Shell, Ansible, Cron) | No tool spans five languages looking for swallowed-error patterns in unified diffs. Each language's linter only sees its own syntax. |
 | Coverage no-devolution | Thresholds can only raise, never lower. No linter or test runner tracks config history. |
 | Dead code after file deletion | Detects imports of deleted `.py` modules before the commit lands. Pre-commit has no cross-file deletion awareness. |
 | Dependency freshness | Flags stale pinned versions, not just unpinned ones. `pip-audit` checks vulnerabilities; this checks rot. |

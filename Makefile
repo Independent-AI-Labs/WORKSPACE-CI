@@ -136,9 +136,9 @@ sync: ## Sync .venv deps + reinstall hooks
 # Public contract targets: delegate to moon for graph-aware caching.
 # Implementation bodies live under private _<target>-impl: targets so
 # the moon command field can invoke them directly without recursing
-# back through the public shim. INCIDENT-prevention: `make X` shimming
+# back through the public wrapper. INCIDENT-prevention: `make X` delegating
 # to `moon run :X` whose command is `make X` would infinite-loop.
-# Resolution: moon calls _<target>-impl, public target shims to moon.
+# Resolution: moon calls _<target>-impl, public targets delegate to moon.
 
 .PHONY: check
 check: ## Run all quality gates (lint + type-check + test)

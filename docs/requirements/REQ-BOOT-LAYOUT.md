@@ -303,7 +303,7 @@ ever writes into a parent's or sibling's boot directory.
 |----|-------------|
 | FR-15.1 | Bootstrap scripts that download platform-specific binaries (gitleaks, uv, rust) MUST detect the host platform and architecture at runtime and select the correct download URL. No hardcoded `linux` or `unknown-linux-gnu` in tarball names or host triples. |
 | FR-15.2 | `bootstrap-rust` MUST compute the Rust host triple using platform-aware logic: `aarch64-apple-darwin` on macOS ARM64, `x86_64-apple-darwin` on macOS Intel, `<arch>-unknown-linux-gnu` on Linux. The `uname -m` output `arm64` MUST be normalized to `aarch64` for Rust triple compatibility. |
-| FR-15.3 | `bootstrap-rust` MUST export `RUSTUP_HOME` and `CARGO_HOME` BEFORE the idempotency version check, so rustup shims can resolve their home directory. |
+| FR-15.3 | `bootstrap-rust` MUST export `RUSTUP_HOME` and `CARGO_HOME` BEFORE the idempotency version check, so rustup proxies can resolve their home directory. |
 | FR-15.4 | `bootstrap-gitleaks` MUST select the correct tarball name based on platform: `gitleaks_<version>_darwin_<arch>.tar.gz` on macOS, `gitleaks_<version>_linux_<arch>.tar.gz` on Linux. |
 | FR-15.5 | All bootstrap scripts that verify downloaded artifacts MUST use `ci_sha256()` for portable SHA-256 checksum computation. The function tries `sha256sum`, then `shasum -a 256`, then `python3` as fallback. |
 

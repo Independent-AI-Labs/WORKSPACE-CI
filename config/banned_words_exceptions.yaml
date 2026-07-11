@@ -19,13 +19,13 @@ exceptions:
   - pattern: '\bpython3?\b'
     paths: ['docs/']
   - pattern: '\bfallback\b'
-    paths: ['docs/', 'README\.md$']
+    paths: ['docs/']
   - pattern: '\blegacy\b'
     paths: ['docs/']
   - pattern: '\bmock\b'
     paths: ['docs/']
   - pattern: '\bsilent'
-    paths: ['docs/', 'README\.md$']
+    paths: ['docs/']
   - pattern: '\bskeleton\b'
     paths: ['docs/']
   - pattern: '\blazy\b'
@@ -43,9 +43,9 @@ exceptions:
   - pattern: 'eslint-disable'
     paths: ['docs/']
   - pattern: '@dataclass'
-    paths: ['docs/', 'README\.md$']
+    paths: ['docs/']
   - pattern: 'self\.get\('
-    paths: ['docs/', 'README\.md$']
+    paths: ['docs/']
 
 
   - pattern: '\.suppress'

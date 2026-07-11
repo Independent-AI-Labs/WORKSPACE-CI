@@ -198,7 +198,7 @@ VM-root. It lives at `projects/CI/mypy.toml`, next to the existing
 `projects/CI/ruff.toml`.
 
 **Allowlist**: ONLY `ignore_missing_imports = true` for third-party
-libraries that genuinely lack type stubs. NO exemptions on project code.
+libraries that genuinely lack type hint packages. NO exemptions on project code.
 NO `disallow_subclassing_any = false`, NO `disallow_untyped_calls =
 false`, NO `disallow_untyped_decorators = false`, NO `warn_return_any =
 false` on any project module.
@@ -214,7 +214,7 @@ exclude = [
     "(?x)(^tmp/|^.venv/|^venv/|^dist/|^build/|^.eggs/|^__pycache__/|.*\\.egg-info/|^.pytest_cache/|^.git/|^\\.boot-linux/|^\\.boot-macos/)"
 ]
 
-# Third-party libraries without type stubs.
+# Third-party libraries without type hint packages.
 # Only ignore_missing_imports is allowed here. No disallow_* relaxations.
 
 [[tool.mypy.overrides]]
@@ -473,7 +473,7 @@ on CI having `mypy.toml`, `ruff.toml` (with "projects"), and
 ## CRITICAL RULES
 
 1. **NO project-code exemptions in mypy.toml.** Only `ignore_missing_imports`
-   for third-party libs without stubs. No `disallow_* = false`, no
+   for third-party libs without type hint packages. No `disallow_* = false`, no
    `warn_return_any = false` on project modules.
 2. **No `2>/dev/null`, `|| true`** in bootstrap-ansible or Makefile.
 3. **`bootstrap-ansible` mirrors `bootstrap-gitleaks` pattern**: sources

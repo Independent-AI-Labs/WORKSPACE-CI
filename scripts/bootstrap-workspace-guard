@@ -340,7 +340,7 @@ install_guard_binary() {
         log_warn "FORCE_ROOT_ONLY=1: proceeding despite ${nr_count} non-root users (their git will break)."
     fi
 
-    if [[ -t 0 ]]; then
+    if [[ -t 0 ]] && [[ "${GUARD_NONINTERACTIVE:-0}" != "1" ]]; then
         echo -ne "${CYAN}${BOLD}Proceed with git guard installation? [y/N] ${NC}"
         read -r response
         case "$response" in

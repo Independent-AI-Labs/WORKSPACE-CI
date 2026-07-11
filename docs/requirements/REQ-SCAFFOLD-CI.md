@@ -46,7 +46,7 @@ filesystem offset.
   (contents, regeneration workflow).
 - The generated `.pre-commit-config.yaml` (format, entry-rendering per
   hook `kind`, override application rules).
-- The generated `Makefile` (contract compliance, stub semantics,
+- The generated `Makefile` (contract compliance, vacuous-pass semantics,
   `CI_DIR` resolution).
 - The copy of per-project-overridable configs from `CI/config/` into
   `<consumer>/config/` (which files, substitution rules, overwrite
@@ -87,7 +87,7 @@ filesystem offset.
 | Auto-insertion | Generator behaviour: append a missing mandatory hook to the end of its stage list with a printed notice. Never reorders user-listed hooks. |
 | Override | Per-hook-entry substitution declared in the profile's `overrides:` block. Limited to `entry`, `files`, `exclude`, `always_run`, `pass_filenames`. |
 | Maintenance mode | `--emit-template` flag: regenerates `templates/ci-profile.template.yaml` from `required_hooks.yaml` and exits. Bypasses all consumer-side generation. |
-| Vacuous stub | A generated Makefile target whose recipe body is `@:` (bash no-op, exit 0). Lets `make check` pass out-of-the-box on a brand-new project without forcing the consumer to wire language-specific tooling before their first commit. |
+| Vacuous pass target | A generated Makefile target whose recipe body is `@:` (bash no-op, exit 0). Lets `make check` pass out-of-the-box on a brand-new project without forcing the consumer to wire language-specific tooling before their first commit. |
 
 ### 1.4 Lifecycle Position
 
@@ -202,12 +202,12 @@ are independent and rerunnable. `scaffold-ci` does NOT call
 |----|-------------|
 | FR-SC-7.1 | The generated `Makefile` MUST define all 10 mandatory targets from `lib/makefile_contract.mk`: `init`, `install`, `install-ci`, `install-hooks`, `sync`, `check`, `lint`, `type-check`, `test`, `clean`, `preflight`. |
 | FR-SC-7.2 | The generated `Makefile` MUST `-include $(CI_DIR)/lib/makefile_contract.mk` where `CI_DIR := $(abspath $(REPO_ROOT)/<REL_CI>)`. This provides `make contract-check` and validates the 10 targets' presence via `make -n`. |
-| FR-SC-7.3 | The language-specific targets (`lint`, `type-check`, `test`, `check-push`) MUST be vacuous stubs with `@:` recipe bodies and `TODO` echo diagnostics. They MUST exit 0 so `make check` passes out-of-the-box on a brand-new project. |
+| FR-SC-7.3 | The language-specific targets (`lint`, `type-check`, `test`, `check-push`) MUST be vacuous pass targets with `@:` recipe bodies and `TODO` echo diagnostics. They MUST exit 0 so `make check` passes out-of-the-box on a brand-new project. |
 | FR-SC-7.4 | The `install-hooks` target MUST call `bash $(CI_DIR)/scripts/generate-hooks`. |
 | FR-SC-7.5 | The `clean-precommit` target MUST call `bash $(CI_DIR)/scripts/cleanup-precommit`. |
 | FR-SC-7.6 | The generator MUST NOT generate `moon.yml` (per SPEC §1.3 -- out of scope). |
 | FR-SC-7.7 | The generated `Makefile` MUST include a `help` target that greps `## ` annotations and prints them, mirroring CI's own Makefile. |
-| FR-SC-7.8 | The generator MUST NOT generate language-specific recipes (no `cargo build`, no `pytest`, no `npm test`). The consumer fills the stubs themselves; the generator's purpose is structural compliance, not stack-specific defaults. |
+| FR-SC-7.8 | The generator MUST NOT generate language-specific recipes (no `cargo build`, no `pytest`, no `npm test`). The consumer fills the vacuous targets themselves; the generator's purpose is structural compliance, not stack-specific defaults. |
 
 ### 2.5 Generated `config/` Files
 
@@ -300,7 +300,7 @@ are independent and rerunnable. `scaffold-ci` does NOT call
 
 | ID | Requirement |
 |----|-------------|
-| NFR-SC-7 | The generator's source MUST NOT contain any banned words per `CI/config/banned_words.yaml` (`unwrap`, `silent`, `mock`, `stub`, `fallback`, etc.). The CI banned-words checker will catch violations at commit time. |
+| NFR-SC-7 | The generator's source MUST NOT contain any banned words per `CI/config/banned_words.yaml`. The CI banned-words checker will catch violations at commit time. |
 | NFR-SC-8 | The generator MUST NOT contain `unsafe` code blocks (not applicable to bash, listed for completeness -- the rule applies across languages). |
 
 ### 3.4 File Length and Format

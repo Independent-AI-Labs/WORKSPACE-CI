@@ -149,7 +149,7 @@ main() {
     mkdir -p "$rust_home"
 
     # Isolate rustup/cargo state inside $CI_BOOT_NAME/rust (NOT $HOME).
-    # Exported BEFORE the idempotency check so rustup shims (rustc/cargo)
+    # Exported BEFORE the idempotency check so rustup proxies (rustc/cargo)
     # can resolve their home directory and find the active toolchain.
     export RUSTUP_HOME="$rust_home"
     export CARGO_HOME="$rust_home"

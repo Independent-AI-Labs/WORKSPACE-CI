@@ -15,7 +15,7 @@ fi
 # Capture stdout of <cmd...>, fall back to <default> string on failure.
 # stderr is captured to a temp file and printed only on failure (real signal,
 # no swallow). Use for UI display strings where a command failure should
-# degrade to a placeholder rather than abort the audit.
+# degrade to a static default rather than abort the audit.
 _capture_or_default() {
     local default="$1"; shift
     local out err rc=0

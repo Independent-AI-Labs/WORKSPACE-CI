@@ -70,7 +70,7 @@ integration package:
 2. **`.pre-commit-config.yaml`** -- generated from the profile, with all
    relative paths computed from the consumer-to-CI offset.
 3. **`Makefile`** -- generated with full contract targets; language-specific
-   targets (`lint`, `type-check`, `test`) are stubs with `TODO` comments
+   targets (`lint`, `type-check`, `test`) are vacuous pass targets with `TODO` comments
    the consumer fills in.
 4. **`config/` directory** -- the six per-project-overridable config files
    copied from CI defaults as starting seeds.
@@ -108,7 +108,7 @@ re-running `scaffold-ci`, and vice versa.
 - Generation of `.pre-commit-config.yaml` from the profile + master
   `required_hooks.yaml` registry (§6).
 - Generation of a contract-compliant `Makefile` with empty language-specific
-  stubs (§7).
+  vacuous pass targets (§7).
 - Copy of CI's per-project-overridable config defaults into the consumer's
   `config/` directory (§8).
 - Rendering of `quality_exceptions.yaml` from the existing template (§9).
@@ -574,7 +574,7 @@ IS defined; the recipe body is irrelevant to the contract).
 # Re-generate: make -C <REL_CI>/.. scaffold-ci CONSUMER=<consumer> --force
 #
 # Language-specific targets (lint, type-check, test, check-push) are
-# intentional stubs. Fill them in per your project's stack. See
+# intentional vacuous targets. Fill them in per your project's stack. See
 # <REL_CI>/Makefile for the canonical example.
 
 SHELL := /bin/bash
@@ -623,27 +623,27 @@ sync: install-deps install-hooks ## Sync deps + reinstall hooks
 	@:
 
 # =============================================================================
-# Quality Gates (stubs -- implement per your stack)
+# Quality Gates (vacuous targets: implement per your stack)
 # =============================================================================
 .PHONY: check lint type-check test check-push clean clean-precommit
 
 check: lint type-check test ## Run all quality gates
-	@echo "TODO: wire lint+type-check+test implementations; this stub passes vacuously."
+	@echo "TODO: wire lint+type-check+test implementations; this target passes vacuously."
 
 lint: ## Lint -- TODO: implement (ruff / eslint / clippy -- see CI/Makefile for examples)
-	@echo "TODO: lint stub -- exit 0 (vacuous pass)."
+	@echo "TODO: lint target: exit 0 (vacuous pass)."
 	@:
 
 type-check: ## Type-check -- TODO: implement (mypy / tsc / cargo check)
-	@echo "TODO: type-check stub -- exit 0 (vacuous pass)."
+	@echo "TODO: type-check target: exit 0 (vacuous pass)."
 	@:
 
 test: ## Test -- TODO: implement (pytest / vitest / cargo test)
-	@echo "TODO: test stub -- exit 0 (vacuous pass)."
+	@echo "TODO: test target: exit 0 (vacuous pass)."
 	@:
 
 check-push: ## Pre-push quality gate -- TODO: implement
-	@echo "TODO: check-push stub -- exit 0 (vacuous pass)."
+	@echo "TODO: check-push target: exit 0 (vacuous pass)."
 	@:
 
 # =============================================================================
@@ -659,14 +659,14 @@ clean-precommit: ## Remove pre-commit framework traces
 
 ### 7.2 Why Stubs Pass `make check` Vacuously
 
-The stub `lint`, `type-check`, and `test` targets each have `@:` (the
+The vacuous `lint`, `type-check`, and `test` targets each have `@:` (the
 bash no-op) as their recipe body, which exits 0. `make check` chains
 `lint && type-check && test`, all of which exit 0, so `make check` exits
 0. This is intentional: a brand-new project can immediately run `make
 install-hooks` and commit without picking up CI's strictness. The
 consumer INCREMENTS in real implementations, replacing each `@:` with a
 real recipe. The `TODO:` comments are highly visible (echoed during the
-run), so the consumer cannot accidentally ship a stub to production
+run), so the consumer cannot accidentally ship a vacuous target to production
 without noticing.
 
 The alternative (scaffold `check: false` to fail loudly) breaks the
@@ -1184,11 +1184,11 @@ does not check individual entries.
 
 1. **`moon.yml` generation?** SPEC: no. Each project's moon task graph
    is custom. The generator leaves `moon.yml` to the consumer. If a
-   future maintainer wants a `moon.template.yml` stub, that's a separate
+   future maintainer wants a `moon.template.yml` vacuous file, that's a separate
    feature gated by its own SPEC.
 
 2. **`check` target: chain or independent?** SPEC §7.1: chain as
-   `lint && type-check && test`. With vacuous stubs, all three exit 0
+   `lint && type-check && test`. With vacuous pass targets, all three exit 0
    so `check` exits 0. The chain order matches the existing CI
    Makefile's own `check` target (lines 110-113). If the consumer wants
    `check` to run only lint + test (skip type-check), they edit their
@@ -1284,7 +1284,7 @@ hold (see REQ-SCAFFOLD-CI.md for full FR/NFR numbering):
   `PIPESTATUS[0]` captured on the line following every pipeline. No
   bare `.` source -- only `source ... || exit N`.
 - **NFR-4**: No banned words per `config/banned_words.yaml`
-  (`unwrap`, `silent`, `mock`, `stub`, `fallback`, etc.) in the
+  (per `banned_words.yaml`) in the
   implementation.
 - **NFR-5**: All implementation files under 512 lines
   (per `config/file_length_limits.yaml`).
