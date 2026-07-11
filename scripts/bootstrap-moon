@@ -1,0 +1,199 @@
+#!/usr/bin/env bash
+# bootstrap-moon: fetch the moon (moonrepo) binary and place it on PATH.
+#
+# This project uses `moon` as the workspace task runner and project-graph
+# dependency validator. This script is idempotent: if a compatible binary
+# is already present at the target path, it exits 0 without redownloading.
+#
+# Default install location:
+#   $CI_PROJECT_ROOT/$CI_BOOT_NAME/bin/moon
+# where $CI_BOOT_NAME is platform-aware (.boot-linux on Linux, .boot-macos
+# on macOS), set at source-time by lib/ci.sh.
+# Override with $MOON_BIN to drop somewhere else.
+#
+# Override the version with $MOON_VERSION (default below).
+#
+# CI_PROJECT_ROOT (this repo's own root) is delegated to lib/ci.sh. Per the
+# boot contract, this script installs to CI's own boot dir: NOT the
+# workspace root. Sibling repos reach this binary via the
+# boot-path resolver (lib/ci.sh::ci_resolve_boot_path) which reads
+# moon.yml::project.inherited_boot_dirs. See:
+#   docs/specifications/SPEC-BOOT-LAYOUT.md
+#
+# Overrideable env vars:
+#   $MOON_VERSION       : release tag to fetch (default: 2.4.2).
+#   $MOON_BIN           : override install target path.
+#
+# Supply-chain pinning: SHA256 verification is MANDATORY and always on.
+# The checksum is fetched at runtime from the .sha256 sidecar file
+# published alongside the tarball on the GitHub release page. No hardcoded
+# hashes are used -- the sidecar is the trusted source of truth, fetched
+# from the same release origin as the tarball.
+
+set -euo pipefail
+
+MOON_VERSION="${MOON_VERSION:-2.4.2}"
+
+_ci_lib="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
+# shellcheck source=lib/ci.sh
+if ! source "$_ci_lib/ci.sh"; then
+    echo "ERROR: failed to source $_ci_lib/ci.sh" >&2
+    exit 2
+fi
+if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
+    echo "ERROR: CI_PROJECT_ROOT not set after sourcing ci.sh" >&2
+    exit 2
+fi
+
+_log() { printf '[bootstrap-moon] %s\n' "$*" >&2; }
+
+main() {
+    local target_dir target arch platform tarball url subdir
+    target_dir="${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/bin"
+    target="${MOON_BIN:-${target_dir}/moon}"
+
+    if ! mkdir -p "$(dirname "$target")"; then
+        _log "mkdir failed for $(dirname "$target")"
+        return 1
+    fi
+
+    if [[ -x "$target" ]]; then
+        local v_out v_err v_rc=0
+        v_out="$(mktemp)"
+        v_err="$(mktemp)"
+        "$target" --version >"$v_out" 2>"$v_err" || v_rc=$?
+        if [[ "$v_rc" -eq 0 ]]; then
+            local cur
+            cur="$(head -1 "$v_out")"
+            rm -f "$v_out" "$v_err"
+            if [[ "$cur" == *"${MOON_VERSION}"* ]]; then
+                _log "moon ${MOON_VERSION} already at $target"
+                return 0
+            fi
+            _log "found existing moon ($cur), upgrading to ${MOON_VERSION}"
+        else
+            local err_msg
+            err_msg="$(head -1 "$v_err")"
+            rm -f "$v_out" "$v_err"
+            _log "existing binary at $target did not respond to '--version'"
+            _log "rc=$v_rc: $err_msg: re-downloading fresh copy"
+        fi
+    fi
+
+    case "$(uname -m)" in
+        x86_64|amd64)  arch="x86_64" ;;
+        aarch64|arm64) arch="aarch64" ;;
+        *) _log "unsupported arch: $(uname -m)"; return 1 ;;
+    esac
+
+    case "$(uname -s)" in
+        Linux)  platform="unknown-linux-gnu" ;;
+        Darwin) platform="apple-darwin" ;;
+        *) _log "unsupported platform: $(uname -s)"; return 1 ;;
+    esac
+
+    # moon release tarballs are named moon_cli-<arch>-<platform>.tar.xz and
+    # extract into a subdir of the same name (without the .tar.xz suffix).
+    tarball="moon_cli-${arch}-${platform}.tar.xz"
+    url="https://github.com/moonrepo/moon/releases/download/v${MOON_VERSION}/${tarball}"
+    subdir="moon_cli-${arch}-${platform}"
+
+    local tmp
+    tmp="$(mktemp -d)"
+    # Use ${tmp:-} so the trap is safe under `set -u` once `tmp` (a local)
+    # goes out of scope after main() returns.
+    # shellcheck disable=SC2064
+    trap "rm -rf \"\${tmp:-$tmp}\"" EXIT
+
+    _log "fetching ${url}"
+    local dl_rc=0
+    curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/${tarball}" "$url" || dl_rc=$?
+    if [[ "$dl_rc" -ne 0 ]]; then
+        _log "curl failed for $url (rc=$dl_rc)"
+        return 1
+    fi
+
+    # Mandatory SHA256 verification: fetch the .sha256 sidecar from the
+    # same GitHub release URL as the tarball. The sidecar file contains
+    # "<hash>  <filename>" -- we extract the hash and compare against
+    # ci_sha256 of the downloaded tarball. No hardcoded hashes.
+    local sha_url="${url}.sha256"
+    _log "fetching checksum sidecar: ${sha_url}"
+    local sha_rc=0
+    curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/${tarball}.sha256" "$sha_url" || sha_rc=$?
+    if [[ "$sha_rc" -ne 0 ]]; then
+        _log "failed to fetch SHA256 sidecar from $sha_url (rc=$sha_rc)"
+        _log "cannot verify tarball integrity without sidecar; refusing to install"
+        return 1
+    fi
+
+    local expected_sha
+    expected_sha="$(awk '{print $1}' "${tmp}/${tarball}.sha256")"
+    if [[ -z "$expected_sha" ]]; then
+        _log "SHA256 sidecar is empty or malformed; refusing to install"
+        return 1
+    fi
+
+    local actual_sha
+    actual_sha="$(ci_sha256 "${tmp}/${tarball}")"
+    if [[ "$actual_sha" != "$expected_sha" ]]; then
+        _log "checksum mismatch: expected $expected_sha, got $actual_sha"
+        return 1
+    fi
+    _log "checksum OK ($expected_sha)"
+
+    # moon tarballs are .tar.xz; -J selects xz decompression (BSD tar and
+    # GNU tar both support it; CI Makefile prepends GNU coreutils gnubin).
+    if ! tar -xJf "${tmp}/${tarball}" -C "$tmp"; then
+        _log "tar extraction failed"
+        return 1
+    fi
+
+    # Locate the moon binary inside the extracted subdir; fall back to the
+    # archive root in case a future release flattens the layout.
+    local moon_src="${tmp}/${subdir}/moon"
+    if [[ ! -f "$moon_src" ]]; then
+        moon_src="${tmp}/moon"
+    fi
+    if [[ ! -f "$moon_src" ]]; then
+        _log "moon binary not found after extraction"
+        _log "looked in ${subdir}/moon and at archive root of ${tmp}"
+        return 1
+    fi
+
+    if ! install -m 0755 "$moon_src" "$target"; then
+        _log "install (copy) failed: $moon_src -> $target"
+        return 1
+    fi
+
+    # Copy moonx (sibling launcher) if the release ships it (same subdir,
+    # then archive root).
+    local moonx_src="${tmp}/${subdir}/moonx"
+    if [[ ! -f "$moonx_src" ]]; then
+        moonx_src="${tmp}/moonx"
+    fi
+    if [[ -f "$moonx_src" ]]; then
+        local moonx_target
+        moonx_target="$(dirname "$target")/moonx"
+        if ! install -m 0755 "$moonx_src" "$moonx_target"; then
+            _log "install (copy) of moonx failed: $moonx_src -> $moonx_target"
+            return 1
+        fi
+        _log "moonx also installed to $moonx_target"
+    fi
+
+    local v_out2 v_err2 v_rc2=0
+    v_out2="$(mktemp)"
+    v_err2="$(mktemp)"
+    "$target" --version >"$v_out2" 2>"$v_err2" || v_rc2=$?
+    if [[ "$v_rc2" -ne 0 ]]; then
+        _log "post-install verification failed: '$target --version' rc=$v_rc2"
+        _log "stderr: $(head -1 "$v_err2")"
+        rm -f "$v_out2" "$v_err2"
+        return 1
+    fi
+    _log "installed: $(head -1 "$v_out2") => $target"
+    rm -f "$v_out2" "$v_err2"
+}
+
+main "$@"

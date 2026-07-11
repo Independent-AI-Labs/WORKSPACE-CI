@@ -84,7 +84,7 @@ install-ci: preflight install-deps ## CI install: deps + bootstrap binaries, no 
 	@:
 
 .PHONY: install-deps
-install-deps: install-boot-tools install-python-deps install-gitleaks install-cloc install-ansible ## Install boot tools + python .venv deps + gitleaks + cloc + ansible
+install-deps: install-boot-tools install-python-deps install-gitleaks install-cloc install-moon install-ansible ## Install boot tools + python .venv deps + gitleaks + cloc + moon + ansible
 
 .PHONY: install-boot-tools
 install-boot-tools: ## Bootstrap uv + rust toolchain into $(BOOT_NAME)/bin/ (idempotent)
@@ -102,6 +102,10 @@ install-gitleaks: ## Bootstrap the gitleaks binary used by the secret-content sc
 .PHONY: install-cloc
 install-cloc: ## Bootstrap the cloc binary (single-file Perl) used by code-stats
 	bash scripts/bootstrap-cloc
+
+.PHONY: install-moon
+install-moon: ## Bootstrap the moon binary (workspace task runner) into $(BOOT_NAME)/bin
+	bash scripts/bootstrap-moon
 
 .PHONY: install-ansible
 install-ansible: install-boot-tools ## Bootstrap ansible + passlib into $(BOOT_NAME)/bin
