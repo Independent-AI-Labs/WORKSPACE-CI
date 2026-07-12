@@ -128,8 +128,16 @@ build_guard_binary() {
     log_info "Building workspace-guard Rust binary..."
     local _boot_name
     case "$(uname -s | tr 'A-Z' 'a-z')" in darwin) _boot_name=".boot-macos" ;; *) _boot_name=".boot-linux" ;; esac
-    local boot_rust="${WORKSPACE_ROOT}/$_boot_name/bin"
-    local rust_home="${WORKSPACE_ROOT}/$_boot_name/rust"
+    local ws_boot_rust="${WORKSPACE_ROOT}/$_boot_name/bin"
+    local ws_rust_home="${WORKSPACE_ROOT}/$_boot_name/rust"
+    local ci_boot_rust="${_CI_ROOT}/$_boot_name/bin"
+    local ci_rust_home="${_CI_ROOT}/$_boot_name/rust"
+    local boot_rust="$ws_boot_rust"
+    local rust_home="$ws_rust_home"
+    if [[ ! -x "$boot_rust/cargo" && -x "$ci_boot_rust/cargo" ]]; then
+        boot_rust="$ci_boot_rust"
+        rust_home="$ci_rust_home"
+    fi
     export PATH="$boot_rust:$PATH"
     export RUSTUP_HOME="$rust_home"
     export CARGO_HOME="$rust_home"
@@ -140,8 +148,15 @@ build_guard_binary() {
             log_error "Rust installation failed"
             return 1
         }
+        if [[ -x "$ci_boot_rust/cargo" ]]; then
+            boot_rust="$ci_boot_rust"
+            rust_home="$ci_rust_home"
+            export PATH="$boot_rust:$PATH"
+            export RUSTUP_HOME="$rust_home"
+            export CARGO_HOME="$rust_home"
+        fi
         if ! command -v cargo >/dev/null; then
-            log_error "cargo still not found after bootstrap: check $boot_rust/"
+            log_error "cargo still not found after bootstrap: check $ws_boot_rust/ or $ci_boot_rust/"
             return 1
         fi
         log_info "Rust bootstrapped successfully"
@@ -489,13 +504,25 @@ EOF
     fi
     hash -r
 
-    for path in /snap/bin/git /usr/local/bin/git; do
-        if [[ -x "$path" ]]; then
-            rc=0; chmod 000 "$path" || rc=$?
-            if [ $rc -ne 0 ]; then
-                echo "chmod 000 $path: failed (rc=$rc)" >&2
+    # Alternate git binaries bypass /usr/bin/git guard; lock them down.
+    local _alt_git_paths=(
+        /snap/bin/git
+        /usr/local/bin/git
+        /var/lib/flatpak/exports/bin/org.freedesktop.Sdk.Extension.git
+    )
+    for path in "${_alt_git_paths[@]}"; do
+        if [[ -e "$path" ]]; then
+            local _chmod_err _chmod_rc=0
+            _chmod_err="$(mktemp)"
+            chmod 000 "$path" 2>"$_chmod_err" || _chmod_rc=$?
+            if [[ $_chmod_rc -ne 0 ]]; then
+                if [[ -s "$_chmod_err" ]]; then
+                    echo "chmod 000 $path: $(cat "$_chmod_err")" >&2
+                fi
+                echo "chmod 000 $path: failed (rc=$_chmod_rc)" >&2
             fi
-            log_info "Restricted $path (bypass vector)"
+            rm -f "$_chmod_err"
+            log_info "Restricted $path (guard bypass vector)"
         fi
     done
 
@@ -559,16 +586,46 @@ EOF
         errors=1
     fi
 
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    chmod 755 "$tmpdir"
-    if bash -c "cd '$tmpdir' && git reset --hard"; then
-        log_error "Guard did not block git reset --hard"
-        errors=1
-    else
-        log_info "Guard correctly blocked git reset --hard"
-    fi
-    rm -rf "$tmpdir"
+    verify_guard_blocks() {
+        local label="$1"
+        shift
+        local tmpdir
+        tmpdir=$(mktemp -d)
+        chmod 755 "$tmpdir"
+        if bash -c "cd '$tmpdir' && $*"; then
+            log_error "Guard did not block: $label"
+            errors=1
+        else
+            log_info "Guard correctly blocked: $label"
+        fi
+        rm -rf "$tmpdir"
+    }
+
+    verify_guard_blocks "git reset --hard" git reset --hard
+    verify_guard_blocks "git update-ref" git update-ref refs/heads/main deadbeefcafe
+    verify_guard_blocks "git read-tree --reset" git read-tree -u --reset HEAD
+    verify_guard_blocks "git switch --discard-changes" git switch --discard-changes
+    verify_guard_blocks "git -- --hard bypass" git -- --hard
+
+    for alt in "${_alt_git_paths[@]}"; do
+        if [[ -e "$alt" ]]; then
+            local alt_mode _stat_err _stat_rc=0
+            _stat_err="$(mktemp)"
+            alt_mode="$(stat -c '%a' "$alt" 2>"$_stat_err")" || _stat_rc=$?
+            if [[ $_stat_rc -ne 0 ]]; then
+                if [[ -s "$_stat_err" ]]; then
+                    log_warn "stat $alt failed: $(cat "$_stat_err")"
+                fi
+                alt_mode="missing"
+            fi
+            rm -f "$_stat_err"
+            if [[ "$alt_mode" != "0" ]]; then
+                log_warn "Alternate git $alt mode is $alt_mode (expected 000)"
+            else
+                log_info "Alternate git restricted: $alt (mode 000)"
+            fi
+        fi
+    done
 
     if [[ $errors -eq 0 ]]; then
         echo ""

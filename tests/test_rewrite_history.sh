@@ -5,6 +5,7 @@
 
 _REWRITE="$PROJECT_DIR/scripts/rewrite-history"
 _TEST_CONFIG="$PROJECT_DIR/config/blocked_commit_patterns.yaml"
+export WORKSPACE_GUARD_ADMIN=1
 
 # Helper: create a temp git repo with git config
 _make_repo() {

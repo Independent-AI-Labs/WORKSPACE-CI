@@ -20,6 +20,13 @@ if ! source "$_CI_ROOT/lib/ci.sh"; then
     exit 2
 fi
 
+# Bypass the git guard only when explicitly authorised. This script rewrites
+# history and must reach git.original; casual PATH tricks are not enough.
+if [[ "${WORKSPACE_GUARD_ADMIN:-0}" != "1" ]]; then
+    ci_fail "rewrite-history requires WORKSPACE_GUARD_ADMIN=1 (admin-only history rewrite)"
+    exit 1
+fi
+
 # Use system git directly: this script is an explicitly destructive tool
 # that the user invokes manually. The git-guard blocks --force which
 # filter-branch requires. Prepend system git dir to PATH so all git calls
