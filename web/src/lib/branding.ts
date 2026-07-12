@@ -35,5 +35,28 @@ const BRANDING_PATH = join(process.cwd(), 'branding.yaml')
 
 export const getBranding = cache((): Branding => {
   const raw = readFileSync(BRANDING_PATH, 'utf8')
-  return load(raw) as Branding
+  const branding = load(raw) as Branding
+  return applyGrafanaBaseUrl(branding)
 })
+
+export function applyGrafanaBaseUrl(branding: Branding): Branding {
+  const base = process.env.GRAFANA_BASE_URL
+  if (!base) return branding
+  let parsedBase: URL
+  try {
+    parsedBase = new URL(base)
+  } catch {
+    return branding
+  }
+  const rewritten = branding.grafana_dashboards.map((d) => {
+    try {
+      const u = new URL(d.url)
+      u.protocol = parsedBase.protocol
+      u.host = parsedBase.host
+      return { ...d, url: u.toString() }
+    } catch {
+      return d
+    }
+  })
+  return { ...branding, grafana_dashboards: rewritten }
+}

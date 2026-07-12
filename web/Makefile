@@ -57,6 +57,11 @@ dev-start: ## Start dev server (Next.js HMR)
 		exit 1; \
 	fi
 	@mkdir -p $(SYSTEMD_DIR)
+	@if [ ! -f $$HOME/.config/wiki-ci-dev.env ] && [ -f grafana.env.example ]; then \
+		echo "[dev-start] Creating $$HOME/.config/wiki-ci-dev.env from grafana.env.example"; \
+		cp grafana.env.example $$HOME/.config/wiki-ci-dev.env; \
+		echo "[dev-start] Edit it to set GRAFANA_BASE_URL to the reachable Grafana origin."; \
+	fi
 	@echo "[dev-start] Installing systemd user unit -> $(SYSTEMD_DIR)/$(SYSTEMD_UNIT)"
 	@sed \
 		-e 's|__PROJECT_ROOT__|$(PROJECT_ROOT)|g' \

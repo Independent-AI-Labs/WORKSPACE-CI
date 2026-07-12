@@ -10,6 +10,7 @@ WorkingDirectory=__PROJECT_ROOT__
 Environment="PATH=__PROJECT_ROOT__/node_modules/.bin:__NODE_BIN__:/usr/local/bin:/usr/bin:/bin"
 Environment="WIKI_DEV_PORT=__DEV_PORT__"
 Environment="WIKI_DEV_HOST=0.0.0.0"
+EnvironmentFile=%h/.config/wiki-ci-dev.env
 ExecStart=__NODE__ scripts/dev-single.mjs
 Restart=always
 RestartSec=5

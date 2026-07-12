@@ -12,6 +12,7 @@ source "$TESTS_DIR/test_helpers.sh"
 # Run unit test suites
 source "$TESTS_DIR/unit/test_core.sh"
 source "$TESTS_DIR/unit/test_checks.sh"
+source "$TESTS_DIR/unit/test_checks_dead_code.sh"
 source "$TESTS_DIR/unit/test_portable_shell.sh"
 source "$TESTS_DIR/unit/test_scaffold_ci.sh"
 source "$TESTS_DIR/unit/test_scaffold_ci_gen.sh"

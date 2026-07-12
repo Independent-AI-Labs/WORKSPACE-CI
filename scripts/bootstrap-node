@@ -73,10 +73,10 @@ main() {
             rm -f "$v_out"
             if [[ "$cur" == "v${NODE_VERSION}" ]]; then
                 _log "node v${NODE_VERSION} already at $node_bin"
-                # Ensure symlinks exist even if node-env was pre-existing.
-                ln -sf "$node_env/bin/node" "${bin_dir}/node"
-                ln -sf "$node_env/bin/npm" "${bin_dir}/npm"
-                ln -sf "$node_env/bin/npx" "${bin_dir}/npx"
+                # bin_dir ($CI_BOOT_DIR/bin) is root:root 0755 on
+                # provisioned VMs, so ln -sf here would hit Permission
+                # denied for uid 1000. Symlink recreation belongs on the
+                # fresh-install path only (handled below after extract).
                 return 0
             fi
             _log "found existing node ($cur), upgrading to v${NODE_VERSION}"

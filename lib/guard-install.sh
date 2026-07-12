@@ -1,0 +1,411 @@
+# lib/guard-install.sh - install_guard_binary helper
+#
+# Sourced by scripts/bootstrap-workspace-guard. NOT a standalone script.
+# Depends on the parent script's globals: _CI_ROOT, CYAN, BOLD, RED, NC,
+# and the log_info / log_warn / log_error helpers. Also calls
+# divert_is_active and rollback_guard (defined in the parent script).
+# Inherits `set -euo pipefail` from the sourcing shell; do not add a
+# shebang or `set` here. Keep this file under the 512-line source-length
+# gate per AGENTS.md Rule 4.
+
+install_guard_binary() {
+    local guard_bin="${1:-$GUARD_BIN}"
+    if [[ ! -f "$guard_bin" ]]; then
+        log_error "Guard binary not found at $guard_bin"
+        log_error "Run 'make build-guard' first to build the binary, then: make install-guard"
+        return 1
+    fi
+    if ! file "$guard_bin" | grep -q ELF; then
+        log_error "Guard binary is not a valid ELF: $guard_bin"
+        return 1
+    fi
+
+    local install_mode="${GUARD_BUILD_MODE:-}"
+    if [[ -z "$install_mode" ]]; then
+        local mode_marker="${guard_bin}.mode"
+        if [[ -f "$mode_marker" ]]; then
+            install_mode="$(cat "$mode_marker")"
+        fi
+    fi
+    if [[ -z "$install_mode" ]]; then
+        log_error "No build-mode marker at ${guard_bin}.mode and no in-process build mode."
+        log_error "Binary build mode (capability vs root-only) unknown; refusing to guess."
+        log_error "Build via 'make build-guard' (records mode), then 'make install-guard'."
+        return 1
+    fi
+    if [[ "$install_mode" != "capability" && "$install_mode" != "root-only" ]]; then
+        log_error "Invalid build-mode marker '$install_mode' at ${guard_bin}.mode"
+        return 1
+    fi
+    if [[ "$install_mode" == "capability" ]] && ! command -v setcap >/dev/null; then
+        log_error "Binary is capability-mode but setcap is not installed on this host."
+        log_error "Capability mode requires setcap (libcap2-bin) to grant non-root git access."
+        log_error "Run 'make init', or rebuild root-only: BUILD_MODE=root-only make build-guard"
+        return 1
+    fi
+    if [[ "$install_mode" == "root-only" ]] && command -v setcap >/dev/null; then
+        log_warn "setcap is available here, but the binary was built root-only."
+        log_warn "A capability build would allow non-root users to run git; root-only will NOT."
+    fi
+
+    local nr_count=0
+    nr_count=$(awk -F: '$3>=1000 && $3<65534 && $7 ~ /(bash|sh|zsh|fish)$/{c++} END{print c+0}' /etc/passwd) || nr_count=0
+
+    if [[ "$install_mode" == "root-only" ]]; then
+        echo ""
+        echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
+        echo -e "${CYAN}${BOLD} Git Guard: Root-Only Installation (SOFT BARRIER)${NC}"
+        echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo "WARNING: Installing in root-only mode: this is a SOFT BARRIER."
+        echo ""
+        echo "  • NON-ROOT USERS CANNOT RUN GIT (the guard exits unless euid=0)"
+        echo "  • The guard policy engine will still block destructive commands"
+        echo "  • Root users can bypass the guard (see threat model docs)"
+        echo "  • No chattr +i, no dpkg-divert, no apt hook"
+        if [[ "$nr_count" -gt 0 ]]; then
+            echo ""
+            echo -e "${RED}${BOLD}  !! $nr_count non-root login user(s) detected.${NC}"
+            echo -e "${RED}${BOLD}     Their git will be BROKEN by root-only mode.${NC}"
+            echo -e "${RED}${BOLD}     For non-root users, use: make build-guard && make install-guard${NC}"
+        fi
+        echo ""
+        echo "Root-only is intended ONLY for root/PRoot/container environments."
+        echo "See docs/ROOT-ONLY-MODE.md for the full threat model."
+        echo ""
+        echo "To uninstall: make uninstall-guard"
+        echo ""
+    else
+        echo ""
+        echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
+        echo -e "${CYAN}${BOLD} Git Guard: File Capability Installation${NC}"
+        echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo "The Git Guard is a capability-enabled binary that wraps /usr/bin/git."
+        echo ""
+        echo "WHAT IT DOES:"
+        echo "  • Relocates real git → /usr/bin/git.original (0700, root-only)"
+        echo "  • Installs guard binary → /usr/bin/git (0755, cap_setpcap,cap_chown,cap_dac_override,cap_fowner,cap_fsetid+ep)"
+        echo "  • Gives users rights to run git ONLY through the guard"
+        echo "  • Blocks: git reset --hard, git checkout --hard, git rebase,"
+        echo "            git commit --amend, git push --force, git reset,"
+        echo "            git checkout (destructive file restoration)"
+        echo "  • Allows: git status, git log, git diff, git add, git commit,"
+        echo "            git pull --ff-only, git fetch, git stash"
+        echo "  • dpkg-divert protects from apt overwrites"
+        echo "  • Immutable attributes (chattr +i) prevent tampering"
+        echo "  • Logs every git invocation to /var/log/workspace-guard/"
+        echo ""
+        echo "To uninstall:"
+        echo "  make uninstall-guard"
+        echo ""
+    fi
+
+    if [[ "$install_mode" == "root-only" && "${nr_count:-0}" -gt 0 ]]; then
+        if [[ "${FORCE_ROOT_ONLY:-0}" != "1" ]]; then
+            log_error "Refusing root-only install: ${nr_count} non-root login user(s) would lose git access."
+            log_error "Multi-user host: use capability mode -> make build-guard && make install-guard"
+            log_error "To override (non-root git WILL break): FORCE_ROOT_ONLY=1 make install-guard"
+            return 1
+        fi
+        log_warn "FORCE_ROOT_ONLY=1: proceeding despite ${nr_count} non-root users (their git will break)."
+    fi
+
+    if [[ -t 0 ]] && [[ "${GUARD_NONINTERACTIVE:-0}" != "1" ]]; then
+        echo -ne "${CYAN}${BOLD}Proceed with git guard installation? [y/N] ${NC}"
+        read -r response
+        case "$response" in
+            [yY][eE][sS]|[yY]) ;;
+            *) log_info "Git guard installation cancelled."; return 0 ;;
+        esac
+    fi
+
+    local guard_hash
+    guard_hash=$(sha256sum "$guard_bin" | awk '{print $1}')
+
+    # Guard-aware source selection: never copy the guard itself to
+    # git.original.  On reinstall, /usr/bin/git IS the old guard, so
+    # copying it would create an infinite fork loop (guard execs
+    # git.original which IS the guard, execs git.original again ...).
+    # We verify each candidate by sha256 against the guard's hash.
+    is_real_git() {
+        local candidate="$1"
+        [[ -x "$candidate" ]] || return 1
+        local h
+        h=$(sha256sum "$candidate" | awk '{print $1}')
+        [[ "$h" != "$guard_hash" ]]
+    }
+
+    if [[ -f /usr/bin/git.original ]] && command -v chattr >/dev/null; then
+        rc=0; chattr -i /usr/bin/git.original || rc=$?
+        if [ $rc -ne 0 ]; then
+            echo "chattr -i /usr/bin/git.original: no-op or failed (rc=$rc)" >&2
+        fi
+    fi
+
+    # If git.original already exists and is NOT the guard, keep it.
+    if [[ -f /usr/bin/git.original ]] && is_real_git /usr/bin/git.original; then
+        log_info "Preserving existing real git at /usr/bin/git.original"
+        git_src="/usr/bin/git.original"
+    else
+        # Find real git: prefer dpkg-divert, then /usr/bin/git (only
+        # if it is NOT the guard), then the apt package binary.
+        git_src=""
+        if divert_is_active && is_real_git /usr/bin/git.distrib; then
+            git_src="/usr/bin/git.distrib"
+        elif is_real_git /usr/bin/git; then
+            git_src="/usr/bin/git"
+        elif is_real_git /usr/lib/git-core/git; then
+            git_src="/usr/lib/git-core/git"
+            log_warn "Using apt package git: /usr/lib/git-core/git"
+        fi
+        if [[ -z "$git_src" ]]; then
+            log_error "Cannot find real git (all candidates are the guard or missing)"
+            log_error "Restore: apt install --reinstall git"
+            return 1
+        fi
+        cp "$git_src" /usr/bin/git.original
+        chown root:root /usr/bin/git.original
+        chmod 0700 /usr/bin/git.original
+    fi
+
+    local src_hash copy_hash
+    src_hash=$(sha256sum "$git_src" | awk '{print $1}')
+    copy_hash=$(sha256sum /usr/bin/git.original | awk '{print $1}')
+    if [[ "$src_hash" != "$copy_hash" ]]; then
+        log_error "Checksum mismatch: git.original does not match"
+        rm -f /usr/bin/git.original
+        return 1
+    fi
+
+    # Safety net: verify git.original is NOT the guard before proceeding.
+    if [[ "$copy_hash" == "$guard_hash" ]]; then
+        log_error "git.original has the same sha256 as the guard: refusing to install"
+        log_error "This would cause an infinite fork loop. Restore: apt install --reinstall git"
+        rm -f /usr/bin/git.original
+        return 1
+    fi
+
+    if [[ "$install_mode" == "root-only" ]]; then
+        # Root-only: simple copy, no dpkg-divert, no setcap, no chattr
+        if [[ -f /usr/bin/git ]] && command -v chattr >/dev/null; then
+            rc=0; chattr -i /usr/bin/git || rc=$?
+            if [ $rc -ne 0 ]; then
+                echo "chattr -i /usr/bin/git: no-op or failed (rc=$rc)" >&2
+            fi
+        fi
+        cp "$guard_bin" /usr/bin/git
+        chown root:root /usr/bin/git
+        chmod 0755 /usr/bin/git
+        log_info "Installed guard in root-only mode (no caps, no chattr, no dpkg-divert)"
+    else
+        # Capability mode: full installation with dpkg-divert, setcap, chattr
+        if divert_is_active; then
+            log_warn "dpkg-divert already in place: continuing"
+        else
+            dpkg-divert --local --divert /usr/bin/git.distrib --rename --add /usr/bin/git
+        fi
+        chmod 0700 /usr/bin/git.distrib
+        chown root:root /usr/bin/git.distrib
+
+        if ! command -v setcap >/dev/null; then
+            log_error "setcap not found: run 'make init' to install system dependencies"
+            return 1
+        fi
+
+        if command -v chattr >/dev/null && [[ -f /usr/bin/git ]]; then
+            rc=0; chattr -i /usr/bin/git || rc=$?
+            if [ $rc -ne 0 ]; then
+                echo "chattr -i /usr/bin/git: no-op or failed (rc=$rc)" >&2
+            fi
+        fi
+        cp "$guard_bin" /usr/bin/git
+        chown root:root /usr/bin/git
+        chmod 0755 /usr/bin/git
+        setcap 'cap_setpcap,cap_chown,cap_dac_override,cap_fowner,cap_fsetid+ep' /usr/bin/git || {
+            log_error "Failed to set file capabilities on /usr/bin/git"
+            return 1
+        }
+
+        if command -v chattr >/dev/null; then
+            chattr +i /usr/bin/git || log_warn "Could not set immutable on /usr/bin/git"
+            chattr +i /usr/bin/git.original || log_warn "Could not set immutable on /usr/bin/git.original"
+        else
+            log_warn "chattr not available: skipping immutable attributes"
+        fi
+
+        cat > /etc/apt/apt.conf.d/99workspace-guard << 'EOF'
+DPkg::Post-Invoke { "/usr/lib/workspace-guard/apt-check.sh"; };
+EOF
+        mkdir -p /usr/lib/workspace-guard
+        cat > /usr/lib/workspace-guard/apt-check.sh << 'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if dpkg -l git | grep -q '^ii' && [[ ! -f /usr/bin/git.original ]]; then
+    echo '[WARN] Git package changed but workspace guard not detected. Re-run: make install-guard' >&2
+fi
+if [[ -f /usr/bin/git.distrib ]]; then
+    chmod 0700 /usr/bin/git.distrib
+    chown root:root /usr/bin/git.distrib
+fi
+EOF
+        chmod 755 /usr/lib/workspace-guard/apt-check.sh
+    fi
+
+    local _cleanup_boot_name
+    case "$(uname -s | tr 'A-Z' 'a-z')" in darwin) _cleanup_boot_name=".boot-macos" ;; *) _cleanup_boot_name=".boot-linux" ;; esac
+    if [[ -f "$WORKSPACE_ROOT/$_cleanup_boot_name/bin/git" ]]; then
+        rm -f "$WORKSPACE_ROOT/$_cleanup_boot_name/bin/git"
+        log_info "Removed previous bash wrapper at $_cleanup_boot_name/bin/git"
+    fi
+    hash -r
+
+    # Alternate git binaries bypass /usr/bin/git guard; lock them down.
+    local _alt_git_paths=(
+        /snap/bin/git
+        /usr/local/bin/git
+        /var/lib/flatpak/exports/bin/org.freedesktop.Sdk.Extension.git
+    )
+    for path in "${_alt_git_paths[@]}"; do
+        if [[ -e "$path" ]]; then
+            local _chmod_err _chmod_rc=0
+            _chmod_err="$(mktemp)"
+            chmod 000 "$path" 2>"$_chmod_err" || _chmod_rc=$?
+            if [[ $_chmod_rc -ne 0 ]]; then
+                if [[ -s "$_chmod_err" ]]; then
+                    echo "chmod 000 $path: $(cat "$_chmod_err")" >&2
+                fi
+                echo "chmod 000 $path: failed (rc=$_chmod_rc)" >&2
+            fi
+            rm -f "$_chmod_err"
+            log_info "Restricted $path (guard bypass vector)"
+        fi
+    done
+
+    mkdir -p /var/log/workspace-guard
+    chmod 1777 /var/log/workspace-guard
+
+    echo ""
+    log_info "Running post-installation verification..."
+    local errors=0
+
+    local guard_mode guard_owner
+    guard_mode=$(stat -c '%a' /usr/bin/git)
+    guard_owner=$(stat -c '%U:%G' /usr/bin/git)
+    if [[ "$guard_mode" != "755" || "$guard_owner" != "root:root" ]]; then
+        log_error "Guard binary has wrong permissions: $guard_mode $guard_owner"
+        errors=1
+    fi
+
+    if [[ "$install_mode" == "capability" ]]; then
+        local _caps_found=0
+        if command -v getcap >/dev/null; then
+            local _gc _gc_err _gc_rc
+            _gc_err="$(mktemp)"
+            _gc="$(getcap /usr/bin/git 2>"$_gc_err")" && _gc_rc=0 || _gc_rc=$?
+            if [[ $_gc_rc -ne 0 ]]; then
+                log_error "getcap failed (rc=$_gc_rc): $(cat "$_gc_err")"
+                rm -f "$_gc_err"
+                errors=1
+                continue
+            fi
+            if [[ -s "$_gc_err" ]]; then
+                log_warn "getcap stderr: $(cat "$_gc_err")"
+            fi
+            rm -f "$_gc_err"
+            for _c in cap_setpcap cap_chown cap_dac_override cap_fowner cap_fsetid; do
+                if echo "$_gc" | grep -q "$_c"; then
+                    _caps_found=$((_caps_found+1))
+                else
+                    log_error "Guard binary missing $_c capability"
+                    errors=1
+                fi
+            done
+        else
+            log_error "getcap not found: cannot verify file capabilities"
+            errors=1
+        fi
+    fi
+
+    local real_mode real_owner
+    real_mode=$(stat -c '%a' /usr/bin/git.original)
+    real_owner=$(stat -c '%U:%G' /usr/bin/git.original)
+    if [[ "$real_mode" != "700" || "$real_owner" != "root:root" ]]; then
+        log_error "git.original has wrong permissions: $real_mode $real_owner"
+        errors=1
+    fi
+
+    if git --version >/dev/null; then
+        log_info "git --version: $(git --version 2>&1)"
+    else
+        log_error "git --version failed"
+        errors=1
+    fi
+
+    verify_guard_blocks() {
+        local label="$1"
+        shift
+        local tmpdir
+        tmpdir=$(mktemp -d)
+        chmod 755 "$tmpdir"
+        if bash -c "cd '$tmpdir' && $*"; then
+            log_error "Guard did not block: $label"
+            errors=1
+        else
+            log_info "Guard correctly blocked: $label"
+        fi
+        rm -rf "$tmpdir"
+    }
+
+    verify_guard_blocks "git reset --hard" git reset --hard
+    verify_guard_blocks "git update-ref" git update-ref refs/heads/main deadbeefcafe
+    verify_guard_blocks "git read-tree --reset" git read-tree -u --reset HEAD
+    verify_guard_blocks "git switch --discard-changes" git switch --discard-changes
+    verify_guard_blocks "git -- --hard bypass" git -- --hard
+
+    for alt in "${_alt_git_paths[@]}"; do
+        if [[ -e "$alt" ]]; then
+            local alt_mode _stat_err _stat_rc=0
+            _stat_err="$(mktemp)"
+            alt_mode="$(stat -c '%a' "$alt" 2>"$_stat_err")" || _stat_rc=$?
+            if [[ $_stat_rc -ne 0 ]]; then
+                if [[ -s "$_stat_err" ]]; then
+                    log_warn "stat $alt failed: $(cat "$_stat_err")"
+                fi
+                alt_mode="missing"
+            fi
+            rm -f "$_stat_err"
+            if [[ "$alt_mode" != "0" ]]; then
+                log_warn "Alternate git $alt mode is $alt_mode (expected 000)"
+            else
+                log_info "Alternate git restricted: $alt (mode 000)"
+            fi
+        fi
+    done
+
+    if [[ $errors -eq 0 ]]; then
+        echo ""
+        if [[ "$install_mode" == "root-only" ]]; then
+            log_info "Git guard installation complete (root-only mode: SOFT BARRIER)."
+            log_info "  /usr/bin/git          (0755 root:root, no caps)"
+            log_info "  /usr/bin/git.original (0700 root:root)"
+            log_info "  audit log: /var/log/workspace-guard/"
+            log_warn "  root-only mode: root can bypass (soft barrier, see threat model docs)"
+        else
+            log_info "Git guard installation complete."
+            log_info "  /usr/bin/git          (0755 root:root, cap_setpcap,cap_chown,cap_dac_override,cap_fowner,cap_fsetid+ep, immutable)"
+            log_info "  /usr/bin/git.original (0700 root:root, immutable)"
+            log_info "  dpkg-divert configured"
+            log_info "  apt hook registered"
+            log_info "  audit log: /var/log/workspace-guard/"
+        fi
+        echo ""
+        log_info "To verify: make check-guard"
+    else
+        log_error "Installation verification failed: rolling back"
+        rollback_guard
+        return 1
+    fi
+
+    return 0
+}

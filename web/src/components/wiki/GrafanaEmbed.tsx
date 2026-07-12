@@ -10,7 +10,7 @@ interface GrafanaEmbedProps {
 
 export function GrafanaEmbed({ src, title, className }: GrafanaEmbedProps) {
   const theme = useThemeStore((s) => s.theme)
-  const themedSrc = `${src}&theme=${theme}`
+  const themedSrc = `${src}&theme=${theme}&kiosk=true`
 
   return (
     <iframe

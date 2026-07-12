@@ -301,14 +301,23 @@ enforce-syslog-limits: ## Enforce system-level log ceilings: logrotate maxsize +
 
 .PHONY: build-guard install-guard uninstall-guard check-guard
 
-build-guard: ## Build git-guard binary from sibling WORKSPACE-GUARD repo (no root needed)
+# Operator invocation contract: guard targets depend on `ensure-repos`
+# (upstream `make` chain) which pulls every workspace repo over SSH. The
+# guard re-pins HOME and SSH_AUTH_SOCK from the calling env; it does NOT
+# manufacture SSH credentials. So the operator MUST run:
+#   sudo --preserve-env=HOME,SSH_AUTH_SOCK make build-guard
+#   sudo --preserve-env=HOME,SSH_AUTH_SOCK make install-guard
+# build-guard writes only to WORKSPACE-GUARD/target/; bootstrap-workspace-guard
+# chowns that tree back to SUDO_USER when run under sudo, so agent-uid
+# rebuilds stay usable. check-guard is read-only and runs as the agent.
+build-guard: ## Build git-guard binary (operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make build-guard)
 	bash scripts/bootstrap-workspace-guard build-only
 
-install-guard: ## Install git-guard to /usr/bin/git (requires root, binary must be pre-built)
+install-guard: ## Install git-guard to /usr/bin/git (operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make install-guard; binary must be pre-built)
 	$(SUDO) bash scripts/bootstrap-workspace-guard install-only
 
-uninstall-guard: ## Uninstall git-guard, restore original /usr/bin/git (requires root)
+uninstall-guard: ## Uninstall git-guard, restore original /usr/bin/git (operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make uninstall-guard)
 	$(SUDO) bash scripts/bootstrap-workspace-guard uninstall
 
-check-guard: ## Check git-guard installation status
+check-guard: ## Check git-guard installation status (read-only, runs as agent)
 	bash scripts/bootstrap-workspace-guard check

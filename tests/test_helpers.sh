@@ -175,3 +175,21 @@ _source_lib() {
     fi
     source lib/checks.sh
 }
+
+# _make_mock_dangle <bindir> <fixture_file> [exit_code] [stderr_msg]
+#   Creates a fake `dangle` binary in <bindir> that:
+#     - cats <fixture_file> to stdout (nothing if file missing/empty)
+#     - echoes <stderr_msg> to stderr if provided
+#     - exits with <exit_code> (default 0)
+#   The fixture path must be absolute. Ensures <bindir> exists.
+_make_mock_dangle() {
+    local _mmd_bindir="$1" _mmd_fixture="$2" _mmd_rc="${3:-0}" _mmd_err="${4:-}"
+    mkdir -p "$_mmd_bindir"
+    cat > "$_mmd_bindir/dangle" <<MOCK_EOF
+#!/usr/bin/env bash
+${_mmd_err:+echo "$_mmd_err" >&2}
+cat "$_mmd_fixture" 2>/dev/null
+exit $_mmd_rc
+MOCK_EOF
+    chmod +x "$_mmd_bindir/dangle"
+}
