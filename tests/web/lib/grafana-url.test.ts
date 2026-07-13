@@ -96,12 +96,11 @@ describe('resolveGrafanaDashboards', () => {
 
 describe('resolveGrafanaBaseUrl', () => {
   afterEach(() => {
-    delete process.env.GRAFANA_BASE_URL
-    delete process.env.NODE_ENV
+    vi.unstubAllEnvs()
   })
 
   it('uses dev default outside production when env unset', async () => {
-    process.env.NODE_ENV = 'development'
+    vi.stubEnv('NODE_ENV', 'development')
     expect(await resolveGrafanaBaseUrl()).toBe(DEV_GRAFANA_BASE_URL)
   })
 })
