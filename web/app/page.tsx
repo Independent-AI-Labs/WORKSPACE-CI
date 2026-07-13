@@ -73,9 +73,8 @@ export default async function HomePage() {
       </section>
       <h1>Project Catalogue</h1>
       <p className="page-intro">
-        Browse README documentation for all backend projects in the workspace.
-        Click a project title to read its full README, or click View details to
-        explore its Makefile targets.
+        Each card summarizes a workspace repo. Open the project title for the
+        full README, or Makefile on the card for targets and recipes.
       </p>
       <ProjectList
         projects={projects}

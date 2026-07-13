@@ -2,9 +2,9 @@
 
 AI coding agents ship code fast and cut every corner doing it: skipped
 tests, ignored lint failures, `--no-verify` to bypass hooks, amended history
-to hide the mess. WORKSPACE-CI generates native git hooks from a single
+to hide the mess. **WORKSPACE-CI** generates native git hooks from a single
 config file and hard-enforces lint, tests, secrets, and coverage at commit
-and push time. With WORKSPACE-GUARD, it blocks every escape hatch
+and push time. With **WORKSPACE-GUARD**, it blocks every escape hatch
 (`--no-verify`, `--force`, `--amend`, `git reset`) at the syscall boundary.
 The agent cannot cheat.
 
