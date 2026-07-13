@@ -18,6 +18,8 @@ services:
       - "3000"
     volumes:
       - wiki-feedback:/workspace/CI/web/data/feedback
+    networks:
+      - wiki
     restart: unless-stopped
 
   wiki-nginx:
@@ -25,8 +27,9 @@ services:
     container_name: wiki-ci-nginx
     depends_on:
       - wiki-app
-    extra_hosts:
-      - "host.containers.internal:host-gateway"
+    networks:
+      - wiki
+      - gateway
     ports:
       - "${WIKI_HTTP_PORT:-80}:80"
       - "${WIKI_HTTPS_PORT:-443}:443"
@@ -44,3 +47,9 @@ services:
 volumes:
   wiki-feedback:
   wiki-tls-certs:
+
+networks:
+  wiki:
+  gateway:
+    external: true
+    name: docker_gateway

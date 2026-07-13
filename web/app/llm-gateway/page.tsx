@@ -2,6 +2,8 @@ import { WikiShell } from '@/components/wiki/WikiShell'
 import { GatewayTabs } from '@/components/wiki/GatewayTabs'
 import { getBranding } from '@/lib/branding'
 
+export const dynamic = 'force-dynamic'
+
 export default function LLMGatewayPage() {
   const branding = getBranding()
 
