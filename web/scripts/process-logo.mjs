@@ -1,4 +1,3 @@
-import fs from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
 import sharp from 'sharp'
