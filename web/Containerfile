@@ -22,10 +22,11 @@ COPY CI/Makefile ./
 COPY CI/web/src/data ./web/src/data
 
 ENV CI_WEB_DATA_DIR=/workspace/CI/web/src/data
+# code-stats.json is copied from the repo above; the extract stage has no sibling
+# git repos, so regenerate hook/script/swallow data only.
 RUN /usr/local/bin/python3.13 scripts/extract-hook-sources.py \
     && /usr/local/bin/python3.13 scripts/extract-script-sources.py \
-    && /usr/local/bin/python3.13 scripts/extract-swallow-source.py \
-    && /usr/local/bin/python3.13 scripts/extract-code-stats.py
+    && /usr/local/bin/python3.13 scripts/extract-swallow-source.py
 
 # -----------------------------------------------------------------------------
 # Stage 2: build Next.js standalone bundle

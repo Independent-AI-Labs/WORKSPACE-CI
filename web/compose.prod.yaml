@@ -13,6 +13,7 @@ services:
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://localhost,https://127.0.0.1}
+      GRAFANA_BASE_URL: ${GRAFANA_BASE_URL:-https://workspaceguardrails.com/grafana}
     expose:
       - "3000"
     volumes:
@@ -24,6 +25,8 @@ services:
     container_name: wiki-ci-nginx
     depends_on:
       - wiki-app
+    extra_hosts:
+      - "host.containers.internal:host-gateway"
     ports:
       - "${WIKI_HTTP_PORT:-80}:80"
       - "${WIKI_HTTPS_PORT:-443}:443"

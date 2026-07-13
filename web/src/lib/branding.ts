@@ -44,16 +44,19 @@ export function applyGrafanaBaseUrl(branding: Branding): Branding {
   if (!base) return branding
   let parsedBase: URL
   try {
-    parsedBase = new URL(base)
+    parsedBase = new URL(base.endsWith('/') ? base : `${base}/`)
   } catch {
     return branding
   }
+  const basePath = parsedBase.pathname.replace(/\/$/, '')
   const rewritten = branding.grafana_dashboards.map((d) => {
     try {
       const u = new URL(d.url)
-      u.protocol = parsedBase.protocol
-      u.host = parsedBase.host
-      return { ...d, url: u.toString() }
+      const out = new URL(
+        `${basePath}${u.pathname}${u.search}`,
+        `${parsedBase.protocol}//${parsedBase.host}`,
+      )
+      return { ...d, url: out.toString() }
     } catch {
       return d
     }

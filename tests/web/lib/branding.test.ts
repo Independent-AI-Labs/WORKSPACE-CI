@@ -72,6 +72,15 @@ describe('applyGrafanaBaseUrl', () => {
     )
   })
 
+  it('prepends a subpath when the base URL includes a pathname', () => {
+    process.env.GRAFANA_BASE_URL = 'https://workspaceguardrails.com/grafana'
+    const out = applyGrafanaBaseUrl(baseBranding())
+    expect(out.grafana_dashboards.map((d) => d.url)).toEqual([
+      'https://workspaceguardrails.com/grafana/d/gateway-cost-leaderboard/x?orgId=1&from=now-24h&to=now',
+      'https://workspaceguardrails.com/grafana/d/gateway-cost-usage/y?orgId=1&var-model=$__all',
+    ])
+  })
+
   it('leaves dashboards untouched when the env var is not a valid URL', () => {
     process.env.GRAFANA_BASE_URL = 'not-a-url'
     const out = applyGrafanaBaseUrl(baseBranding())
