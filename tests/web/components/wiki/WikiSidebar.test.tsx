@@ -19,7 +19,7 @@ const mockStats: WikiStats = {
 }
 
 const mockBranding: Branding = {
-  name: 'AI Workspace Guardrails',
+  name: 'Digital and AI Workspace Guardrails',
   sidebar_title_thin: 'workspace',
   sidebar_title_bold: 'guardrails',
   logo_path: '/LOGO.png',
@@ -27,7 +27,7 @@ const mockBranding: Branding = {
   logo_path_light: '/LOGO_LIGHT_THEME.png',
   metadata_title: 'Workspace Guardrails',
   metadata_description: 'Interactive wiki for workspace-ci',
-  footer_tagline: 'The AI Workspace Guardrails Wiki',
+  footer_tagline: 'The Digital and AI Workspace Guardrails Wiki',
   footer_copyright: '2026 ◆ Independent AI Labs',
   contact_email: 'independentailabs@gmail.com',
   grafana_dashboards: [

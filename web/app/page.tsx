@@ -66,10 +66,9 @@ export default async function HomePage() {
       <section className="hero">
         <h1 className="hero__title">{getBranding().name}</h1>
         <p className="hero__subtitle">
-          The unified wiki for the AI safety stack. Native git hooks,
-          static anti-pattern analysis, policy enforcement, runtime
-          escape-hatch blocking, and a multi-tenant LLM gateway, every
-          guardrail, side by side.
+          Unified wiki for the digital and AI safety stack. Browse git hooks,
+          static checks, guard policies, runtime blocks, and LLM gateway
+          operations from one catalogue.
         </p>
       </section>
       <h1>Project Catalogue</h1>

@@ -70,12 +70,10 @@ async function writeLogoSet({ slug, resDir, remixIcon }) {
   await fs.mkdir(resDir, { recursive: true })
 
   const svgOut = path.join(resDir, 'LOGO.svg')
-  const rawOut = path.join(resDir, 'LOGO_RAW.png')
   const logoOut = path.join(resDir, 'LOGO.png')
 
   await fs.writeFile(svgOut, svg, 'utf8')
   const png = await sharp(Buffer.from(svg)).png().toBuffer()
-  await fs.writeFile(rawOut, png)
   await fs.writeFile(logoOut, png)
 
   const meta = await sharp(png).metadata()
