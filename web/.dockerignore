@@ -1,0 +1,27 @@
+# Build context is projects/ (parent of CI/). Prune heavy or sensitive trees.
+
+**/.git/objects
+**/.git/logs
+**/node_modules
+**/.next
+**/.venv
+**/.boot-linux
+**/.boot-macos
+**/__pycache__
+**/*.pyc
+**/dist
+**/build
+**/.pytest_cache
+**/.coverage
+**/.mypy_cache
+**/.ruff_cache
+
+# Large non-wiki artifacts in CI
+CI/*.pdf
+CI/.venv
+CI/china-interim-measures-genai.pdf
+CI/unesco-ai-ethics-recommendation.pdf
+CI/us-ai-bill-of-rights.pdf
+
+# Dev-only wiki state (feedback is a runtime volume in prod)
+CI/web/data/feedback

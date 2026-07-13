@@ -22,7 +22,30 @@ DEV_PORT := 3001
 SYSTEMD_UNIT := wiki-ci-dev.service
 SYSTEMD_DIR := $(HOME)/.config/systemd/user
 PROJECT_ROOT := $(abspath .)
-
+PROJECTS_ROOT := $(abspath ../..)
+CI_REPO := $(abspath ..)
+PROD_IMAGE := localhost/workspace-ci-wiki:prod
+COMPOSE_FILE := compose.prod.yaml
+# Override on the command line or in the environment if needed:
+#   COMPOSE_CMD=podman-compose PODMAN=podman make prod-start
+COMPOSE_CMD ?= podman-compose
+PODMAN ?= podman
+# `export COMPOSE_CMD` with no value defines an empty var; ?= will not override it.
+ifeq ($(COMPOSE_CMD),)
+COMPOSE_CMD := podman-compose
+endif
+ifeq ($(PODMAN),)
+PODMAN := podman
+endif
+export PROD_HTTP_PORT ?= 80
+export PROD_HTTPS_PORT ?= 443
+ifneq ($(WIKI_HTTP_PORT),)
+export PROD_HTTP_PORT := $(WIKI_HTTP_PORT)
+endif
+ifneq ($(WIKI_HTTPS_PORT),)
+export PROD_HTTPS_PORT := $(WIKI_HTTPS_PORT)
+endif
+export PROD_IMAGE COMPOSE_CMD PODMAN ALLOWED_ORIGINS
 .PHONY: help
 help: ## Show this help
 	@echo "workspace-ci Wiki Makefile"
@@ -40,6 +63,14 @@ help: ## Show this help
 	@echo "  type-check   Run tsc --noEmit"
 	@echo "  test         Run vitest"
 	@echo "  check        Run lint + type-check + test"
+	@echo ""
+	@echo "Production (Podman; ports $(PROD_HTTP_PORT)/$(PROD_HTTPS_PORT)):"
+	@echo "  prod-build    Build workspace-ci-wiki:prod image"
+	@echo "  prod-start    Start nginx + Next.js stack"
+	@echo "  prod-stop     Stop production stack"
+	@echo "  prod-restart  Restart production stack"
+	@echo "  prod-status   Show stack status + HTTP probe"
+	@echo "  prod-logs     Tail production logs"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  clean        Remove .next and node_modules"
@@ -164,6 +195,29 @@ dev-status: ## Show dev server status
 .PHONY: dev-logs
 dev-logs: ## Print dev server logs (last 100 lines)
 	@journalctl --user -u $(SYSTEMD_UNIT) --no-pager -n 100
+
+# =============================================================================
+# Production Targets (Podman; default ports 80/443)
+# =============================================================================
+
+.PHONY: prod-check-syntax
+prod-check-syntax: ## Verify prod shell scripts parse under bash -n
+	@bash -n scripts/prod.sh
+	@echo "OK  scripts/prod.sh"
+
+.PHONY: prod-build prod-start prod-stop prod-restart prod-status prod-logs
+prod-build: ## Build production wiki image (context: projects root)
+	@./scripts/prod.sh build
+prod-start: ## Start production stack (HTTP :$(PROD_HTTP_PORT), HTTPS :$(PROD_HTTPS_PORT))
+	@./scripts/prod.sh start
+prod-stop: ## Stop production stack
+	@./scripts/prod.sh stop
+prod-restart: ## Restart production stack
+	@./scripts/prod.sh restart
+prod-status: ## Show production stack status + HTTP probe
+	@./scripts/prod.sh status
+prod-logs: ## Tail production stack logs
+	@./scripts/prod.sh logs
 
 # =============================================================================
 # Code Quality

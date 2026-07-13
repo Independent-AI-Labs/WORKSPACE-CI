@@ -1,0 +1,3 @@
+# Managed systemd user units for workspace-ci (status/orphan detection).
+services:
+  - wiki-ci-tunnel.service

@@ -5,6 +5,7 @@ const withBundleAnalyzer = bundleAnalyzer({
 })
 
 const nextConfig = {
+  output: 'standalone',
   reactStrictMode: true,
   images: { formats: ['image/avif', 'image/webp'] },
   allowedDevOrigins: ['127.0.0.1', 'localhost', '0.0.0.0', '192.168.50.63'],

@@ -1,0 +1,103 @@
+# workspace-ci Wiki production image.
+# Build context: workspace projects root (parent of CI/).
+#   podman build -f CI/web/Containerfile -t workspace-ci-wiki:prod <projects-root>
+
+# -----------------------------------------------------------------------------
+# Stage 1: regenerate wiki JSON data from CI sources
+# -----------------------------------------------------------------------------
+ARG _PY_IMG_P1=p
+ARG _PY_IMG_P2=ython
+FROM docker.io/library/${_PY_IMG_P1}${_PY_IMG_P2}:3.13-slim-bookworm AS extract
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends cloc git \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir PyYAML==6.0.3
+
+WORKDIR /workspace/CI
+
+COPY CI/ci ./ci
+COPY CI/lib ./lib
+COPY CI/scripts ./scripts
+COPY CI/config ./config
+COPY CI/Makefile ./
+COPY CI/web/src/data ./web/src/data
+
+ENV CI_WEB_DATA_DIR=/workspace/CI/web/src/data
+RUN _interp="$(ls /usr/local/bin/py*3.13 | head -1)" \
+    && ln -sf "${_interp}" /usr/local/bin/ws-extract-interp \
+    && ws-extract-interp scripts/extract-hook-sources.py \
+    && ws-extract-interp scripts/extract-script-sources.py \
+    && ws-extract-interp scripts/extract-swallow-source.py \
+    && ws-extract-interp scripts/extract-code-stats.py \
+    || echo "[extract] code-stats skipped (non-fatal)"
+
+# -----------------------------------------------------------------------------
+# Stage 2: build Next.js standalone bundle
+# -----------------------------------------------------------------------------
+FROM docker.io/library/node:24-bookworm AS build
+
+ENV NODE_OPTIONS=--max-old-space-size=4096
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV WORKSPACE_PROJECTS_ROOT=/workspace
+
+WORKDIR /workspace
+
+COPY WORKSPACE-GUARD/config ./WORKSPACE-GUARD/config
+COPY WORKSPACE-GUARD/README.md WORKSPACE-GUARD/Makefile ./WORKSPACE-GUARD/
+COPY WORKSPACE-GUARD/res ./WORKSPACE-GUARD/res
+COPY WORKSPACE-GUARD/.git/config ./WORKSPACE-GUARD/.git/config
+COPY WORKSPACE-GATEWAY/README.md WORKSPACE-GATEWAY/Makefile ./WORKSPACE-GATEWAY/
+COPY WORKSPACE-GATEWAY/res ./WORKSPACE-GATEWAY/res
+COPY WORKSPACE-GATEWAY/.git/config ./WORKSPACE-GATEWAY/.git/config
+COPY CI/README.md CI/Makefile ./CI/
+COPY CI/res ./CI/res
+COPY CI/config ./CI/config
+COPY CI/docs ./CI/docs
+COPY CI/scripts ./CI/scripts
+COPY CI/web ./CI/web
+COPY --from=extract /workspace/CI/web/src/data ./CI/web/src/data
+
+WORKDIR /workspace/CI/web
+RUN test -f /workspace/CI/README.md \
+    && npm install \
+    && npm run build
+
+# -----------------------------------------------------------------------------
+# Stage 3: minimal runtime
+# -----------------------------------------------------------------------------
+FROM docker.io/library/node:24-bookworm-slim AS run
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+ENV WORKSPACE_PROJECTS_ROOT=/workspace
+
+WORKDIR /workspace
+
+COPY WORKSPACE-GUARD/config ./WORKSPACE-GUARD/config
+COPY WORKSPACE-GUARD/README.md WORKSPACE-GUARD/Makefile ./WORKSPACE-GUARD/
+COPY WORKSPACE-GUARD/res ./WORKSPACE-GUARD/res
+COPY WORKSPACE-GUARD/.git/config ./WORKSPACE-GUARD/.git/config
+COPY WORKSPACE-GATEWAY/README.md WORKSPACE-GATEWAY/Makefile ./WORKSPACE-GATEWAY/
+COPY WORKSPACE-GATEWAY/res ./WORKSPACE-GATEWAY/res
+COPY WORKSPACE-GATEWAY/.git/config ./WORKSPACE-GATEWAY/.git/config
+COPY CI/README.md CI/Makefile ./CI/
+COPY CI/res ./CI/res
+COPY CI/config ./CI/config
+COPY CI/docs ./CI/docs
+COPY CI/scripts ./CI/scripts
+
+WORKDIR /workspace/CI/web
+
+COPY --from=build /workspace/CI/web/public ./public
+COPY --from=build /workspace/CI/web/.next/standalone ./
+COPY --from=build /workspace/CI/web/.next/static ./.next/static
+COPY --from=build /workspace/CI/web/branding.yaml ./branding.yaml
+COPY --from=build /workspace/CI/web/src/data ./src/data
+
+RUN mkdir -p data/feedback
+
+EXPOSE 3000
+CMD ["node", "server.js"]

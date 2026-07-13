@@ -1,0 +1,21 @@
+[Unit]
+Description=Cloudflare Tunnel for workspace-ci Wiki (prod)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+{% if tunnel_token | length > 0 %}
+Environment=TUNNEL_TOKEN={{ tunnel_token }}
+ExecStart={{ cloudflared_bin }} tunnel run --token {{ tunnel_token }}
+{% else %}
+ExecStart={{ cloudflared_bin }} tunnel --config {{ tunnel_config }} run
+{% endif %}
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=wiki-ci-tunnel
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,43 @@
+# workspace-ci Wiki production stack (Podman Compose).
+#
+# Host ports: HTTP 80 -> nginx 80, HTTPS 443 -> nginx 443.
+# Override for local testing without root: WIKI_HTTP_PORT=8080 WIKI_HTTPS_PORT=4433
+
+services:
+  wiki-app:
+    image: localhost/workspace-ci-wiki:prod
+    pull_policy: never
+    container_name: wiki-ci-app
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://localhost,https://127.0.0.1,https://workspaceguardrails.com}
+    expose:
+      - "3000"
+    volumes:
+      - wiki-feedback:/workspace/CI/web/data/feedback
+    restart: unless-stopped
+
+  wiki-nginx:
+    image: docker.io/library/nginx:1.27.4-bookworm
+    container_name: wiki-ci-nginx
+    depends_on:
+      - wiki-app
+    ports:
+      - "${WIKI_HTTP_PORT:-80}:80"
+      - "${WIKI_HTTPS_PORT:-443}:443"
+    environment:
+      WIKI_TLS_CN: ${WIKI_TLS_CN:-localhost}
+      WIKI_TLS_DIR: /etc/nginx/certs
+    volumes:
+      - ./res/nginx/wiki-prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./scripts/gen-self-signed-cert.sh:/scripts/gen-self-signed-cert.sh:ro
+      - ./res/nginx/entrypoint.sh:/entrypoint.sh:ro
+      - wiki-tls-certs:/etc/nginx/certs
+    entrypoint: ["/bin/bash", "/entrypoint.sh"]
+    restart: unless-stopped
+
+volumes:
+  wiki-feedback:
+  wiki-tls-certs:

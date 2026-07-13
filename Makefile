@@ -32,6 +32,34 @@ MYPY := .venv/bin/mypy
 # (fresh install), PATH is not modified: install-python-deps handles it.
 BOOT_NAME := $(if $(filter Darwin,$(_OS)),.boot-macos,.boot-linux)
 BOOT_BIN := $(CURDIR)/$(BOOT_NAME)/bin
+
+# Local overrides: copy .env.example -> .env (gitignored). KEY=value makefile syntax.
+-include .env
+export CLOUDFLARED_BIN TUNNEL_CONFIG TUNNEL_TOKEN
+export CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN
+export WIKI_TUNNEL_HOSTNAME WIKI_TUNNEL_NAME
+export WIKI_HTTP_PORT WIKI_HTTPS_PORT
+
+# Tunnel origin = wiki prod nginx on host (default https://127.0.0.1:443).
+ifeq ($(WIKI_HTTPS_PORT),)
+_WIKI_HTTPS_PORT := 443
+else
+_WIKI_HTTPS_PORT := $(WIKI_HTTPS_PORT)
+endif
+ifeq ($(WIKI_TUNNEL_ORIGIN),)
+WIKI_TUNNEL_ORIGIN := https://127.0.0.1:$(_WIKI_HTTPS_PORT)
+endif
+export WIKI_TUNNEL_ORIGIN
+
+# CORS for wiki API when accessed via public tunnel hostname.
+ifeq ($(ALLOWED_ORIGINS),)
+ALLOWED_ORIGINS := https://localhost,https://127.0.0.1
+ifneq ($(WIKI_TUNNEL_HOSTNAME),)
+ALLOWED_ORIGINS := $(ALLOWED_ORIGINS),https://$(WIKI_TUNNEL_HOSTNAME)
+endif
+endif
+export ALLOWED_ORIGINS
+
 ifneq ($(wildcard $(BOOT_BIN)/uv),)
     export PATH := $(BOOT_BIN):$(PATH)
 endif
@@ -227,6 +255,68 @@ wiki-dev-status: ## Show wiki dev server status
 	$(MAKE) -C web dev-status
 wiki-dev-logs: ## Tail wiki dev server logs
 	$(MAKE) -C web dev-logs
+
+# =============================================================================
+# Wiki Production (Podman; ports 80/443)
+# Env overrides: PODMAN, COMPOSE_CMD, WIKI_HTTP_PORT, WIKI_HTTPS_PORT, PROD_HTTP_PORT, PROD_HTTPS_PORT
+# Runs as your user; sudo prompts once for sysctl when binding :80/:443.
+# =============================================================================
+
+.PHONY: wiki-prod-check-syntax wiki-prod-build wiki-prod-start wiki-prod-stop wiki-prod-restart wiki-prod-status wiki-prod-logs
+wiki-prod-check-syntax: ## Verify wiki prod Makefile recipes parse under bash -n
+	$(MAKE) -C web prod-check-syntax
+wiki-prod-build: ## Build wiki production image (Podman)
+	$(MAKE) -C web prod-build
+wiki-prod-start: ## Start wiki production stack on :80/:443
+	$(MAKE) -C web prod-start WIKI_HTTP_PORT="$(WIKI_HTTP_PORT)" WIKI_HTTPS_PORT="$(WIKI_HTTPS_PORT)" ALLOWED_ORIGINS="$(ALLOWED_ORIGINS)"
+wiki-prod-stop: ## Stop wiki production stack
+	$(MAKE) -C web prod-stop
+wiki-prod-restart: ## Restart wiki production stack
+	$(MAKE) -C web prod-restart
+wiki-prod-status: ## Show wiki production stack status
+	$(MAKE) -C web prod-status
+wiki-prod-logs: ## Tail wiki production stack logs
+	$(MAKE) -C web prod-logs
+
+# =============================================================================
+# Wiki Cloudflare Tunnel (systemd user; no VM tunnel wrapper)
+# Configure in .env (see .env.example) or override on command line.
+# =============================================================================
+
+ifeq ($(CLOUDFLARED_BIN),)
+CLOUDFLARED_BIN := $(BOOT_BIN)/cloudflared
+endif
+ifeq ($(TUNNEL_CONFIG),)
+TUNNEL_CONFIG := $(CURDIR)/cloudflare/config.yml
+else ifeq ($(filter /%,$(TUNNEL_CONFIG)),)
+TUNNEL_CONFIG := $(CURDIR)/$(TUNNEL_CONFIG)
+endif
+ANSIBLE_TUNNEL_ENV := CLOUDFLARED_BIN="$(CLOUDFLARED_BIN)" TUNNEL_CONFIG="$(TUNNEL_CONFIG)" \
+	TUNNEL_TOKEN="$(TUNNEL_TOKEN)" \
+	CLOUDFLARE_ACCOUNT_ID="$(CLOUDFLARE_ACCOUNT_ID)" CLOUDFLARE_API_TOKEN="$(CLOUDFLARE_API_TOKEN)" \
+	WIKI_TUNNEL_HOSTNAME="$(WIKI_TUNNEL_HOSTNAME)" WIKI_TUNNEL_NAME="$(WIKI_TUNNEL_NAME)" \
+	WIKI_TUNNEL_ORIGIN="$(WIKI_TUNNEL_ORIGIN)" WIKI_HTTPS_PORT="$(_WIKI_HTTPS_PORT)" \
+	ALLOWED_ORIGINS="$(ALLOWED_ORIGINS)"
+ANSIBLE_TUNNEL := $(ANSIBLE_TUNNEL_ENV) ansible-playbook res/ansible/tunnel.yml
+
+.PHONY: wiki-tunnel-start wiki-tunnel-stop wiki-tunnel-restart wiki-tunnel-status
+.PHONY: wiki-tunnel-deploy wiki-tunnel-undeploy wiki-tunnel-logs wiki-tunnel-route-dns
+wiki-tunnel-start: ## Start Cloudflare tunnel (requires cloudflare/config.yml + credentials)
+	$(ANSIBLE_TUNNEL) --tags start
+wiki-tunnel-stop: ## Stop Cloudflare tunnel
+	$(ANSIBLE_TUNNEL) --tags stop
+wiki-tunnel-restart: ## Restart Cloudflare tunnel
+	$(ANSIBLE_TUNNEL) --tags restart
+wiki-tunnel-status: ## Show Cloudflare tunnel status
+	$(ANSIBLE_TUNNEL) --tags status
+wiki-tunnel-deploy: ## Install + enable wiki tunnel on boot (systemd user + linger)
+	$(ANSIBLE_TUNNEL) --tags deploy
+wiki-tunnel-undeploy: ## Disable + remove wiki tunnel systemd unit
+	$(ANSIBLE_TUNNEL) --tags undeploy
+wiki-tunnel-logs: ## Tail wiki tunnel logs
+	journalctl --user -u wiki-ci-tunnel -f
+wiki-tunnel-route-dns: ## Route DNS (WIKI_TUNNEL_HOSTNAME from .env)
+	$(ANSIBLE_TUNNEL) --tags route-dns
 
 # =============================================================================
 # Cleanup

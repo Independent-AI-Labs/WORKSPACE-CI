@@ -1,4 +1,7 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
+
+// Read sibling repo READMEs from the runtime filesystem (copied into the prod image).
+export const dynamic = 'force-dynamic'
 import { ProjectList } from '@/components/wiki/ProjectList'
 import { loadAllProjectSummaries, loadProjectMakefile, PROJECTS } from '@/lib/project-registry'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'

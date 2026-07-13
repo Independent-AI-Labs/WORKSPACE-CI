@@ -58,8 +58,10 @@ export function useProjectFilter(
 
   const filtered = useMemo(
     () =>
-      projects.filter((p) =>
-        p.languagePercents.some((lp) => activeLanguages.has(lp.language)),
+      projects.filter(
+        (p) =>
+          p.languagePercents.length === 0 ||
+          p.languagePercents.some((lp) => activeLanguages.has(lp.language)),
       ),
     [projects, activeLanguages],
   )
