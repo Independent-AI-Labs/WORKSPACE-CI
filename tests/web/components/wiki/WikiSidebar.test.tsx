@@ -112,6 +112,12 @@ describe('WikiSidebar', () => {
     expect(standardsIdx).toBeGreaterThan(guardIdx)
   })
 
+  it('renders globe icon on LLM Gateway nav item', () => {
+    render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
+    const llmLink = screen.getByRole('link', { name: 'LLM Gateway' })
+    expect(llmLink.querySelector('i.ri-globe-line')).toBeTruthy()
+  })
+
   it('renders dividers around LLM Gateway, Static Analysis, and Playground group', () => {
     const { container } = render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
     const items = Array.from(container.querySelectorAll('.wiki-sidebar__nav > li'))

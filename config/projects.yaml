@@ -16,7 +16,7 @@ projects:
     displayName: WORKSPACE-GATEWAY
     language: Lua
     repoName: WORKSPACE-GATEWAY
-    icon: ri-router-line
+    icon: ri-globe-line
     logoPath: /logos/workspace-gateway.png
   - slug: workspace-guard
     displayName: WORKSPACE-GUARD

@@ -1,16 +1,14 @@
 # Makefile for workspace-ci Wiki (Next.js 16)
 # Manages the dev server via systemd user services.
-# Pattern copied from WORKSPACE-PORTAL.
 
 SHELL := /bin/bash
 
-# Wiki lives at projects/CI/web. Node.js is bootstrapped by CI into
-# CI's own boot dir (projects/CI/.boot-macos or .boot-linux), reached
-# via ../.. from here. This follows the boot contract: NO workspace-root
-# dependencies.
+# Wiki lives at projects/CI/web. Node.js is read from CI's own boot dir
+# (projects/CI/.boot-linux or .boot-macos), installed by sudo prereqs.
+# Restart/dev targets never write boot; they only resolve and execute node.
 _OS := $(shell uname -s)
 _BOOT_NAME := $(if $(filter Darwin,$(_OS)),.boot-macos,.boot-linux)
-CI_ROOT := $(abspath ../..)
+CI_ROOT := $(abspath ..)
 NODE_ENV_BIN := $(CI_ROOT)/$(_BOOT_NAME)/node-env/bin
 BOOT_BIN := $(CI_ROOT)/$(_BOOT_NAME)/bin
 NODE := $(NODE_ENV_BIN)/node
@@ -84,7 +82,6 @@ help: ## Show this help
 dev-start: ## Start dev server (Next.js HMR)
 	@if [ ! -x "$(NODE)" ]; then \
 		echo "ERROR: Bootstrapped Node.js not found at $(NODE)"; \
-		echo "  Run 'make -C $(CI_ROOT) install-node' from the workspace root."; \
 		exit 1; \
 	fi
 	@mkdir -p $(SYSTEMD_DIR)

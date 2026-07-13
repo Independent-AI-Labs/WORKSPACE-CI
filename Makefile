@@ -249,7 +249,7 @@ wiki-dev: wiki-dev-start ## Alias for wiki-dev-start
 	@:
 wiki-dev-stop: ## Stop wiki dev server
 	$(MAKE) -C web dev-stop
-wiki-dev-restart: extract-wiki-data ## Restart wiki dev server (stop + start)
+wiki-dev-restart: ## Restart wiki dev server (stop + start; does not re-run extract-wiki-data)
 	$(MAKE) -C web dev-restart
 wiki-dev-status: ## Show wiki dev server status
 	$(MAKE) -C web dev-status

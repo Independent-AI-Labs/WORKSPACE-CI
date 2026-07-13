@@ -25,7 +25,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/tooling', label: 'Tools & Scripts', icon: 'ri-tools-line', count: 'scripts' },
   { href: '/guard', label: 'Guard Policies', icon: 'ri-shield-keyhole-line', count: 'guards' },
   { href: '/standards', label: 'AI Governance', icon: 'ri-book-marked-line', count: 'standards' },
-  { href: '/llm-gateway', label: 'LLM Gateway', icon: 'ri-router-line', divider: true },
+  { href: '/llm-gateway', label: 'LLM Gateway', icon: 'ri-globe-line', divider: true },
   { href: '/checks', label: 'Static Analysis', icon: 'ri-check-double-line' },
   { href: '/playground', label: 'Playground', icon: 'ri-code-box-line' },
   { href: '/integration', label: 'Integration Guide', icon: 'ri-plug-line', divider: true },
