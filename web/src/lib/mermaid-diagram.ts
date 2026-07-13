@@ -325,17 +325,37 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
     closeFullscreen()
   })
 
+  let renderInFlight: Promise<void> | null = null
+
   async function runMermaid(runner: MermaidRunner): Promise<void> {
-    pre.removeAttribute('data-processed')
-    pre.textContent = source
-    try {
-      await runner.run({ nodes: [pre], suppressErrors: true })
-    } catch (err) {
-      console.error('mermaid render failed:', err)
+    if (renderInFlight) {
+      await renderInFlight
+      return
     }
-    syncSvg()
-    frame.setAttribute('data-mermaid-ready', '')
-    frame.classList.add('is-ready')
+    renderInFlight = (async () => {
+      frame.removeAttribute('data-mermaid-ready')
+      frame.classList.remove('is-ready')
+      pre.removeAttribute('data-processed')
+      pre.textContent = source
+      try {
+        await runner.run({ nodes: [pre], suppressErrors: true })
+      } catch (err) {
+        console.error('mermaid render failed:', err)
+      }
+      syncSvg()
+      if (pre.querySelector('svg')) {
+        frame.setAttribute('data-mermaid-ready', '')
+        frame.classList.add('is-ready')
+      } else {
+        pre.removeAttribute('data-processed')
+        console.warn('mermaid render produced no svg', frame)
+      }
+    })()
+    try {
+      await renderInFlight
+    } finally {
+      renderInFlight = null
+    }
   }
 
   return {

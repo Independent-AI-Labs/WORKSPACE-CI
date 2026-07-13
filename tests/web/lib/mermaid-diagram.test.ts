@@ -68,6 +68,78 @@ describe('mountMermaidDiagram', () => {
     ctrl.destroy()
   })
 
+  it('does not mark ready when runner produces no svg', async () => {
+    const frame = makeFrame('graph TD\nA-->B')
+    const ctrl = mountMermaidDiagram(frame)
+    const emptyRunner: MermaidRunner = {
+      async run() {
+        /* no svg inserted */
+      },
+    }
+    await ctrl.render(emptyRunner)
+    expect(frame.querySelector('pre.mermaid svg')).toBeNull()
+    expect(frame.hasAttribute('data-mermaid-ready')).toBe(false)
+    expect(frame.classList.contains('is-ready')).toBe(false)
+    ctrl.destroy()
+  })
+
+  it('dedupes concurrent render calls on the same frame', async () => {
+    const frame = makeFrame('graph TD\nA-->B')
+    const ctrl = mountMermaidDiagram(frame)
+    let runCount = 0
+    const slowRunner: MermaidRunner = {
+      async run(options) {
+        runCount += 1
+        await new Promise((r) => setTimeout(r, 40))
+        const nodes = options?.nodes
+        if (!nodes || nodes.length === 0) return
+        const pre = nodes[0] as HTMLElement
+        pre.innerHTML = '<svg width="10" height="10"></svg>'
+      },
+    }
+    await Promise.all([ctrl.render(slowRunner), ctrl.render(slowRunner)])
+    expect(runCount).toBe(1)
+    expect(frame.hasAttribute('data-mermaid-ready')).toBe(true)
+    ctrl.destroy()
+  })
+
+  it('renders multiple frames with distinct svg content', async () => {
+    const sources = [
+      'graph TD\nA-->B',
+      'flowchart LR\nC-->D',
+      'graph TD\nE-->F',
+      'flowchart TB\nG-->H',
+    ]
+    const frames = sources.map((src) => makeFrame(src))
+    const ctrls = frames.map((f) => mountMermaidDiagram(f))
+    const runner: MermaidRunner = {
+      async run(options) {
+        const nodes = options?.nodes
+        if (!nodes || nodes.length === 0) return
+        const pre = nodes[0] as HTMLElement
+        const label = (pre.textContent ?? '').includes('C-->D')
+          ? 'diagram-1'
+          : (pre.textContent ?? '').includes('E-->F')
+            ? 'diagram-2'
+            : (pre.textContent ?? '').includes('G-->H')
+              ? 'diagram-3'
+              : 'diagram-0'
+        pre.innerHTML = `<svg data-label="${label}"></svg>`
+      },
+    }
+    for (const ctrl of ctrls) {
+      await ctrl.render(runner)
+    }
+    const labels = frames.map(
+      (f) => f.querySelector('svg')?.getAttribute('data-label'),
+    )
+    expect(labels).toEqual(['diagram-0', 'diagram-1', 'diagram-2', 'diagram-3'])
+    for (const frame of frames) {
+      expect(frame.hasAttribute('data-mermaid-ready')).toBe(true)
+    }
+    for (const ctrl of ctrls) ctrl.destroy()
+  })
+
   it('initialises the viewBox to the diagram base', async () => {
     const frame = makeFrame('graph TD\nA-->B')
     const ctrl = mountMermaidDiagram(frame)

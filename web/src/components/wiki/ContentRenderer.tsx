@@ -54,14 +54,16 @@ export async function ContentRenderer({
     : marked
 
   const htmlParts: string[] = []
+  let diagramIndex = 0
   for (let i = 0; i < segments.length; i++) {
     if (i % 2 === 0) {
       const html = await processMarkdownSegment(segments[i], renderer)
       htmlParts.push(html)
     } else {
       htmlParts.push(
-        `<div class="mermaid-frame" data-mermaid><pre class="mermaid">${escapeHtml(segments[i])}</pre></div>`,
+        `<div class="mermaid-frame" data-mermaid><pre class="mermaid" id="mermaid-diagram-${diagramIndex}">${escapeHtml(segments[i])}</pre></div>`,
       )
+      diagramIndex += 1
     }
   }
 

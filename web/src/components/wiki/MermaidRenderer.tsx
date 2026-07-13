@@ -8,6 +8,7 @@ import {
   type MermaidController,
   type MermaidRunner,
 } from '@/lib/mermaid-diagram'
+import { enqueueMermaidRun } from '@/lib/mermaid-run-queue'
 import { getMermaidThemeConfig } from '@/lib/mermaid-theme'
 
 interface MermaidInitializer {
@@ -46,7 +47,7 @@ export function MermaidRenderer() {
     }
   }
 
-  function mountPending(): void {
+  async function mountPending(): Promise<void> {
     const runner = runnerRef.current
     if (!runner) return
     pruneDisconnected()
@@ -59,20 +60,21 @@ export function MermaidRenderer() {
       if (controllers.has(frame)) continue
       const ctrl = mountMermaidDiagram(frame)
       controllers.set(frame, ctrl)
-      void ctrl.render(runner)
+      await enqueueMermaidRun(() => ctrl.render(runner))
     }
   }
 
   async function rerenderAll(): Promise<void> {
     const runner = runnerRef.current
     if (!runner) return
-    pruneDisconnected()
-    initialize(runner, themeRef.current)
-    const controllers = controllersRef.current
-    if (controllers.size === 0) return
-    await Promise.all(
-      Array.from(controllers.values()).map((ctrl) => ctrl.rerender(runner)),
-    )
+    await enqueueMermaidRun(async () => {
+      pruneDisconnected()
+      initialize(runner, themeRef.current)
+      const controllers = controllersRef.current
+      for (const ctrl of controllers.values()) {
+        await ctrl.rerender(runner)
+      }
+    })
   }
 
   useEffect(() => {
@@ -80,7 +82,7 @@ export function MermaidRenderer() {
     void import('mermaid').then(({ default: mermaid }) => {
       if (cancelled) return
       runnerRef.current = mermaid as unknown as MermaidRunner
-      mountPending()
+      void mountPending()
     })
     return () => {
       cancelled = true
@@ -88,7 +90,7 @@ export function MermaidRenderer() {
   }, [])
 
   useEffect(() => {
-    mountPending()
+    void mountPending()
   }, [pathname])
 
   useEffect(() => {

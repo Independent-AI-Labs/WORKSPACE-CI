@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, cleanup, waitFor } from '@testing-library/react'
 import type { MermaidController, MermaidRunner } from '@/lib/mermaid-diagram'
+import { resetMermaidRunQueue } from '@/lib/mermaid-run-queue'
 
 let currentPathname = '/workspace-ci'
 vi.mock('next/navigation', () => ({
@@ -17,24 +18,27 @@ vi.mock('mermaid', () => ({
   default: fakeRunner,
 }))
 
-const mountMermaidDiagram = vi.fn()
-const fakeControllers: Array<MermaidController> = []
+const { mountMermaidDiagram, fakeControllers } = vi.hoisted(() => {
+  const controllers: MermaidController[] = []
+  const mount = vi.fn((frame: HTMLElement): MermaidController => {
+    const ctrl: MermaidController = {
+      render: vi.fn().mockResolvedValue(undefined),
+      rerender: vi.fn().mockResolvedValue(undefined),
+      destroy: vi.fn(),
+    }
+    controllers.push(ctrl)
+    return ctrl
+  })
+  return { mountMermaidDiagram: mount, fakeControllers: controllers }
+})
+
 vi.mock('@/lib/mermaid-diagram', async () => {
   const actual = await vi.importActual<typeof import('@/lib/mermaid-diagram')>(
     '@/lib/mermaid-diagram',
   )
   return {
     ...actual,
-    mountMermaidDiagram: (frame: HTMLElement) => {
-      const ctrl: MermaidController = {
-        render: vi.fn().mockResolvedValue(undefined),
-        rerender: vi.fn().mockResolvedValue(undefined),
-        destroy: vi.fn(),
-      }
-      fakeControllers.push(ctrl)
-      mountMermaidDiagram(frame)
-      return ctrl
-    },
+    mountMermaidDiagram,
   }
 })
 
@@ -62,6 +66,7 @@ function mountFrame(id: string): HTMLElement {
 describe('MermaidRenderer', () => {
   beforeEach(() => {
     currentPathname = '/workspace-ci'
+    resetMermaidRunQueue()
     fakeControllers.length = 0
     mountMermaidDiagram.mockClear()
     fakeInitialize.mockClear()
@@ -152,6 +157,31 @@ describe('MermaidRenderer', () => {
     })
     unmount()
     expect(fakeControllers[0].destroy).toHaveBeenCalled()
+  })
+
+  it('mounts multiple frames sequentially (one render at a time)', async () => {
+    const renderOrder: string[] = []
+    mountMermaidDiagram.mockImplementation((frame: HTMLElement): MermaidController => {
+      const ctrl: MermaidController = {
+        render: vi.fn().mockImplementation(async () => {
+          renderOrder.push(frame.id)
+          await new Promise((r) => setTimeout(r, 20))
+        }),
+        rerender: vi.fn().mockResolvedValue(undefined),
+        destroy: vi.fn(),
+      }
+      fakeControllers.push(ctrl)
+      return ctrl
+    })
+    mountFrame('f1')
+    mountFrame('f2')
+    mountFrame('f3')
+    mountFrame('f4')
+    render(<MermaidRenderer />)
+    await waitFor(() => {
+      expect(renderOrder).toEqual(['f1', 'f2', 'f3', 'f4'])
+    })
+    expect(fakeControllers).toHaveLength(4)
   })
 
   it('prunes disconnected frames before mounting new ones', async () => {
