@@ -40,13 +40,27 @@ describe('applyGrafanaBaseUrl', () => {
     delete process.env.GRAFANA_BASE_URL
   })
 
-  it('returns dashboards unchanged when env var is unset', () => {
+  it('returns dashboards unchanged when env var is unset and no base passed', () => {
     delete process.env.GRAFANA_BASE_URL
     const out = applyGrafanaBaseUrl(baseBranding())
     expect(out.grafana_dashboards.map((d) => d.url)).toEqual([
       'http://localhost:3030/d/gateway-cost-leaderboard/x?orgId=1&from=now-24h&to=now',
       'http://localhost:3030/d/gateway-cost-usage/y?orgId=1&var-model=$__all',
     ])
+  })
+
+  it('rewrites path+query sources when an explicit base is passed', () => {
+    const branding = baseBranding()
+    branding.grafana_dashboards = [
+      {
+        title: 'LEADERBOARD',
+        url: 'http://ignored/d/gateway-cost-leaderboard/x?orgId=1',
+      },
+    ]
+    const out = applyGrafanaBaseUrl(branding, 'https://127.0.0.1/grafana')
+    expect(out.grafana_dashboards[0].url).toBe(
+      'https://127.0.0.1/grafana/d/gateway-cost-leaderboard/x?orgId=1',
+    )
   })
 
   it('returns dashboards unchanged when env var is empty', () => {

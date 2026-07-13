@@ -13,7 +13,8 @@ services:
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://localhost,https://127.0.0.1}
-      GRAFANA_BASE_URL: ${GRAFANA_BASE_URL:-https://workspaceguardrails.com/grafana}
+      # Unset = auto-derive https://<request-host>/grafana per request (same-origin iframes).
+      GRAFANA_BASE_URL: ${GRAFANA_BASE_URL:-}
     expose:
       - "3000"
     volumes:

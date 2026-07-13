@@ -2,11 +2,17 @@ import { cache } from 'react'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { load } from 'js-yaml'
+import {
+  type GrafanaDashboardConfig,
+  type GrafanaDashboardSource,
+  resolveGrafanaBaseUrl,
+  resolveGrafanaBaseUrlFromEnv,
+  resolveGrafanaBaseUrlSync,
+  resolveGrafanaDashboards,
+  DEV_GRAFANA_BASE_URL,
+} from '@/lib/grafana-url'
 
-export interface GrafanaDashboardConfig {
-  title: string
-  url: string
-}
+export type { GrafanaDashboardConfig } from '@/lib/grafana-url'
 
 export interface Branding {
   name: string
@@ -33,33 +39,58 @@ export interface Branding {
 
 const BRANDING_PATH = join(process.cwd(), 'branding.yaml')
 
-export const getBranding = cache((): Branding => {
-  const raw = readFileSync(BRANDING_PATH, 'utf8')
-  const branding = load(raw) as Branding
-  return applyGrafanaBaseUrl(branding)
-})
+type RawBranding = Omit<Branding, 'grafana_dashboards'> & {
+  grafana_dashboards: GrafanaDashboardSource[]
+}
 
-export function applyGrafanaBaseUrl(branding: Branding): Branding {
-  const base = process.env.GRAFANA_BASE_URL
-  if (!base) return branding
-  let parsedBase: URL
+function loadRawBranding(): RawBranding {
+  const raw = readFileSync(BRANDING_PATH, 'utf8')
+  return load(raw) as RawBranding
+}
+
+export function applyGrafanaBaseUrl(branding: Branding, base?: string): Branding {
+  const envBase = resolveGrafanaBaseUrlFromEnv()
+  const resolvedBase = base ?? envBase
+  if (!resolvedBase) {
+    return branding
+  }
   try {
-    parsedBase = new URL(base.endsWith('/') ? base : `${base}/`)
+    new URL(resolvedBase.endsWith('/') ? resolvedBase : `${resolvedBase}/`)
   } catch {
     return branding
   }
-  const basePath = parsedBase.pathname.replace(/\/$/, '')
-  const rewritten = branding.grafana_dashboards.map((d) => {
-    try {
-      const u = new URL(d.url)
-      const out = new URL(
-        `${basePath}${u.pathname}${u.search}`,
-        `${parsedBase.protocol}//${parsedBase.host}`,
-      )
-      return { ...d, url: out.toString() }
-    } catch {
-      return d
-    }
-  })
-  return { ...branding, grafana_dashboards: rewritten }
+
+  const sources: GrafanaDashboardSource[] = branding.grafana_dashboards.map((d) => ({
+    title: d.title,
+    url: d.url,
+  }))
+  return {
+    ...branding,
+    grafana_dashboards: resolveGrafanaDashboards(sources, resolvedBase),
+  }
 }
+
+function brandingWithGrafanaSources(sources: GrafanaDashboardSource[]): Branding {
+  const raw = loadRawBranding()
+  const base = resolveGrafanaBaseUrlSync()
+  return {
+    ...raw,
+    grafana_dashboards: resolveGrafanaDashboards(sources, base),
+  }
+}
+
+export const getBranding = cache((): Branding => {
+  const raw = loadRawBranding()
+  return brandingWithGrafanaSources(raw.grafana_dashboards)
+})
+
+export async function getBrandingForRequest(): Promise<Branding> {
+  const raw = loadRawBranding()
+  const base = await resolveGrafanaBaseUrl()
+  return {
+    ...raw,
+    grafana_dashboards: resolveGrafanaDashboards(raw.grafana_dashboards, base),
+  }
+}
+
+export { DEV_GRAFANA_BASE_URL }

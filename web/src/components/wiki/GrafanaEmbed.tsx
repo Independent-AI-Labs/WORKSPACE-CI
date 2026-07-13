@@ -1,5 +1,6 @@
 'use client'
 
+import { appendGrafanaEmbedParams } from '@/lib/grafana-url'
 import { useThemeStore } from '@/stores/theme-store'
 
 interface GrafanaEmbedProps {
@@ -10,7 +11,7 @@ interface GrafanaEmbedProps {
 
 export function GrafanaEmbed({ src, title, className }: GrafanaEmbedProps) {
   const theme = useThemeStore((s) => s.theme)
-  const themedSrc = `${src}&theme=${theme}&kiosk=true`
+  const themedSrc = appendGrafanaEmbedParams(src, theme)
 
   return (
     <iframe
