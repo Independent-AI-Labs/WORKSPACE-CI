@@ -475,3 +475,24 @@ ci_resolve_boot_path() {
     # Strip trailing colon (accum always ends with ':' due to prepend pattern)
     printf '%s' "${accum%:}"
 }
+
+# ci_resolve_tool_path <start-dir> <tool-name>
+#   Walks up from <start-dir> to / looking for an executable at
+#   $CI_BOOT_NAME/bin/<tool-name>. Falls back to command -v. Prints the
+#   resolved path to stdout; returns 1 if not found.
+ci_resolve_tool_path() {
+    local start="$1" tool="$2" walk _boot_name="${CI_BOOT_NAME:-$(ci_boot_name)}"
+    walk="$start"
+    while [[ "$walk" != "/" && "$walk" != "." ]]; do
+        if [[ -x "$walk/$_boot_name/bin/$tool" ]]; then
+            printf '%s\n' "$walk/$_boot_name/bin/$tool"
+            return 0
+        fi
+        walk="$(dirname "$walk")"
+    done
+    if command -v "$tool" >/dev/null 2>&1; then
+        command -v "$tool"
+        return 0
+    fi
+    return 1
+}

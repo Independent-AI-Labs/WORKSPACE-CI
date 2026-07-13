@@ -2,7 +2,7 @@
 # workspace-ci Wiki - Cloudflare Tunnel (no VM tunnel wrapper)
 #
 # Env overrides:
-#   CLOUDFLARED_BIN  - path to cloudflared (default: <CI>/.boot-linux/bin/cloudflared)
+#   CLOUDFLARED_BIN  - path to cloudflared (default: scripts/resolve-cloudflared.sh walk-up)
 #   TUNNEL_CONFIG    - path to config.yml (default: <CI>/cloudflare/config.yml)
 #   WIKI_TUNNEL_HOSTNAME - public hostname (status/route-dns)
 #   WIKI_TUNNEL_NAME     - tunnel name for route-dns (default: workspace-ci-wiki)
@@ -20,9 +20,9 @@
     project_root: '{{ playbook_dir | dirname | dirname }}'
     tunnel_unit: wiki-ci-tunnel.service
     systemd_dir: '{{ ansible_env.HOME }}/.config/systemd/user'
-    cloudflared_bin_default: '{{ project_root }}/.boot-linux/bin/cloudflared'
+    boot_name: "{{ '.boot-macos' if ansible_system == 'Darwin' else '.boot-linux' }}"
     tunnel_config_default: '{{ project_root }}/cloudflare/config.yml'
-    cloudflared_bin: "{{ lookup('env', 'CLOUDFLARED_BIN') | default(cloudflared_bin_default, true) }}"
+    cloudflared_bin: "{{ lookup('env', 'CLOUDFLARED_BIN') | default('', true) }}"
     tunnel_config: "{{ lookup('env', 'TUNNEL_CONFIG') | default(tunnel_config_default, true) }}"
     wiki_tunnel_hostname: "{{ lookup('env', 'WIKI_TUNNEL_HOSTNAME') | default('', true) }}"
     wiki_tunnel_name: "{{ lookup('env', 'WIKI_TUNNEL_NAME') | default('workspace-ci-wiki', true) }}"
@@ -44,10 +44,21 @@
         - name: Set resolved paths
           ansible.builtin.set_fact:
             project_root: '{{ resolved_root.stdout }}'
-            cloudflared_bin_default: '{{ resolved_root.stdout }}/.boot-linux/bin/cloudflared'
             tunnel_config_default: '{{ resolved_root.stdout }}/cloudflare/config.yml'
-            cloudflared_bin: "{{ lookup('env', 'CLOUDFLARED_BIN') | default(resolved_root.stdout + '/.boot-linux/bin/cloudflared', true) }}"
             tunnel_config: "{{ lookup('env', 'TUNNEL_CONFIG') | default(resolved_root.stdout + '/cloudflare/config.yml', true) }}"
+
+        - name: Resolve cloudflared binary (boot walk-up or PATH)
+          ansible.builtin.command:
+            argv: [bash, scripts/resolve-cloudflared.sh]
+            chdir: '{{ resolved_root.stdout }}'
+          register: cloudflared_resolve
+          changed_when: false
+          when: lookup('env', 'CLOUDFLARED_BIN') | length == 0
+
+        - name: Set cloudflared from resolver
+          ansible.builtin.set_fact:
+            cloudflared_bin: '{{ cloudflared_resolve.stdout }}'
+          when: lookup('env', 'CLOUDFLARED_BIN') | length == 0
 
     - name: Ensure systemd user directory exists
       tags: [always, start, deploy]

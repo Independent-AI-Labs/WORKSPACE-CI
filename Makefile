@@ -283,20 +283,20 @@ wiki-prod-logs: ## Tail wiki production stack logs
 # Configure in .env (see .env.example) or override on command line.
 # =============================================================================
 
-ifeq ($(CLOUDFLARED_BIN),)
-CLOUDFLARED_BIN := $(BOOT_BIN)/cloudflared
-endif
 ifeq ($(TUNNEL_CONFIG),)
 TUNNEL_CONFIG := $(CURDIR)/cloudflare/config.yml
 else ifeq ($(filter /%,$(TUNNEL_CONFIG)),)
 TUNNEL_CONFIG := $(CURDIR)/$(TUNNEL_CONFIG)
 endif
-ANSIBLE_TUNNEL_ENV := CLOUDFLARED_BIN="$(CLOUDFLARED_BIN)" TUNNEL_CONFIG="$(TUNNEL_CONFIG)" \
+ANSIBLE_TUNNEL_ENV := TUNNEL_CONFIG="$(TUNNEL_CONFIG)" \
 	TUNNEL_TOKEN="$(TUNNEL_TOKEN)" \
 	CLOUDFLARE_ACCOUNT_ID="$(CLOUDFLARE_ACCOUNT_ID)" CLOUDFLARE_API_TOKEN="$(CLOUDFLARE_API_TOKEN)" \
 	WIKI_TUNNEL_HOSTNAME="$(WIKI_TUNNEL_HOSTNAME)" WIKI_TUNNEL_NAME="$(WIKI_TUNNEL_NAME)" \
 	WIKI_TUNNEL_ORIGIN="$(WIKI_TUNNEL_ORIGIN)" WIKI_HTTPS_PORT="$(_WIKI_HTTPS_PORT)" \
 	ALLOWED_ORIGINS="$(ALLOWED_ORIGINS)"
+ifneq ($(CLOUDFLARED_BIN),)
+ANSIBLE_TUNNEL_ENV := CLOUDFLARED_BIN="$(CLOUDFLARED_BIN)" $(ANSIBLE_TUNNEL_ENV)
+endif
 ANSIBLE_TUNNEL := $(ANSIBLE_TUNNEL_ENV) ansible-playbook res/ansible/tunnel.yml
 
 .PHONY: wiki-tunnel-start wiki-tunnel-stop wiki-tunnel-restart wiki-tunnel-status

@@ -5,9 +5,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: regenerate wiki JSON data from CI sources
 # -----------------------------------------------------------------------------
-ARG _PY_IMG_P1=p
-ARG _PY_IMG_P2=ython
-FROM docker.io/library/${_PY_IMG_P1}${_PY_IMG_P2}:3.13-slim-bookworm AS extract
+FROM docker.io/library/python:3.13-slim-bookworm AS extract
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends cloc git \
@@ -24,13 +22,10 @@ COPY CI/Makefile ./
 COPY CI/web/src/data ./web/src/data
 
 ENV CI_WEB_DATA_DIR=/workspace/CI/web/src/data
-RUN _interp="$(ls /usr/local/bin/py*3.13 | head -1)" \
-    && ln -sf "${_interp}" /usr/local/bin/ws-extract-interp \
-    && ws-extract-interp scripts/extract-hook-sources.py \
-    && ws-extract-interp scripts/extract-script-sources.py \
-    && ws-extract-interp scripts/extract-swallow-source.py \
-    && ws-extract-interp scripts/extract-code-stats.py \
-    || echo "[extract] code-stats skipped (non-fatal)"
+RUN /usr/local/bin/python3.13 scripts/extract-hook-sources.py \
+    && /usr/local/bin/python3.13 scripts/extract-script-sources.py \
+    && /usr/local/bin/python3.13 scripts/extract-swallow-source.py \
+    && /usr/local/bin/python3.13 scripts/extract-code-stats.py
 
 # -----------------------------------------------------------------------------
 # Stage 2: build Next.js standalone bundle

@@ -80,6 +80,10 @@ universal_exceptions:
   - paths: ['config/banned_words.yaml']
     patterns:
       - '\bpython3?\b'
+  # OCI base image tag and interpreter path in the wiki production Containerfile.
+  - paths: ['web/Containerfile$']
+    patterns:
+      - '\bpython3?\b'
 
   # Legitimate technical terms that share spelling with AI slop.
   # The slop VERB/metaphor sense is caught by phrase patterns (e.g.
