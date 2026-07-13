@@ -35,16 +35,18 @@ def main() -> int:
         print(f"ERROR: code-stats script not found at {_CODE_STATS}", file=sys.stderr)
         return 1
 
-    workspace_root = os.environ.get("CI_WORKSPACE_ROOT", "")
+    workspace_root = os.environ.get("CI_WORKSPACE_ROOT", "").strip()
     if not workspace_root:
-        workspace_root = str(_REPO_ROOT.parent)
+        # Umbrella repo (WORKSPACE-VM) root, not projects/; nested repos live under projects/.
+        _projects_root = _REPO_ROOT.parent
+        workspace_root = str(_projects_root.parent)
 
     env = dict(os.environ)
     env["CI_WORKSPACE_ROOT"] = workspace_root
 
     try:
         result = subprocess.run(
-            ["bash", str(_CODE_STATS), "--json", "--no-umbrella"],
+            ["bash", str(_CODE_STATS), "--json"],
             capture_output=True,
             text=True,
             env=env,
