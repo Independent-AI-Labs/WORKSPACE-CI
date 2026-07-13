@@ -30,6 +30,21 @@ _OUTPUT_PATH = _OUTPUT_DIR / "code-stats.json"
 _CODE_STATS = _SCRIPTS_DIR / "code-stats"
 
 
+def _load_umbrella_stats(workspace_root: str, env: dict[str, str]) -> dict | None:
+    root = Path(workspace_root)
+    if not (root / ".git").is_dir():
+        return None
+    umbrella = subprocess.run(
+        ["bash", str(_CODE_STATS), "--repo", workspace_root, "--json"],
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=str(_REPO_ROOT),
+        check=True,
+    )
+    return json.loads(umbrella.stdout)
+
+
 def main() -> int:
     if not _CODE_STATS.exists():
         print(f"ERROR: code-stats script not found at {_CODE_STATS}", file=sys.stderr)
@@ -66,12 +81,21 @@ def main() -> int:
         print(f"ERROR: failed to parse code-stats JSON: {exc}", file=sys.stderr)
         return 1
 
+    repo_languages = list(data.get("repo_languages", []))
+    repos = list(data.get("repos", []))
+    umbrella_data = _load_umbrella_stats(workspace_root, env)
+    if umbrella_data is not None:
+        for entry in umbrella_data.get("repo_languages", []):
+            repo_languages.append({**entry, "repo": "WORKSPACE-VM"})
+        for entry in umbrella_data.get("repos", []):
+            repos.append({**entry, "repo": "WORKSPACE-VM"})
+
     output = {
         "generated_at": datetime.now(UTC).isoformat(),
         "totals": data.get("totals", {}),
-        "repos": data.get("repos", []),
+        "repos": repos,
         "languages": data.get("languages", []),
-        "repo_languages": data.get("repo_languages", []),
+        "repo_languages": repo_languages,
     }
 
     _OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)

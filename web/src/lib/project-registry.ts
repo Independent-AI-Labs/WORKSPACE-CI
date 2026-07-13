@@ -32,8 +32,19 @@ function loadProjectsConfig(): ProjectsConfig {
   return load(raw) as ProjectsConfig
 }
 
+/** Umbrella repo (WORKSPACE-VM) lives above projects/ in dev; staged under WORKSPACE-VM/ in prod. */
+export function resolveRepoDir(cfg: ProjectConfigEntry, projectsRoot = PROJECTS_ROOT): string {
+  if (cfg.slug === 'workspace-vm') {
+    if (process.env.WORKSPACE_PROJECTS_ROOT) {
+      return join(projectsRoot, 'WORKSPACE-VM')
+    }
+    return join(projectsRoot, '..')
+  }
+  return join(projectsRoot, cfg.repoName)
+}
+
 function buildProjectEntry(cfg: ProjectConfigEntry): ProjectEntry {
-  const repoDirPath = join(PROJECTS_ROOT, cfg.repoName)
+  const repoDirPath = resolveRepoDir(cfg)
   return {
     slug: cfg.slug,
     displayName: cfg.displayName,

@@ -89,6 +89,8 @@ compose_run() {
 
 cmd_build() {
   require_cmd "${PODMAN}" PODMAN
+  echo "[prod-build] Staging umbrella repo into ${PROJECTS_ROOT}/WORKSPACE-VM"
+  node "${WEB_DIR}/scripts/stage-umbrella-repo.mjs"
   echo "[prod-build] Building ${PROD_IMAGE} from ${PROJECTS_ROOT}"
   "${PODMAN}" build -f "${WEB_DIR}/Containerfile" -t "${PROD_IMAGE}" "${PROJECTS_ROOT}"
 }

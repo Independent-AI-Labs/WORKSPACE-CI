@@ -1,5 +1,11 @@
 version: 1
 projects:
+  - slug: workspace-vm
+    displayName: WORKSPACE-VM
+    language: Python
+    repoName: WORKSPACE-VM
+    icon: ri-server-line
+    logoPath: /logos/workspace-vm.png
   - slug: workspace-ci
     displayName: WORKSPACE-CI
     language: Python

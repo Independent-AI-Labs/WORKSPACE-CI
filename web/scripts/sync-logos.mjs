@@ -1,6 +1,7 @@
 import fs from 'fs/promises'
-import { existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import path from 'path'
+import { load } from 'js-yaml'
 
 process.on('uncaughtException', (err) => {
   console.error('[sync-logos] uncaughtException:', err)
@@ -14,12 +15,8 @@ process.on('unhandledRejection', (reason) => {
 const WEB_DIR = process.cwd()
 const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT
   ?? path.resolve(WEB_DIR, '..', '..')
-
-const REPOS = [
-  { slug: 'workspace-ci', repoName: 'CI' },
-  { slug: 'workspace-gateway', repoName: 'WORKSPACE-GATEWAY' },
-  { slug: 'workspace-guard', repoName: 'WORKSPACE-GUARD' },
-]
+const CONFIG_ROOT = process.env.WORKSPACE_CI_CONFIG_ROOT
+  ?? path.resolve(WEB_DIR, '..', 'config')
 
 const DEST_DIR = path.resolve(WEB_DIR, 'public', 'logos')
 
@@ -32,20 +29,40 @@ const LOCAL_LOGOS = [
   { src: 'res/LOGO_LIGHT_THEME.png', dest: 'public/LOGO_LIGHT_THEME.png' },
 ]
 
+function loadProjects() {
+  const raw = readFileSync(path.join(CONFIG_ROOT, 'projects.yaml'), 'utf8')
+  const config = load(raw)
+  return config.projects ?? []
+}
+
+function resolveLogoSource(slug, repoName) {
+  if (slug === 'workspace-vm') {
+    if (process.env.WORKSPACE_PROJECTS_ROOT) {
+      return path.resolve(PROJECTS_ROOT, 'WORKSPACE-VM', 'res', 'LOGO.png')
+    }
+    return path.resolve(PROJECTS_ROOT, '..', 'res', 'LOGO.png')
+  }
+  return path.resolve(PROJECTS_ROOT, repoName, 'res', 'LOGO.png')
+}
+
 async function syncLogos() {
   await fs.mkdir(DEST_DIR, { recursive: true })
 
+  const projects = loadProjects()
+
   // Per-repo project logos -> public/logos/<slug>.png
   const results = await Promise.all(
-    REPOS.map(async ({ slug, repoName }) => {
-      const src = path.resolve(PROJECTS_ROOT, repoName, 'res', 'LOGO.png')
-      if (!existsSync(src)) {
-        return { slug, ok: false, reason: `missing source: ${src}` }
-      }
-      const dest = path.resolve(DEST_DIR, `${slug}.png`)
-      await fs.copyFile(src, dest)
-      return { slug, ok: true, dest }
-    }),
+    projects
+      .filter((p) => p.logoPath)
+      .map(async ({ slug, repoName }) => {
+        const src = resolveLogoSource(slug, repoName)
+        if (!existsSync(src)) {
+          return { slug, ok: false, reason: `missing source: ${src}` }
+        }
+        const dest = path.resolve(DEST_DIR, `${slug}.png`)
+        await fs.copyFile(src, dest)
+        return { slug, ok: true, dest }
+      }),
   )
   for (const r of results) {
     if (r.ok) {
