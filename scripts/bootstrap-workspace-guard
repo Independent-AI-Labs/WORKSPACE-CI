@@ -230,7 +230,7 @@ check_guard() {
     fi
     log_warn "Drift items:"
     printf '  - %s\n' "${_drift[@]}"
-    log_info "Fix: sudo make reconcile-guard-host-exec (or install-guard-host-exec when drifted)"
+    log_info "Fix: sudo make guard-refresh"
 }
 
 case "$MODE" in

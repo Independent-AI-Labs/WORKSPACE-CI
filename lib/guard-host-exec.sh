@@ -60,6 +60,11 @@ guard_host_provision_config_file() {
         printf '%s\n' "$WORKSPACE_HOST_PROVISION_FILE"
         return 0
     fi
+    local system_cfg="/etc/workspace-guard/host-provision.yaml"
+    if [[ -f "$system_cfg" ]]; then
+        printf '%s\n' "$system_cfg"
+        return 0
+    fi
     printf '%s/config/host-provision.yaml\n' "$_guard_dir"
 }
 
@@ -140,11 +145,14 @@ guard_host_provision_fleet_in_sudo() {
 
 guard_assert_host_provision_complete() {
     guard_host_provision_user_mgmt_enabled || return 0
+    if [[ "${GUARD_PROVISION_CONTEXT:-}" == "1" ]]; then
+        return 0
+    fi
     local marker cfg_admin marker_admin offender
     marker="$(guard_host_provision_marker_file)"
     if [[ ! -f "$marker" ]]; then
         log_error "Host provision incomplete: $marker missing"
-        log_error "Run: sudo make provision-host  (or sudo make install-host-stack)"
+        log_error "Run: sudo make guard-up"
         return 1
     fi
     cfg_admin="$(_guard_capture_line awk '
@@ -157,14 +165,13 @@ guard_assert_host_provision_complete() {
     marker_admin="$(_guard_capture_line awk -F= '$1=="admin"{print $2; exit}' "$marker")"
     if [[ -n "$cfg_admin" && -n "$marker_admin" && "$cfg_admin" != "$marker_admin" ]]; then
         log_error "Host provision marker admin=$marker_admin does not match config ($cfg_admin)"
-        log_error "Re-run: sudo make provision-host"
+        log_error "Re-run: sudo make guard-up"
         return 1
     fi
     offender="$(_guard_capture_line guard_host_provision_fleet_in_sudo)" || offender=""
     if [[ -n "$offender" ]]; then
-        log_error "Fleet user '$offender' is still in group sudo"
-        log_error "Run: sudo make provision-host"
-        return 1
+        log_warn "Fleet user '$offender' is in group sudo (audit-only; install continues)"
+        log_warn "Use break-glass admin for root ops; provision does not demote fleet sudo."
     fi
     return 0
 }

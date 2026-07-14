@@ -35,6 +35,32 @@ _guard_rehome_target_tree() {
     log_info "Re-homed target/ -> $user"
 }
 
+_guard_assert_target_ownership() {
+    local user="${1:-}"
+    [[ -n "$user" && "$user" != "root" && -d "$_guard_dir/target" ]] || return 0
+    local owner="" _stat_err _stat_rc=0
+    _stat_err="$(mktemp)"
+    owner="$(stat -c '%U' "$_guard_dir/target" 2>"$_stat_err")" || _stat_rc=$?
+    if [[ $_stat_rc -ne 0 ]]; then
+        if [[ -s "$_stat_err" ]]; then
+            log_warn "stat owner of $_guard_dir/target failed: $(head -1 "$_stat_err")"
+        fi
+        rm -f "$_stat_err"
+        return 0
+    fi
+    rm -f "$_stat_err"
+    if [[ "$owner" == "root" ]]; then
+        if [[ "${GUARD_FIX_TARGET_OWNERSHIP:-}" == "1" ]]; then
+            _guard_rehome_target_tree "$user"
+            return 0
+        fi
+        log_error "WORKSPACE-GUARD/target is root-owned; agent rebuild will fail."
+        log_error "Fix: chown -R $user:$user $_guard_dir/target"
+        log_error "Or: GUARD_FIX_TARGET_OWNERSHIP=1 make build-guard"
+        return 1
+    fi
+}
+
 _guard_cargo_release_build() {
     local err_file rc=0
     err_file="$(mktemp)"
@@ -145,6 +171,8 @@ build_guard_binary() {
     cd "$_guard_dir"
     if [[ $EUID -eq 0 ]]; then
         _guard_rehome_target_tree "$(_guard_repo_owner)"
+    else
+        _guard_assert_target_ownership "$(_guard_repo_owner)" || return 1
     fi
 
     local -a build_features=()
