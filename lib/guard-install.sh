@@ -105,9 +105,9 @@ install_guard_binary() {
         echo "  • Logs every git invocation to /var/log/workspace-guard/"
         echo ""
         echo "To refresh after code changes:"
-        echo "  make reconcile-guard-host-exec"
+        echo "  sudo make guard-refresh   (workspace root; alias: refresh-guard)"
         echo "To uninstall git guard (preserves provision state):"
-        echo "  make uninstall-guard"
+        echo "  sudo make guard-down"
         echo ""
     fi
 

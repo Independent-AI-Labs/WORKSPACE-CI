@@ -28,6 +28,17 @@ _guard_capture_line() {
     printf '%s' "${out%%$'\n'*}"
 }
 
+# Predicate probe: rc!=0 means "condition false", not an operator error.
+# Does not emit guard probe noise; callers treat empty output as false.
+_guard_try_line() {
+    local rc=0 out=""
+    out="$("$@" 2>&1)" || rc=$?
+    if [[ $rc -eq 0 ]]; then
+        printf '%s' "${out%%$'\n'*}"
+    fi
+    return $rc
+}
+
 # Capture stdout lines from a command without process substitution.
 _guard_read_lines() {
     local -n _arr=$1

@@ -168,7 +168,10 @@ guard_assert_host_provision_complete() {
         log_error "Re-run: sudo make guard-up"
         return 1
     fi
-    offender="$(_guard_capture_line guard_host_provision_fleet_in_sudo)" || offender=""
+    offender=""
+    if offender="$(_guard_try_line guard_host_provision_fleet_in_sudo)"; then
+        :
+    fi
     if [[ -n "$offender" ]]; then
         log_warn "Fleet user '$offender' is in group sudo (audit-only; install continues)"
         log_warn "Use break-glass admin for root ops; provision does not demote fleet sudo."
