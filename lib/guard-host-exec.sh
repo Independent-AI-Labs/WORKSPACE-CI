@@ -119,8 +119,16 @@ guard_host_provision_fleet_in_sudo() {
         return 1
     fi
     while IFS= read -r user; do
+        local _id_err _id_rc=0 _groups=""
         [[ -z "$user" ]] && continue
-        if id -nG "$user" 2>/dev/null | tr ' ' '\n' | grep -qx sudo; then
+        _id_err="$(mktemp)"
+        _groups="$(id -nG "$user" 2>"$_id_err")" || _id_rc=$?
+        if [[ $_id_rc -ne 0 ]]; then
+            rm -f "$_id_err"
+            continue
+        fi
+        rm -f "$_id_err"
+        if printf '%s\n' "$_groups" | tr ' ' '\n' | grep -qx sudo; then
             rm -f "$_users_file"
             printf '%s\n' "$user"
             return 0
@@ -233,12 +241,13 @@ purge_guard_state() {
     base="$(guard_state_dir)"
     if [[ "${GUARD_PURGE_CONFIRM:-}" != "1" ]]; then
         log_error "Refusing purge: export GUARD_PURGE_CONFIRM=1 to destroy all guard state"
-        log_error "This removes: $base (host-provision.ok, ssh-keys/, identities), guard logs"
+        log_error "This removes: $base (host-provision.ok, ssh-keys/, identities), /usr/lib/workspace-binary-guard/, guard logs"
         log_error "Then run: sudo make install-host-stack"
         return 1
     fi
     log_warn "Purging all workspace-guard state under $base"
     rm -rf "$base"
+    rm -rf /usr/lib/workspace-binary-guard
     rm -rf /usr/lib/ami-git-guard
     rm -rf /var/log/workspace-guard
     rm -rf /var/log/ami-git-guard
@@ -267,10 +276,19 @@ guard_install_git_ssh_wrapper() {
     fi
     mkdir -p /usr/lib/workspace-guard
     install -m 0755 -o root -g root "$src" "$dest"
-    if ! setcap cap_dac_override=ep "$dest" 2>/dev/null; then
-        log_error "Failed to set cap_dac_override on $dest"
+    local _sc_err _sc_rc=0
+    _sc_err="$(mktemp)"
+    setcap cap_dac_override=ep "$dest" 2>"$_sc_err" || _sc_rc=$?
+    if [[ $_sc_rc -ne 0 ]]; then
+        if [[ -s "$_sc_err" ]]; then
+            log_error "Failed to set cap_dac_override on $dest: $(head -1 "$_sc_err")"
+        else
+            log_error "Failed to set cap_dac_override on $dest"
+        fi
+        rm -f "$_sc_err"
         return 1
     fi
+    rm -f "$_sc_err"
     log_info "Installed git SSH wrapper: $dest (cap_dac_override=ep)"
 }
 

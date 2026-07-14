@@ -4,7 +4,7 @@
 
 workspace-ci uses `.pre-commit-config.yaml` as a hook configuration format but does NOT use the `pre-commit` Python framework. Instead, `scripts/generate-hooks` reads the YAML and generates native bash scripts in `.git/hooks/`.
 
-This eliminates the pre-commit framework's stashing behavior (which temporarily removes files from disk, breaking live dev servers) while keeping the familiar configuration format.
+This removes the pre-commit framework's stashing behavior (which temporarily removes files from disk, breaking live dev servers) while keeping the familiar configuration format.
 
 ## Quick Start
 

@@ -43,7 +43,7 @@ _guard_cargo_release_build() {
         return 0
     fi
     rc=$?
-    if grep -q 'Cannot emit physreg copy' "$err_file" 2>/dev/null; then
+    if [[ -s "$err_file" ]] && grep -q 'Cannot emit physreg copy' "$err_file"; then
         log_warn "rustc LLVM error; retrying with CARGO_BUILD_JOBS=1"
         rm -f "$err_file"
         CARGO_BUILD_JOBS=1 cargo "$@"
