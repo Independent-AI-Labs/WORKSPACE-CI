@@ -15,7 +15,7 @@ log_info()  { echo -e "${GREEN}[INFO]${NC} $*"; }
 log_warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $*"; }
 
-MODE="${1:-install-host-exec}"  # install-host-exec | check-host-exec | uninstall | build-only; removed modes hard-fail
+MODE="${1:-install-host-exec}"  # install-host-exec | check-host-exec | uninstall | purge-guard-state | build-only
 
 _guard_removed_target_error() {
     local removed_target="$1" replacement="$2"
@@ -33,33 +33,7 @@ guard_is_installed() {
         || [[ -f /usr/lib/workspace-guard/deployment-class ]]
 }
 
-uninstall_guard() {
-    log_info "Uninstalling workspace guard..."
-    if ! guard_is_installed; then
-        log_info "Git guard not installed; cleaning workspace-guard artifacts only"
-        if command -v chattr >/dev/null; then
-            [[ -f /usr/bin/git ]] && _guard_best_effort chattr -i /usr/bin/git
-            [[ -f /usr/bin/git.original ]] && _guard_best_effort chattr -i /usr/bin/git.original
-        fi
-        if declare -F guard_scrub_pam_artifacts >/dev/null; then
-            guard_scrub_pam_artifacts || {
-                local _scrub_rc=$?
-                printf 'guard optional scrub failed (rc=%s)\n' "$_scrub_rc" >&2
-            }
-        fi
-        rm -f /etc/apt/apt.conf.d/99workspace-guard
-        rm -f /etc/apt/apt.conf.d/99git-guard
-        rm -rf /usr/lib/workspace-guard
-        rm -rf /usr/lib/ami-git-guard
-        rm -rf /var/log/workspace-guard
-        rm -rf /var/log/ami-git-guard
-        if [[ -x /usr/bin/git ]]; then
-            _guard_best_effort setcap -r /usr/bin/git
-        fi
-        log_info "Cleanup complete"
-        git --version
-        return 0
-    fi
+_restore_stock_git() {
     if command -v chattr >/dev/null; then
         test -f /usr/bin/git       && chattr -i /usr/bin/git
         test -f /usr/bin/git.original && chattr -i /usr/bin/git.original
@@ -86,6 +60,10 @@ uninstall_guard() {
         log_error "Reinstall git: sudo apt install --reinstall git"
         return 1
     fi
+    return 0
+}
+
+_cleanup_git_guard_sidecars() {
     if declare -F guard_scrub_pam_artifacts >/dev/null; then
         guard_scrub_pam_artifacts || {
             local _scrub_rc=$?
@@ -94,11 +72,37 @@ uninstall_guard() {
     fi
     rm -f /etc/apt/apt.conf.d/99workspace-guard
     rm -f /etc/apt/apt.conf.d/99git-guard
-    rm -rf /usr/lib/workspace-guard
+    if declare -F guard_remove_git_install_artifacts >/dev/null; then
+        guard_remove_git_install_artifacts
+    fi
     rm -rf /usr/lib/ami-git-guard
     rm -rf /var/log/workspace-guard
     rm -rf /var/log/ami-git-guard
-    log_info "Git guard uninstalled: /usr/bin/git restored, system paths cleaned"
+}
+
+uninstall_guard() {
+    local state_dir="/usr/lib/workspace-guard"
+    if declare -F guard_state_dir >/dev/null; then
+        state_dir="$(guard_state_dir)"
+    fi
+    log_info "Uninstalling git guard (preserving host provision state under $state_dir)..."
+    if ! guard_is_installed; then
+        log_info "Git guard not installed; removing git-install artifacts only"
+        if command -v chattr >/dev/null; then
+            [[ -f /usr/bin/git ]] && _guard_best_effort chattr -i /usr/bin/git
+            [[ -f /usr/bin/git.original ]] && _guard_best_effort chattr -i /usr/bin/git.original
+        fi
+        _cleanup_git_guard_sidecars
+        if [[ -x /usr/bin/git ]]; then
+            _guard_best_effort setcap -r /usr/bin/git
+        fi
+        log_info "Cleanup complete (provision state preserved)"
+        git --version
+        return 0
+    fi
+    _restore_stock_git || return 1
+    _cleanup_git_guard_sidecars
+    log_info "Git guard uninstalled: stock /usr/bin/git restored; provision state preserved"
     git --version
 }
 
@@ -145,7 +149,11 @@ rollback_guard() {
         log_info "Restored /usr/bin/git from git.distrib"
     fi
     rm -f /etc/apt/apt.conf.d/99workspace-guard
-    rm -rf /usr/lib/workspace-guard
+    if declare -F guard_remove_git_install_artifacts >/dev/null; then
+        guard_remove_git_install_artifacts
+    else
+        rm -rf /usr/lib/workspace-guard
+    fi
 }
 
 _run_guard_install_with_drift_check() {
@@ -157,7 +165,10 @@ _run_guard_install_with_drift_check() {
         }
     fi
     local -a _drift=()
-    if [[ "$MODE" != "reinstall" ]]; then
+    if [[ "${GUARD_FORCE_RECONCILE:-}" == "1" ]]; then
+        log_info "GUARD_FORCE_RECONCILE=1: reconciling regardless of drift status"
+        export GUARD_RECONCILE=1
+    else
         _guard_read_lines _drift guard_install_drift_reasons "$guard_bin"
         if [[ ${#_drift[@]} -eq 0 ]]; then
             log_info "Git guard healthy; nothing to do."
@@ -219,11 +230,12 @@ check_guard() {
     fi
     log_warn "Drift items:"
     printf '  - %s\n' "${_drift[@]}"
-    log_info "Fix: sudo make install-guard-host-exec (from SSH/TTY where NoNewPrivs=0)"
+    log_info "Fix: sudo make reconcile-guard-host-exec (or install-guard-host-exec when drifted)"
 }
 
 case "$MODE" in
     uninstall) uninstall_guard ;;
+    purge-guard-state) purge_guard_state ;;
     check-host-exec) check_guard ;;
     check) _guard_removed_target_error check-guard check-guard-host-exec ;;
     build-only) build_guard_binary ;;

@@ -104,7 +104,9 @@ install_guard_binary() {
         echo "  • Immutable attributes (chattr +i) prevent tampering"
         echo "  • Logs every git invocation to /var/log/workspace-guard/"
         echo ""
-        echo "To uninstall:"
+        echo "To refresh after code changes:"
+        echo "  make reconcile-guard-host-exec"
+        echo "To uninstall git guard (preserves provision state):"
         echo "  make uninstall-guard"
         echo ""
     fi
@@ -207,6 +209,8 @@ install_guard_binary() {
                 echo "chattr -i /usr/bin/git: no-op or failed (rc=$rc)" >&2
             fi
         fi
+        mkdir -p /usr/lib/workspace-guard
+        guard_install_agent_git_identity || return 1
         cp "$guard_bin" /usr/bin/git
         chown root:root /usr/bin/git
         chmod 0755 /usr/bin/git
@@ -253,6 +257,11 @@ install_guard_binary() {
 DPkg::Post-Invoke { "/usr/lib/workspace-guard/apt-check.sh"; };
 EOF
         mkdir -p /usr/lib/workspace-guard
+        guard_install_agent_git_identity || {
+            log_error "Failed to install agent git identity"
+            rollback_guard
+            return 1
+        }
         cat > /usr/lib/workspace-guard/apt-check.sh << 'EOF'
 #!/usr/bin/env bash
 set -euo pipefail

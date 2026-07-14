@@ -389,7 +389,7 @@ enforce-syslog-limits: ## Enforce system-level log ceilings: logrotate maxsize +
 # WORKSPACE-GUARD: compiled git protection (opt-in)
 # =============================================================================
 
-.PHONY: build-guard install-guard install-guard-host-exec uninstall-guard check-guard check-guard-host-exec
+.PHONY: build-guard install-guard install-guard-host-exec reconcile-guard-host-exec uninstall-guard purge-guard-state check-guard check-guard-host-exec
 
 # Operator invocation contract: guard targets depend on `ensure-repos`
 # (upstream `make` chain) which pulls every workspace repo over SSH. The
@@ -410,8 +410,14 @@ install-guard: ## REMOVED: use install-guard-host-exec
 install-guard-host-exec: build-guard ## Install git-guard (host-exec; operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make install-guard-host-exec)
 	$(SUDO) bash scripts/bootstrap-workspace-guard install-host-exec
 
-uninstall-guard: ## Uninstall git-guard, restore original /usr/bin/git (operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make uninstall-guard)
+uninstall-guard: ## Uninstall git-guard, restore stock git; preserve provision state (operator: sudo make uninstall-guard)
 	$(SUDO) bash scripts/bootstrap-workspace-guard uninstall
+
+purge-guard-state: ## Destroy all guard state (requires GUARD_PURGE_CONFIRM=1)
+	$(SUDO) bash scripts/bootstrap-workspace-guard purge-guard-state
+
+reconcile-guard-host-exec: build-guard ## Force rebuild + reinstall git guard and aux artifacts (operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make reconcile-guard-host-exec)
+	GUARD_FORCE_RECONCILE=1 GUARD_SKIP_BUILD=1 $(MAKE) install-guard-host-exec
 
 check-guard: ## REMOVED: use check-guard-host-exec
 	@echo "ERROR: make check-guard is removed. Use: make check-guard-host-exec" >&2

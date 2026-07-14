@@ -5,6 +5,11 @@
 # host-exec helpers: guard-host-exec.sh (sourced after this file).
 
 GUARD_WORKLOAD_FILE_CAP_STRING='cap_setpcap,cap_chown,cap_dac_override,cap_fowner,cap_fsetid=ep'
+GUARD_GIT_SSH_WRAPPER_CAP_STRING='cap_dac_override=ep'
+
+_guard_state_dir() {
+    printf '%s\n' "${WORKSPACE_GUARD_STATE_DIR:-/usr/lib/workspace-guard}"
+}
 
 # Run command; log failure to stderr; emit captured stdout (may be empty).
 _guard_capture() {
@@ -153,6 +158,91 @@ guard_verify_login_user() {
     awk -F: '$3>=1000 && $3<65534 && $7 ~ /\/(bash|sh|zsh|fish)$/{print $1; exit}' /etc/passwd
 }
 
+_resolve_git_ssh_bin() {
+    if [[ -n "${GUARD_GIT_SSH_BIN:-}" && -f "$GUARD_GIT_SSH_BIN" ]]; then
+        printf '%s\n' "$GUARD_GIT_SSH_BIN"
+        return 0
+    fi
+    local candidate
+    for candidate in \
+        "$_guard_dir/target/x86_64-unknown-linux-musl/release/workspace-git-ssh" \
+        "$_guard_dir/target/release/workspace-git-ssh"; do
+        if [[ -f "$candidate" ]]; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+guard_git_ssh_wrapper_cap_actual() {
+    local dest line caps
+    command -v getcap >/dev/null || return 1
+    dest="$(_guard_state_dir)/git-ssh-wrapper"
+    [[ -f "$dest" ]] || return 1
+    line="$(_guard_capture_line getcap "$dest")"
+    [[ -n "$line" ]] || return 1
+    caps="${line#*cap_}"
+    [[ "$caps" == "$line" ]] && return 1
+    printf 'cap_%s\n' "$caps"
+}
+
+guard_git_ssh_wrapper_has_required_cap() {
+    local actual norm_actual norm_expected
+    if ! command -v getcap >/dev/null; then
+        return 1
+    fi
+    actual="$(guard_git_ssh_wrapper_cap_actual)"
+    [[ -n "$actual" ]] || return 1
+    norm_actual="$(guard_file_cap_normalize "$actual")" || return 1
+    norm_expected="$(guard_file_cap_normalize "$GUARD_GIT_SSH_WRAPPER_CAP_STRING")" || return 1
+    [[ "$norm_actual" == "$norm_expected" ]]
+}
+
+# Emit host-exec aux-artifact drift reasons (wrapper, identity). Empty = healthy.
+guard_host_exec_aux_drift_reasons() {
+    local -a reasons=()
+    local base dest ref_ssh ref_identity identity_src
+    base="$(_guard_state_dir)"
+    dest="$base/git-ssh-wrapper"
+    ref_ssh="$(_guard_capture_line _resolve_git_ssh_bin)" || ref_ssh=""
+
+    if [[ ! -f "$dest" ]]; then
+        reasons+=("git-ssh-wrapper missing ($dest)")
+    elif [[ -n "$ref_ssh" && -f "$ref_ssh" ]]; then
+        local installed_hash ref_hash
+        installed_hash="$(sha256sum "$dest" | awk '{print $1}')"
+        ref_hash="$(sha256sum "$ref_ssh" | awk '{print $1}')"
+        if [[ "$installed_hash" != "$ref_hash" ]]; then
+            reasons+=("git-ssh-wrapper stale (sha256 differs from built workspace-git-ssh)")
+        fi
+    fi
+
+    if [[ -f "$dest" ]] && command -v getcap >/dev/null; then
+        local _gc
+        _gc="$(_guard_capture_line guard_git_ssh_wrapper_cap_actual)"
+        if ! guard_git_ssh_wrapper_has_required_cap; then
+            reasons+=("git-ssh-wrapper requires ${GUARD_GIT_SSH_WRAPPER_CAP_STRING} (got: ${_gc:-none})")
+        fi
+    fi
+
+    identity_src="${_guard_dir}/config/agent-git-identity"
+    if [[ ! -f "$base/agent-git-identity" ]]; then
+        reasons+=("agent-git-identity missing ($base/agent-git-identity)")
+    elif [[ -f "$identity_src" ]]; then
+        local installed_id ref_id
+        installed_id="$(sha256sum "$base/agent-git-identity" | awk '{print $1}')"
+        ref_id="$(sha256sum "$identity_src" | awk '{print $1}')"
+        if [[ "$installed_id" != "$ref_id" ]]; then
+            reasons+=("agent-git-identity stale (sha256 differs from config/agent-git-identity)")
+        fi
+    fi
+
+    if [[ ${#reasons[@]} -gt 0 ]]; then
+        printf '%s\n' "${reasons[@]}"
+    fi
+}
+
 _resolve_guard_bin() {
     if [[ -n "${GUARD_BIN:-}" && -f "$GUARD_BIN" ]]; then
         printf '%s\n' "$GUARD_BIN"
@@ -295,6 +385,12 @@ guard_install_drift_reasons() {
                     printf 'guard probe: lsattr /usr/bin/git.original failed (rc=%s)\n' "$_orc" >&2
                 fi
             fi
+        fi
+
+        local -a _aux=()
+        _guard_read_lines _aux guard_host_exec_aux_drift_reasons
+        if [[ ${#_aux[@]} -gt 0 ]]; then
+            reasons+=("${_aux[@]}")
         fi
     fi
 

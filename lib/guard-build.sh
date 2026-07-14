@@ -7,9 +7,49 @@
 # `set` here. Keep this file under the 512-line source-length gate per
 # AGENTS.md Rule 4.
 
+_guard_repo_owner() {
+    local owner=""
+    owner="$(stat -c '%U' "$_guard_dir" 2>/dev/null || true)"
+    if [[ -n "$owner" && "$owner" != "root" ]]; then
+        printf '%s\n' "$owner"
+        return 0
+    fi
+    if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]]; then
+        printf '%s\n' "$SUDO_USER"
+    fi
+}
+
+_guard_rehome_target_tree() {
+    local user="${1:-}"
+    [[ -n "$user" && "$user" != "root" && -d "$_guard_dir/target" ]] || return 0
+    chown -R "$user" "$_guard_dir/target" || log_warn "chown target/ -> $user failed (some files may remain root-owned)"
+    log_info "Re-homed target/ -> $user"
+}
+
+_guard_cargo_release_build() {
+    local err_file rc=0
+    err_file="$(mktemp)"
+    if cargo "$@" 2>"$err_file"; then
+        rm -f "$err_file"
+        return 0
+    fi
+    rc=$?
+    if grep -q 'Cannot emit physreg copy' "$err_file" 2>/dev/null; then
+        log_warn "rustc LLVM error; retrying with CARGO_BUILD_JOBS=1"
+        rm -f "$err_file"
+        CARGO_BUILD_JOBS=1 cargo "$@"
+        return $?
+    fi
+    cat "$err_file" >&2
+    rm -f "$err_file"
+    return $rc
+}
+
 build_guard_binary() {
     log_info "Building workspace-guard Rust binary..."
-    local _boot_name
+    local _boot_name preset_cargo_home preset_rustup_home
+    preset_cargo_home="${CARGO_HOME:-}"
+    preset_rustup_home="${RUSTUP_HOME:-}"
     case "$(uname -s | tr 'A-Z' 'a-z')" in darwin) _boot_name=".boot-macos" ;; *) _boot_name=".boot-linux" ;; esac
     local ws_boot_rust="${WORKSPACE_ROOT}/$_boot_name/bin"
     local ws_rust_home="${WORKSPACE_ROOT}/$_boot_name/rust"
@@ -21,8 +61,14 @@ build_guard_binary() {
         boot_rust="$ci_boot_rust"
         rust_home="$ci_rust_home"
     fi
+    if [[ -n "$preset_cargo_home" ]]; then
+        mkdir -p "$preset_cargo_home" 2>/dev/null || true
+        if [[ -d "$preset_cargo_home" && -w "$preset_cargo_home" ]]; then
+            rust_home="$preset_cargo_home"
+        fi
+    fi
     export PATH="$boot_rust:$PATH"
-    export RUSTUP_HOME="$rust_home"
+    export RUSTUP_HOME="${preset_rustup_home:-$rust_home}"
     export CARGO_HOME="$rust_home"
 
     if ! command -v cargo >/dev/null; then
@@ -78,6 +124,9 @@ build_guard_binary() {
     fi
 
     cd "$_guard_dir"
+    if [[ $EUID -eq 0 ]]; then
+        _guard_rehome_target_tree "$(_guard_repo_owner)"
+    fi
 
     local -a build_features=()
     local build_mode_env="${BUILD_MODE:-}"
@@ -97,17 +146,26 @@ build_guard_binary() {
         local installed_targets
         installed_targets=$(rustup target list --installed)
         if echo "$installed_targets" | grep -q musl; then
-            log_info "Building statically linked binary (musl)..."
-            cargo build --release --target x86_64-unknown-linux-musl "${build_features[@]}"
+            log_info "Building statically linked binaries (musl)..."
+            _guard_cargo_release_build build --release --target x86_64-unknown-linux-musl "${build_features[@]}"
+            _guard_cargo_release_build build --release --bin workspace-git-ssh --target x86_64-unknown-linux-musl "${build_features[@]}"
             guard_bin="target/x86_64-unknown-linux-musl/release/workspace-guard"
         else
-            log_info "Building dynamically linked binary (gnu)..."
-            PATH="/usr/bin:/usr/sbin:/usr/local/bin:$PATH" CC=gcc cargo build --release "${build_features[@]}"
+            log_info "Building dynamically linked binaries (gnu)..."
+            PATH="/usr/bin:/usr/sbin:/usr/local/bin:$PATH"
+            CC=gcc
+            export PATH CC
+            _guard_cargo_release_build build --release "${build_features[@]}"
+            _guard_cargo_release_build build --release --bin workspace-git-ssh "${build_features[@]}"
             guard_bin="target/release/workspace-guard"
         fi
     else
-        log_info "Building dynamically linked binary (gnu, no rustup)..."
-        PATH="/usr/bin:/usr/sbin:/usr/local/bin:$PATH" CC=gcc cargo build --release "${build_features[@]}"
+        log_info "Building dynamically linked binaries (gnu, no rustup)..."
+        PATH="/usr/bin:/usr/sbin:/usr/local/bin:$PATH"
+        CC=gcc
+        export PATH CC
+        _guard_cargo_release_build build --release "${build_features[@]}"
+        _guard_cargo_release_build build --release --bin workspace-git-ssh "${build_features[@]}"
         guard_bin="target/release/workspace-guard"
     fi
 
@@ -124,6 +182,12 @@ build_guard_binary() {
         return 1
     fi
     log_info "Build successful: $(file "$guard_bin" | cut -d: -f2)"
+    local git_ssh_bin="${guard_bin/workspace-guard/workspace-git-ssh}"
+    if [[ -f "$git_ssh_bin" ]]; then
+        log_info "git-ssh wrapper built: $git_ssh_bin"
+    else
+        log_warn "workspace-git-ssh binary missing after build"
+    fi
 
     GUARD_BIN="$guard_bin"
     GUARD_BUILD_MODE="capability"
@@ -141,9 +205,8 @@ build_guard_binary() {
     # user so cargo's fingerprint cache and incremental artifacts stay
     # usable across uid boundaries. No-op when the script runs as the agent
     # directly (SUDO_USER unset / EUID!=0).
-    if [[ $EUID -eq 0 && -n "${SUDO_USER:-}" ]]; then
-        chown -R "$SUDO_USER" "$_guard_dir/target" || log_warn "chown target/ -> $SUDO_USER failed (some files may remain root-owned)"
-        log_info "Re-homed target/ -> $SUDO_USER (build ran under sudo)"
+    if [[ $EUID -eq 0 ]]; then
+        _guard_rehome_target_tree "$(_guard_repo_owner)"
     fi
     return 0
 }
