@@ -169,9 +169,8 @@ guard_assert_host_provision_complete() {
         return 1
     fi
     offender=""
-    if offender="$(_guard_try_line guard_host_provision_fleet_in_sudo)"; then
-        :
-    fi
+    local _fleet_rc=0
+    offender="$(_guard_try_line guard_host_provision_fleet_in_sudo)" || _fleet_rc=$?
     if [[ -n "$offender" ]]; then
         log_warn "Fleet user '$offender' is in group sudo (audit-only; install continues)"
         log_warn "Use break-glass admin for root ops; provision does not demote fleet sudo."

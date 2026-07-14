@@ -40,7 +40,7 @@ file_types:
     extensions: ['.cron', '.crontab']
 
 inline_patterns:
-  # ── Shell patterns (11) ─────────────────────────────────────────────
+  # ── Shell patterns (13) ─────────────────────────────────────────────
   - id: sh-pipe-true
     regex: '\|\|\s*true\b'
     language: shell
@@ -95,6 +95,16 @@ inline_patterns:
     regex: '\|\|\s*(?:echo|printf)\b'
     language: shell
     description: 'Echo on failure replaces proper error handling; the exit code is lost.'
+
+  - id: sh-if-then-colon-inline
+    regex: 'if\s+.+\s*;\s*then\s*:\s*;?\s*fi'
+    language: shell
+    description: 'Empty if body (colon no-op) discards command-substitution failure under set -e.'
+
+  - id: make-recipe-true
+    regex: '^\t@?true\s*(?:#.*)?$'
+    language: shell
+    description: 'Make recipe that succeeds without doing work; masks missing/wrong targets.'
 
   # ── JS/TS patterns (6) ──────────────────────────────────────────────
   - id: js-empty-catch
@@ -308,3 +318,18 @@ multiline_detectors:
     source_file: lib/check_silent_swallow_ansible.py
     language: ansible
     description: 'Ansible task registers output but only displays it on failure, or never displays it at all; the output is silently discarded.'
+
+  # ── Shell multiline (2 patterns from detect_shell_multiline) ────────
+  - id: sh-if-then-colon-noop
+    detector: detect_shell_multiline
+    source_function: _check_if_then_colon_noop
+    source_file: lib/check_silent_swallow_shell.py
+    language: shell
+    description: 'Multi-line if/then with colon no-op body; set -e evasion around command substitution.'
+
+  - id: sh-stderr-temp-discard
+    detector: detect_shell_multiline
+    source_function: _check_stderr_temp_without_rc
+    source_file: lib/check_silent_swallow_shell.py
+    language: shell
+    description: 'Stderr redirected to a temp path variable without rc capture on the same or next lines.'

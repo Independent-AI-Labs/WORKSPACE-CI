@@ -33,6 +33,7 @@ from check_silent_swallow_python import (
     detect_python_multiline,
     is_python_file,
 )
+from check_silent_swallow_shell import detect_shell_multiline
 from check_silent_swallow_system import (
     CRON_ENV,
     CRON_LINE,
@@ -126,7 +127,9 @@ def _check_inline(
         if patterns:
             if lang == "python" and re.match(r"^\s*#", text):
                 return None
-            return _match_inline(a, text, patterns)
+            v = _match_inline(a, text, patterns)
+            if v is not None:
+                return v
 
         for det_name in custom_by_lang.get(lang, []):
             if det_name == "_check_cron_inline":
@@ -149,6 +152,7 @@ def _collect_multiline_violations(
         "detect_js_multiline": detect_js_multiline,
         "detect_ansible_tasks": detect_ansible_tasks,
         "detect_registered_output_swallow": detect_registered_output_swallow,
+        "detect_shell_multiline": detect_shell_multiline,
     }
 
     lang_checker = dict(_LANGUAGE_CHECKERS)

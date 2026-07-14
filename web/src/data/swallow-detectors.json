@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-09T10:10:05.139704+00:00",
+  "generated_at": "2026-07-14T19:53:47.379957+00:00",
   "source_version": "",
   "detectors": [
     {
@@ -85,6 +85,18 @@
       "source_file": "lib/check_silent_swallow_ansible.py",
       "docstring": "Detect task that registers output but only displays it on failure\n(or never displays it at all).\n\nThe output is silently discarded on success. When failed_when:false is\nalso present, the task never fails, so conditional display-on-failure\nnever triggers and the output is completely invisible.",
       "source": "def _check_ansible_register_output_swallowed(\n    lines: list,\n    i: int,\n) -> str | None:\n    \"\"\"Detect task that registers output but only displays it on failure\n    (or never displays it at all).\n\n    The output is silently discarded on success. When failed_when:false is\n    also present, the task never fails, so conditional display-on-failure\n    never triggers and the output is completely invisible.\n    \"\"\"\n    reg_var, _ = _find_registered_var(lines, i)\n    if not reg_var or reg_var in _REG_VAR_BLOCKLIST:\n        return None\n    if not _has_unconditional_display(lines, i, reg_var):\n        return \"ansible-register-output-swallowed\"\n    return None"
+    },
+    {
+      "name": "_check_if_then_colon_noop",
+      "source_file": "lib/check_silent_swallow_shell.py",
+      "docstring": null,
+      "source": "def _check_if_then_colon_noop(lines: list[AddedLine], i: int) -> str | None:\n    text = lines[i].text\n    if not _IF_THEN_EOL_RE.match(text):\n        return None\n    for j in range(i + 1, min(i + 6, len(lines))):\n        nt = lines[j].text\n        if _FI_RE.match(nt):\n            return None\n        if not nt.strip():\n            continue\n        if _COLON_ONLY_RE.match(nt):\n            for k in range(j + 1, min(j + 4, len(lines))):\n                n2 = lines[k].text\n                if not n2.strip():\n                    continue\n                if _ELSE_RE.match(n2):\n                    return None\n                if _FI_RE.match(n2):\n                    return \"sh-if-then-colon-noop\"\n                return None\n            return \"sh-if-then-colon-noop\"\n        return None\n    return None"
+    },
+    {
+      "name": "_check_stderr_temp_without_rc",
+      "source_file": "lib/check_silent_swallow_shell.py",
+      "docstring": null,
+      "source": "def _check_stderr_temp_without_rc(lines: list[AddedLine], i: int) -> str | None:\n    text = lines[i].text\n    if not _STDERR_TEMP_RE.search(text):\n        return None\n    if _RC_CAPTURE_RE.search(text):\n        return None\n    if _IF_NEGATED_RE.search(text):\n        return None\n    for j in range(i + 1, min(i + 4, len(lines))):\n        if _RC_ASSIGN_RE.match(lines[j].text):\n            return None\n    return \"sh-stderr-temp-discard\""
     }
   ]
 }
