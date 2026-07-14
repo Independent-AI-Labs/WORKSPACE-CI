@@ -1,3 +1,8 @@
 # Managed systemd user units for workspace-ci (status/orphan detection).
 services:
   - wiki-ci-tunnel.service
+  - wiki-prod-compose.service
+
+compose_services:
+  wiki-prod-compose:
+    compose_file: web/compose.prod.yaml

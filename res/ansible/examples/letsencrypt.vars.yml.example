@@ -1,0 +1,26 @@
+---
+# Copy and customize for any consumer repo.
+#
+#   ansible-playbook /path/to/CI/res/ansible/letsencrypt.yml \
+#     --extra-vars @letsencrypt.vars.yml --tags issue
+#
+# Prerequisites:
+#   - CLOUDFLARE_API_TOKEN with Zone -> DNS -> Edit on letsencrypt_cloudflare_zone
+#   - bash /path/to/CI/scripts/bootstrap-certbot  (or certbot on PATH)
+#   - openssl on PATH
+
+letsencrypt_domains:
+  - wiki.example.com
+letsencrypt_email: ops@example.com
+letsencrypt_cloudflare_zone: example.com
+letsencrypt_cert_dir: /path/to/certs/wiki.example.com
+
+# Optional post-issue/renew hook (reload nginx, haproxy, etc.)
+letsencrypt_reload_cmd: podman exec my-nginx nginx -s reload
+
+# Use true for dry-run against Let's Encrypt staging CA
+letsencrypt_staging: false
+
+# For systemd renewal timer (--tags deploy)
+letsencrypt_project_root: /path/to/consumer-or-ci-repo
+letsencrypt_playbook_path: /path/to/CI/res/ansible/letsencrypt.yml

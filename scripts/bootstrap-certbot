@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# bootstrap-certbot: install certbot + certbot-dns-cloudflare into the boot bin dir.
+#
+# Uses `uv tool install` with UV_TOOL_BIN_DIR pointing at
+# $CI_PROJECT_ROOT/$CI_BOOT_NAME/bin/ (same layout as bootstrap-ansible).
+#
+# CI_PROJECT_ROOT is set by lib/ci.sh.
+
+set -euo pipefail
+
+_ci_lib="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
+# shellcheck source=lib/ci.sh
+if ! source "$_ci_lib/ci.sh"; then
+    echo "ERROR: failed to source $_ci_lib/ci.sh" >&2
+    exit 2
+fi
+if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
+    echo "ERROR: CI_PROJECT_ROOT not set after sourcing ci.sh" >&2
+    exit 2
+fi
+
+_log() { printf '[bootstrap-certbot] %s\n' "$*" >&2; }
+
+main() {
+    local target_dir tool_dir uv_bin boot_bin
+    boot_bin="${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/bin"
+    # .boot-linux/bin may be root-owned on shared VMs; fall back to repo-local .local/bin.
+    if [[ -n "${UV_TOOL_BIN_DIR:-}" ]]; then
+        target_dir="${UV_TOOL_BIN_DIR}"
+    elif [[ -w "${boot_bin}" ]]; then
+        target_dir="${boot_bin}"
+    else
+        target_dir="${CI_PROJECT_ROOT}/.local/bin"
+    fi
+    tool_dir="${UV_TOOL_DIR:-${CI_PROJECT_ROOT}/.local/uv-tools}"
+    uv_bin="${boot_bin}/uv"
+
+    if [[ ! -x "$uv_bin" ]]; then
+        _log "ERROR: uv not found at $uv_bin -- run 'make install-boot-tools' first"
+        return 1
+    fi
+
+    if [[ -x "$target_dir/certbot" ]]; then
+        if "$target_dir/certbot" --version > /dev/null 2>&1; then
+            local v
+            v="$("$target_dir/certbot" --version 2>&1)"
+            v="${v%%$'\n'*}"
+            _log "certbot already installed: $v"
+            return 0
+        fi
+        _log "existing certbot at $target_dir is broken; re-installing"
+    fi
+
+    _log "installing certbot + certbot-dns-cloudflare via uv tool..."
+    if ! mkdir -p "$target_dir"; then
+        _log "mkdir failed for $target_dir"
+        return 1
+    fi
+
+    UV_TOOL_DIR="$tool_dir" UV_TOOL_BIN_DIR="$target_dir" \
+        "$uv_bin" tool install certbot --with certbot-dns-cloudflare --force
+
+    local v_out v_rc=0
+    v_out="$("$target_dir/certbot" --version 2>&1)" || v_rc=$?
+    if [[ "$v_rc" -ne 0 ]]; then
+        _log "post-install verification failed: certbot --version returned rc=$v_rc"
+        _log "$v_out"
+        return 1
+    fi
+    _log "installed: ${v_out%%$'\n'*} => $target_dir/certbot"
+}
+
+main "$@"

@@ -1,0 +1,76 @@
+---
+- name: Resolve project root for bootstrap script
+  when: letsencrypt_bootstrap_script | length == 0
+  block:
+    - name: Get absolute playbook project path
+      ansible.builtin.command: realpath {{ letsencrypt_project_root | default(playbook_dir | dirname | dirname, true) }}
+      register: _le_project_root
+      changed_when: false
+
+    - name: Set bootstrap script path
+      ansible.builtin.set_fact:
+        letsencrypt_bootstrap_script: '{{ _le_project_root.stdout }}/scripts/bootstrap-certbot'
+        letsencrypt_project_root: '{{ letsencrypt_project_root | default(_le_project_root.stdout, true) }}'
+
+- name: Resolve certbot binary from boot bin
+  when: letsencrypt_certbot_bin | length == 0
+  block:
+    - name: Stat repo-local certbot
+      ansible.builtin.stat:
+        path: '{{ letsencrypt_project_root }}/.local/bin/certbot'
+      register: _local_certbot
+
+    - name: Set certbot from repo-local bin
+      ansible.builtin.set_fact:
+        letsencrypt_certbot_bin: '{{ letsencrypt_project_root }}/.local/bin/certbot'
+      when: _local_certbot.stat.exists and _local_certbot.stat.executable | default(false)
+
+    - name: Stat boot certbot
+      ansible.builtin.stat:
+        path: '{{ letsencrypt_project_root }}/{{ ".boot-macos" if ansible_system == "Darwin" else ".boot-linux" }}/bin/certbot'
+      register: _boot_certbot
+      when: letsencrypt_certbot_bin | length == 0
+
+    - name: Set certbot from boot bin
+      ansible.builtin.set_fact:
+        letsencrypt_certbot_bin: '{{ letsencrypt_project_root }}/{{ ".boot-macos" if ansible_system == "Darwin" else ".boot-linux" }}/bin/certbot'
+      when:
+        - letsencrypt_certbot_bin | length == 0
+        - _boot_certbot.stat.exists | default(false)
+        - _boot_certbot.stat.executable | default(false)
+
+    - name: Set certbot from PATH lookup
+      ansible.builtin.set_fact:
+        letsencrypt_certbot_bin: "{{ lookup('ansible.builtin.which', 'certbot', errors='ignore') }}"
+      when:
+        - letsencrypt_certbot_bin | length == 0
+        - lookup('ansible.builtin.which', 'certbot', errors='ignore') | length > 0
+
+- name: Set Cloudflare credentials path default
+  ansible.builtin.set_fact:
+    letsencrypt_cloudflare_credentials: '{{ letsencrypt_config_dir }}/cloudflare.ini'
+  when: letsencrypt_cloudflare_credentials | length == 0
+
+- name: Set cloudflare zone default from primary domain
+  ansible.builtin.set_fact:
+    letsencrypt_cloudflare_zone: '{{ letsencrypt_primary_domain }}'
+  when:
+    - letsencrypt_cloudflare_zone | length == 0
+    - letsencrypt_primary_domain | length > 0
+
+- name: Resolve ansible-playbook for renewal timer
+  when: letsencrypt_playbook_path | length > 0
+  block:
+    - name: Stat boot ansible-playbook
+      ansible.builtin.stat:
+        path: '{{ letsencrypt_project_root }}/{{ ".boot-macos" if ansible_system == "Darwin" else ".boot-linux" }}/bin/ansible-playbook'
+      register: _boot_ansible
+
+    - name: Set ansible-playbook bin
+      ansible.builtin.set_fact:
+        ansible_playbook_bin: >-
+          {{ (letsencrypt_project_root + '/'
+              + (".boot-macos" if ansible_system == "Darwin" else ".boot-linux")
+              + '/bin/ansible-playbook')
+             if (_boot_ansible.stat.exists and _boot_ansible.stat.executable | default(false))
+             else 'ansible-playbook' }}

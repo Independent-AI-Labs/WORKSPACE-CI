@@ -1,4 +1,4 @@
-# Cloudflare Tunnel for workspace-ci Wiki (production nginx on :443).
+# Cloudflare Tunnel for workspace-ci Wiki (production nginx on :8443).
 # Copy to cloudflare/config.yml and set credentials (gitignored).
 #
 # Bootstrap (CLOUDFLARED_BIN is configurable; no VM tunnel wrapper):
@@ -12,7 +12,7 @@ credentials-file: cloudflare/credentials.json
 
 ingress:
   - hostname: <WIKI_TUNNEL_HOSTNAME>
-    service: https://127.0.0.1:443
+    service: https://127.0.0.1:8443
     originRequest:
       noTLSVerify: true
       httpHostHeader: <WIKI_TUNNEL_HOSTNAME>

@@ -1,0 +1,46 @@
+---
+- name: Stat certbot binary
+  ansible.builtin.stat:
+    path: '{{ letsencrypt_certbot_bin }}'
+  register: _certbot_stat
+  when: letsencrypt_certbot_bin | length > 0
+
+- name: Bootstrap certbot when missing
+  when: letsencrypt_certbot_bin | length == 0 or not (_certbot_stat.stat.exists | default(false))
+  block:
+    - name: Run bootstrap-certbot
+      ansible.builtin.command:
+        argv: [bash, '{{ letsencrypt_bootstrap_script }}']
+      register: _bootstrap_certbot
+      changed_when: "'installed:' in (_bootstrap_certbot.stderr | default('')) or 're-installing' in (_bootstrap_certbot.stderr | default(''))"
+
+    - name: Re-stat repo-local certbot after bootstrap
+      ansible.builtin.stat:
+        path: '{{ letsencrypt_project_root }}/.local/bin/certbot'
+      register: _local_certbot_after
+
+    - name: Set certbot path after bootstrap
+      ansible.builtin.set_fact:
+        letsencrypt_certbot_bin: '{{ letsencrypt_project_root }}/.local/bin/certbot'
+      when: _local_certbot_after.stat.exists and _local_certbot_after.stat.executable | default(false)
+
+    - name: Re-stat boot certbot after bootstrap
+      ansible.builtin.stat:
+        path: '{{ letsencrypt_project_root }}/{{ ".boot-macos" if ansible_system == "Darwin" else ".boot-linux" }}/bin/certbot'
+      register: _boot_certbot_after
+      when: letsencrypt_certbot_bin | length == 0
+
+    - name: Set certbot from boot bin after bootstrap
+      ansible.builtin.set_fact:
+        letsencrypt_certbot_bin: '{{ letsencrypt_project_root }}/{{ ".boot-macos" if ansible_system == "Darwin" else ".boot-linux" }}/bin/certbot'
+      when:
+        - letsencrypt_certbot_bin | length == 0
+        - _boot_certbot_after.stat.exists | default(false)
+        - _boot_certbot_after.stat.executable | default(false)
+
+- name: Fail if certbot is still missing
+  ansible.builtin.fail:
+    msg: |
+      certbot not found. Run: bash {{ letsencrypt_bootstrap_script }}
+      Or set letsencrypt_certbot_bin=/path/to/certbot
+  when: letsencrypt_certbot_bin | length == 0

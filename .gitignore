@@ -8,6 +8,10 @@ uv.lock
 .env
 .env.*
 !.env.example
+cloudflare/certs/
+cloudflare/credentials.json
+cloudflare/*.ini
+.local/
 .coverage
 .venv/
 .boot-linux/

@@ -1,0 +1,23 @@
+---
+letsencrypt_domains: []
+letsencrypt_email: "{{ lookup('env', 'LETSENCRYPT_EMAIL') | default('', true) }}"
+letsencrypt_cloudflare_zone: "{{ lookup('env', 'LETSENCRYPT_CLOUDFLARE_ZONE') | default('', true) }}"
+letsencrypt_cloudflare_api_token: "{{ lookup('env', 'CLOUDFLARE_API_TOKEN') | default('', true) }}"
+
+letsencrypt_cert_dir: ''
+letsencrypt_config_dir: "{{ ansible_env.HOME }}/.config/letsencrypt"
+letsencrypt_work_dir: "{{ ansible_env.HOME }}/.config/letsencrypt/work"
+letsencrypt_logs_dir: "{{ ansible_env.HOME }}/.config/letsencrypt/logs"
+letsencrypt_cloudflare_credentials: ''
+
+letsencrypt_staging: "{{ lookup('env', 'LETSENCRYPT_STAGING') | default('0', true) in ['1', 'true', 'yes', 'True'] }}"
+letsencrypt_reload_cmd: ''
+letsencrypt_certbot_bin: ''
+
+letsencrypt_primary_domain: "{{ letsencrypt_domains | first }}"
+letsencrypt_unit_name: letsencrypt-renew
+letsencrypt_project_root: ''
+letsencrypt_playbook_path: ''
+letsencrypt_bootstrap_script: ''
+
+letsencrypt_cert_min_days: 30

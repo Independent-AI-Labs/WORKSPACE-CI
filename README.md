@@ -193,15 +193,22 @@ The interactive documentation wiki lives in [`web/`](web/) (Next.js).
 | `make wiki-dev-stop/restart/status/logs` | Dev server lifecycle |
 | `make extract-wiki-data` | Regenerate wiki JSON from CI sources (hooks, scripts, code-stats) |
 | `make wiki-prod-build` | Build production Podman image (`web/Containerfile`) |
-| `make wiki-prod-start/stop/restart/status/logs` | Prod stack: nginx TLS proxy on `:80`/`:443` + app container |
+| `make wiki-prod-start/stop/restart/status/logs` | Prod stack: nginx TLS proxy on `:8080`/`:8443` + app container (no root) |
+| `make wiki-prod-deploy/undeploy` | Install wiki prod as a boot-persistent systemd user unit |
 | `make wiki-tunnel-deploy/start/stop/route-dns/...` | Cloudflare tunnel via Ansible systemd user unit |
 
-Production deploy: copy [`.env.example`](.env.example) to `.env` (gitignored),
-edit tunnel hostname and credentials, then `make wiki-prod-start` followed by
-`make wiki-tunnel-deploy`. See [`cloudflare/config.yml.example`](cloudflare/config.yml.example)
-and [`res/ansible/tunnel.yml`](res/ansible/tunnel.yml). `cloudflared` is resolved
-via [`scripts/resolve-cloudflared.sh`](scripts/resolve-cloudflared.sh) (boot-dir
-walk-up or `PATH`) when `CLOUDFLARED_BIN` is unset.
+Production deploy (boot-persistent): copy [`.env.example`](.env.example) to `.env`
+(gitignored), then in order:
+
+1. `make -C ../WORKSPACE-GATEWAY gateway-deploy`: gateway + Grafana on boot
+2. `make wiki-prod-build && make wiki-prod-deploy`: wiki prod on boot (TLS + renewal timer)
+3. `make wiki-tunnel-deploy`: syncs Cloudflare ingress to `WIKI_TUNNEL_ORIGIN` and starts tunnel
+
+Token-mode tunnels read ingress from Cloudflare remotely; `wiki-tunnel-deploy` pushes
+`https://127.0.0.1:<WIKI_HTTPS_PORT>` via the Cloudflare API when `WIKI_TUNNEL_ID` and
+API credentials are set. See [`res/ansible/tunnel.yml`](res/ansible/tunnel.yml).
+`cloudflared` is resolved via [`scripts/resolve-cloudflared.sh`](scripts/resolve-cloudflared.sh)
+(boot-dir walk-up or `PATH`) when `CLOUDFLARED_BIN` is unset.
 
 ---
 

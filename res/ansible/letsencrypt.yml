@@ -1,0 +1,30 @@
+---
+# Generic Let's Encrypt TLS issuance via Cloudflare DNS-01.
+#
+# Consumers invoke this playbook directly and override role vars.
+# CI wiki wiring: make wiki-tls-issue / wiki-tls-renew / wiki-tls-deploy
+#
+# Required vars (or env):
+#   letsencrypt_domains          - list, e.g. ["wiki.example.com"]
+#   letsencrypt_email            - ACME account email (LETSENCRYPT_EMAIL)
+#   letsencrypt_cert_dir         - where fullchain.pem + privkey.pem are published
+#   letsencrypt_cloudflare_zone  - apex zone (LETSENCRYPT_CLOUDFLARE_ZONE)
+#   CLOUDFLARE_API_TOKEN         - Zone:DNS:Edit on the zone
+#
+# Optional:
+#   letsencrypt_reload_cmd       - shell hook after issue/renew (e.g. nginx reload)
+#   letsencrypt_staging          - true for LE staging endpoint (LETSENCRYPT_STAGING=1)
+#   letsencrypt_project_root     - for bootstrap-certbot + timer WorkingDirectory
+#   letsencrypt_playbook_path    - absolute path (required for --tags deploy)
+#
+# Tags: issue, renew, verify, deploy, undeploy
+- name: Let's Encrypt TLS (Cloudflare DNS-01)
+  hosts: localhost
+  gather_facts: true
+
+  vars:
+    letsencrypt_project_root: '{{ playbook_dir | dirname | dirname }}'
+    letsencrypt_playbook_path: '{{ playbook_dir }}/letsencrypt.yml'
+
+  roles:
+    - role: letsencrypt_dns

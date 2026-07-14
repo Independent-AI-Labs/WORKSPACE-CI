@@ -1,0 +1,88 @@
+---
+- name: Ensure certbot is installed
+  ansible.builtin.import_tasks: install_acme_tool.yml
+
+- name: Ensure Let's Encrypt state directories exist
+  ansible.builtin.file:
+    path: '{{ item }}'
+    state: directory
+    mode: '0700'
+  loop:
+    - '{{ letsencrypt_config_dir }}'
+    - '{{ letsencrypt_work_dir }}'
+    - '{{ letsencrypt_logs_dir }}'
+    - '{{ letsencrypt_cert_dir }}'
+
+- name: Install Cloudflare credentials for certbot
+  ansible.builtin.template:
+    src: cloudflare-credentials.ini.j2
+    dest: '{{ letsencrypt_cloudflare_credentials }}'
+    mode: '0600'
+  no_log: true
+
+- name: Build certbot domain flags
+  ansible.builtin.set_fact:
+    _certbot_domain_flags: "{{ _certbot_domain_flags | default([]) + ['-d', item] }}"
+  loop: '{{ letsencrypt_domains }}'
+
+- name: Issue certificate via certbot DNS-01
+  ansible.builtin.command:
+    argv: >-
+      {{
+        [
+          letsencrypt_certbot_bin,
+          'certonly',
+          '--dns-cloudflare',
+          '--dns-cloudflare-credentials', letsencrypt_cloudflare_credentials,
+          '--config-dir', letsencrypt_config_dir,
+          '--work-dir', letsencrypt_work_dir,
+          '--logs-dir', letsencrypt_logs_dir,
+          '--email', letsencrypt_email,
+          '--agree-tos',
+          '--non-interactive',
+          '--keep-until-expiring',
+        ]
+        + (['--staging'] if letsencrypt_staging else [])
+        + (_certbot_domain_flags | default([]))
+      }}
+  register: _certbot_issue
+  changed_when: "'Certificate not yet due for renewal' not in (_certbot_issue.stdout | default(''))"
+  no_log: true
+
+- name: Publish fullchain.pem to consumer cert dir
+  ansible.builtin.copy:
+    src: '{{ letsencrypt_config_dir }}/live/{{ letsencrypt_primary_domain }}/fullchain.pem'
+    dest: '{{ letsencrypt_cert_dir }}/fullchain.pem'
+    remote_src: true
+    mode: '0644'
+    follow: true
+  notify: Reload TLS consumer
+
+- name: Publish privkey.pem to consumer cert dir
+  ansible.builtin.copy:
+    src: '{{ letsencrypt_config_dir }}/live/{{ letsencrypt_primary_domain }}/privkey.pem'
+    dest: '{{ letsencrypt_cert_dir }}/privkey.pem'
+    remote_src: true
+    mode: '0600'
+    follow: true
+  notify: Reload TLS consumer
+
+- name: Read certificate expiry
+  ansible.builtin.command:
+    argv:
+      - openssl
+      - x509
+      - -in
+      - '{{ letsencrypt_cert_dir }}/fullchain.pem'
+      - -noout
+      - -enddate
+  register: _cert_expiry
+  changed_when: false
+
+- name: Certificate issued
+  ansible.builtin.debug:
+    msg: |
+      Let's Encrypt certificate issued for {{ letsencrypt_domains | join(', ') }}.
+        Staging : {{ letsencrypt_staging }}
+        Cert dir: {{ letsencrypt_cert_dir }}
+        Expiry  : {{ _cert_expiry.stdout | default('unknown') | trim }}

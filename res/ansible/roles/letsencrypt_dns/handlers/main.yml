@@ -1,0 +1,13 @@
+---
+- name: Reload TLS consumer
+  ansible.builtin.command:
+    argv: ['/bin/bash', '-lc', '{{ letsencrypt_reload_cmd }}']
+  when: letsencrypt_reload_cmd | length > 0
+  register: tls_reload
+  changed_when: tls_reload.rc == 0
+  failed_when: tls_reload.rc != 0
+
+- name: Show TLS reload result
+  ansible.builtin.debug:
+    msg: '{{ tls_reload.stdout | default("") | trim }}'
+  when: letsencrypt_reload_cmd | length > 0

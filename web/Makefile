@@ -35,8 +35,11 @@ endif
 ifeq ($(PODMAN),)
 PODMAN := podman
 endif
-export PROD_HTTP_PORT ?= 80
-export PROD_HTTPS_PORT ?= 443
+export PROD_HTTP_PORT ?= 8080
+export PROD_HTTPS_PORT ?= 8443
+export WIKI_TLS_DIR ?=
+export WIKI_TLS_MODE ?= auto
+export WIKI_TLS_CN ?= localhost
 ifneq ($(WIKI_HTTP_PORT),)
 export PROD_HTTP_PORT := $(WIKI_HTTP_PORT)
 endif
@@ -194,7 +197,7 @@ dev-logs: ## Print dev server logs (last 100 lines)
 	@journalctl --user -u $(SYSTEMD_UNIT) --no-pager -n 100
 
 # =============================================================================
-# Production Targets (Podman; default ports 80/443)
+# Production Targets (Podman; default ports 8080/8443, no root)
 # =============================================================================
 
 .PHONY: prod-check-syntax

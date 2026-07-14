@@ -1,0 +1,28 @@
+[Unit]
+Description=workspace-ci Wiki production stack (Podman Compose)
+After=network-online.target gateway-compose.service
+Wants=network-online.target gateway-compose.service
+
+[Service]
+EnvironmentFile=-{{ project_root }}/.env
+Type=simple
+WorkingDirectory={{ web_dir }}
+Environment=PATH={{ compose_bin_dir }}:{{ podman_bin_dir }}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=WIKI_HTTP_PORT={{ wiki_http_port }}
+Environment=WIKI_HTTPS_PORT={{ wiki_https_port }}
+Environment=ALLOWED_ORIGINS={{ allowed_origins }}
+Environment=WIKI_TLS_DIR={{ wiki_tls_dir }}
+Environment=WIKI_TLS_MODE={{ wiki_tls_mode }}
+Environment=WIKI_TLS_CN={{ wiki_tls_cn }}
+ExecStart={{ compose_cmd }} --podman-path {{ podman_path }} -f {{ compose_file }} up --remove-orphans
+ExecStop={{ compose_cmd }} --podman-path {{ podman_path }} -f {{ compose_file }} down
+Restart=always
+RestartSec=15
+TimeoutStartSec=120
+TimeoutStopSec=60
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=wiki-prod-compose
+
+[Install]
+WantedBy=default.target

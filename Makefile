@@ -37,17 +37,34 @@ BOOT_BIN := $(CURDIR)/$(BOOT_NAME)/bin
 -include .env
 export CLOUDFLARED_BIN TUNNEL_CONFIG TUNNEL_TOKEN
 export CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN
-export WIKI_TUNNEL_HOSTNAME WIKI_TUNNEL_NAME
+export WIKI_TUNNEL_HOSTNAME WIKI_TUNNEL_NAME WIKI_TUNNEL_ID
 export WIKI_HTTP_PORT WIKI_HTTPS_PORT
+export LETSENCRYPT_EMAIL LETSENCRYPT_STAGING LETSENCRYPT_CLOUDFLARE_ZONE
+export WIKI_TLS_MODE WIKI_TLS_DIR WIKI_TLS_CN
 
-# Tunnel origin = wiki prod nginx on host (default https://127.0.0.1:443).
+# Tunnel origin = wiki prod nginx HTTPS (default https://127.0.0.1:8443).
 ifeq ($(WIKI_HTTPS_PORT),)
-_WIKI_HTTPS_PORT := 443
+_WIKI_HTTPS_PORT := 8443
 else
 _WIKI_HTTPS_PORT := $(WIKI_HTTPS_PORT)
 endif
 ifeq ($(WIKI_TUNNEL_ORIGIN),)
 WIKI_TUNNEL_ORIGIN := https://127.0.0.1:$(_WIKI_HTTPS_PORT)
+endif
+
+ifeq ($(WIKI_TUNNEL_HOSTNAME),)
+_WIKI_TLS_HOST := localhost
+else
+_WIKI_TLS_HOST := $(WIKI_TUNNEL_HOSTNAME)
+endif
+ifeq ($(WIKI_TLS_DIR),)
+WIKI_TLS_DIR := $(CURDIR)/cloudflare/certs/$(_WIKI_TLS_HOST)
+endif
+ifeq ($(WIKI_TLS_CN),)
+WIKI_TLS_CN := $(_WIKI_TLS_HOST)
+endif
+ifeq ($(LETSENCRYPT_CLOUDFLARE_ZONE),)
+LETSENCRYPT_CLOUDFLARE_ZONE := $(WIKI_TUNNEL_HOSTNAME)
 endif
 export WIKI_TUNNEL_ORIGIN
 
@@ -257,18 +274,21 @@ wiki-dev-logs: ## Tail wiki dev server logs
 	$(MAKE) -C web dev-logs
 
 # =============================================================================
-# Wiki Production (Podman; ports 80/443)
+# Wiki Production (Podman; ports 8080/8443, no root)
 # Env overrides: PODMAN, COMPOSE_CMD, WIKI_HTTP_PORT, WIKI_HTTPS_PORT, PROD_HTTP_PORT, PROD_HTTPS_PORT
-# Runs as your user; sudo prompts once for sysctl when binding :80/:443.
+# Override to :80/:443 only if you have root or sysctl unprivileged_port_start lowered.
 # =============================================================================
 
 .PHONY: wiki-prod-check-syntax wiki-prod-build wiki-prod-start wiki-prod-stop wiki-prod-restart wiki-prod-status wiki-prod-logs
+.PHONY: wiki-prod-deploy wiki-prod-undeploy wiki-prod-systemd-logs
 wiki-prod-check-syntax: ## Verify wiki prod Makefile recipes parse under bash -n
 	$(MAKE) -C web prod-check-syntax
 wiki-prod-build: ## Build wiki production image (Podman)
 	$(MAKE) -C web prod-build
-wiki-prod-start: ## Start wiki production stack on :80/:443
-	$(MAKE) -C web prod-start WIKI_HTTP_PORT="$(WIKI_HTTP_PORT)" WIKI_HTTPS_PORT="$(WIKI_HTTPS_PORT)" ALLOWED_ORIGINS="$(ALLOWED_ORIGINS)"
+wiki-prod-start: ## Start wiki production stack on :8080/:8443
+	$(MAKE) -C web prod-start WIKI_HTTP_PORT="$(WIKI_HTTP_PORT)" WIKI_HTTPS_PORT="$(WIKI_HTTPS_PORT)" \
+		WIKI_TLS_DIR="$(WIKI_TLS_DIR)" WIKI_TLS_MODE="$(WIKI_TLS_MODE)" WIKI_TLS_CN="$(WIKI_TLS_CN)" \
+		ALLOWED_ORIGINS="$(ALLOWED_ORIGINS)"
 wiki-prod-stop: ## Stop wiki production stack
 	$(MAKE) -C web prod-stop
 wiki-prod-restart: ## Restart wiki production stack
@@ -277,6 +297,12 @@ wiki-prod-status: ## Show wiki production stack status
 	$(MAKE) -C web prod-status
 wiki-prod-logs: ## Tail wiki production stack logs
 	$(MAKE) -C web prod-logs
+wiki-prod-deploy: ## Install + enable wiki prod on boot (systemd user + linger)
+	ansible-playbook res/ansible/prod.yml --tags deploy
+wiki-prod-undeploy: ## Disable + remove wiki prod systemd unit
+	ansible-playbook res/ansible/prod.yml --tags undeploy
+wiki-prod-systemd-logs: ## Tail wiki prod systemd unit logs
+	journalctl --user -u wiki-prod-compose -f
 
 # =============================================================================
 # Wiki Cloudflare Tunnel (systemd user; no VM tunnel wrapper)
@@ -292,6 +318,7 @@ ANSIBLE_TUNNEL_ENV := TUNNEL_CONFIG="$(TUNNEL_CONFIG)" \
 	TUNNEL_TOKEN="$(TUNNEL_TOKEN)" \
 	CLOUDFLARE_ACCOUNT_ID="$(CLOUDFLARE_ACCOUNT_ID)" CLOUDFLARE_API_TOKEN="$(CLOUDFLARE_API_TOKEN)" \
 	WIKI_TUNNEL_HOSTNAME="$(WIKI_TUNNEL_HOSTNAME)" WIKI_TUNNEL_NAME="$(WIKI_TUNNEL_NAME)" \
+	WIKI_TUNNEL_ID="$(WIKI_TUNNEL_ID)" \
 	WIKI_TUNNEL_ORIGIN="$(WIKI_TUNNEL_ORIGIN)" WIKI_HTTPS_PORT="$(_WIKI_HTTPS_PORT)" \
 	ALLOWED_ORIGINS="$(ALLOWED_ORIGINS)"
 ifneq ($(CLOUDFLARED_BIN),)
@@ -317,6 +344,40 @@ wiki-tunnel-logs: ## Tail wiki tunnel logs
 	journalctl --user -u wiki-ci-tunnel -f
 wiki-tunnel-route-dns: ## Route DNS (WIKI_TUNNEL_HOSTNAME from .env)
 	$(ANSIBLE_TUNNEL) --tags route-dns
+
+# =============================================================================
+# Wiki TLS (Let's Encrypt DNS-01 via Cloudflare; generic playbook)
+# =============================================================================
+
+ANSIBLE_LETSENCRYPT_ENV := CLOUDFLARE_API_TOKEN="$(CLOUDFLARE_API_TOKEN)" \
+	LETSENCRYPT_EMAIL="$(LETSENCRYPT_EMAIL)" \
+	LETSENCRYPT_STAGING="$(LETSENCRYPT_STAGING)" \
+	LETSENCRYPT_CLOUDFLARE_ZONE="$(LETSENCRYPT_CLOUDFLARE_ZONE)"
+ANSIBLE_LETSENCRYPT_EXTRA := \
+	-e '{"letsencrypt_domains": ["$(WIKI_TUNNEL_HOSTNAME)"]}' \
+	-e "letsencrypt_cert_dir=$(WIKI_TLS_DIR)" \
+	-e "letsencrypt_email=$(LETSENCRYPT_EMAIL)" \
+	-e "letsencrypt_cloudflare_zone=$(LETSENCRYPT_CLOUDFLARE_ZONE)" \
+	-e 'letsencrypt_reload_cmd=podman exec wiki-ci-nginx nginx -s reload' \
+	-e "letsencrypt_project_root=$(CURDIR)" \
+	-e "letsencrypt_playbook_path=$(CURDIR)/res/ansible/letsencrypt.yml"
+ANSIBLE_LETSENCRYPT := $(ANSIBLE_LETSENCRYPT_ENV) ansible-playbook res/ansible/letsencrypt.yml $(ANSIBLE_LETSENCRYPT_EXTRA)
+
+.PHONY: wiki-tls-issue wiki-tls-renew wiki-tls-verify wiki-tls-deploy wiki-tls-undeploy
+wiki-tls-issue: ## Issue Let's Encrypt cert (DNS-01; LETSENCRYPT_STAGING=1 to test)
+	@test -n "$(WIKI_TUNNEL_HOSTNAME)" || (echo "Set WIKI_TUNNEL_HOSTNAME in .env" >&2; exit 1)
+	@test -n "$(LETSENCRYPT_EMAIL)" || (echo "Set LETSENCRYPT_EMAIL in .env" >&2; exit 1)
+	@test -n "$(CLOUDFLARE_API_TOKEN)" || (echo "Set CLOUDFLARE_API_TOKEN in .env (Zone:DNS:Edit)" >&2; exit 1)
+	$(ANSIBLE_LETSENCRYPT) --tags issue
+wiki-tls-renew: ## Renew Let's Encrypt cert and reload nginx
+	@test -n "$(WIKI_TUNNEL_HOSTNAME)" || (echo "Set WIKI_TUNNEL_HOSTNAME in .env" >&2; exit 1)
+	$(ANSIBLE_LETSENCRYPT) --tags renew
+wiki-tls-verify: ## Verify TLS cert expiry and SAN
+	$(ANSIBLE_LETSENCRYPT) --tags verify
+wiki-tls-deploy: ## Install systemd user timer for daily cert renewal
+	$(ANSIBLE_LETSENCRYPT) --tags deploy
+wiki-tls-undeploy: ## Remove Let's Encrypt renewal timer
+	$(ANSIBLE_LETSENCRYPT) --tags undeploy
 
 # =============================================================================
 # Cleanup

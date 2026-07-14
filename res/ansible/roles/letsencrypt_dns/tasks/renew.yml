@@ -1,0 +1,66 @@
+---
+- name: Ensure certbot is installed
+  ansible.builtin.import_tasks: install_acme_tool.yml
+
+- name: Stat published certificate
+  ansible.builtin.stat:
+    path: '{{ letsencrypt_cert_dir }}/fullchain.pem'
+  register: _published_cert
+
+- name: Skip renew when no certificate has been issued yet
+  ansible.builtin.debug:
+    msg: 'No certificate at {{ letsencrypt_cert_dir }}/fullchain.pem; run with --tags issue first.'
+  when: not _published_cert.stat.exists
+
+- name: Renew certificates when published cert exists
+  when: _published_cert.stat.exists
+  block:
+    - name: Ensure Cloudflare credentials exist for renewal
+      ansible.builtin.template:
+        src: cloudflare-credentials.ini.j2
+        dest: '{{ letsencrypt_cloudflare_credentials }}'
+        mode: '0600'
+      no_log: true
+
+    - name: Run certbot renew
+      ansible.builtin.command:
+        argv:
+          - '{{ letsencrypt_certbot_bin }}'
+          - renew
+          - '--dns-cloudflare'
+          - '--dns-cloudflare-credentials'
+          - '{{ letsencrypt_cloudflare_credentials }}'
+          - '--config-dir'
+          - '{{ letsencrypt_config_dir }}'
+          - '--work-dir'
+          - '{{ letsencrypt_work_dir }}'
+          - '--logs-dir'
+          - '{{ letsencrypt_logs_dir }}'
+          - '--non-interactive'
+      register: _certbot_renew
+      changed_when: "'No renewals were attempted' not in (_certbot_renew.stdout | default(''))"
+      no_log: true
+
+    - name: Publish fullchain.pem after renewal
+      ansible.builtin.copy:
+        src: '{{ letsencrypt_config_dir }}/live/{{ letsencrypt_primary_domain }}/fullchain.pem'
+        dest: '{{ letsencrypt_cert_dir }}/fullchain.pem'
+        remote_src: true
+        mode: '0644'
+        follow: true
+      when: _certbot_renew.changed
+      notify: Reload TLS consumer
+
+    - name: Publish privkey.pem after renewal
+      ansible.builtin.copy:
+        src: '{{ letsencrypt_config_dir }}/live/{{ letsencrypt_primary_domain }}/privkey.pem'
+        dest: '{{ letsencrypt_cert_dir }}/privkey.pem'
+        remote_src: true
+        mode: '0600'
+        follow: true
+      when: _certbot_renew.changed
+      notify: Reload TLS consumer
+
+    - name: Renewal result
+      ansible.builtin.debug:
+        msg: "{{ 'Certificate renewed and published.' if _certbot_renew.changed else 'No renewal needed.' }}"

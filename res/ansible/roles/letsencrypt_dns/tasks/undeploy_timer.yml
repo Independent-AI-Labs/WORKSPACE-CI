@@ -1,0 +1,30 @@
+---
+- name: Stop and disable renewal timer
+  ansible.builtin.systemd:
+    name: '{{ letsencrypt_unit_name }}.timer'
+    enabled: false
+    state: stopped
+    scope: user
+  register: _stop_timer
+  failed_when: >
+    _stop_timer.failed
+    and 'Could not find the requested service' not in (_stop_timer.msg | default(''))
+
+- name: Remove renewal timer unit
+  ansible.builtin.file:
+    path: '{{ ansible_env.HOME }}/.config/systemd/user/{{ letsencrypt_unit_name }}.timer'
+    state: absent
+
+- name: Remove renewal service unit
+  ansible.builtin.file:
+    path: '{{ ansible_env.HOME }}/.config/systemd/user/{{ letsencrypt_unit_name }}.service'
+    state: absent
+
+- name: Reload systemd user daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+    scope: user
+
+- name: Renewal timer undeployed
+  ansible.builtin.debug:
+    msg: Let's Encrypt renewal timer removed.

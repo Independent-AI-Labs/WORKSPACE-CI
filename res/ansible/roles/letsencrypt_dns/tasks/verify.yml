@@ -1,0 +1,76 @@
+---
+- name: Stat published certificate
+  ansible.builtin.stat:
+    path: '{{ letsencrypt_cert_dir }}/fullchain.pem'
+  register: _published_cert
+
+- name: Fail verify when certificate is missing
+  ansible.builtin.fail:
+    msg: 'No certificate at {{ letsencrypt_cert_dir }}/fullchain.pem; run with --tags issue.'
+  when: not _published_cert.stat.exists
+
+- name: Read certificate expiry
+  ansible.builtin.command:
+    argv:
+      - openssl
+      - x509
+      - -in
+      - '{{ letsencrypt_cert_dir }}/fullchain.pem'
+      - -noout
+      - -enddate
+      - -subject
+  register: _cert_meta
+  changed_when: false
+
+- name: Show certificate metadata
+  ansible.builtin.debug:
+    msg: '{{ _cert_meta.stdout | default("") | trim }}'
+
+- name: Check certificate days remaining
+  ansible.builtin.command:
+    argv:
+      - openssl
+      - x509
+      - -in
+      - '{{ letsencrypt_cert_dir }}/fullchain.pem'
+      - -noout
+      - -checkend
+      - '{{ (letsencrypt_cert_min_days | int) * 86400 }}'
+  register: _cert_checkend
+  changed_when: false
+
+- name: Show certificate expiry check
+  ansible.builtin.debug:
+    msg: '{{ _cert_checkend.stdout | default("") | trim }}'
+
+- name: Fail if certificate expires too soon
+  ansible.builtin.fail:
+    msg: |
+      Certificate at {{ letsencrypt_cert_dir }}/fullchain.pem expires within {{ letsencrypt_cert_min_days }} days.
+      Run: --tags renew (or issue for first-time setup).
+  when: _cert_checkend.rc != 0
+
+- name: Verify certificate SAN includes primary domain
+  ansible.builtin.command:
+    argv:
+      - openssl
+      - x509
+      - -in
+      - '{{ letsencrypt_cert_dir }}/fullchain.pem'
+      - -noout
+      - -text
+  register: _cert_text
+  changed_when: false
+
+- name: Fail if primary domain missing from certificate
+  ansible.builtin.fail:
+    msg: "Certificate does not appear to include {{ letsencrypt_primary_domain }}."
+  when: letsencrypt_primary_domain not in (_cert_text.stdout | default(''))
+
+- name: Certificate verification passed
+  ansible.builtin.debug:
+    msg: |
+      TLS certificate OK.
+        Path   : {{ letsencrypt_cert_dir }}
+        Meta   : {{ _cert_meta.stdout | default('') | trim }}
+        MinDays: {{ letsencrypt_cert_min_days }} (check passed)

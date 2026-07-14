@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Production wiki lifecycle (Podman Compose). Invoked by web/Makefile prod-* targets.
-# Runs as the current user; sudo is used only for sysctl when binding :80/:443.
+# Runs as the current user; sudo is used only for sysctl when overriding to :80/:443.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,8 +11,8 @@ PROD_IMAGE="${PROD_IMAGE:-localhost/workspace-ci-wiki:prod}"
 COMPOSE_FILE="${COMPOSE_FILE:-compose.prod.yaml}"
 COMPOSE_CMD="${COMPOSE_CMD:-podman-compose}"
 PODMAN="${PODMAN:-podman}"
-PROD_HTTP_PORT="${PROD_HTTP_PORT:-80}"
-PROD_HTTPS_PORT="${PROD_HTTPS_PORT:-443}"
+PROD_HTTP_PORT="${PROD_HTTP_PORT:-8080}"
+PROD_HTTPS_PORT="${PROD_HTTPS_PORT:-8443}"
 
 resolve_cmd() {
   local var="$1" name="$2"
@@ -79,10 +79,15 @@ ensure_prod_image() {
 }
 
 compose_run() {
+  local tls_dir="${WIKI_TLS_DIR:-${WEB_DIR}/../cloudflare/certs/${WIKI_TLS_CN:-localhost}}"
+  mkdir -p "${tls_dir}"
   (
     cd "${WEB_DIR}"
     WIKI_HTTP_PORT="${PROD_HTTP_PORT}" WIKI_HTTPS_PORT="${PROD_HTTPS_PORT}" \
       ALLOWED_ORIGINS="${ALLOWED_ORIGINS:-}" \
+      WIKI_TLS_DIR="${tls_dir}" \
+      WIKI_TLS_MODE="${WIKI_TLS_MODE:-auto}" \
+      WIKI_TLS_CN="${WIKI_TLS_CN:-localhost}" \
       "${COMPOSE_CMD}" --podman-path "${PODMAN}" -f "${COMPOSE_FILE}" "$@"
   )
 }
@@ -102,7 +107,11 @@ cmd_start() {
   ensure_prod_image
   compose_run up -d
   echo "[prod-start] HTTP  http://127.0.0.1:${PROD_HTTP_PORT}/  (redirects to HTTPS)"
-  echo "[prod-start] HTTPS https://127.0.0.1:${PROD_HTTPS_PORT}/  (self-signed)"
+  if [[ "${WIKI_TLS_MODE:-auto}" == "letsencrypt" ]]; then
+    echo "[prod-start] HTTPS https://127.0.0.1:${PROD_HTTPS_PORT}/  (Let's Encrypt)"
+  else
+    echo "[prod-start] HTTPS https://127.0.0.1:${PROD_HTTPS_PORT}/  (self-signed or mounted certs)"
+  fi
 }
 
 cmd_stop() {

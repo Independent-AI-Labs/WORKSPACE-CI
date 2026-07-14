@@ -6,8 +6,8 @@
 #   TUNNEL_CONFIG    - path to config.yml (default: <CI>/cloudflare/config.yml)
 #   WIKI_TUNNEL_HOSTNAME - public hostname (status/route-dns)
 #   WIKI_TUNNEL_NAME     - tunnel name for route-dns (default: workspace-ci-wiki)
-#   WIKI_TUNNEL_ORIGIN   - prod nginx origin (default: https://127.0.0.1:443)
-#   WIKI_HTTPS_PORT      - host HTTPS port for prod stack (default: 443)
+#   WIKI_TUNNEL_ORIGIN   - prod nginx origin (default: https://127.0.0.1:8443)
+#   WIKI_HTTPS_PORT      - host HTTPS port for prod stack (default: 8443)
 #   TUNNEL_TOKEN         - optional; run via --token (skips credentials.json requirement)
 #   CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN - API access (verify / automation)
 #
@@ -25,9 +25,10 @@
     cloudflared_bin: "{{ lookup('env', 'CLOUDFLARED_BIN') | default('', true) }}"
     tunnel_config: "{{ lookup('env', 'TUNNEL_CONFIG') | default(tunnel_config_default, true) }}"
     wiki_tunnel_hostname: "{{ lookup('env', 'WIKI_TUNNEL_HOSTNAME') | default('', true) }}"
+    wiki_tunnel_id: "{{ lookup('env', 'WIKI_TUNNEL_ID') | default('', true) }}"
     wiki_tunnel_name: "{{ lookup('env', 'WIKI_TUNNEL_NAME') | default('workspace-ci-wiki', true) }}"
-    wiki_https_port: "{{ lookup('env', 'WIKI_HTTPS_PORT') | default('443', true) }}"
-    wiki_tunnel_origin: "{{ lookup('env', 'WIKI_TUNNEL_ORIGIN') | default('https://127.0.0.1:' + (lookup('env', 'WIKI_HTTPS_PORT') | default('443', true)), true) }}"
+    wiki_https_port: "{{ lookup('env', 'WIKI_HTTPS_PORT') | default('8443', true) }}"
+    wiki_tunnel_origin: "{{ lookup('env', 'WIKI_TUNNEL_ORIGIN') | default('https://127.0.0.1:' + (lookup('env', 'WIKI_HTTPS_PORT') | default('8443', true)), true) }}"
     tunnel_token: "{{ lookup('env', 'TUNNEL_TOKEN') | default('', true) }}"
     cloudflare_account_id: "{{ lookup('env', 'CLOUDFLARE_ACCOUNT_ID') | default('', true) }}"
     cloudflare_api_token: "{{ lookup('env', 'CLOUDFLARE_API_TOKEN') | default('', true) }}"
@@ -144,6 +145,45 @@
           when: >
             'wiki-ci-app' not in (wiki_containers.stdout | default(''))
             or 'wiki-ci-nginx' not in (wiki_containers.stdout | default(''))
+
+        - name: Sync Cloudflare tunnel ingress to local origin (token-mode tunnels)
+          when:
+            - cloudflare_account_id | length > 0
+            - cloudflare_api_token | length > 0
+            - wiki_tunnel_id | length > 0
+            - wiki_tunnel_hostname | length > 0
+          block:
+            - name: Push tunnel ingress configuration
+              ansible.builtin.uri:
+                url: 'https://api.cloudflare.com/client/v4/accounts/{{ cloudflare_account_id }}/cfd_tunnel/{{ wiki_tunnel_id }}/configurations'
+                method: PUT
+                headers:
+                  Authorization: 'Bearer {{ cloudflare_api_token }}'
+                  Content-Type: application/json
+                body_format: json
+                body:
+                  config:
+                    ingress:
+                      - hostname: '{{ wiki_tunnel_hostname }}'
+                        service: '{{ wiki_tunnel_origin }}'
+                        originRequest:
+                          originServerName: '{{ wiki_tunnel_hostname }}'
+                          httpHostHeader: '{{ wiki_tunnel_hostname }}'
+                      - service: http_status:404
+                status_code: [200, 201]
+              register: tunnel_ingress_sync
+
+            - name: Show tunnel ingress sync result
+              ansible.builtin.debug:
+                msg: 'Cloudflare ingress synced to {{ wiki_tunnel_origin }} (HTTP {{ tunnel_ingress_sync.status }})'
+          rescue:
+            - name: Warn if Cloudflare ingress sync failed
+              ansible.builtin.debug:
+                msg: |
+                  Could not sync tunnel ingress via API.
+                  Update the public hostname origin manually in Cloudflare Zero Trust to {{ wiki_tunnel_origin }}
+                  or grant the API token Cloudflare One / Zero Trust edit permissions.
+                  Detail: {{ ansible_failed_result.msg | default('unknown error') }}
 
         - block:
             - name: Preflight wiki prod HTTPS locally (tunnel origin)

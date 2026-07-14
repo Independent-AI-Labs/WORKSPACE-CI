@@ -1,0 +1,304 @@
+---
+# workspace-ci Wiki production stack (Podman Compose + systemd user unit)
+#
+# Tags: deploy, start, stop, restart, status, undeploy
+- name: workspace-ci Wiki production stack
+  hosts: localhost
+  gather_facts: true
+
+  vars:
+    project_root: '{{ playbook_dir | dirname | dirname }}'
+    web_dir: '{{ project_root }}/web'
+    compose_file: compose.prod.yaml
+    prod_unit: wiki-prod-compose.service
+    systemd_dir: '{{ ansible_env.HOME }}/.config/systemd/user'
+    wiki_http_port: "{{ lookup('env', 'WIKI_HTTP_PORT') | default('8080', true) }}"
+    wiki_https_port: "{{ lookup('env', 'WIKI_HTTPS_PORT') | default('8443', true) }}"
+    allowed_origins: "{{ lookup('env', 'ALLOWED_ORIGINS') | default('https://localhost,https://127.0.0.1', true) }}"
+    wiki_tunnel_hostname: "{{ lookup('env', 'WIKI_TUNNEL_HOSTNAME') | default('', true) }}"
+    wiki_tls_mode: "{{ lookup('env', 'WIKI_TLS_MODE') | default('auto', true) }}"
+    wiki_tls_cn: "{{ lookup('env', 'WIKI_TLS_CN') | default(lookup('env', 'WIKI_TUNNEL_HOSTNAME') | default('localhost', true), true) }}"
+    wiki_tls_dir: "{{ lookup('env', 'WIKI_TLS_DIR') | default('', true) }}"
+
+  tasks:
+    - name: Resolve project root
+      tags: [always]
+      block:
+        - name: Get absolute project path
+          ansible.builtin.command: realpath {{ project_root }}
+          register: resolved_root
+          changed_when: false
+
+        - name: Set resolved paths
+          ansible.builtin.set_fact:
+            project_root: '{{ resolved_root.stdout }}'
+            web_dir: '{{ resolved_root.stdout }}/web'
+            wiki_tls_dir: >-
+              {{ wiki_tls_dir if wiki_tls_dir | length > 0 else
+                 (resolved_root.stdout + '/cloudflare/certs/' +
+                  (wiki_tunnel_hostname if wiki_tunnel_hostname | length > 0 else wiki_tls_cn)) }}
+
+    - name: Detect podman and podman-compose
+      tags: [always, deploy, start, restart]
+      block:
+        - name: Find podman
+          ansible.builtin.command: which podman
+          register: podman_check
+          changed_when: false
+
+        - name: Show podman path
+          ansible.builtin.debug:
+            msg: '{{ podman_check.stdout | default("") | trim }}'
+
+        - name: Fail if podman missing
+          ansible.builtin.fail:
+            msg: 'podman not on PATH'
+          when: podman_check.rc != 0
+
+        - name: Find podman-compose
+          ansible.builtin.command: which podman-compose
+          register: compose_check
+          changed_when: false
+
+        - name: Show podman-compose path
+          ansible.builtin.debug:
+            msg: '{{ compose_check.stdout | default("") | trim }}'
+
+        - name: Fail if podman-compose missing
+          ansible.builtin.fail:
+            msg: 'podman-compose not on PATH'
+          when: compose_check.rc != 0
+
+        - name: Set runtime facts
+          ansible.builtin.set_fact:
+            podman_path: '{{ podman_check.stdout }}'
+            podman_bin_dir: '{{ podman_check.stdout | dirname }}'
+            compose_cmd: '{{ compose_check.stdout }}'
+            compose_bin_dir: '{{ compose_check.stdout | dirname }}'
+
+    - name: Deploy wiki prod stack
+      tags: [deploy, start, restart]
+      block:
+        - name: Check gateway Grafana is running
+          ansible.builtin.command:
+            argv:
+              - podman
+              - ps
+              - --filter
+              - name=gw-grafana
+              - --filter
+              - status=running
+              - --format
+              - '{{ "{{" }}.Names{{ "}}" }}'
+          register: grafana_running
+          changed_when: false
+
+        - name: Show Grafana container probe
+          ansible.builtin.debug:
+            msg: '{{ grafana_running.stdout | default("(none)") | trim }}'
+
+        - name: Warn if Grafana is not running
+          ansible.builtin.debug:
+            msg: |
+              WARNING: gw-grafana is not running. Wiki nginx will still start,
+              but /grafana/ embeds will fail until gateway-compose is up.
+          when: grafana_running.stdout | trim | length == 0
+
+        - name: Check prod image exists
+          ansible.builtin.command:
+            argv:
+              - podman
+              - image
+              - exists
+              - localhost/workspace-ci-wiki:prod
+          register: prod_image
+          changed_when: false
+
+        - name: Show prod image check result
+          ansible.builtin.debug:
+            msg: 'prod image exists check rc={{ prod_image.rc }} stdout={{ prod_image.stdout | default("") | trim }}'
+
+        - name: Fail if prod image missing
+          ansible.builtin.fail:
+            msg: 'Production image missing. Run: make wiki-prod-build'
+          when: prod_image.rc != 0
+
+        - name: Ensure TLS certificate directory exists
+          ansible.builtin.file:
+            path: '{{ wiki_tls_dir }}'
+            state: directory
+            mode: '0700'
+
+        - name: Ensure systemd user directory exists
+          ansible.builtin.file:
+            path: '{{ systemd_dir }}'
+            state: directory
+            mode: '0755'
+
+        - name: Enable systemd user linger
+          tags: [deploy]
+          ansible.builtin.command: loginctl enable-linger {{ ansible_user_id }}
+          register: linger_result
+          changed_when: linger_result.rc == 0
+          failed_when: linger_result.rc != 0
+
+        - name: Show linger enable result
+          ansible.builtin.debug:
+            msg: '{{ linger_result.stdout | default("") | trim }}'
+
+        - name: Install wiki prod systemd unit
+          ansible.builtin.template:
+            src: templates/wiki-prod-compose.service.j2
+            dest: '{{ systemd_dir }}/{{ prod_unit }}'
+            mode: '0644'
+
+        - name: Reload systemd user daemon
+          ansible.builtin.systemd:
+            daemon_reload: true
+            scope: user
+
+        - name: Enable and start wiki prod compose
+          ansible.builtin.systemd:
+            name: '{{ prod_unit }}'
+            enabled: true
+            state: restarted
+            scope: user
+
+        - name: Preflight wiki prod HTTPS locally
+          block:
+            - name: Probe wiki prod HTTPS locally
+              ansible.builtin.uri:
+                url: 'https://127.0.0.1:{{ wiki_https_port }}/'
+                validate_certs: false
+                status_code: [200, 301, 302, 307, 308]
+                timeout: 10
+              register: wiki_local
+              retries: 24
+              delay: 5
+              until: wiki_local.status in [200, 301, 302, 307, 308]
+
+            - name: Show wiki HTTPS preflight result
+              ansible.builtin.debug:
+                msg: 'wiki HTTPS preflight HTTP {{ wiki_local.status }}'
+          rescue:
+            - name: Warn wiki HTTPS preflight failed
+              ansible.builtin.debug:
+                msg: |
+                  WARNING: wiki prod HTTPS preflight failed on :{{ wiki_https_port }}.
+                  Detail: {{ ansible_failed_result.msg | default('no response') }}
+
+        - name: Wiki prod deployed
+          ansible.builtin.debug:
+            msg: |
+              Wiki prod running (systemd user: {{ prod_unit }}).
+                HTTP  : http://127.0.0.1:{{ wiki_http_port }}/
+                HTTPS : https://127.0.0.1:{{ wiki_https_port }}/
+                Logs  : journalctl --user -u {{ prod_unit }} -f
+
+    - name: Stop wiki prod before restart
+      tags: [restart]
+      ansible.builtin.systemd:
+        name: '{{ prod_unit }}'
+        state: stopped
+        scope: user
+      register: restart_stop
+      failed_when: >
+        restart_stop.failed
+        and 'Could not find the requested service' not in (restart_stop.msg | default(''))
+
+    - name: Stop wiki prod compose
+      tags: [stop, undeploy]
+      ansible.builtin.systemd:
+        name: '{{ prod_unit }}'
+        state: stopped
+        scope: user
+      register: stop_prod
+      failed_when: >
+        stop_prod.failed
+        and 'Could not find the requested service' not in (stop_prod.msg | default(''))
+
+    - name: Show wiki prod status
+      tags: [status, never]
+      block:
+        - name: Check wiki prod service
+          ansible.builtin.command: systemctl --user is-active {{ prod_unit }}
+          register: prod_status
+          failed_when: prod_status.rc not in [0, 3]
+          changed_when: false
+
+        - name: List wiki prod containers
+          ansible.builtin.command:
+            argv:
+              - podman
+              - ps
+              - --filter
+              - name=wiki-ci-
+              - --format
+              - 'table {{ "{{" }}.Names{{ "}}" }}\t{{ "{{" }}.Status{{ "}}" }}\t{{ "{{" }}.Ports{{ "}}" }}'
+          register: wiki_containers
+          changed_when: false
+
+        - name: Probe HTTP
+          block:
+            - name: Request wiki HTTP locally
+              ansible.builtin.uri:
+                url: 'http://127.0.0.1:{{ wiki_http_port }}/'
+                status_code: [200, 301, 302, 307, 308]
+                timeout: 5
+              register: http_probe
+          rescue:
+            - name: Record HTTP probe failure
+              ansible.builtin.set_fact:
+                http_probe: {status: 'DOWN'}
+
+        - name: Probe HTTPS
+          block:
+            - name: Request wiki HTTPS locally
+              ansible.builtin.uri:
+                url: 'https://127.0.0.1:{{ wiki_https_port }}/'
+                validate_certs: false
+                status_code: [200, 301, 302, 307, 308]
+                timeout: 10
+              register: https_probe
+          rescue:
+            - name: Record HTTPS probe failure
+              ansible.builtin.set_fact:
+                https_probe: {status: 'DOWN'}
+
+        - name: Display status
+          ansible.builtin.debug:
+            msg: |
+              Wiki prod status:
+                Unit     : {{ prod_status.stdout | default('not installed') }}
+                HTTP     : {{ http_probe.status | default('DOWN') }} (expect 301)
+                HTTPS    : {{ https_probe.status | default('DOWN') }} (expect 200)
+                Containers :
+              {{ wiki_containers.stdout | default('(none)') | indent(2, first=False) }}
+
+    - name: Undeploy wiki prod compose
+      tags: [undeploy, never]
+      block:
+        - name: Disable wiki prod service
+          ansible.builtin.systemd:
+            name: '{{ prod_unit }}'
+            enabled: false
+            state: stopped
+            scope: user
+          register: undeploy_stop
+          failed_when: >
+            undeploy_stop.failed
+            and 'Could not find the requested service' not in (undeploy_stop.msg | default(''))
+
+        - name: Remove wiki prod unit file
+          ansible.builtin.file:
+            path: '{{ systemd_dir }}/{{ prod_unit }}'
+            state: absent
+
+        - name: Reload systemd user daemon
+          ansible.builtin.systemd:
+            daemon_reload: true
+            scope: user
+
+        - name: Wiki prod undeployed
+          ansible.builtin.debug:
+            msg: Wiki prod compose undeployed.

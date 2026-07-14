@@ -1,0 +1,28 @@
+---
+- name: Resolve role paths
+  tags: [always]
+  ansible.builtin.import_tasks: resolve.yml
+
+- name: Validate inputs
+  tags: [always, issue, renew, verify]
+  ansible.builtin.import_tasks: assert.yml
+
+- name: Issue certificates
+  tags: [issue]
+  ansible.builtin.import_tasks: issue.yml
+
+- name: Renew certificates
+  tags: [renew]
+  ansible.builtin.import_tasks: renew.yml
+
+- name: Verify certificates
+  tags: [verify]
+  ansible.builtin.import_tasks: verify.yml
+
+- name: Deploy renewal timer
+  tags: [deploy]
+  ansible.builtin.import_tasks: deploy_timer.yml
+
+- name: Undeploy renewal timer
+  tags: [undeploy, never]
+  ansible.builtin.import_tasks: undeploy_timer.yml
