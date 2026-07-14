@@ -8,11 +8,20 @@
 # AGENTS.md Rule 4.
 
 _guard_repo_owner() {
-    local owner=""
-    owner="$(stat -c '%U' "$_guard_dir" 2>/dev/null || true)"
-    if [[ -n "$owner" && "$owner" != "root" ]]; then
-        printf '%s\n' "$owner"
-        return 0
+    local owner="" _stat_err _stat_rc=0
+    _stat_err="$(mktemp)"
+    owner="$(stat -c '%U' "$_guard_dir" 2>"$_stat_err")" || _stat_rc=$?
+    if [[ $_stat_rc -ne 0 ]]; then
+        if [[ -s "$_stat_err" ]]; then
+            log_warn "stat owner of $_guard_dir failed: $(head -1 "$_stat_err")"
+        fi
+        rm -f "$_stat_err"
+    else
+        rm -f "$_stat_err"
+        if [[ -n "$owner" && "$owner" != "root" ]]; then
+            printf '%s\n' "$owner"
+            return 0
+        fi
     fi
     if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]]; then
         printf '%s\n' "$SUDO_USER"
@@ -62,9 +71,19 @@ build_guard_binary() {
         rust_home="$ci_rust_home"
     fi
     if [[ -n "$preset_cargo_home" ]]; then
-        mkdir -p "$preset_cargo_home" 2>/dev/null || true
-        if [[ -d "$preset_cargo_home" && -w "$preset_cargo_home" ]]; then
-            rust_home="$preset_cargo_home"
+        local _mk_err _mk_rc=0
+        _mk_err="$(mktemp)"
+        mkdir -p "$preset_cargo_home" 2>"$_mk_err" || _mk_rc=$?
+        if [[ $_mk_rc -ne 0 ]]; then
+            if [[ -s "$_mk_err" ]]; then
+                log_warn "mkdir -p $preset_cargo_home failed: $(head -1 "$_mk_err")"
+            fi
+            rm -f "$_mk_err"
+        else
+            rm -f "$_mk_err"
+            if [[ -d "$preset_cargo_home" && -w "$preset_cargo_home" ]]; then
+                rust_home="$preset_cargo_home"
+            fi
         fi
     fi
     export PATH="$boot_rust:$PATH"

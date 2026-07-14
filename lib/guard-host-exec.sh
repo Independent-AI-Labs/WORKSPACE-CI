@@ -103,22 +103,30 @@ guard_host_provision_fleet_file() {
 }
 
 guard_host_provision_fleet_in_sudo() {
-    local fleet user
+    local fleet user _users_file _awk_rc=0
     fleet="$(_guard_capture_line guard_host_provision_fleet_file)" || return 1
     [[ -f "$fleet" ]] || return 1
     getent group sudo >/dev/null 2>&1 || return 1
-    while IFS= read -r user; do
-        [[ -z "$user" ]] && continue
-        if id -nG "$user" 2>/dev/null | tr ' ' '\n' | grep -qx sudo; then
-            printf '%s\n' "$user"
-            return 0
-        fi
-    done < <(awk '
+    _users_file="$(mktemp)"
+    awk '
         /^[[:space:]]*-[[:space:]]*name:/ {
             v=$0; sub(/^[^:]*:[[:space:]]*/, "", v); gsub(/["'\'']/, "", v)
             if (v) print v
         }
-    ' "$fleet")
+    ' "$fleet" >"$_users_file" || _awk_rc=$?
+    if [[ $_awk_rc -ne 0 ]]; then
+        rm -f "$_users_file"
+        return 1
+    fi
+    while IFS= read -r user; do
+        [[ -z "$user" ]] && continue
+        if id -nG "$user" 2>/dev/null | tr ' ' '\n' | grep -qx sudo; then
+            rm -f "$_users_file"
+            printf '%s\n' "$user"
+            return 0
+        fi
+    done < "$_users_file"
+    rm -f "$_users_file"
     return 1
 }
 
@@ -273,7 +281,7 @@ guard_install_agent_git_identity() {
     if [[ ! -f "$src" ]]; then
         log_error "Agent git identity missing: $src"
         log_error "Copy and edit locally: cp config/agent-git-identity.example config/agent-git-identity"
-        log_error "(config/agent-git-identity is gitignored — never commit real emails/names)"
+        log_error "(config/agent-git-identity is gitignored - never commit real emails/names)"
         return 1
     fi
     mkdir -p /usr/lib/workspace-guard
