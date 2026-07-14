@@ -229,6 +229,7 @@ make check-guard
 
 | Doc | What's in it |
 |-----|-------------|
+| [`workflows/README.md`](workflows/README.md) | Agent/contributor workflows: website copy, architecture diagrams |
 | [`docs/HOOKS.md`](docs/HOOKS.md) | Hook generation, configuration, migration from pre-commit |
 | [`docs/PORTABILITY.md`](docs/PORTABILITY.md) | Shell portability contract: process-substitution ban, temp-file capture helpers |
 | [`docs/SPEC-CI-SHARED-CONFIGS.md`](docs/SPEC-CI-SHARED-CONFIGS.md) | Monorepo shared config contract and inheritance |

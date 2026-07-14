@@ -4,15 +4,21 @@
 # Depends on the parent script's globals: _CI_ROOT, CYAN, BOLD, RED, NC,
 # and the log_info / log_warn / log_error helpers. Also calls
 # divert_is_active and rollback_guard (defined in the parent script).
+# Drift/host-exec helpers live in lib/guard-drift.sh and lib/guard-host-exec.sh.
 # Inherits `set -euo pipefail` from the sourcing shell; do not add a
 # shebang or `set` here. Keep this file under the 512-line source-length
 # gate per AGENTS.md Rule 4.
 
 install_guard_binary() {
     local guard_bin="${1:-$GUARD_BIN}"
+    if grep -q '^NoNewPrivs:[[:space:]]*1' /proc/self/status; then
+        log_error "Installer shell has NoNewPrivs=1; sudo cannot gain privileges here."
+        log_error "Run from SSH/TTY root session: sudo make install-guard-host-exec"
+        return 1
+    fi
     if [[ ! -f "$guard_bin" ]]; then
         log_error "Guard binary not found at $guard_bin"
-        log_error "Run 'make build-guard' first to build the binary, then: make install-guard"
+        log_error "Run 'make build-guard' first to build the binary, then: make install-guard-host-exec"
         return 1
     fi
     if ! file "$guard_bin" | grep -q ELF; then
@@ -30,7 +36,7 @@ install_guard_binary() {
     if [[ -z "$install_mode" ]]; then
         log_error "No build-mode marker at ${guard_bin}.mode and no in-process build mode."
         log_error "Binary build mode (capability vs root-only) unknown; refusing to guess."
-        log_error "Build via 'make build-guard' (records mode), then 'make install-guard'."
+        log_error "Build via 'make build-guard' (records mode), then 'make install-guard-host-exec'."
         return 1
     fi
     if [[ "$install_mode" != "capability" && "$install_mode" != "root-only" ]]; then
@@ -67,7 +73,7 @@ install_guard_binary() {
             echo ""
             echo -e "${RED}${BOLD}  !! $nr_count non-root login user(s) detected.${NC}"
             echo -e "${RED}${BOLD}     Their git will be BROKEN by root-only mode.${NC}"
-            echo -e "${RED}${BOLD}     For non-root users, use: make build-guard && make install-guard${NC}"
+            echo -e "${RED}${BOLD}     For non-root users, use: make build-guard && make install-guard-host-exec${NC}"
         fi
         echo ""
         echo "Root-only is intended ONLY for root/PRoot/container environments."
@@ -78,14 +84,16 @@ install_guard_binary() {
     else
         echo ""
         echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
-        echo -e "${CYAN}${BOLD} Git Guard: File Capability Installation${NC}"
+        echo -e "${CYAN}${BOLD} Git Guard: host-exec Installation${NC}"
         echo -e "${CYAN}${BOLD}═══════════════════════════════════════════════════════${NC}"
         echo ""
-        echo "The Git Guard is a capability-enabled binary that wraps /usr/bin/git."
+        echo "The Git Guard is a file-capability binary that wraps /usr/bin/git."
         echo ""
         echo "WHAT IT DOES:"
         echo "  • Relocates real git → /usr/bin/git.original (0700, root-only)"
-        echo "  • Installs guard binary → /usr/bin/git (0755, cap_setpcap,cap_chown,cap_dac_override,cap_fowner,cap_fsetid+ep)"
+        echo "  • Installs guard binary → /usr/bin/git (0755, file capabilities)"
+        echo "  • Grants workload caps via setcap on /usr/bin/git (host-exec class)"
+        echo "  • Removes any prior pam_cap artifacts from earlier installs"
         echo "  • Gives users rights to run git ONLY through the guard"
         echo "  • Blocks: git reset --hard, git checkout --hard, git rebase,"
         echo "            git commit --amend, git push --force, git reset,"
@@ -104,14 +112,19 @@ install_guard_binary() {
     if [[ "$install_mode" == "root-only" && "${nr_count:-0}" -gt 0 ]]; then
         if [[ "${FORCE_ROOT_ONLY:-0}" != "1" ]]; then
             log_error "Refusing root-only install: ${nr_count} non-root login user(s) would lose git access."
-            log_error "Multi-user host: use capability mode -> make build-guard && make install-guard"
-            log_error "To override (non-root git WILL break): FORCE_ROOT_ONLY=1 make install-guard"
+            log_error "Multi-user host: use capability mode -> make build-guard && make install-guard-host-exec"
+            log_error "To override (non-root git WILL break): FORCE_ROOT_ONLY=1 make install-guard-host-exec"
             return 1
         fi
         log_warn "FORCE_ROOT_ONLY=1: proceeding despite ${nr_count} non-root users (their git will break)."
     fi
 
-    if [[ -t 0 ]] && [[ "${GUARD_NONINTERACTIVE:-0}" != "1" ]]; then
+    if [[ "${GUARD_RECONCILE:-0}" == "1" ]] || [[ -f /usr/bin/git.original ]]; then
+        log_info "Reconciling git guard installation..."
+    fi
+
+    if [[ -t 0 ]] && [[ "${GUARD_NONINTERACTIVE:-0}" != "1" ]] \
+        && [[ "${GUARD_RECONCILE:-0}" != "1" ]] && [[ ! -f /usr/bin/git.original ]]; then
         echo -ne "${CYAN}${BOLD}Proceed with git guard installation? [y/N] ${NC}"
         read -r response
         case "$response" in
@@ -222,10 +235,12 @@ install_guard_binary() {
         cp "$guard_bin" /usr/bin/git
         chown root:root /usr/bin/git
         chmod 0755 /usr/bin/git
-        setcap 'cap_setpcap,cap_chown,cap_dac_override,cap_fowner,cap_fsetid+ep' /usr/bin/git || {
-            log_error "Failed to set file capabilities on /usr/bin/git"
+        _guard_best_effort setcap -r /usr/bin/git
+        if ! install_guard_host_exec; then
+            log_error "host-exec capability delivery failed: rolling back"
+            rollback_guard
             return 1
-        }
+        fi
 
         if command -v chattr >/dev/null; then
             chattr +i /usr/bin/git || log_warn "Could not set immutable on /usr/bin/git"
@@ -242,7 +257,7 @@ EOF
 #!/usr/bin/env bash
 set -euo pipefail
 if dpkg -l git | grep -q '^ii' && [[ ! -f /usr/bin/git.original ]]; then
-    echo '[WARN] Git package changed but workspace guard not detected. Re-run: make install-guard' >&2
+    echo '[WARN] Git package changed but workspace guard not detected. Re-run: make install-guard-host-exec' >&2
 fi
 if [[ -f /usr/bin/git.distrib ]]; then
     chmod 0700 /usr/bin/git.distrib
@@ -287,43 +302,37 @@ EOF
 
     echo ""
     log_info "Running post-installation verification..."
-    local errors=0
+    local structural_errors=0 functional_errors=0
 
     local guard_mode guard_owner
     guard_mode=$(stat -c '%a' /usr/bin/git)
     guard_owner=$(stat -c '%U:%G' /usr/bin/git)
     if [[ "$guard_mode" != "755" || "$guard_owner" != "root:root" ]]; then
         log_error "Guard binary has wrong permissions: $guard_mode $guard_owner"
-        errors=1
+        structural_errors=1
     fi
 
     if [[ "$install_mode" == "capability" ]]; then
-        local _caps_found=0
+        local _cls
+        _cls="$(_guard_capture_line guard_read_deployment_class)"
+        if [[ "$_cls" != "host-exec" ]]; then
+            log_error "deployment-class must be host-exec (got: ${_cls:-missing})"
+            structural_errors=1
+        fi
         if command -v getcap >/dev/null; then
-            local _gc _gc_err _gc_rc
-            _gc_err="$(mktemp)"
-            _gc="$(getcap /usr/bin/git 2>"$_gc_err")" && _gc_rc=0 || _gc_rc=$?
-            if [[ $_gc_rc -ne 0 ]]; then
-                log_error "getcap failed (rc=$_gc_rc): $(cat "$_gc_err")"
-                rm -f "$_gc_err"
-                errors=1
-                continue
+            local _gc
+            _gc="$(_guard_capture_line getcap /usr/bin/git)"
+            if guard_git_has_required_file_caps; then
+                log_info "Guard binary has host-exec file caps: $_gc"
+            else
+                log_error "host-exec requires $(guard_workload_file_cap_string) (got: ${_gc:-none})"
+                structural_errors=1
             fi
-            if [[ -s "$_gc_err" ]]; then
-                log_warn "getcap stderr: $(cat "$_gc_err")"
-            fi
-            rm -f "$_gc_err"
-            for _c in cap_setpcap cap_chown cap_dac_override cap_fowner cap_fsetid; do
-                if echo "$_gc" | grep -q "$_c"; then
-                    _caps_found=$((_caps_found+1))
-                else
-                    log_error "Guard binary missing $_c capability"
-                    errors=1
-                fi
-            done
-        else
-            log_error "getcap not found: cannot verify file capabilities"
-            errors=1
+        fi
+        if [[ -f /etc/security/capability.conf ]] \
+            && grep -q 'workspace-guard ambient caps' /etc/security/capability.conf; then
+            log_error "pam_cap artifact still in capability.conf after host-exec install"
+            structural_errors=1
         fi
     fi
 
@@ -332,36 +341,69 @@ EOF
     real_owner=$(stat -c '%U:%G' /usr/bin/git.original)
     if [[ "$real_mode" != "700" || "$real_owner" != "root:root" ]]; then
         log_error "git.original has wrong permissions: $real_mode $real_owner"
-        errors=1
+        structural_errors=1
     fi
 
-    if git --version >/dev/null; then
-        log_info "git --version: $(git --version 2>&1)"
-    else
-        log_error "git --version failed"
-        errors=1
-    fi
-
-    verify_guard_blocks() {
-        local label="$1"
-        shift
-        local tmpdir
-        tmpdir=$(mktemp -d)
-        chmod 755 "$tmpdir"
-        if bash -c "cd '$tmpdir' && $*"; then
-            log_error "Guard did not block: $label"
-            errors=1
+    local verify_user=""
+    if [[ "$install_mode" == "capability" && "$structural_errors" -eq 0 ]]; then
+        verify_user="$(guard_verify_login_user)"
+        if [[ -z "$verify_user" ]]; then
+            log_error "No login user for functional install verification"
+            functional_errors=1
+        elif ! guard_host_exec_functional_healthy "$verify_user"; then
+            log_error "Agent $verify_user cannot run git (host-exec file-cap delivery ineffective)"
+            local _gc
+            _gc="$(_guard_capture_line guard_git_file_cap_actual)"
+            log_warn "  deployment-class: host-exec"
+            log_warn "  getcap /usr/bin/git: ${_gc:-<empty>}"
+            functional_errors=1
         else
-            log_info "Guard correctly blocked: $label"
+            local _ver_out _ver_rc=0
+            _ver_out="$(runuser -u "$verify_user" -- git --version 2>&1)" || _ver_rc=$?
+            if [[ $_ver_rc -eq 0 ]]; then
+                log_info "git --version ($verify_user, host-exec): $_ver_out"
+            else
+                log_error "git --version failed for $verify_user: $_ver_out"
+                functional_errors=1
+            fi
         fi
-        rm -rf "$tmpdir"
-    }
+    elif [[ "$install_mode" == "root-only" ]]; then
+        if git --version >/dev/null 2>&1; then
+            log_info "git --version: $(git --version 2>&1)"
+        else
+            log_error "git --version failed"
+            structural_errors=1
+        fi
+    fi
 
-    verify_guard_blocks "git reset --hard" git reset --hard
-    verify_guard_blocks "git update-ref" git update-ref refs/heads/main deadbeefcafe
-    verify_guard_blocks "git read-tree --reset" git read-tree -u --reset HEAD
-    verify_guard_blocks "git switch --discard-changes" git switch --discard-changes
-    verify_guard_blocks "git -- --hard bypass" git -- --hard
+    if [[ "$install_mode" == "capability" && "$functional_errors" -eq 0 && -n "$verify_user" ]]; then
+        verify_guard_blocks() {
+            local label="$1"
+            shift
+            local tmpdir _stderr _rc=0
+            tmpdir=$(mktemp -d)
+            chmod 755 "$tmpdir"
+            _stderr="$(mktemp)"
+            local cmd="cd '$tmpdir' && $*"
+            guard_verify_user_run "$verify_user" "$cmd" "$_stderr" || _rc=$?
+            if grep -q 'missing workload capabilities' "$_stderr"; then
+                log_error "Functional verify invalid for $label (workload caps missing)"
+                functional_errors=1
+            elif [[ $_rc -eq 0 ]]; then
+                log_error "Guard did not block: $label"
+                functional_errors=1
+            else
+                log_info "Guard correctly blocked: $label"
+            fi
+            rm -f "$_stderr"
+            rm -rf "$tmpdir"
+        }
+        verify_guard_blocks "git reset --hard" git reset --hard
+        verify_guard_blocks "git update-ref" git update-ref refs/heads/main deadbeefcafe
+        verify_guard_blocks "git read-tree --reset" git read-tree -u --reset HEAD
+        verify_guard_blocks "git switch --discard-changes" git switch --discard-changes
+        verify_guard_blocks "git -- --hard bypass" git -- --hard
+    fi
 
     for alt in "${_alt_git_paths[@]}"; do
         if [[ -e "$alt" ]]; then
@@ -383,29 +425,36 @@ EOF
         fi
     done
 
-    if [[ $errors -eq 0 ]]; then
-        echo ""
-        if [[ "$install_mode" == "root-only" ]]; then
-            log_info "Git guard installation complete (root-only mode: SOFT BARRIER)."
-            log_info "  /usr/bin/git          (0755 root:root, no caps)"
-            log_info "  /usr/bin/git.original (0700 root:root)"
-            log_info "  audit log: /var/log/workspace-guard/"
-            log_warn "  root-only mode: root can bypass (soft barrier, see threat model docs)"
-        else
-            log_info "Git guard installation complete."
-            log_info "  /usr/bin/git          (0755 root:root, cap_setpcap,cap_chown,cap_dac_override,cap_fowner,cap_fsetid+ep, immutable)"
-            log_info "  /usr/bin/git.original (0700 root:root, immutable)"
-            log_info "  dpkg-divert configured"
-            log_info "  apt hook registered"
-            log_info "  audit log: /var/log/workspace-guard/"
-        fi
-        echo ""
-        log_info "To verify: make check-guard"
-    else
-        log_error "Installation verification failed: rolling back"
+    if [[ $structural_errors -ne 0 ]]; then
+        log_error "Structural verification failed: rolling back"
         rollback_guard
         return 1
     fi
+
+    if [[ $functional_errors -ne 0 ]]; then
+        log_error "Guard installed but agent cannot run git"
+        log_error "Fix host-exec delivery, then: sudo make install-guard-host-exec"
+        return 1
+    fi
+
+    echo ""
+    if [[ "$install_mode" == "root-only" ]]; then
+        log_info "Git guard installation complete (root-only mode: SOFT BARRIER)."
+        log_info "  /usr/bin/git          (0755 root:root, no caps)"
+        log_info "  /usr/bin/git.original (0700 root:root)"
+        log_info "  audit log: /var/log/workspace-guard/"
+        log_warn "  root-only mode: root can bypass (soft barrier, see threat model docs)"
+    else
+        log_info "Git guard installation complete (host-exec)."
+        log_info "  /usr/bin/git          (0755 root:root, file caps, immutable)"
+        log_info "  /usr/bin/git.original (0700 root:root, immutable)"
+        log_info "  deployment-class: host-exec (see /usr/lib/workspace-guard/deployment-class)"
+        log_info "  dpkg-divert configured"
+        log_info "  apt hook registered"
+        log_info "  audit log: /var/log/workspace-guard/"
+    fi
+    echo ""
+    log_info "To verify: make check-guard-host-exec"
 
     return 0
 }

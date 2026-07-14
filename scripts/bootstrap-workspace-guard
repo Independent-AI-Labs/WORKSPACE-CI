@@ -15,14 +15,51 @@ log_info()  { echo -e "${GREEN}[INFO]${NC} $*"; }
 log_warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $*"; }
 
-MODE="${1:-install}"  # install | uninstall | reinstall | check | build-only | install-only
+MODE="${1:-install-host-exec}"  # install-host-exec | check-host-exec | uninstall | build-only; removed modes hard-fail
+
+_guard_removed_target_error() {
+    local removed_target="$1" replacement="$2"
+    log_error "make $removed_target is removed. Use: make $replacement"
+    exit 1
+}
 
 divert_is_active() {
     dpkg-divert --list /usr/bin/git | grep -q 'git.distrib'
 }
 
+guard_is_installed() {
+    [[ -f /usr/bin/git.original ]] \
+        || divert_is_active \
+        || [[ -f /usr/lib/workspace-guard/deployment-class ]]
+}
+
 uninstall_guard() {
     log_info "Uninstalling workspace guard..."
+    if ! guard_is_installed; then
+        log_info "Git guard not installed; cleaning workspace-guard artifacts only"
+        if command -v chattr >/dev/null; then
+            [[ -f /usr/bin/git ]] && _guard_best_effort chattr -i /usr/bin/git
+            [[ -f /usr/bin/git.original ]] && _guard_best_effort chattr -i /usr/bin/git.original
+        fi
+        if declare -F guard_scrub_pam_artifacts >/dev/null; then
+            guard_scrub_pam_artifacts || {
+                local _scrub_rc=$?
+                printf 'guard optional scrub failed (rc=%s)\n' "$_scrub_rc" >&2
+            }
+        fi
+        rm -f /etc/apt/apt.conf.d/99workspace-guard
+        rm -f /etc/apt/apt.conf.d/99git-guard
+        rm -rf /usr/lib/workspace-guard
+        rm -rf /usr/lib/ami-git-guard
+        rm -rf /var/log/workspace-guard
+        rm -rf /var/log/ami-git-guard
+        if [[ -x /usr/bin/git ]]; then
+            _guard_best_effort setcap -r /usr/bin/git
+        fi
+        log_info "Cleanup complete"
+        git --version
+        return 0
+    fi
     if command -v chattr >/dev/null; then
         test -f /usr/bin/git       && chattr -i /usr/bin/git
         test -f /usr/bin/git.original && chattr -i /usr/bin/git.original
@@ -36,16 +73,24 @@ uninstall_guard() {
         mv /usr/bin/git.original /usr/bin/git
         chown root:root /usr/bin/git
         chmod 0755 /usr/bin/git
+        _guard_best_effort setcap -r /usr/bin/git
         log_info "Restored /usr/bin/git from git.original"
     elif [[ -f /usr/bin/git.distrib ]]; then
         mv /usr/bin/git.distrib /usr/bin/git
         chown root:root /usr/bin/git
         chmod 0755 /usr/bin/git
+        _guard_best_effort setcap -r /usr/bin/git
         log_info "Restored /usr/bin/git from git.distrib"
     else
         log_error "No git backup found: cannot restore"
         log_error "Reinstall git: sudo apt install --reinstall git"
         return 1
+    fi
+    if declare -F guard_scrub_pam_artifacts >/dev/null; then
+        guard_scrub_pam_artifacts || {
+            local _scrub_rc=$?
+            printf 'guard optional scrub failed (rc=%s)\n' "$_scrub_rc" >&2
+        }
     fi
     rm -f /etc/apt/apt.conf.d/99workspace-guard
     rm -f /etc/apt/apt.conf.d/99git-guard
@@ -82,7 +127,7 @@ rollback_guard() {
     fi
     if [[ -f /usr/bin/git.original ]]; then
         if command -v chattr >/dev/null; then
-rc=0; chattr -i /usr/bin/git.original || rc=$?
+            rc=0; chattr -i /usr/bin/git.original || rc=$?
             if [ $rc -ne 0 ]; then
                 echo "chattr -i /usr/bin/git.original: no-op or failed (rc=$rc)" >&2
             fi
@@ -90,38 +135,39 @@ rc=0; chattr -i /usr/bin/git.original || rc=$?
         mv /usr/bin/git.original /usr/bin/git
         chown root:root /usr/bin/git
         chmod 0755 /usr/bin/git
+        _guard_best_effort setcap -r /usr/bin/git
         log_info "Restored /usr/bin/git from git.original"
     elif [[ -f /usr/bin/git.distrib ]]; then
         mv /usr/bin/git.distrib /usr/bin/git
         chown root:root /usr/bin/git
         chmod 0755 /usr/bin/git
+        _guard_best_effort setcap -r /usr/bin/git
         log_info "Restored /usr/bin/git from git.distrib"
     fi
     rm -f /etc/apt/apt.conf.d/99workspace-guard
     rm -rf /usr/lib/workspace-guard
 }
 
-preflight_check() {
-    if [[ -f /usr/bin/git.original ]]; then
-        local gmode gowner
-        gmode=$(stat -c '%a' /usr/bin/git.original)
-        gowner=$(stat -c '%U:%G' /usr/bin/git.original)
-        if [[ "$gmode" == "700" && "$gowner" == "root:root" ]]; then
-            if [[ -x /usr/bin/git ]]; then
-                local guard_mode guard_owner
-                guard_mode=$(stat -c '%a' /usr/bin/git)
-                guard_owner=$(stat -c '%U:%G' /usr/bin/git)
-                if [[ "$guard_owner" == "root:root" ]]; then
-                    # Capability mode: 4555 or 0755 with caps
-                    # Root-only mode: 0755 without caps
-                    if [[ "$guard_mode" == "4555" || "$guard_mode" == "755" ]]; then
-                        return 0
-                    fi
-                fi
-            fi
-        fi
+_run_guard_install_with_drift_check() {
+    local guard_bin="${1:-}"
+    if [[ -z "$guard_bin" ]]; then
+        guard_bin="$(_resolve_guard_bin)" || {
+            log_error "Guard binary not found; run make build-guard first"
+            return 1
+        }
     fi
-    return 1
+    local -a _drift=()
+    if [[ "$MODE" != "reinstall" ]]; then
+        _guard_read_lines _drift guard_install_drift_reasons "$guard_bin"
+        if [[ ${#_drift[@]} -eq 0 ]]; then
+            log_info "Git guard healthy; nothing to do."
+            return 0
+        fi
+        log_warn "Git guard drift detected; reconciling:"
+        printf '  - %s\n' "${_drift[@]}"
+        export GUARD_RECONCILE=1
+    fi
+    install_guard_binary "$guard_bin" || return 1
 }
 
 # Source the build and install helpers from lib/. These were extracted
@@ -132,73 +178,64 @@ preflight_check() {
 # Use `source ... || exit 1` per AGENTS.md Rule 14 (no bare source).
 # shellcheck source=lib/guard-build.sh
 source "$_CI_ROOT/lib/guard-build.sh" || exit 1
+# shellcheck source=lib/guard-drift.sh
+source "$_CI_ROOT/lib/guard-drift.sh" || exit 1
+# shellcheck source=lib/guard-host-exec.sh
+source "$_CI_ROOT/lib/guard-host-exec.sh" || exit 1
 # shellcheck source=lib/guard-install.sh
 source "$_CI_ROOT/lib/guard-install.sh" || exit 1
 
 install_guard() {
-    if [[ "$MODE" != "reinstall" ]]; then
-        if preflight_check; then
-            log_info "Git guard is already installed."
-            log_info "To reinstall: make build-guard && make install-guard"
-            return 0
-        fi
-    fi
-
     build_guard_binary || return 1
-    install_guard_binary "$GUARD_BIN" || return 1
+    _run_guard_install_with_drift_check "$GUARD_BIN" || return 1
 }
 
 check_guard() {
-    if preflight_check; then
-        log_info "Rust guard status: INSTALLED"
+    local ref_bin=""
+    ref_bin="$(_guard_capture_line _resolve_guard_bin)"
+    local -a _drift=()
+    _guard_read_lines _drift guard_install_drift_reasons "$ref_bin"
+
+    if [[ ${#_drift[@]} -eq 0 ]]; then
+        log_info "Rust guard status: HEALTHY"
         if [[ -f /usr/bin/git ]]; then
             log_info "  /usr/bin/git: $(stat -c '%a %U:%G' /usr/bin/git)"
-            if command -v getcap >/dev/null && getcap /usr/bin/git | grep -q cap_setpcap; then
-                log_info "  mode: capability (cap_setpcap,cap_chown,cap_dac_override,cap_fowner,cap_fsetid+ep)"
-            else
-                log_info "  mode: root-only (no caps: soft barrier)"
-            fi
-        else
-            log_warn "  /usr/bin/git: MISSING"
         fi
         if [[ -f /usr/bin/git.original ]]; then
             log_info "  /usr/bin/git.original: $(stat -c '%a %U:%G' /usr/bin/git.original)"
-        else
-            log_warn "  /usr/bin/git.original: MISSING"
         fi
-        if divert_is_active; then
-            log_info "  dpkg-divert: ACTIVE"
-        else
-            log_warn "  dpkg-divert: not configured (root-only mode skips this)"
-        fi
-        if [[ -f /etc/apt/apt.conf.d/99workspace-guard ]]; then
-            log_info "  apt hook: INSTALLED"
-        else
-            log_warn "  apt hook: not configured (root-only mode skips this)"
-        fi
-        if [[ -f /usr/bin/git ]] && command -v lsattr >/dev/null; then
-            if lsattr /usr/bin/git | grep -q '^....i'; then
-                log_info "  immutable: YES"
-            else
-                log_warn "  immutable: NO (root-only mode skips this)"
-            fi
-        else
-            log_warn "  immutable: SKIPPED (lsattr unavailable)"
-        fi
-    else
-        log_info "Rust guard status: NOT INSTALLED"
-        log_info "To install: make build-guard && make install-guard"
+        local _mode _cls
+        _mode="$(_guard_reference_mode "$ref_bin")"
+        _cls="$(_guard_capture_line guard_read_deployment_class)"
+        log_info "  mode: $_mode"
+        [[ -n "$_cls" ]] && log_info "  deployment-class: $_cls"
+        return 0
     fi
+
+    if [[ "${_drift[0]}" == "guard not installed:"* ]]; then
+        log_info "Rust guard status: NOT INSTALLED"
+    else
+        log_info "Rust guard status: DRIFTED"
+    fi
+    log_warn "Drift items:"
+    printf '  - %s\n' "${_drift[@]}"
+    log_info "Fix: sudo make install-guard-host-exec (from SSH/TTY where NoNewPrivs=0)"
 }
 
 case "$MODE" in
     uninstall) uninstall_guard ;;
-    check) check_guard ;;
+    check-host-exec) check_guard ;;
+    check) _guard_removed_target_error check-guard check-guard-host-exec ;;
     build-only) build_guard_binary ;;
-    install-only)
-        GUARD_BIN="$_guard_dir/target/release/workspace-guard"
-        install_guard_binary "$GUARD_BIN"
+    install-host-exec)
+        GUARD_BIN="$(_resolve_guard_bin)" || {
+            log_error "Guard binary not found; make build-guard should run first"
+            exit 1
+        }
+        _run_guard_install_with_drift_check "$GUARD_BIN"
         ;;
-    reinstall|install) install_guard ;;
+    install-only|install|reinstall)
+        _guard_removed_target_error install-guard install-guard-host-exec
+        ;;
     *) log_error "Unknown mode: $MODE"; exit 1 ;;
 esac

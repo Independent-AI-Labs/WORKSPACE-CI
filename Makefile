@@ -389,7 +389,7 @@ enforce-syslog-limits: ## Enforce system-level log ceilings: logrotate maxsize +
 # WORKSPACE-GUARD: compiled git protection (opt-in)
 # =============================================================================
 
-.PHONY: build-guard install-guard uninstall-guard check-guard
+.PHONY: build-guard install-guard install-guard-host-exec uninstall-guard check-guard check-guard-host-exec
 
 # Operator invocation contract: guard targets depend on `ensure-repos`
 # (upstream `make` chain) which pulls every workspace repo over SSH. The
@@ -403,11 +403,19 @@ enforce-syslog-limits: ## Enforce system-level log ceilings: logrotate maxsize +
 build-guard: ## Build git-guard binary (operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make build-guard)
 	bash scripts/bootstrap-workspace-guard build-only
 
-install-guard: ## Install git-guard to /usr/bin/git (operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make install-guard; binary must be pre-built)
-	$(SUDO) bash scripts/bootstrap-workspace-guard install-only
+install-guard: ## REMOVED: use install-guard-host-exec
+	@echo "ERROR: make install-guard is removed. Use: make install-guard-host-exec" >&2
+	@exit 1
+
+install-guard-host-exec: build-guard ## Install git-guard (host-exec; operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make install-guard-host-exec)
+	$(SUDO) bash scripts/bootstrap-workspace-guard install-host-exec
 
 uninstall-guard: ## Uninstall git-guard, restore original /usr/bin/git (operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make uninstall-guard)
 	$(SUDO) bash scripts/bootstrap-workspace-guard uninstall
 
-check-guard: ## Check git-guard installation status (read-only, runs as agent)
-	bash scripts/bootstrap-workspace-guard check
+check-guard: ## REMOVED: use check-guard-host-exec
+	@echo "ERROR: make check-guard is removed. Use: make check-guard-host-exec" >&2
+	@exit 1
+
+check-guard-host-exec: ## Check host-exec git-guard installation (read-only, runs as agent)
+	bash scripts/bootstrap-workspace-guard check-host-exec
