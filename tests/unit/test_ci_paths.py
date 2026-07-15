@@ -195,3 +195,112 @@ class TestFindWebDataDir:
         monkeypatch.setenv("CI_WEB_DATA_DIR", str(tmp_path))
         result = ci_paths.find_web_data_dir()
         assert result == tmp_path.resolve()
+
+
+class TestNormalizeConfigStem:
+    def test_strips_yaml_suffix(self) -> None:
+        assert ci_paths.normalize_config_stem("banned_words.yaml") == "banned_words"
+
+    def test_strips_yml_suffix(self) -> None:
+        assert ci_paths.normalize_config_stem("foo.yml") == "foo"
+
+
+class TestConfigPathEnvVar:
+    def test_ci_prefix(self) -> None:
+        assert ci_paths.config_path_env_var("banned-words") == "CI_CONFIG_PATH_BANNED_WORDS"
+
+    def test_guard_prefix(self) -> None:
+        assert (
+            ci_paths.config_path_env_var("guard-custom", guard=True)
+            == "CI_GUARD_CONFIG_PATH_GUARD_CUSTOM"
+        )
+
+
+class TestFindGuardConfigDir:
+    def test_env_override(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        monkeypatch.setenv("CI_GUARD_CONFIG_DIR", str(tmp_path))
+        assert ci_paths.find_guard_config_dir() == tmp_path.resolve()
+
+    def test_raises_when_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("CI_GUARD_CONFIG_DIR", raising=False)
+        monkeypatch.delenv("WORKSPACE_GUARD_CONFIG_ROOT", raising=False)
+        with pytest.raises(FileNotFoundError, match="CI_GUARD_CONFIG_DIR"):
+            ci_paths.find_guard_config_dir()
+
+
+class TestFindProjectRootFallback:
+    def test_derives_from_config_dir(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        monkeypatch.delenv("CI_PROJECT_ROOT", raising=False)
+        monkeypatch.setenv("CI_CONFIG_DIR", str(config_dir))
+        assert ci_paths.find_project_root() == tmp_path.resolve()
+
+
+class TestLoadYamlConfig:
+    def test_loads_existing_config(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        config_file = config_dir / "sample.yaml"
+        config_file.write_text("version: 2\n", encoding="utf-8")
+        monkeypatch.setenv("CI_CONFIG_DIR", str(config_dir))
+
+        data = ci_paths.load_yaml_config("sample")
+        assert data == {"version": 2}
+
+    def test_returns_none_when_optional_missing(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        monkeypatch.setenv("CI_CONFIG_DIR", str(config_dir))
+
+        data = ci_paths.load_yaml_config("missing", required=False)
+        assert data is None
+
+
+class TestResolveGuardConfigPath:
+    def test_raises_when_required_and_missing(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        monkeypatch.setenv("CI_GUARD_CONFIG_DIR", str(tmp_path))
+        with pytest.raises(FileNotFoundError, match="Guard config not found"):
+            ci_paths.resolve_guard_config_path("missing_guard_cfg")
+
+
+class TestManifestErrors:
+    def test_invalid_manifest_type(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        manifest = tmp_path / "bad.yaml"
+        manifest.write_text("- not-a-mapping\n", encoding="utf-8")
+        monkeypatch.setenv("CI_CONFIG_OVERRIDES", str(manifest))
+        with pytest.raises(TypeError, match="must be a mapping"):
+            ci_paths.resolve_config_path("banned_words")
+
+    def test_missing_manifest_file(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        monkeypatch.setenv("CI_CONFIG_OVERRIDES", str(tmp_path / "nope.yaml"))
+        with pytest.raises(FileNotFoundError, match="manifest not found"):
+            ci_paths.resolve_config_path("banned_words")
