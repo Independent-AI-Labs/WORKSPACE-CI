@@ -4,6 +4,10 @@ import { StoreHydration } from '@/components/StoreHydration'
 import { getBranding } from '@/lib/branding'
 import '@/styles/globals.css'
 
+// Wiki chrome (sidebar Home pin, landing flag) reads runtime env vars.
+// Without this, static pages bake isHomeLandingEnabled() at image build time.
+export const dynamic = 'force-dynamic'
+
 const branding = getBranding()
 
 const montserrat = Montserrat({

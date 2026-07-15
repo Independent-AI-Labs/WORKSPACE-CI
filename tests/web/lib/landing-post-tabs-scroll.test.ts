@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   getHorizontalScrollOverflow,
   getHorizontalScrollStep,
+  getPostTabIndicatorRect,
 } from '@/lib/landing-post-tabs-scroll'
 
 describe('getHorizontalScrollOverflow', () => {
@@ -30,6 +31,46 @@ describe('getHorizontalScrollOverflow', () => {
     expect(getHorizontalScrollOverflow(200, 400, 200)).toEqual({
       canScrollLeft: true,
       canScrollRight: false,
+    })
+  })
+})
+
+describe('getPostTabIndicatorRect', () => {
+  it('uses scroll offsets so the indicator tracks tabs inside overflow', () => {
+    const list = {
+      scrollLeft: 80,
+      scrollTop: 0,
+      getBoundingClientRect: () => ({ left: 40, top: 100, width: 200, height: 48 }),
+    } as unknown as HTMLElement
+
+    const tab = {
+      getBoundingClientRect: () => ({ left: 90, top: 108, width: 72, height: 32 }),
+    } as unknown as HTMLElement
+
+    expect(getPostTabIndicatorRect(list, tab)).toEqual({
+      x: 130,
+      y: 8,
+      w: 72,
+      h: 32,
+    })
+  })
+
+  it('matches visible offset when scroll origin is zero', () => {
+    const list = {
+      scrollLeft: 0,
+      scrollTop: 0,
+      getBoundingClientRect: () => ({ left: 40, top: 100, width: 200, height: 48 }),
+    } as unknown as HTMLElement
+
+    const tab = {
+      getBoundingClientRect: () => ({ left: 56, top: 108, width: 72, height: 32 }),
+    } as unknown as HTMLElement
+
+    expect(getPostTabIndicatorRect(list, tab)).toEqual({
+      x: 16,
+      y: 8,
+      w: 72,
+      h: 32,
     })
   })
 })

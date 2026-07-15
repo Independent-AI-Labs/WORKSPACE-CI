@@ -32,15 +32,6 @@ export function LandingStackedGestureCanvas({
     baseZoom: number
     getImageSize: () => { width: number; height: number } | null
   } | null>(null)
-  baseZoomRef.current = baseZoom
-  layoutContextRef.current = {
-    baseZoom: baseZoomRef.current,
-    getImageSize: () => {
-      const image = imageRef.current
-      if (!image?.naturalWidth || !image.naturalHeight) return null
-      return { width: image.naturalWidth, height: image.naturalHeight }
-    },
-  }
 
   const paint = useCallback(() => {
     const host = hostRef.current
@@ -91,8 +82,6 @@ export function LandingStackedGestureCanvas({
     })
   }, [paint])
 
-  repaintRef.current = schedulePaint
-
   const { resetTransform } = useGestureCanvasTransform(
     hostRef,
     transformRef,
@@ -101,7 +90,26 @@ export function LandingStackedGestureCanvas({
   )
 
   const resetTransformRef = useRef(resetTransform)
-  resetTransformRef.current = resetTransform
+
+  useEffect(() => {
+    baseZoomRef.current = baseZoom
+    layoutContextRef.current = {
+      baseZoom,
+      getImageSize: () => {
+        const image = imageRef.current
+        if (!image?.naturalWidth || !image.naturalHeight) return null
+        return { width: image.naturalWidth, height: image.naturalHeight }
+      },
+    }
+  }, [baseZoom])
+
+  useEffect(() => {
+    repaintRef.current = schedulePaint
+  }, [schedulePaint])
+
+  useEffect(() => {
+    resetTransformRef.current = resetTransform
+  }, [resetTransform])
 
   useEffect(() => {
     resetTransformRef.current()

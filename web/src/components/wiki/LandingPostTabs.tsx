@@ -6,10 +6,10 @@ import { useNarrowViewport } from '@/hooks/useNarrowViewport'
 import {
   getHorizontalScrollOverflow,
   getHorizontalScrollStep,
+  getPostTabIndicatorRect,
+  type PostTabIndicatorRect,
 } from '@/lib/landing-post-tabs-scroll'
 import type { LandingPost, LandingUi } from '@/lib/landing-posts'
-
-type PostTabIndicatorRect = { x: number; y: number; w: number; h: number }
 
 function formatPostTabLabel(template: string, label: string): string {
   return template.replace('{label}', label)
@@ -60,14 +60,7 @@ export function LandingPostTabs({
     const tab = postTabRefs.current[postIndex]
     if (!list || !tab) return
 
-    const listRect = list.getBoundingClientRect()
-    const tabRect = tab.getBoundingClientRect()
-    setPostTabIndicator({
-      x: tabRect.left - listRect.left,
-      y: tabRect.top - listRect.top,
-      w: tabRect.width,
-      h: tabRect.height,
-    })
+    setPostTabIndicator(getPostTabIndicatorRect(list, tab))
     setPostTabIndicatorReady(true)
     syncPostTabScrollHints()
   }, [postIndex, syncPostTabScrollHints])

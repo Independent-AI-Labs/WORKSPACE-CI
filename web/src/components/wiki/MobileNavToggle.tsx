@@ -2,12 +2,21 @@
 
 import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
+import { useNarrowViewport } from '@/hooks/useNarrowViewport'
 import { useSidebarStore } from '@/stores/sidebar-store'
+
+function isSidebarCollapsedOnDom(): boolean {
+  if (typeof document === 'undefined') return false
+  return document.documentElement.getAttribute('data-sidebar-collapsed') === 'true'
+}
 
 export function MobileNavToggle() {
   const pathname = usePathname()
+  const isNarrow = useNarrowViewport()
+  const collapsed = useSidebarStore((s) => s.collapsed)
   const mobileOpen = useSidebarStore((s) => s.mobileOpen)
   const setMobileOpen = useSidebarStore((s) => s.setMobileOpen)
+  const toggle = useSidebarStore((s) => s.toggle)
 
   useEffect(() => {
     const sidebar = document.getElementById('wiki-sidebar')
@@ -31,21 +40,21 @@ export function MobileNavToggle() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [mobileOpen, setMobileOpen])
 
+  const isCollapsed = collapsed || isSidebarCollapsedOnDom()
+
   return (
     <>
-      {!mobileOpen && (
-        <button
-          type="button"
-          className="mobile-nav-toggle"
-          aria-expanded={mobileOpen}
-          aria-controls="wiki-sidebar"
-          aria-label="Open navigation menu"
-          onClick={() => setMobileOpen(true)}
-        >
-          <i className="ri-menu-line" aria-hidden="true" />
-        </button>
-      )}
-      {mobileOpen && (
+      <button
+        type="button"
+        className="mobile-nav-toggle"
+        aria-expanded={isNarrow ? mobileOpen : !isCollapsed}
+        aria-controls="wiki-sidebar"
+        aria-label={isNarrow ? 'Open navigation menu' : 'Expand sidebar'}
+        onClick={() => (isNarrow ? setMobileOpen(true) : toggle())}
+      >
+        <i className="ri-menu-line" aria-hidden="true" />
+      </button>
+      {isNarrow && mobileOpen && (
         <div
           className="mobile-nav-backdrop"
           onClick={() => setMobileOpen(false)}

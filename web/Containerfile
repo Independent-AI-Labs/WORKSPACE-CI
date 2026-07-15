@@ -84,6 +84,7 @@ COPY --from=extract /workspace/CI/web/src/data ./CI/web/src/data
 
 WORKDIR /workspace/CI/web
 ENV CI_WIKI_PROD_BUILD=1
+ENV WIKI_HOME_LANDING_ENABLED=true
 RUN set -eux \
     && echo "[wiki-build] checking inputs" \
     && test -f /workspace/CI/README.md \

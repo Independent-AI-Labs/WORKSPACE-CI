@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 import { WikiSidebar } from '@/components/wiki/WikiSidebar'
 import { WikiBreadcrumbs } from '@/components/wiki/WikiBreadcrumbs'
+import { WikiHeaderBrand } from '@/components/wiki/WikiHeaderBrand'
 import { WikiFooter } from '@/components/wiki/WikiFooter'
 import { ThemeToggle } from '@/components/wiki/ThemeToggle'
 import { WikiSearch } from '@/components/wiki/WikiSearch'
@@ -32,6 +33,7 @@ export function WikiShell({ children, contentClassName }: WikiShellProps) {
       <div className="wiki-main">
         <header className="wiki-header" role="banner">
           <div className="wiki-header__left">
+            <WikiHeaderBrand branding={branding} homeLandingEnabled={homeLandingEnabled} />
             <WikiBreadcrumbs homeLandingEnabled={homeLandingEnabled} />
           </div>
           <div className="wiki-header__actions">

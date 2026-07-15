@@ -145,28 +145,19 @@
   flex-shrink: 0;
 }
 
-/* Collapsed state - desktop only */
+/* Collapsed desktop: icon rail; header chrome moves to main column hamburger */
 @media (min-width: 769px) {
   [data-sidebar-collapsed='true'] .wiki-sidebar {
     overflow-x: hidden;
+    padding-top: var(--wiki-chrome-header-height);
   }
 
   [data-sidebar-collapsed='true'] .wiki-sidebar__header {
-    justify-content: center;
-    padding: var(--space-3) var(--space-1);
+    display: none;
   }
 
-  [data-sidebar-collapsed='true'] .wiki-sidebar__brand {
-    flex: 0;
-  }
-
-  [data-sidebar-collapsed='true'] .wiki-sidebar__title {
-    display: none !important;
-  }
-
-  [data-sidebar-collapsed='true'] .wiki-sidebar__toggle {
-    margin-left: 0;
-    width: 100%;
+  [data-sidebar-collapsed='true'] .wiki-sidebar__nav--pinned {
+    padding-top: 0;
   }
 
   [data-sidebar-collapsed='true'] .wiki-sidebar__link {

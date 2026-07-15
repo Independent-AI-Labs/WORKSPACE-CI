@@ -68,6 +68,52 @@ describe('LandingPostTabs', () => {
     expect(screen.queryByRole('button', { name: 'Scroll tabs left' })).toBeNull()
   })
 
+  it('positions the active tab indicator using scroll offsets', () => {
+    const { container } = render(
+      <LandingPostTabs
+        posts={posts}
+        postIndex={1}
+        ui={ui}
+        reducedMotion
+        onPostTab={vi.fn()}
+      />,
+    )
+
+    const tablist = container.querySelector('.landing-stage__post-tabs') as HTMLDivElement
+    const activeTab = screen.getByRole('tab', { selected: true })
+
+    vi.spyOn(tablist, 'getBoundingClientRect').mockReturnValue({
+      x: 40,
+      y: 100,
+      left: 40,
+      top: 100,
+      right: 240,
+      bottom: 148,
+      width: 200,
+      height: 48,
+      toJSON: () => ({}),
+    })
+    vi.spyOn(activeTab, 'getBoundingClientRect').mockReturnValue({
+      x: 90,
+      y: 108,
+      left: 90,
+      top: 108,
+      right: 162,
+      bottom: 140,
+      width: 72,
+      height: 32,
+      toJSON: () => ({}),
+    })
+    mockTablistOverflow(tablist, { clientWidth: 120, scrollWidth: 360, scrollLeft: 80 })
+    fireEvent.scroll(tablist)
+
+    const indicator = container.querySelector(
+      '.landing-stage__post-tab-indicator',
+    ) as HTMLSpanElement
+    expect(indicator.style.getPropertyValue('--tab-ind-x')).toBe('130px')
+    expect(indicator.style.getPropertyValue('--tab-ind-w')).toBe('72px')
+  })
+
   it('shows a left scroll hint after scrolling away from the start', () => {
     const { container } = render(
       <LandingPostTabs

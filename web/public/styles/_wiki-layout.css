@@ -33,6 +33,19 @@
   min-width: 0;
 }
 
+.wiki-header__brand {
+  display: none;
+  align-items: center;
+  flex-shrink: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.wiki-header__brand-logo {
+  width: var(--space-8);
+  height: var(--space-8);
+}
+
 .wiki-header__actions {
   display: flex;
   align-items: center;
@@ -64,6 +77,34 @@
 
 .mobile-nav-toggle {
   display: none;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 1.125rem;
+  line-height: 1;
+  flex-shrink: 0;
+  position: fixed;
+  top: calc((var(--wiki-chrome-header-height) - 2.25rem) / 2);
+  left: var(--space-3);
+  z-index: calc(var(--z-modal) + 1);
+}
+
+.mobile-nav-toggle:hover {
+  border-color: var(--accent);
+}
+
+.mobile-nav-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-backdrop);
+  z-index: calc(var(--z-modal) - 1);
 }
 
 @media (max-width: 768px) {
@@ -78,42 +119,40 @@
 
   .mobile-nav-toggle {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    width: 2.25rem;
-    height: 2.25rem;
-    padding: 0;
-    cursor: pointer;
-    color: var(--text);
-    font-size: 1.125rem;
-    line-height: 1;
-    flex-shrink: 0;
-    position: fixed;
-    top: calc((var(--wiki-chrome-header-height) - 2.25rem) / 2);
-    left: var(--space-3);
-    z-index: calc(var(--z-modal) + 1);
   }
 
-  .mobile-nav-toggle:hover {
-    border-color: var(--accent);
-  }
-
-  .mobile-nav-backdrop {
-    position: fixed;
-    inset: 0;
-    background: var(--overlay-backdrop);
-    z-index: calc(var(--z-modal) - 1);
+  .wiki-shell:has(.wiki-sidebar.is-open) .mobile-nav-toggle {
+    display: none;
   }
 
   .wiki-header__left {
     padding-left: calc(2.25rem + var(--space-2));
   }
 
+  .wiki-header__brand {
+    display: inline-flex;
+  }
+
+  .wiki-shell:has(.wiki-sidebar.is-open) .wiki-header__brand {
+    display: none;
+  }
+
   .wiki-header__actions {
     margin-left: auto;
+  }
+}
+
+@media (min-width: 769px) {
+  [data-sidebar-collapsed='true'] .mobile-nav-toggle {
+    display: flex;
+  }
+
+  [data-sidebar-collapsed='true'] .wiki-header__left {
+    padding-left: calc(2.25rem + var(--space-2));
+  }
+
+  [data-sidebar-collapsed='true'] .wiki-header__brand {
+    display: inline-flex;
   }
 }
 
