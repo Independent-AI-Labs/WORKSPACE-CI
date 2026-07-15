@@ -68,6 +68,7 @@ _link_lib_files() {
         done
     done
     [[ -e "$_ci_dir/pyproject.toml" ]] || ln -s "$PROJECT_DIR/pyproject.toml" "$_ci_dir/pyproject.toml"
+    [[ -e "$_ci_dir/ci" ]] || ln -s "$PROJECT_DIR/ci" "$_ci_dir/ci"
 }
 
 _setup_tmpdir() {
@@ -105,6 +106,7 @@ _setup_tmpdir() {
         # Reset workspace pyproject.toml (may have been overwritten)
         echo '[project]' > "$TEST_TMP/workspace/pyproject.toml"
         echo 'name = "workspace"' >> "$TEST_TMP/workspace/pyproject.toml"
+        echo 'version = "0.0.0"' >> "$TEST_TMP/workspace/pyproject.toml"
         return
     fi
     TEST_TMP="$(mktemp -d)"
@@ -122,6 +124,7 @@ _setup_tmpdir() {
     # Minimal pyproject.toml at workspace root
     echo '[project]' > "$TEST_TMP/workspace/pyproject.toml"
     echo 'name = "workspace"' >> "$TEST_TMP/workspace/pyproject.toml"
+    echo 'version = "0.0.0"' >> "$TEST_TMP/workspace/pyproject.toml"
     # Symlink the real .venv/ so ci_check_silent_swallow's e2e tests can
     # find bin/python (the classifier requires a working interpreter).
     ln -s "$PROJECT_DIR/.venv" "$_ci_dir/.venv"
