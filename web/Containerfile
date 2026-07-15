@@ -54,6 +54,7 @@ COPY WORKSPACE-GUARD/.git/config ./WORKSPACE-GUARD/.git/config
 COPY WORKSPACE-GATEWAY/README.md WORKSPACE-GATEWAY/Makefile ./WORKSPACE-GATEWAY/
 COPY WORKSPACE-GATEWAY/res ./WORKSPACE-GATEWAY/res
 COPY WORKSPACE-GATEWAY/.git/config ./WORKSPACE-GATEWAY/.git/config
+COPY WORKSPACE-WEB-CONTENT/ ./WORKSPACE-WEB-CONTENT/
 COPY CI/README.md CI/Makefile ./CI/
 COPY CI/res ./CI/res
 COPY CI/config ./CI/config
@@ -64,6 +65,7 @@ COPY --from=extract /workspace/CI/web/src/data ./CI/web/src/data
 
 WORKDIR /workspace/CI/web
 RUN test -f /workspace/CI/README.md \
+    && test -f /workspace/WORKSPACE-WEB-CONTENT/landing-posts.yaml \
     && npm install \
     && npm run build
 
@@ -90,6 +92,7 @@ COPY WORKSPACE-GUARD/.git/config ./WORKSPACE-GUARD/.git/config
 COPY WORKSPACE-GATEWAY/README.md WORKSPACE-GATEWAY/Makefile ./WORKSPACE-GATEWAY/
 COPY WORKSPACE-GATEWAY/res ./WORKSPACE-GATEWAY/res
 COPY WORKSPACE-GATEWAY/.git/config ./WORKSPACE-GATEWAY/.git/config
+COPY WORKSPACE-WEB-CONTENT/ ./WORKSPACE-WEB-CONTENT/
 COPY CI/README.md CI/Makefile ./CI/
 COPY CI/res ./CI/res
 COPY CI/config ./CI/config

@@ -3,4 +3,6 @@ node_modules/
 out/
 *.tsbuildinfo
 public/logos/
+content/
+public/landing/
 .podman-containers.conf

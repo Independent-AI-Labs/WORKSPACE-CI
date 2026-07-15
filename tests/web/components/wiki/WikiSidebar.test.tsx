@@ -60,9 +60,21 @@ describe('WikiSidebar', () => {
     expect(patternsLink).toHaveClass('is-active')
   })
 
-  it('renders all nav items', () => {
+  it('renders Open Source when landing flag is off', () => {
     render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
     expect(screen.getByText('Open Source')).toBeInTheDocument()
+    expect(screen.queryByText('Home')).not.toBeInTheDocument()
+  })
+
+  it('renders Home and Projects when landing flag is on', () => {
+    render(<WikiSidebar stats={mockStats} branding={mockBranding} homeLandingEnabled />)
+    expect(screen.getByText('Home')).toBeInTheDocument()
+    expect(screen.getByText('Projects')).toBeInTheDocument()
+    expect(screen.queryByText('Open Source')).not.toBeInTheDocument()
+  })
+
+  it('renders all nav items', () => {
+    render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
     expect(screen.getByText('Runtime Hooks')).toBeInTheDocument()
     expect(screen.getByText('Guard Policies')).toBeInTheDocument()
     expect(screen.getByText('LLM Gateway')).toBeInTheDocument()

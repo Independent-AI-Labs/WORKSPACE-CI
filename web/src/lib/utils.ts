@@ -73,9 +73,10 @@ export function formatValueHtml(value: unknown, indent = 0): string {
   return escHtml(String(value))
 }
 
-export function pageTitle(path: string): string {
+export function pageTitle(path: string, homeLandingEnabled = false): string {
   const map: Record<string, string> = {
-    '/': 'Open Source',
+    '/': homeLandingEnabled ? 'Home' : 'Open Source',
+    '/projects': 'Projects',
     '/patterns': 'Code Anti-Patterns',
     '/hooks': 'Git Hooks',
     '/config': 'Config Files',

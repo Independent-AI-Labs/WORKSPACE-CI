@@ -1,14 +1,25 @@
 version: 1
 pages:
   - id: page-home
-    title: Open Source
+    title: Home
     section: Pages
-    content: "Project catalogue: browse READMEs for all backend projects"
+    content: "Mission, tech stack, and rotating posts on zero-trust agents and digital sovereignty"
     href: /
     keywords:
       - home
-      - catalogue
+      - mission
+      - landing
+      - sovereignty
+      - clankers
+  - id: page-projects
+    title: Projects
+    section: Pages
+    content: "Project catalogue: browse READMEs for all backend projects"
+    href: /projects
+    keywords:
       - projects
+      - catalogue
+      - open source
       - readme
   - id: page-patterns
     title: Code Anti-Patterns

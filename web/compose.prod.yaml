@@ -15,6 +15,7 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://localhost,https://127.0.0.1}
       # Unset = auto-derive https://<request-host>/grafana per request (same-origin iframes).
       GRAFANA_BASE_URL: ${GRAFANA_BASE_URL:-}
+      WIKI_HOME_LANDING_ENABLED: ${WIKI_HOME_LANDING_ENABLED:-false}
     expose:
       - "3000"
     volumes:

@@ -16,8 +16,8 @@ interface NavItem {
   divider?: boolean
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { href: '/', label: 'Open Source', icon: 'ri-dna-line' },
+const BASE_NAV_ITEMS: NavItem[] = [
+  { href: '/projects', label: 'Projects', icon: 'ri-dna-line' },
   { href: '/hooks', label: 'Git Hooks', icon: 'ri-git-commit-line', count: 'hooks' },
   { href: '/runtime-hooks', label: 'Runtime Hooks', icon: 'ri-pulse-line', count: 'runtimeHooks' },
   { href: '/patterns', label: 'Code Anti-Patterns', icon: 'ri-error-warning-line', count: 'patterns' },
@@ -31,17 +31,27 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/integration', label: 'Integration Guide', icon: 'ri-plug-line', divider: true },
 ]
 
+function buildNavItems(homeLandingEnabled: boolean): NavItem[] {
+  if (!homeLandingEnabled) {
+    return [{ href: '/', label: 'Open Source', icon: 'ri-dna-line' }, ...BASE_NAV_ITEMS.slice(1)]
+  }
+  return [{ href: '/', label: 'Home', icon: 'ri-home-line' }, ...BASE_NAV_ITEMS]
+}
+
 function isPathActive(pathname: string, href: string): boolean {
   if (href === '/') return pathname === '/'
+  if (href === '/projects') return pathname === '/projects'
   return pathname === href || pathname.startsWith(href + '/')
 }
 
 interface WikiSidebarProps {
   stats: WikiStats
   branding: Branding
+  homeLandingEnabled?: boolean
 }
 
-export function WikiSidebar({ stats, branding }: WikiSidebarProps) {
+export function WikiSidebar({ stats, branding, homeLandingEnabled = false }: WikiSidebarProps) {
+  const navItems = buildNavItems(homeLandingEnabled)
   const pathname = usePathname()
   const collapsed = useSidebarStore((s) => s.collapsed)
   const mobileOpen = useSidebarStore((s) => s.mobileOpen)
@@ -79,7 +89,7 @@ export function WikiSidebar({ stats, branding }: WikiSidebarProps) {
         </button>
       </div>
       <ul className="wiki-sidebar__nav">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const isActive = isPathActive(pathname, item.href)
           const count = item.count ? stats[item.count] : undefined
           return (
