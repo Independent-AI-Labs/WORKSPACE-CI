@@ -266,6 +266,7 @@
 }
 
 .landing-stage__stacked-pan--doc {
+  --landing-pdf-preview-zoom: 3.75;
   background: #525659;
 }
 
@@ -305,7 +306,7 @@
   max-height: 100%;
   object-fit: contain;
   object-position: center;
-  transform: scale(var(--landing-pdf-preview-zoom, 2.5));
+  transform: scale(var(--landing-pdf-preview-zoom, 3.75));
   background: #525659;
 }
 

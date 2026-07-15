@@ -238,7 +238,7 @@
   --landing-pan-inset: -2%;
   --landing-pan-scale-start: 1.02;
   --landing-pan-scale-mid: 1.04;
-  --landing-pdf-preview-zoom: 1.75;
+  --landing-pdf-preview-zoom: 2.625;
   --landing-pdf-nav-width: 12.5rem;
   --landing-pdf-toolbar-offset: 2.75rem;
   --landing-pdf-nav-scrollbar-width: 1.125rem;
@@ -345,7 +345,7 @@
   max-height: 100%;
   object-fit: contain;
   object-position: center;
-  transform: scale(var(--landing-pdf-preview-zoom, 1.75));
+  transform: scale(var(--landing-pdf-preview-zoom, 2.625));
   background: #525659;
 }
 

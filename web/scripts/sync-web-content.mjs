@@ -129,6 +129,7 @@ async function syncWebContent() {
   }
   const landingDest = path.resolve(WEB_DIR, 'public', 'landing')
   await mirrorPostAssets(postsSrc, landingDest, ids)
+  await import('./prerender-landing-pdf-previews.mjs')
 }
 
 await syncWebContent()
