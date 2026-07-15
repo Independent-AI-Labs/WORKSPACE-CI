@@ -1,14 +1,9 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useNarrowViewport } from '@/hooks/useNarrowViewport'
 import { useSidebarStore } from '@/stores/sidebar-store'
-
-function isSidebarCollapsedOnDom(): boolean {
-  if (typeof document === 'undefined') return false
-  return document.documentElement.getAttribute('data-sidebar-collapsed') === 'true'
-}
 
 export function MobileNavToggle() {
   const pathname = usePathname()
@@ -17,6 +12,12 @@ export function MobileNavToggle() {
   const mobileOpen = useSidebarStore((s) => s.mobileOpen)
   const setMobileOpen = useSidebarStore((s) => s.setMobileOpen)
   const toggle = useSidebarStore((s) => s.toggle)
+  const [chromeReady, setChromeReady] = useState(false)
+
+  useLayoutEffect(() => {
+    useSidebarStore.getState().hydrate()
+    setChromeReady(true)
+  }, [])
 
   useEffect(() => {
     const sidebar = document.getElementById('wiki-sidebar')
@@ -40,7 +41,7 @@ export function MobileNavToggle() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [mobileOpen, setMobileOpen])
 
-  const isCollapsed = collapsed || isSidebarCollapsedOnDom()
+  const isCollapsed = chromeReady && collapsed
 
   return (
     <>
