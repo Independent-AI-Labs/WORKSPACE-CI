@@ -73,15 +73,28 @@ describe('RotatingPosts', () => {
     expect(screen.getByText('Slide B')).toBeInTheDocument()
   })
 
-  it('loops from last slide back to first within a post', () => {
+  it('advances to the next post from the last slide', () => {
     render(<RotatingPosts posts={posts} settings={settings} ui={ui} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Page 2 of 2' }))
     expect(screen.getByText('Slide B')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
-    expect(screen.getByText('Slide A')).toBeInTheDocument()
-    expect(screen.getByText('FIRST POST')).toBeInTheDocument()
+    expect(screen.getByText('SECOND POST')).toBeInTheDocument()
+    expect(screen.getByText('Doc')).toBeInTheDocument()
+  })
+
+  it('advances to the next post on interval after the last slide', () => {
+    render(<RotatingPosts posts={posts} settings={settings} ui={ui} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2 of 2' }))
+    expect(screen.getByText('Slide B')).toBeInTheDocument()
+
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(screen.getByText('SECOND POST')).toBeInTheDocument()
+    expect(screen.getByText('Doc')).toBeInTheDocument()
   })
 
   it('switches posts via post tabs', () => {

@@ -1,14 +1,21 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import Image from 'next/image'
 import clsx from 'clsx'
-import type { LandingPost, LandingSettings, LandingSlide, LandingUi } from '@/lib/landing-posts'
+import type { LandingPost, LandingSettings, LandingUi } from '@/lib/landing-posts'
+import {
+  assignPanAxisForSlide,
+  buildInitialPanMap,
+  panSlideKey,
+  resolveSlidePan,
+  type SlidePan,
+} from '@/lib/landing-pan'
 import {
   measureSlideTextHeight,
   typographyFromComputed,
   type PretextTypography,
 } from '@/lib/landing-pretext'
+import { LandingSlideLayer } from '@/components/wiki/LandingSlideLayer'
 import { SlideTextLayer } from '@/components/wiki/SlideTextLayer'
 
 interface RotatingPostsProps {
@@ -27,134 +34,6 @@ function formatPostTabLabel(template: string, label: string): string {
 
 function postTabLabel(post: LandingPost): string {
   return post.tab_label ?? post.title
-}
-
-type PanAxis = { x: 1 | -1; y: 1 | -1 }
-
-type SlidePan = { axis: PanAxis; token: number }
-
-const DEFAULT_PAN: SlidePan = { axis: { x: 1, y: 1 }, token: 0 }
-
-function randomPanAxis(): PanAxis {
-  return {
-    x: Math.random() < 0.5 ? 1 : -1,
-    y: Math.random() < 0.5 ? 1 : -1,
-  }
-}
-
-function panSlideKey(postId: string, slideIndex: number): string {
-  return `${postId}-${slideIndex}`
-}
-
-function assignPanAxisForSlide(
-  prev: Record<string, SlidePan>,
-  postId: string,
-  slideIndex: number,
-  seed?: SlidePan,
-): Record<string, SlidePan> {
-  const key = panSlideKey(postId, slideIndex)
-  return {
-    ...prev,
-    [key]: {
-      axis: randomPanAxis(),
-      token: (prev[key]?.token ?? seed?.token ?? 0) + 1,
-    },
-  }
-}
-
-function buildInitialPanMap(posts: LandingPost[]): Record<string, SlidePan> {
-  const map: Record<string, SlidePan> = {}
-  for (const p of posts) {
-    for (let i = 0; i < p.slides.length; i++) {
-      map[panSlideKey(p.id, i)] = { axis: randomPanAxis(), token: 1 }
-    }
-  }
-  return map
-}
-
-function resolveSlidePan(
-  panBySlide: Record<string, SlidePan>,
-  initialPanBySlide: Record<string, SlidePan>,
-  postId: string,
-  slideIndex: number,
-): SlidePan {
-  const key = panSlideKey(postId, slideIndex)
-  return panBySlide[key] ?? initialPanBySlide[key] ?? DEFAULT_PAN
-}
-
-function SlideLayer({
-  slide,
-  active,
-  leaving,
-  transitionMs,
-  panDurationMs,
-  pan,
-}: {
-  slide: LandingSlide
-  active: boolean
-  leaving: boolean
-  transitionMs: number
-  panDurationMs: number
-  pan: SlidePan
-}) {
-  const layerStyle = {
-    ['--landing-fade-ms' as string]: `${transitionMs}ms`,
-    ['--landing-pan-duration' as string]: `${panDurationMs}ms`,
-  }
-
-  if (slide.type === 'image') {
-    return (
-      <div
-        className={clsx(
-          'landing-stage__layer',
-          active && 'is-active',
-          leaving && 'is-leaving',
-        )}
-        style={layerStyle}
-        aria-hidden={!active}
-      >
-        <div
-          key={pan.token}
-          className="landing-stage__pan"
-          style={{
-            ['--pan-x' as string]: pan.axis.x,
-            ['--pan-y' as string]: pan.axis.y,
-          }}
-        >
-          <Image src={slide.src} alt="" fill className="landing-stage__image" sizes="100vw" unoptimized />
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div
-      className={clsx(
-        'landing-stage__layer',
-        'landing-stage__layer--doc',
-        active && 'is-active',
-        leaving && 'is-leaving',
-      )}
-      style={layerStyle}
-      aria-hidden={!active}
-    >
-      <div
-        key={pan.token}
-        className="landing-stage__pan landing-stage__pan--doc"
-        style={{
-          ['--pan-x' as string]: pan.axis.x,
-          ['--pan-y' as string]: pan.axis.y,
-        }}
-      >
-        <iframe
-          src={slide.src}
-          title={slide.subtitle}
-          className="landing-stage__iframe"
-          tabIndex={-1}
-        />
-      </div>
-    </div>
-  )
 }
 
 export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
@@ -216,18 +95,6 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
     [initialPanBySlide, post, slideIndex, settings.transition_ms],
   )
 
-  const goNext = useCallback(() => {
-    if (!post) return
-    const nextIndex = (slideIndex + 1) % post.slides.length
-    transitionToSlide(nextIndex)
-  }, [post, slideIndex, transitionToSlide])
-
-  const goPrev = useCallback(() => {
-    if (!post) return
-    const nextIndex = (slideIndex - 1 + post.slides.length) % post.slides.length
-    transitionToSlide(nextIndex)
-  }, [post, slideIndex, transitionToSlide])
-
   const goToPost = useCallback(
     (index: number) => {
       if (index === postIndex) return
@@ -248,6 +115,60 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
     },
     [initialPanBySlide, postIndex, posts, resetTimer],
   )
+
+  const goNext = useCallback(() => {
+    if (!post) return
+    if (slideIndex < post.slides.length - 1) {
+      transitionToSlide(slideIndex + 1)
+      return
+    }
+    if (posts.length > 1) {
+      goToPost((postIndex + 1) % posts.length)
+      return
+    }
+    transitionToSlide(0)
+  }, [goToPost, post, postIndex, posts.length, slideIndex, transitionToSlide])
+
+  const goPrev = useCallback(() => {
+    if (!post) return
+    if (slideIndex > 0) {
+      transitionToSlide(slideIndex - 1)
+      return
+    }
+    if (posts.length > 1) {
+      const prevPostIndex = (postIndex - 1 + posts.length) % posts.length
+      const prevPost = posts[prevPostIndex]
+      if (!prevPost) return
+      const lastSlideIndex = prevPost.slides.length - 1
+      if (leaveTimerRef.current) {
+        clearTimeout(leaveTimerRef.current)
+        leaveTimerRef.current = null
+      }
+      setPrefadingSlideIndex(null)
+      setLeavingSlideIndex(null)
+      setPanBySlide((prev) =>
+        assignPanAxisForSlide(
+          prev,
+          prevPost.id,
+          lastSlideIndex,
+          initialPanBySlide[panSlideKey(prevPost.id, lastSlideIndex)],
+        ),
+      )
+      setPostIndex(prevPostIndex)
+      setSlideIndex(lastSlideIndex)
+      resetTimer()
+      return
+    }
+    transitionToSlide(post.slides.length - 1)
+  }, [
+    initialPanBySlide,
+    post,
+    postIndex,
+    posts,
+    resetTimer,
+    slideIndex,
+    transitionToSlide,
+  ])
 
   const goToSlide = useCallback(
     (index: number) => {
@@ -398,7 +319,7 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
           }}
         >
           {post.slides.map((s, i) => (
-            <SlideLayer
+            <LandingSlideLayer
               key={`${post.id}-${s.src}-${i}`}
               slide={s}
               active={i === slideIndex}
