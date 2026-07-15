@@ -10,6 +10,9 @@ const SUBTITLE_GAP_PX = 12
 /** Horizontal padding on `.landing-stage__slide-panel` (space-6 × 2). */
 export const SLIDE_PANEL_PADDING_X_PX = 48
 
+/** Vertical padding on `.landing-stage__slide-panel` (space-5 × 2). */
+export const SLIDE_PANEL_PADDING_Y_PX = 40
+
 export function typographyFromComputed(style: CSSStyleDeclaration): PretextTypography {
   const weight = style.fontWeight || '400'
   const size = style.fontSize || '16px'
@@ -52,15 +55,16 @@ export function measureTextHeight(
 export function measureSlideTextHeight(
   subtitle: string,
   body: string,
-  textWidth: number,
+  contentWidth: number,
   subtitleType: PretextTypography,
   bodyType: PretextTypography,
 ): number {
-  const subtitleHeight = measureTextHeight(subtitle, textWidth, subtitleType)
-  const bodyHeight = measureTextHeight(body, textWidth, bodyType)
-  return subtitleHeight + SUBTITLE_GAP_PX + bodyHeight
+  const bodyTextWidth = panelBodyTextWidth(contentWidth)
+  const subtitleHeight = measureTextHeight(subtitle, contentWidth, subtitleType)
+  const bodyHeight = measureTextHeight(body, bodyTextWidth, bodyType)
+  return subtitleHeight + SUBTITLE_GAP_PX + SLIDE_PANEL_PADDING_Y_PX + bodyHeight
 }
 
-export function textWidthFromContent(contentWidth: number): number {
+export function panelBodyTextWidth(contentWidth: number): number {
   return Math.max(0, contentWidth - SLIDE_PANEL_PADDING_X_PX)
 }

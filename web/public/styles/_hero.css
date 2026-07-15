@@ -21,6 +21,11 @@
   margin: 0;
 }
 
+.hero__subtitle strong {
+  font-weight: 600;
+  color: color-mix(in oklab, var(--text) 55%, var(--muted));
+}
+
 @media (max-width: 480px) {
   .hero {
     padding: var(--space-4) var(--space-3);

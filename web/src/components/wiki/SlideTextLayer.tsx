@@ -10,7 +10,7 @@ interface SlideTextLayerProps {
   active: boolean
   leaving: boolean
   transitionMs: number
-  textWidth: number
+  contentWidth: number
   subtitleType: PretextTypography
   bodyType: PretextTypography
   reducedMotion: boolean
@@ -25,7 +25,7 @@ export function SlideTextLayer({
   active,
   leaving,
   transitionMs,
-  textWidth,
+  contentWidth,
   subtitleType,
   bodyType,
   reducedMotion,
@@ -35,8 +35,14 @@ export function SlideTextLayer({
   sourceLabel,
 }: SlideTextLayerProps) {
   const measuredHeight =
-    textWidth > 0
-      ? measureSlideTextHeight(slide.subtitle, slide.content, textWidth, subtitleType, bodyType)
+    contentWidth > 0
+      ? measureSlideTextHeight(
+          slide.subtitle,
+          slide.content,
+          contentWidth,
+          subtitleType,
+          bodyType,
+        )
       : null
 
   const layerStyle = {
@@ -55,8 +61,8 @@ export function SlideTextLayer({
       style={layerStyle}
       aria-hidden={!active}
     >
+      <h2 className="landing-stage__subtitle">{slide.subtitle}</h2>
       <div className="landing-stage__slide-panel">
-        <h2 className="landing-stage__subtitle">{slide.subtitle}</h2>
         <p className="landing-stage__body">{slide.content}</p>
 
         {showLinks && (
