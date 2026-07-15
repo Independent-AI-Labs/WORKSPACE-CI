@@ -69,6 +69,9 @@
 
   /* Shared wiki chrome row: breadcrumbs/actions and sidebar branding */
   --wiki-chrome-header-height: calc(var(--space-3) * 2 + var(--space-8) + var(--space-px));
+  --wiki-chrome-hamburger-width: 2.25rem;
+  --wiki-chrome-leading: calc(var(--space-3) + var(--wiki-chrome-hamburger-width) + var(--space-2));
+  --wiki-chrome-brand-inset: var(--space-2);
 
   /* ---- Tier 1: Typography scale (font-size) ----
      Display tiers (lg+) use clamp() for fluid scaling across 320-1280px.
