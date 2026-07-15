@@ -6,6 +6,7 @@ const minimal = {
   ui: {
     missing_content_message: 'Missing',
     source_link_label: 'Source',
+    download_link_label: 'Download PDF',
     carousel_aria_label: 'Carousel',
     slide_tab_aria_label_template: 'Page {n} of {total}',
     prev_slide_aria_label: 'Previous page',

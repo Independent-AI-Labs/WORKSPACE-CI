@@ -6,6 +6,7 @@ import type { LandingPost, LandingUi } from '@/lib/landing-posts'
 const ui: LandingUi = {
   missing_content_message: 'Missing',
   source_link_label: 'Official source',
+  download_link_label: 'Download PDF',
   carousel_aria_label: 'Rotating posts',
   slide_tab_aria_label_template: 'Page {n} of {total}',
   prev_slide_aria_label: 'Previous page',
@@ -99,5 +100,33 @@ describe('RotatingPosts', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Previous page' }))
     expect(screen.getByText('Slide A')).toBeInTheDocument()
+  })
+
+  it('renders download and official links for document slides', () => {
+    const docPosts: LandingPost[] = [
+      {
+        id: 'sov',
+        title: 'SOVEREIGNTY',
+        slides: [
+          {
+            type: 'document',
+            src: '/landing/sovereignty/doc.pdf',
+            source_url: 'https://eur-lex.europa.eu/example',
+            subtitle: 'EU slide',
+            content: 'Body text',
+          },
+        ],
+      },
+    ]
+    render(<RotatingPosts posts={docPosts} settings={settings} ui={ui} />)
+
+    expect(screen.getByRole('link', { name: 'Download PDF' })).toHaveAttribute(
+      'href',
+      '/landing/sovereignty/doc.pdf',
+    )
+    expect(screen.getByRole('link', { name: 'Official source' })).toHaveAttribute(
+      'href',
+      'https://eur-lex.europa.eu/example',
+    )
   })
 })

@@ -193,6 +193,9 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
   if (!post || !slide) return null
 
   const sourceLabel = slide.source_label ?? ui.source_link_label
+  const downloadLabel = slide.download_label ?? ui.download_link_label
+  const showDownload = slide.type === 'document'
+  const showLinks = showDownload || Boolean(slide.source_url)
 
   return (
     <section className="landing-stage" aria-live="polite" aria-atomic="true">
@@ -265,15 +268,26 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
           <p className="landing-stage__post-title">{post.title}</p>
           <h2 className="landing-stage__subtitle">{slide.subtitle}</h2>
           <p className="landing-stage__body">{slide.content}</p>
-          {slide.source_url && (
-            <a
-              href={slide.source_url}
-              className="landing-stage__source"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {sourceLabel}
-            </a>
+          {showLinks && (
+            <div className="landing-stage__links">
+              {showDownload && (
+                <a href={slide.src} className="landing-stage__link landing-stage__link--download" download>
+                  <i className="ri-download-2-line" aria-hidden="true" />
+                  {downloadLabel}
+                </a>
+              )}
+              {slide.source_url && (
+                <a
+                  href={slide.source_url}
+                  className="landing-stage__link landing-stage__link--external"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <i className="ri-external-link-line" aria-hidden="true" />
+                  {sourceLabel}
+                </a>
+              )}
+            </div>
           )}
         </div>
       </div>

@@ -12,6 +12,7 @@ export interface LandingSlide {
   content: string
   source_url?: string
   source_label?: string
+  download_label?: string
 }
 
 export interface LandingPost {
@@ -33,6 +34,7 @@ export interface LandingMission {
 export interface LandingUi {
   missing_content_message: string
   source_link_label: string
+  download_link_label: string
   carousel_aria_label: string
   slide_tab_aria_label_template: string
   prev_slide_aria_label: string
@@ -102,6 +104,9 @@ function assertSlide(slide: unknown, postId: string, index: number): LandingSlid
   if (typeof s.source_label === 'string' && s.source_label.trim()) {
     result.source_label = s.source_label.trim()
   }
+  if (typeof s.download_label === 'string' && s.download_label.trim()) {
+    result.download_label = s.download_label.trim()
+  }
   return result
 }
 
@@ -119,6 +124,7 @@ export function parseLandingPostsConfig(raw: unknown): LandingPostsConfig {
   const ui: LandingUi = {
     missing_content_message: requireString(u.missing_content_message, 'ui.missing_content_message'),
     source_link_label: requireString(u.source_link_label, 'ui.source_link_label'),
+    download_link_label: requireString(u.download_link_label, 'ui.download_link_label'),
     carousel_aria_label: requireString(u.carousel_aria_label, 'ui.carousel_aria_label'),
     slide_tab_aria_label_template: requireString(
       u.slide_tab_aria_label_template,
