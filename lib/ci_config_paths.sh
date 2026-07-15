@@ -2,7 +2,7 @@
 # Config path resolution for CI shell hooks.
 # Sourced by ci.sh after CI_LIB_DIR and CI_CONFIG_DIR are set.
 
-declare -A _CI_CONFIG_PATH_CACHE=()
+declare -g -A _CI_CONFIG_PATH_CACHE=()
 
 # ci_config_path <stem> [consumer_path]
 #
