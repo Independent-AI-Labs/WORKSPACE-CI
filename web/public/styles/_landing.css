@@ -79,10 +79,6 @@
   z-index: 1;
 }
 
-.landing-stage__layer.is-active.is-entering {
-  transition-delay: 140ms;
-}
-
 .landing-stage__layer.is-leaving {
   opacity: 0;
   z-index: 0;
@@ -156,16 +152,26 @@
     color-mix(in oklab, var(--bg) 40%, transparent) 100%
   );
   pointer-events: none;
-  transition: background 780ms ease-in;
 }
 
-.landing-stage__backdrop.is-bg-prefading .landing-stage__scrim {
-  background: linear-gradient(
-    105deg,
-    color-mix(in oklab, var(--bg) 97%, transparent) 0%,
-    color-mix(in oklab, var(--bg) 88%, transparent) 45%,
-    color-mix(in oklab, var(--bg) 72%, transparent) 100%
-  );
+.landing-stage__scrim::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  opacity: 0;
+  transition: opacity var(--landing-prefade-ms, 780ms) ease-in;
+  pointer-events: none;
+}
+
+.landing-stage__backdrop.is-bg-prefading .landing-stage__scrim::after {
+  opacity: 0.22;
+}
+
+.landing-stage__backdrop.is-bg-crossfading .landing-stage__scrim::after {
+  opacity: 0;
+  transition-duration: var(--landing-fade-ms, 1200ms);
+  transition-timing-function: ease-in-out;
 }
 
 .landing-stage__content {

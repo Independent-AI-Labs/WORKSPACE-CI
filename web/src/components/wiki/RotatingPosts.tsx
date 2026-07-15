@@ -65,7 +65,6 @@ function SlideLayer({
   slide,
   active,
   leaving,
-  entering,
   transitionMs,
   panDurationMs,
   pan,
@@ -73,7 +72,6 @@ function SlideLayer({
   slide: LandingSlide
   active: boolean
   leaving: boolean
-  entering: boolean
   transitionMs: number
   panDurationMs: number
   pan: SlidePan
@@ -90,7 +88,6 @@ function SlideLayer({
           'landing-stage__layer',
           active && 'is-active',
           leaving && 'is-leaving',
-          entering && 'is-entering',
         )}
         style={layerStyle}
         aria-hidden={!active}
@@ -116,7 +113,6 @@ function SlideLayer({
         'landing-stage__layer--doc',
         active && 'is-active',
         leaving && 'is-leaving',
-        entering && 'is-entering',
       )}
       style={layerStyle}
       aria-hidden={!active}
@@ -177,13 +173,13 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
         clearTimeout(prefadeTimerRef.current)
         prefadeTimerRef.current = null
       }
-      setPrefadingSlideIndex(null)
       const outgoing = slideIndex
       setPanBySlide((prev) => assignPanAxisForSlide(prev, post.id, nextIndex))
       setLeavingSlideIndex(outgoing)
       setSlideIndex(nextIndex)
       leaveTimerRef.current = setTimeout(() => {
         setLeavingSlideIndex(null)
+        setPrefadingSlideIndex(null)
         leaveTimerRef.current = null
       }, settings.transition_ms)
     },
@@ -368,7 +364,12 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
           className={clsx(
             'landing-stage__backdrop',
             prefadingSlideIndex !== null && leavingSlideIndex === null && 'is-bg-prefading',
+            leavingSlideIndex !== null && 'is-bg-crossfading',
           )}
+          style={{
+            ['--landing-fade-ms' as string]: `${settings.transition_ms}ms`,
+            ['--landing-prefade-ms' as string]: `${fadeLeadMs}ms`,
+          }}
         >
           {post.slides.map((s, i) => (
             <SlideLayer
@@ -376,7 +377,6 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
               slide={s}
               active={i === slideIndex}
               leaving={i === leavingSlideIndex}
-              entering={i === slideIndex && leavingSlideIndex !== null}
               transitionMs={settings.transition_ms}
               panDurationMs={settings.background_pan_duration_ms}
               pan={panBySlide[panSlideKey(post.id, i)] ?? DEFAULT_PAN}
