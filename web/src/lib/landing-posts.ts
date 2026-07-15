@@ -17,7 +17,12 @@ export interface LandingSlide {
 export interface LandingPost {
   id: string
   title: string
+  tab_label?: string
   slides: LandingSlide[]
+}
+
+export interface LandingHero {
+  intro: string
 }
 
 export interface LandingMission {
@@ -32,17 +37,21 @@ export interface LandingUi {
   slide_tab_aria_label_template: string
   prev_slide_aria_label: string
   next_slide_aria_label: string
+  posts_tablist_aria_label: string
+  post_tab_aria_label_template: string
 }
 
 export interface LandingSettings {
   post_interval_ms: number
   slide_interval_ms: number
   transition_ms: number
+  background_pan_duration_ms: number
 }
 
 export interface LandingPostsConfig {
   version: number
   ui: LandingUi
+  hero: LandingHero
   mission: LandingMission
   settings: LandingSettings
   posts: LandingPost[]
@@ -117,7 +126,21 @@ export function parseLandingPostsConfig(raw: unknown): LandingPostsConfig {
     ),
     prev_slide_aria_label: requireString(u.prev_slide_aria_label, 'ui.prev_slide_aria_label'),
     next_slide_aria_label: requireString(u.next_slide_aria_label, 'ui.next_slide_aria_label'),
+    posts_tablist_aria_label: requireString(
+      u.posts_tablist_aria_label,
+      'ui.posts_tablist_aria_label',
+    ),
+    post_tab_aria_label_template: requireString(
+      u.post_tab_aria_label_template,
+      'ui.post_tab_aria_label_template',
+    ),
   }
+
+  const heroRaw = data.hero
+  if (!heroRaw || typeof heroRaw !== 'object') {
+    throw new Error('landing-posts.yaml: hero is required')
+  }
+  const h = heroRaw as Record<string, unknown>
 
   const mission = data.mission
   if (!mission || typeof mission !== 'object') {
@@ -134,6 +157,10 @@ export function parseLandingPostsConfig(raw: unknown): LandingPostsConfig {
     post_interval_ms: requireNumber(s.post_interval_ms, 'settings.post_interval_ms'),
     slide_interval_ms: requireNumber(s.slide_interval_ms, 'settings.slide_interval_ms'),
     transition_ms: requireNumber(s.transition_ms, 'settings.transition_ms'),
+    background_pan_duration_ms: requireNumber(
+      s.background_pan_duration_ms,
+      'settings.background_pan_duration_ms',
+    ),
   }
 
   const postsRaw = data.posts
@@ -150,16 +177,23 @@ export function parseLandingPostsConfig(raw: unknown): LandingPostsConfig {
     if (!Array.isArray(p.slides) || p.slides.length === 0) {
       throw new Error(`landing-posts.yaml: posts[${pi}] slides must be non-empty`)
     }
-    return {
+    const entry: LandingPost = {
       id,
       title,
       slides: p.slides.map((slide, si) => assertSlide(slide, id, si)),
     }
+    if (typeof p.tab_label === 'string' && p.tab_label.trim()) {
+      entry.tab_label = p.tab_label.trim()
+    }
+    return entry
   })
 
   return {
     version: typeof data.version === 'number' ? data.version : 1,
     ui,
+    hero: {
+      intro: requireString(h.intro, 'hero.intro'),
+    },
     mission: {
       headline: requireString(m.headline, 'mission.headline'),
       summary: requireString(m.summary, 'mission.summary'),

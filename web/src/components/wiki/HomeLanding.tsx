@@ -1,4 +1,5 @@
 import { RotatingPosts } from '@/components/wiki/RotatingPosts'
+import { getBranding } from '@/lib/branding'
 import { getLandingPostsConfig } from '@/lib/landing-posts'
 
 export function HomeLanding() {
@@ -7,12 +8,17 @@ export function HomeLanding() {
     return null
   }
 
+  const branding = getBranding()
+
   return (
     <div className="landing-page">
-      <header className="landing-mission">
-        <h1 className="landing-mission__headline">{config.mission.headline}</h1>
-        <p className="landing-mission__summary">{config.mission.summary}</p>
-      </header>
+      <section className="hero landing-hero">
+        <h1 className="hero__title">{branding.name}</h1>
+        <p className="hero__subtitle">{config.hero.intro}</p>
+        <p className="hero__subtitle landing-hero__mission">
+          <strong>{config.mission.headline}</strong> {config.mission.summary}
+        </p>
+      </section>
 
       <RotatingPosts
         posts={config.posts}

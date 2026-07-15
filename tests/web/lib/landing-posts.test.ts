@@ -10,6 +10,11 @@ const minimal = {
     slide_tab_aria_label_template: 'Page {n} of {total}',
     prev_slide_aria_label: 'Previous page',
     next_slide_aria_label: 'Next page',
+    posts_tablist_aria_label: 'Featured posts',
+    post_tab_aria_label_template: '{label}',
+  },
+  hero: {
+    intro: 'Unified wiki intro text.',
   },
   mission: {
     headline: 'Test',
@@ -19,10 +24,12 @@ const minimal = {
     post_interval_ms: 30000,
     slide_interval_ms: 7000,
     transition_ms: 1200,
+    background_pan_duration_ms: 36000,
   },
   posts: [
     {
       id: 'a',
+      tab_label: 'Alpha',
       title: 'Post A',
       slides: [
         { type: 'image', src: '/landing/a.png', subtitle: 'Sub', content: 'Body' },
@@ -34,9 +41,12 @@ const minimal = {
 describe('parseLandingPostsConfig', () => {
   it('parses valid config', () => {
     const config = parseLandingPostsConfig(minimal)
+    expect(config.hero.intro).toContain('Unified wiki')
     expect(config.mission.headline).toBe('Test')
     expect(config.ui.source_link_label).toBe('Source')
+    expect(config.settings.background_pan_duration_ms).toBe(36000)
     expect(config.posts).toHaveLength(1)
+    expect(config.posts[0].tab_label).toBe('Alpha')
     expect(config.posts[0].slides[0].type).toBe('image')
   })
 
@@ -64,6 +74,10 @@ describe('parseLandingPostsConfig', () => {
 
   it('requires ui block', () => {
     expect(() => parseLandingPostsConfig({ ...minimal, ui: undefined })).toThrow()
+  })
+
+  it('requires hero block', () => {
+    expect(() => parseLandingPostsConfig({ ...minimal, hero: undefined })).toThrow()
   })
 
   it('rejects empty posts', () => {

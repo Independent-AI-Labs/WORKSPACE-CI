@@ -2,7 +2,6 @@ import { ProjectList } from '@/components/wiki/ProjectList'
 import { loadAllProjectSummaries, loadProjectMakefile, PROJECTS } from '@/lib/project-registry'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
 import { loadCodeStats } from '@/lib/docs-loader'
-import { getBranding } from '@/lib/branding'
 import { parseMakefile } from '@/lib/makefile-parser'
 import { highlightCode } from '@/lib/highlight'
 import type { LanguagePercent } from '@/types/code-stats'
@@ -59,14 +58,6 @@ export async function ProjectCatalogue() {
 
   return (
     <>
-      <section className="hero">
-        <h1 className="hero__title">{getBranding().name}</h1>
-        <p className="hero__subtitle">
-          Unified wiki for the digital and AI safety stack. Browse git hooks,
-          static checks, guard policies, runtime blocks, and LLM gateway
-          operations from one catalogue.
-        </p>
-      </section>
       <h1>Project Catalogue</h1>
       <p className="page-intro">
         Each card summarizes a workspace repo. Open the project title for the

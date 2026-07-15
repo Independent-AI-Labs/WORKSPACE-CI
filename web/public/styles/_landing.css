@@ -9,43 +9,70 @@
   gap: var(--space-6);
 }
 
-.landing-mission {
-  padding: var(--space-8) var(--space-6) 0;
-  max-width: 72rem;
+.landing-hero {
+  margin: var(--space-8) var(--space-6) 0;
 }
 
-.landing-mission__headline {
-  margin: 0 0 var(--space-3);
-  font-size: var(--text-3xl);
-  font-weight: 700;
-  letter-spacing: var(--tracking-tight);
-  line-height: var(--leading-tight);
-  color: var(--text);
-}
-
-.landing-mission__summary {
-  margin: 0;
-  max-width: 60ch;
-  font-size: var(--text-base);
-  line-height: var(--leading-relaxed);
-  color: var(--muted);
+.landing-hero__mission {
+  margin-top: var(--space-3);
 }
 
 .landing-stage {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.landing-stage__post-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0 var(--space-6) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.landing-stage__viewport {
   position: relative;
   min-height: clamp(22rem, 55vh, 36rem);
-  overflow: hidden;
+}
+
+.landing-stage__post-tab {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.landing-stage__post-tab:hover {
+  color: var(--text);
+  border-color: color-mix(in oklab, var(--text) 35%, var(--border));
+}
+
+.landing-stage__post-tab.is-active {
+  background: color-mix(in oklab, var(--text) 8%, var(--bg));
+  border-color: var(--text);
+  color: var(--text);
 }
 
 .landing-stage__backdrop {
   position: absolute;
   inset: 0;
+  overflow: hidden;
 }
 
 .landing-stage__layer {
   position: absolute;
   inset: 0;
   opacity: 0;
+  z-index: 1;
   transition: opacity ease-in-out;
   pointer-events: none;
   overflow: hidden;
@@ -53,6 +80,26 @@
 
 .landing-stage__layer.is-active {
   opacity: 1;
+  z-index: 2;
+}
+
+.landing-stage__layer.is-leaving {
+  opacity: 0;
+  z-index: 1;
+}
+
+.landing-stage__pan {
+  position: absolute;
+  inset: -4%;
+  overflow: hidden;
+}
+
+.landing-stage__pan--doc {
+  inset: -2%;
+}
+
+.landing-stage__layer.is-active .landing-stage__pan {
+  animation: landing-pan var(--landing-pan-duration, 36s) ease-in-out infinite alternate;
 }
 
 .landing-stage__image {
@@ -67,24 +114,35 @@
   height: 100%;
   border: 0;
   pointer-events: none;
-  transform: scale(1.02);
+  transform: scale(1.04);
   transform-origin: top left;
+}
+
+@keyframes landing-pan {
+  from {
+    transform: translate3d(0, 0, 0) scale(1.06);
+  }
+  to {
+    transform: translate3d(-2.5%, -1.5%, 0) scale(1.08);
+  }
 }
 
 .landing-stage__scrim {
   position: absolute;
   inset: 0;
+  z-index: 2;
   background: linear-gradient(
     105deg,
     color-mix(in oklab, var(--bg) 92%, transparent) 0%,
     color-mix(in oklab, var(--bg) 70%, transparent) 45%,
     color-mix(in oklab, var(--bg) 40%, transparent) 100%
   );
+  pointer-events: none;
 }
 
 .landing-stage__content {
   position: relative;
-  z-index: 1;
+  z-index: 3;
   max-width: 42rem;
   padding: var(--space-10) var(--space-6);
 }
@@ -197,8 +255,12 @@
 }
 
 @media (max-width: 640px) {
-  .landing-mission {
-    padding: var(--space-6) var(--space-4) 0;
+  .landing-hero {
+    margin: var(--space-6) var(--space-4) 0;
+  }
+
+  .landing-stage__post-tabs {
+    padding: 0 var(--space-4) var(--space-3);
   }
 
   .landing-stage__content {
@@ -222,5 +284,9 @@
 @media (prefers-reduced-motion: reduce) {
   .landing-stage__layer {
     transition: none;
+  }
+
+  .landing-stage__layer.is-active .landing-stage__pan {
+    animation: none;
   }
 }

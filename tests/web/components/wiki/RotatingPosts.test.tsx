@@ -10,11 +10,21 @@ const ui: LandingUi = {
   slide_tab_aria_label_template: 'Page {n} of {total}',
   prev_slide_aria_label: 'Previous page',
   next_slide_aria_label: 'Next page',
+  posts_tablist_aria_label: 'Featured posts',
+  post_tab_aria_label_template: '{label}',
+}
+
+const settings = {
+  post_interval_ms: 30000,
+  slide_interval_ms: 1000,
+  transition_ms: 200,
+  background_pan_duration_ms: 36000,
 }
 
 const posts: LandingPost[] = [
   {
     id: 'one',
+    tab_label: 'First',
     title: 'FIRST POST',
     slides: [
       { type: 'image', src: '/a.png', subtitle: 'Slide A', content: 'Content A' },
@@ -23,6 +33,7 @@ const posts: LandingPost[] = [
   },
   {
     id: 'two',
+    tab_label: 'Second',
     title: 'SECOND POST',
     slides: [
       { type: 'iframe', src: 'https://example.com/doc', subtitle: 'Doc', content: 'Doc body' },
@@ -40,70 +51,53 @@ describe('RotatingPosts', () => {
   })
 
   it('renders first slide', () => {
-    render(
-      <RotatingPosts
-        posts={posts}
-        settings={{ post_interval_ms: 30000, slide_interval_ms: 1000, transition_ms: 200 }}
-        ui={ui}
-      />,
-    )
+    render(<RotatingPosts posts={posts} settings={settings} ui={ui} />)
     expect(screen.getByText('FIRST POST')).toBeInTheDocument()
     expect(screen.getByText('Slide A')).toBeInTheDocument()
   })
 
-  it('renders one dot per slide in the active post', () => {
-    render(
-      <RotatingPosts
-        posts={posts}
-        settings={{ post_interval_ms: 30000, slide_interval_ms: 1000, transition_ms: 200 }}
-        ui={ui}
-      />,
-    )
-    expect(screen.getByRole('tab', { name: 'Page 1 of 2' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Page 2 of 2' })).toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: 'Page 1 of 1' })).not.toBeInTheDocument()
+  it('renders post tabs and slide dots for the active post', () => {
+    render(<RotatingPosts posts={posts} settings={settings} ui={ui} />)
+    expect(screen.getByRole('tab', { name: 'First' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Second' })).toHaveAttribute('aria-selected', 'false')
+    expect(screen.getByRole('button', { name: 'Page 1 of 2' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Page 2 of 2' })).toBeInTheDocument()
   })
 
   it('advances slides on interval', () => {
-    render(
-      <RotatingPosts
-        posts={posts}
-        settings={{ post_interval_ms: 30000, slide_interval_ms: 1000, transition_ms: 200 }}
-        ui={ui}
-      />,
-    )
+    render(<RotatingPosts posts={posts} settings={settings} ui={ui} />)
     act(() => {
       vi.advanceTimersByTime(1000)
     })
     expect(screen.getByText('Slide B')).toBeInTheDocument()
   })
 
+  it('loops from last slide back to first within a post', () => {
+    render(<RotatingPosts posts={posts} settings={settings} ui={ui} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2 of 2' }))
+    expect(screen.getByText('Slide B')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+    expect(screen.getByText('Slide A')).toBeInTheDocument()
+    expect(screen.getByText('FIRST POST')).toBeInTheDocument()
+  })
+
+  it('switches posts via post tabs', () => {
+    render(<RotatingPosts posts={posts} settings={settings} ui={ui} />)
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Second' }))
+    expect(screen.getByText('SECOND POST')).toBeInTheDocument()
+    expect(screen.getByText('Doc')).toBeInTheDocument()
+  })
+
   it('navigates with prev and next controls', () => {
-    render(
-      <RotatingPosts
-        posts={posts}
-        settings={{ post_interval_ms: 30000, slide_interval_ms: 1000, transition_ms: 200 }}
-        ui={ui}
-      />,
-    )
+    render(<RotatingPosts posts={posts} settings={settings} ui={ui} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
     expect(screen.getByText('Slide B')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Previous page' }))
     expect(screen.getByText('Slide A')).toBeInTheDocument()
-  })
-
-  it('jumps to a slide when a dot is clicked', () => {
-    render(
-      <RotatingPosts
-        posts={posts}
-        settings={{ post_interval_ms: 30000, slide_interval_ms: 1000, transition_ms: 200 }}
-        ui={ui}
-      />,
-    )
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Page 2 of 2' }))
-    expect(screen.getByText('Slide B')).toBeInTheDocument()
   })
 })
