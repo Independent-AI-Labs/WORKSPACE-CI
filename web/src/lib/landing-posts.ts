@@ -11,6 +11,7 @@ export interface LandingSlide {
   subtitle: string
   content: string
   source_url?: string
+  source_label?: string
 }
 
 export interface LandingPost {
@@ -19,15 +20,16 @@ export interface LandingPost {
   slides: LandingSlide[]
 }
 
-export interface LandingProduct {
-  slug: string
-  blurb: string
-}
-
 export interface LandingMission {
   headline: string
   summary: string
-  products: LandingProduct[]
+}
+
+export interface LandingUi {
+  missing_content_message: string
+  source_link_label: string
+  carousel_aria_label: string
+  post_tab_aria_label_template: string
 }
 
 export interface LandingSettings {
@@ -38,15 +40,10 @@ export interface LandingSettings {
 
 export interface LandingPostsConfig {
   version: number
+  ui: LandingUi
   mission: LandingMission
   settings: LandingSettings
   posts: LandingPost[]
-}
-
-const DEFAULT_SETTINGS: LandingSettings = {
-  post_interval_ms: 30000,
-  slide_interval_ms: 7000,
-  transition_ms: 1200,
 }
 
 const LANDING_YAML_CANDIDATES = [
@@ -66,6 +63,13 @@ function resolveLandingYamlPath(): string | null {
   return null
 }
 
+function requireString(value: unknown, field: string): string {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error(`landing-posts.yaml: ${field} is required`)
+  }
+  return value
+}
+
 function assertSlide(slide: unknown, postId: string, index: number): LandingSlide {
   if (!slide || typeof slide !== 'object') {
     throw new Error(`Post "${postId}" slide ${index}: expected object`)
@@ -75,23 +79,17 @@ function assertSlide(slide: unknown, postId: string, index: number): LandingSlid
   if (type !== 'image' && type !== 'iframe' && type !== 'document') {
     throw new Error(`Post "${postId}" slide ${index}: invalid type "${String(type)}"`)
   }
-  if (typeof s.src !== 'string' || !s.src.trim()) {
-    throw new Error(`Post "${postId}" slide ${index}: src is required`)
-  }
-  if (typeof s.subtitle !== 'string') {
-    throw new Error(`Post "${postId}" slide ${index}: subtitle is required`)
-  }
-  if (typeof s.content !== 'string') {
-    throw new Error(`Post "${postId}" slide ${index}: content is required`)
-  }
   const result: LandingSlide = {
     type,
-    src: s.src.trim(),
-    subtitle: s.subtitle,
-    content: s.content,
+    src: requireString(s.src, `posts.${postId}.slides[${index}].src`),
+    subtitle: requireString(s.subtitle, `posts.${postId}.slides[${index}].subtitle`),
+    content: requireString(s.content, `posts.${postId}.slides[${index}].content`),
   }
   if (typeof s.source_url === 'string' && s.source_url.trim()) {
     result.source_url = s.source_url.trim()
+  }
+  if (typeof s.source_label === 'string' && s.source_label.trim()) {
+    result.source_label = s.source_label.trim()
   }
   return result
 }
@@ -101,43 +99,37 @@ export function parseLandingPostsConfig(raw: unknown): LandingPostsConfig {
     throw new Error('landing-posts.yaml: root must be an object')
   }
   const data = raw as Record<string, unknown>
+
+  const uiRaw = data.ui
+  if (!uiRaw || typeof uiRaw !== 'object') {
+    throw new Error('landing-posts.yaml: ui is required')
+  }
+  const u = uiRaw as Record<string, unknown>
+  const ui: LandingUi = {
+    missing_content_message: requireString(u.missing_content_message, 'ui.missing_content_message'),
+    source_link_label: requireString(u.source_link_label, 'ui.source_link_label'),
+    carousel_aria_label: requireString(u.carousel_aria_label, 'ui.carousel_aria_label'),
+    post_tab_aria_label_template: requireString(
+      u.post_tab_aria_label_template,
+      'ui.post_tab_aria_label_template',
+    ),
+  }
+
   const mission = data.mission
   if (!mission || typeof mission !== 'object') {
     throw new Error('landing-posts.yaml: mission is required')
   }
   const m = mission as Record<string, unknown>
-  if (typeof m.headline !== 'string' || typeof m.summary !== 'string') {
-    throw new Error('landing-posts.yaml: mission.headline and mission.summary are required')
-  }
-  const productsRaw = m.products
-  if (!Array.isArray(productsRaw)) {
-    throw new Error('landing-posts.yaml: mission.products must be a list')
-  }
-  const products: LandingProduct[] = productsRaw.map((p, i) => {
-    if (!p || typeof p !== 'object') {
-      throw new Error(`landing-posts.yaml: mission.products[${i}] must be an object`)
-    }
-    const entry = p as Record<string, unknown>
-    if (typeof entry.slug !== 'string' || typeof entry.blurb !== 'string') {
-      throw new Error(`landing-posts.yaml: mission.products[${i}] needs slug and blurb`)
-    }
-    return { slug: entry.slug, blurb: entry.blurb }
-  })
 
   const settingsRaw = data.settings
-  let settings = DEFAULT_SETTINGS
-  if (settingsRaw && typeof settingsRaw === 'object') {
-    const s = settingsRaw as Record<string, unknown>
-    settings = {
-      post_interval_ms:
-        typeof s.post_interval_ms === 'number' ? s.post_interval_ms : DEFAULT_SETTINGS.post_interval_ms,
-      slide_interval_ms:
-        typeof s.slide_interval_ms === 'number'
-          ? s.slide_interval_ms
-          : DEFAULT_SETTINGS.slide_interval_ms,
-      transition_ms:
-        typeof s.transition_ms === 'number' ? s.transition_ms : DEFAULT_SETTINGS.transition_ms,
-    }
+  if (!settingsRaw || typeof settingsRaw !== 'object') {
+    throw new Error('landing-posts.yaml: settings is required')
+  }
+  const s = settingsRaw as Record<string, unknown>
+  const settings: LandingSettings = {
+    post_interval_ms: requireNumber(s.post_interval_ms, 'settings.post_interval_ms'),
+    slide_interval_ms: requireNumber(s.slide_interval_ms, 'settings.slide_interval_ms'),
+    transition_ms: requireNumber(s.transition_ms, 'settings.transition_ms'),
   }
 
   const postsRaw = data.posts
@@ -149,29 +141,35 @@ export function parseLandingPostsConfig(raw: unknown): LandingPostsConfig {
       throw new Error(`landing-posts.yaml: posts[${pi}] must be an object`)
     }
     const p = post as Record<string, unknown>
-    if (typeof p.id !== 'string' || typeof p.title !== 'string') {
-      throw new Error(`landing-posts.yaml: posts[${pi}] needs id and title`)
-    }
+    const id = requireString(p.id, `posts[${pi}].id`)
+    const title = requireString(p.title, `posts[${pi}].title`)
     if (!Array.isArray(p.slides) || p.slides.length === 0) {
       throw new Error(`landing-posts.yaml: posts[${pi}] slides must be non-empty`)
     }
     return {
-      id: p.id,
-      title: p.title,
-      slides: p.slides.map((slide, si) => assertSlide(slide, p.id as string, si)),
+      id,
+      title,
+      slides: p.slides.map((slide, si) => assertSlide(slide, id, si)),
     }
   })
 
   return {
     version: typeof data.version === 'number' ? data.version : 1,
+    ui,
     mission: {
-      headline: m.headline,
-      summary: m.summary,
-      products,
+      headline: requireString(m.headline, 'mission.headline'),
+      summary: requireString(m.summary, 'mission.summary'),
     },
     settings,
     posts,
   }
+}
+
+function requireNumber(value: unknown, field: string): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    throw new Error(`landing-posts.yaml: ${field} must be a number`)
+  }
+  return value
 }
 
 export const getLandingPostsConfig = cache((): LandingPostsConfig | null => {

@@ -1,10 +1,11 @@
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { isHomeLandingEnabled } from '@/lib/feature-flags'
 
 describe('isHomeLandingEnabled', () => {
   const original = process.env.WIKI_HOME_LANDING_ENABLED
 
   afterEach(() => {
+    vi.unstubAllEnvs()
     if (original === undefined) {
       delete process.env.WIKI_HOME_LANDING_ENABLED
     } else {
@@ -13,19 +14,15 @@ describe('isHomeLandingEnabled', () => {
   })
 
   it('returns true in development when unset', () => {
-    delete process.env.WIKI_HOME_LANDING_ENABLED
-    const prev = process.env.NODE_ENV
-    process.env.NODE_ENV = 'development'
+    vi.stubEnv('WIKI_HOME_LANDING_ENABLED', '')
+    vi.stubEnv('NODE_ENV', 'development')
     expect(isHomeLandingEnabled()).toBe(true)
-    process.env.NODE_ENV = prev
   })
 
   it('returns false in production when unset', () => {
-    delete process.env.WIKI_HOME_LANDING_ENABLED
-    const prev = process.env.NODE_ENV
-    process.env.NODE_ENV = 'production'
+    vi.stubEnv('WIKI_HOME_LANDING_ENABLED', '')
+    vi.stubEnv('NODE_ENV', 'production')
     expect(isHomeLandingEnabled()).toBe(false)
-    process.env.NODE_ENV = prev
   })
 
   it('returns true for true/1/yes', () => {

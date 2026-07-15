@@ -3,19 +3,27 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import clsx from 'clsx'
-import type { LandingPost, LandingSettings, LandingSlide } from '@/lib/landing-posts'
+import type { LandingPost, LandingSettings, LandingSlide, LandingUi } from '@/lib/landing-posts'
 
 interface RotatingPostsProps {
   posts: LandingPost[]
   settings: LandingSettings
+  ui: LandingUi
 }
 
-function slideMediaSrc(slide: LandingSlide): string {
-  if (slide.type === 'document') return slide.src
-  return slide.src
+function formatPostTabLabel(template: string, index: number, title: string): string {
+  return template.replace('{n}', String(index + 1)).replace('{title}', title)
 }
 
-function SlideLayer({ slide, active, transitionMs }: { slide: LandingSlide; active: boolean; transitionMs: number }) {
+function SlideLayer({
+  slide,
+  active,
+  transitionMs,
+}: {
+  slide: LandingSlide
+  active: boolean
+  transitionMs: number
+}) {
   const style = { transitionDuration: `${transitionMs}ms` }
 
   if (slide.type === 'image') {
@@ -30,7 +38,6 @@ function SlideLayer({ slide, active, transitionMs }: { slide: LandingSlide; acti
     )
   }
 
-  const iframeSrc = slide.type === 'document' ? slide.src : slide.src
   return (
     <div
       className={clsx('landing-stage__layer', 'landing-stage__layer--doc', active && 'is-active')}
@@ -38,7 +45,7 @@ function SlideLayer({ slide, active, transitionMs }: { slide: LandingSlide; acti
       aria-hidden={!active}
     >
       <iframe
-        src={iframeSrc}
+        src={slide.src}
         title={slide.subtitle}
         className="landing-stage__iframe"
         tabIndex={-1}
@@ -47,7 +54,7 @@ function SlideLayer({ slide, active, transitionMs }: { slide: LandingSlide; acti
   )
 }
 
-export function RotatingPosts({ posts, settings }: RotatingPostsProps) {
+export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
   const [postIndex, setPostIndex] = useState(0)
   const [slideIndex, setSlideIndex] = useState(0)
   const [reducedMotion, setReducedMotion] = useState(false)
@@ -87,12 +94,14 @@ export function RotatingPosts({ posts, settings }: RotatingPostsProps) {
 
   if (!post || !slide) return null
 
+  const sourceLabel = slide.source_label ?? ui.source_link_label
+
   return (
     <section className="landing-stage" aria-live="polite" aria-atomic="true">
       <div className="landing-stage__backdrop">
         {post.slides.map((s, i) => (
           <SlideLayer
-            key={`${post.id}-${slideMediaSrc(s)}-${i}`}
+            key={`${post.id}-${s.src}-${i}`}
             slide={s}
             active={i === slideIndex}
             transitionMs={settings.transition_ms}
@@ -112,19 +121,19 @@ export function RotatingPosts({ posts, settings }: RotatingPostsProps) {
             target="_blank"
             rel="noopener noreferrer"
           >
-            Official source
+            {sourceLabel}
           </a>
         )}
       </div>
 
-      <div className="landing-stage__indicators" role="tablist" aria-label="Carousel slides">
+      <div className="landing-stage__indicators" role="tablist" aria-label={ui.carousel_aria_label}>
         {postIndicators.map((ind, i) => (
           <button
             key={ind.id}
             type="button"
             role="tab"
             aria-selected={ind.active}
-            aria-label={`Post ${i + 1}: ${posts[i].title}`}
+            aria-label={formatPostTabLabel(ui.post_tab_aria_label_template, i, posts[i].title)}
             className={clsx('landing-stage__dot', ind.active && 'is-active')}
             onClick={() => {
               setPostIndex(i)

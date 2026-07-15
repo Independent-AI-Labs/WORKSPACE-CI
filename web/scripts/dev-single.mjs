@@ -104,6 +104,7 @@ async function main() {
   await writeLock()
 
   await import('./sync-logos.mjs')
+  await import('./fetch-web-documents.mjs')
   await import('./sync-web-content.mjs')
 
   const args = ['dev', '-H', HOST, '-p', String(APP_PORT), ...process.argv.slice(2)]

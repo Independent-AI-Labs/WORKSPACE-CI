@@ -8,8 +8,8 @@
     "npm": ">=11"
   },
   "scripts": {
-    "dev": "node scripts/sync-logos.mjs && node scripts/sync-web-content.mjs && next dev",
-    "prebuild": "node scripts/sync-logos.mjs && node scripts/sync-web-content.mjs",
+    "dev": "node scripts/sync-logos.mjs && node scripts/fetch-web-documents.mjs && node scripts/sync-web-content.mjs && next dev",
+    "prebuild": "node scripts/sync-logos.mjs && node scripts/fetch-web-documents.mjs && node scripts/sync-web-content.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
