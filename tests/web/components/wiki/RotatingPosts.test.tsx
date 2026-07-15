@@ -18,7 +18,7 @@ const settings = {
   post_interval_ms: 30000,
   slide_interval_ms: 1000,
   transition_ms: 200,
-  background_pan_duration_ms: 36000,
+  background_pan_duration_ms: 18000,
 }
 
 const posts: LandingPost[] = [

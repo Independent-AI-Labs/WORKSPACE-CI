@@ -88,6 +88,8 @@
   position: absolute;
   inset: -4%;
   overflow: hidden;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .landing-stage__pan--doc {
@@ -95,7 +97,7 @@
 }
 
 .landing-stage__layer.is-active .landing-stage__pan {
-  animation: landing-pan var(--landing-pan-duration, 36s) ease-in-out infinite alternate;
+  animation: landing-pan var(--landing-pan-duration, 18s) linear infinite alternate;
 }
 
 .landing-stage__image {
@@ -115,11 +117,20 @@
 }
 
 @keyframes landing-pan {
-  from {
-    transform: translate3d(0, 0, 0) scale(1.06);
+  0% {
+    transform: translate3d(0.37px, -0.28px, 0) scale(1.06);
   }
-  to {
-    transform: translate3d(-2.5%, -1.5%, 0) scale(1.08);
+  25% {
+    transform: translate3d(calc(-1.12% + 0.62px), calc(-0.68% - 0.41px), 0) scale(1.065);
+  }
+  50% {
+    transform: translate3d(calc(-2.24% + 0.19px), calc(-1.36% + 0.33px), 0) scale(1.072);
+  }
+  75% {
+    transform: translate3d(calc(-3.36% - 0.47px), calc(-2.04% + 0.11px), 0) scale(1.078);
+  }
+  100% {
+    transform: translate3d(calc(-4.5% + 0.28px), calc(-2.72% - 0.19px), 0) scale(1.085);
   }
 }
 

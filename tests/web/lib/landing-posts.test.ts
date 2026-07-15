@@ -24,7 +24,7 @@ const minimal = {
     post_interval_ms: 30000,
     slide_interval_ms: 7000,
     transition_ms: 1200,
-    background_pan_duration_ms: 36000,
+    background_pan_duration_ms: 18000,
   },
   posts: [
     {
@@ -44,7 +44,7 @@ describe('parseLandingPostsConfig', () => {
     expect(config.hero.intro).toContain('Unified wiki')
     expect(config.mission.headline).toBe('Test')
     expect(config.ui.source_link_label).toBe('Source')
-    expect(config.settings.background_pan_duration_ms).toBe(36000)
+    expect(config.settings.background_pan_duration_ms).toBe(18000)
     expect(config.posts).toHaveLength(1)
     expect(config.posts[0].tab_label).toBe('Alpha')
     expect(config.posts[0].slides[0].type).toBe('image')
