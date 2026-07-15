@@ -1,9 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import clsx from 'clsx'
 import type { LandingPost, LandingSettings, LandingSlide, LandingUi } from '@/lib/landing-posts'
+import {
+  measureSlideTextHeight,
+  textWidthFromContent,
+  typographyFromComputed,
+  type PretextTypography,
+} from '@/lib/landing-pretext'
+import { SlideTextLayer } from '@/components/wiki/SlideTextLayer'
 
 interface RotatingPostsProps {
   posts: LandingPost[]
@@ -23,22 +30,35 @@ function postTabLabel(post: LandingPost): string {
   return post.tab_label ?? post.title
 }
 
+type PanAxis = { x: 1 | -1; y: 1 | -1 }
+
+function randomPanAxis(): PanAxis {
+  return {
+    x: Math.random() < 0.5 ? 1 : -1,
+    y: Math.random() < 0.5 ? 1 : -1,
+  }
+}
+
 function SlideLayer({
   slide,
   active,
   leaving,
   transitionMs,
   panDurationMs,
+  panAxis,
 }: {
   slide: LandingSlide
   active: boolean
   leaving: boolean
   transitionMs: number
   panDurationMs: number
+  panAxis: PanAxis
 }) {
   const layerStyle = {
     transitionDuration: `${transitionMs}ms`,
     ['--landing-pan-duration' as string]: `${panDurationMs}ms`,
+    ['--pan-x' as string]: panAxis.x,
+    ['--pan-y' as string]: panAxis.y,
   }
 
   if (slide.type === 'image') {
@@ -88,7 +108,13 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
   const [leavingSlideIndex, setLeavingSlideIndex] = useState<number | null>(null)
   const [reducedMotion, setReducedMotion] = useState(false)
   const [timerEpoch, setTimerEpoch] = useState(0)
+  const [contentWidth, setContentWidth] = useState(0)
+  const [subtitleType, setSubtitleType] = useState<PretextTypography | null>(null)
+  const [bodyType, setBodyType] = useState<PretextTypography | null>(null)
+  const [panBySlide, setPanBySlide] = useState<Record<string, PanAxis>>({})
   const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const probeRef = useRef<HTMLDivElement>(null)
 
   const post = posts[postIndex]
   const slide = post?.slides[slideIndex]
@@ -167,6 +193,38 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
     }
   }, [])
 
+  useLayoutEffect(() => {
+    const content = contentRef.current
+    const probe = probeRef.current
+    if (!content || !probe) return
+
+    const sync = () => {
+      const width = content.clientWidth
+      setContentWidth(width)
+      const subtitleEl = probe.querySelector('.landing-stage__subtitle')
+      const bodyEl = probe.querySelector('.landing-stage__body')
+      if (subtitleEl instanceof HTMLElement && bodyEl instanceof HTMLElement) {
+        setSubtitleType(typographyFromComputed(getComputedStyle(subtitleEl)))
+        setBodyType(typographyFromComputed(getComputedStyle(bodyEl)))
+      }
+    }
+
+    sync()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(sync)
+    observer.observe(content)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (reducedMotion || !post) return
+    const key = `${post.id}-${slideIndex}`
+    setPanBySlide((prev) => ({
+      ...prev,
+      [key]: randomPanAxis(),
+    }))
+  }, [post, postIndex, reducedMotion, slideIndex])
+
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
     const update = () => setReducedMotion(mq.matches)
@@ -190,12 +248,41 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
     [post, slideIndex],
   )
 
-  if (!post || !slide) return null
+  const subtitleTypography = subtitleType ?? { font: '700 42px Montserrat', lineHeightPx: 52.5 }
+  const bodyTypography = bodyType ?? { font: '400 28px Montserrat', lineHeightPx: 45.5 }
 
-  const sourceLabel = slide.source_label ?? ui.source_link_label
-  const downloadLabel = slide.download_label ?? ui.download_link_label
-  const showDownload = slide.type === 'document'
-  const showLinks = showDownload || Boolean(slide.source_url)
+  const textWidth = textWidthFromContent(contentWidth)
+
+  const textStackMinHeight = useMemo(() => {
+    if (!post || textWidth <= 0) return undefined
+    const indices = new Set<number>([slideIndex])
+    if (leavingSlideIndex !== null) indices.add(leavingSlideIndex)
+    let maxHeight = 0
+    for (const index of indices) {
+      const s = post.slides[index]
+      if (!s) continue
+      maxHeight = Math.max(
+        maxHeight,
+        measureSlideTextHeight(
+          s.subtitle,
+          s.content,
+          textWidth,
+          subtitleTypography,
+          bodyTypography,
+        ),
+      )
+    }
+    return maxHeight > 0 ? `${maxHeight}px` : undefined
+  }, [
+    bodyTypography,
+    leavingSlideIndex,
+    post,
+    slideIndex,
+    subtitleTypography,
+    textWidth,
+  ])
+
+  if (!post || !slide) return null
 
   return (
     <section className="landing-stage" aria-live="polite" aria-atomic="true">
@@ -209,6 +296,7 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
               leaving={i === leavingSlideIndex}
               transitionMs={settings.transition_ms}
               panDurationMs={settings.background_pan_duration_ms}
+              panAxis={panBySlide[`${post.id}-${i}`] ?? { x: 1, y: 1 }}
             />
           ))}
           <div className="landing-stage__scrim" />
@@ -244,31 +332,37 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
           </div>
         </div>
 
-        <div className="landing-stage__content">
+        <div className="landing-stage__content" ref={contentRef}>
+          <div className="landing-stage__pretext-probe" ref={probeRef} aria-hidden="true">
+            <span className="landing-stage__subtitle">Probe</span>
+            <span className="landing-stage__body">Probe</span>
+          </div>
+
           <p className="landing-stage__post-title">{post.title}</p>
-          <h2 className="landing-stage__subtitle">{slide.subtitle}</h2>
-          <p className="landing-stage__body">{slide.content}</p>
-          {showLinks && (
-            <div className="landing-stage__links">
-              {showDownload && (
-                <a href={slide.src} className="landing-stage__link landing-stage__link--download" download>
-                  <i className="ri-download-2-line" aria-hidden="true" />
-                  {downloadLabel}
-                </a>
-              )}
-              {slide.source_url && (
-                <a
-                  href={slide.source_url}
-                  className="landing-stage__link landing-stage__link--external"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <i className="ri-external-link-line" aria-hidden="true" />
-                  {sourceLabel}
-                </a>
-              )}
-            </div>
-          )}
+
+          <div className="landing-stage__text-stack" style={{ minHeight: textStackMinHeight }}>
+            {post.slides.map((s, i) => {
+              const slideShowDownload = s.type === 'document'
+              const slideShowLinks = slideShowDownload || Boolean(s.source_url)
+              return (
+                <SlideTextLayer
+                  key={`${post.id}-text-${s.src}-${i}`}
+                  slide={s}
+                  active={i === slideIndex}
+                  leaving={i === leavingSlideIndex}
+                  transitionMs={settings.transition_ms}
+                  textWidth={textWidth}
+                  subtitleType={subtitleTypography}
+                  bodyType={bodyTypography}
+                  reducedMotion={reducedMotion}
+                  showDownload={slideShowDownload}
+                  showLinks={slideShowLinks}
+                  downloadLabel={s.download_label ?? ui.download_link_label}
+                  sourceLabel={s.source_label ?? ui.source_link_label}
+                />
+              )
+            })}
+          </div>
         </div>
       </div>
 
