@@ -60,6 +60,11 @@ universal_exceptions:
   # WORKSPACE-VM umbrella: pattern catalog quotes forbidden examples.
   - paths: ['workspace/config/patterns/']
     patterns: ['.*']
+  # WORKSPACE-GUARD: sandbox hostname table uses a catch-all regex entry.
+  - paths: ['config/sandbox/profiles\.yaml$']
+    patterns:
+      - 'pattern:\s*"\.\*"'
+      - "pattern:\\s*'\\.\\*'"
   # Root AGENTS.md documents hook/checker policy (meta-references).
   - paths: ['AGENTS\.md$']
     patterns:
@@ -878,12 +883,21 @@ banned:
     reason: "Use uv run python (own repo) or uv run --project <path> --no-sync python (cross-repo). Never .venv/bin/python."
     category: deprecated-python
 
-  # === POLICY INTEGRITY: wildcard exception sabotage ===
+  # === POLICY INTEGRITY: catch-all pattern field sabotage ===
+  # Bare .* / .+ in a YAML `pattern:` field is a catch-all regex or exception
+  # key. Scoped per-file exemptions live in universal_exceptions or project
+  # banned_words_exceptions.yaml (never a repo-wide bypass).
   - pattern: "pattern:\\s*'\\.\\*'"
-    reason: "Wildcard exception pattern: '.*' exempts matching paths from ALL banned rules. Use per-pattern scoped exceptions only."
+    reason: "Catch-all regex pattern '.*' in a pattern field. Use per-pattern scoped exceptions only."
     category: policy-integrity
   - pattern: 'pattern:\s*"\.\*"'
-    reason: "Same as single-quoted form. No wildcard exception keys."
+    reason: "Same as single-quoted .* form. No catch-all pattern keys."
+    category: policy-integrity
+  - pattern: "pattern:\\s*'\\.\\+'"
+    reason: "Catch-all regex pattern '.+' evades the .* ban. Use per-pattern scoped exceptions only."
+    category: policy-integrity
+  - pattern: 'pattern:\s*"\.\+"'
+    reason: "Same as single-quoted .+ form. No catch-all pattern keys."
     category: policy-integrity
 
   # === SELF METHOD PATTERNS ===
