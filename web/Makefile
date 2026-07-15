@@ -126,7 +126,10 @@ dev-start: ## Start dev server (Next.js HMR)
 	for i in $$(seq 1 20); do \
 		state=$$(systemctl --user is-active $(SYSTEMD_UNIT) 2>&1); \
 		nrest=$$(systemctl --user show $(SYSTEMD_UNIT) -p NRestarts --value 2>&1); \
-		_curl_tmp=$$(mktemp); code=$$(curl -S -o "$$_curl_tmp" -w "%{http_code}" --max-time 3 http://127.0.0.1:$(DEV_PORT)/ 2>&1); rm -f "$$_curl_tmp"; \
+		_curl_tmp=$$(mktemp); _curl_err=$$(mktemp); \
+		code=$$(curl -sS -o "$$_curl_tmp" -w "%{http_code}" --max-time 3 http://127.0.0.1:$(DEV_PORT)/ 2>"$$_curl_err"); _curl_rc=$$?; \
+		if [ $$_curl_rc -ne 0 ]; then echo "[dev-start] curl probe (rc=$$_curl_rc): $$(cat "$$_curl_err")" >&2; fi; \
+		rm -f "$$_curl_tmp" "$$_curl_err"; \
 		echo "[dev-start] attempt $$i/20: state=$$state http=$$code restarts=$$nrest"; \
 		if [ "$$state" = "failed" ] || [ "$$state" = "inactive" ]; then \
 			echo ""; \
@@ -188,7 +191,10 @@ dev-restart: ## Restart dev server (stop + start)
 .PHONY: dev-status
 dev-status: ## Show dev server status
 	svc=$$(systemctl --user is-active $(SYSTEMD_UNIT) 2>&1); echo "Service: $$svc"
-	_curl_tmp=$$(mktemp); code=$$(curl -S -o "$$_curl_tmp" -w '%{http_code}' http://127.0.0.1:$(DEV_PORT)/ 2>&1); rm -f "$$_curl_tmp"; echo "HTTP:    $$code"
+	_curl_tmp=$$(mktemp); _curl_err=$$(mktemp); \
+	code=$$(curl -sS -o "$$_curl_tmp" -w '%{http_code}' http://127.0.0.1:$(DEV_PORT)/ 2>"$$_curl_err"); _curl_rc=$$?; \
+	if [ $$_curl_rc -ne 0 ]; then echo "[dev-status] curl probe (rc=$$_curl_rc): $$(cat "$$_curl_err")" >&2; fi; \
+	rm -f "$$_curl_tmp" "$$_curl_err"; echo "HTTP:    $$code"
 	echo "Port:    $(DEV_PORT)"
 	echo "Logs:    journalctl --user -u $(SYSTEMD_UNIT) -f"
 
