@@ -58,7 +58,7 @@ export async function ProjectCatalogue() {
 
   return (
     <>
-      <h1>Project Catalogue</h1>
+      <h1>Browse Projects</h1>
       <p className="page-intro">
         Each card summarizes a workspace repo. Open the project title for the
         full README, or Makefile on the card for targets and recipes.

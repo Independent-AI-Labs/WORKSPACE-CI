@@ -71,6 +71,11 @@
     grid-template-columns: 1fr;
   }
 
+  .wiki-header {
+    padding: var(--space-2) var(--space-3);
+    gap: var(--space-1);
+  }
+
   .mobile-nav-toggle {
     display: flex;
     align-items: center;
@@ -78,15 +83,17 @@
     background: transparent;
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    width: 44px;
-    height: 44px;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
     cursor: pointer;
     color: var(--text);
-    font-size: 1.25rem;
+    font-size: 1.125rem;
+    line-height: 1;
     flex-shrink: 0;
     position: fixed;
-    top: var(--space-3);
-    left: var(--space-6);
+    top: calc((var(--wiki-chrome-header-height) - 2.25rem) / 2);
+    left: var(--space-3);
     z-index: calc(var(--z-modal) + 1);
   }
 
@@ -102,7 +109,7 @@
   }
 
   .wiki-header__left {
-    padding-left: calc(44px + var(--space-2));
+    padding-left: calc(2.25rem + var(--space-2));
   }
 
   .wiki-header__actions {

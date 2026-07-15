@@ -28,7 +28,7 @@ export function CategoryNav({
   return (
     <div className="category-nav">
       <div className="category-nav__header">
-        <span />
+        <span aria-hidden="true" />
         <div className="category-nav__actions">
           <button className="btn btn--sm btn--ghost" onClick={selectAll}>
             Select all

@@ -358,10 +358,11 @@ ci_run_python_checker() {
         ci_fail "Checker script not found: $_script"
         return 1
     fi
-    if ! ci_uv_bin; then
+    local _uv=""
+    _uv="$(ci_uv_bin)" || {
         ci_fail "CI uv not found; run: make install-boot-tools"
         return 1
-    fi
+    }
 
     CI_CHECKER_STDOUT="$(mktemp)"
     CI_CHECKER_STDERR="$(mktemp)"

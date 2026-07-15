@@ -51,9 +51,9 @@ export function ProjectList({
         selectAll={selectAll}
         deselectAll={deselectAll}
       />
-      <div className="project-list__count">
+      <p className="list-section__count">
         {visibleCount} of {totalCount} projects
-      </div>
+      </p>
       <div className="wiki-card-grid">
         {items.map((item, i) => {
           const p = filtered[i]

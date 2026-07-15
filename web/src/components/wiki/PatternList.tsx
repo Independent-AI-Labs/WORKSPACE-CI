@@ -44,9 +44,9 @@ export function PatternList({
         selectAll={selectAll}
         deselectAll={deselectAll}
       />
-      <div className="pattern-list__count">
+      <p className="list-section__count">
         {visibleCount} of {totalCount} patterns
-      </div>
+      </p>
       <div className="wiki-card-grid">
         {items.map((item, i) => {
           const p = filtered[i]

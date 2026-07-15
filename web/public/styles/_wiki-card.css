@@ -17,20 +17,19 @@
   gap: var(--space-4);
 }
 
-.card-list-section__count {
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
-
 .project-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
 }
 
-.project-list__count {
-  color: var(--muted);
+.list-section__count {
+  display: block;
+  width: 100%;
+  margin: 0;
+  text-align: right;
   font-size: var(--text-sm);
+  color: var(--muted);
 }
 
 .project-list .wiki-card__tags {

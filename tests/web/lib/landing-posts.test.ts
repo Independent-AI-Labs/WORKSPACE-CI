@@ -18,6 +18,8 @@ const minimal = {
     next_slide_aria_label: 'Next page',
     posts_tablist_aria_label: 'Featured posts',
     post_tab_aria_label_template: '{label}',
+    post_tabs_scroll_prev_aria_label: 'Scroll tabs left',
+    post_tabs_scroll_next_aria_label: 'Scroll tabs right',
   },
   hero: {
     intro: 'Unified wiki intro text.',
@@ -45,6 +47,27 @@ const minimal = {
 }
 
 describe('parseLandingPostsConfig', () => {
+  it('derives text_transition_ms when omitted', () => {
+    const config = parseLandingPostsConfig(minimal)
+    expect(config.settings.text_transition_ms).toBe(480)
+  })
+
+  it('defaults post tab scroll aria labels when omitted', () => {
+    const { post_tabs_scroll_prev_aria_label: _p, post_tabs_scroll_next_aria_label: _n, ...ui } =
+      minimal.ui
+    const config = parseLandingPostsConfig({ ...minimal, ui })
+    expect(config.ui.post_tabs_scroll_prev_aria_label).toBe('Scroll tabs left')
+    expect(config.ui.post_tabs_scroll_next_aria_label).toBe('Scroll tabs right')
+  })
+
+  it('parses explicit text_transition_ms', () => {
+    const config = parseLandingPostsConfig({
+      ...minimal,
+      settings: { ...minimal.settings, text_transition_ms: 450 },
+    })
+    expect(config.settings.text_transition_ms).toBe(450)
+  })
+
   it('parses valid config', () => {
     const config = parseLandingPostsConfig(minimal)
     expect(config.hero.intro).toContain('Unified wiki')

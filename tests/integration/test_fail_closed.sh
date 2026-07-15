@@ -157,6 +157,36 @@ test_fail_closed_missing_python() {
 _run_test "fail-closed: missing python returns 1" test_fail_closed_missing_python
 
 # ---------------------------------------------------------------------------
+# Test: ci_run_python_checker must not leak ci_uv_bin resolver output.
+# Prior bug: `if ! ci_uv_bin` printed the uv path once per scanned file.
+# ---------------------------------------------------------------------------
+test_ci_run_python_checker_no_uv_stdout_leak() {
+    _source_lib
+    local _stdout_tmp
+    _stdout_tmp="$(mktemp)"
+    ci_run_python_checker "$CI_PROJECT_ROOT/lib/check_silent_swallow.py" \
+        </dev/null > "$_stdout_tmp" 2>/dev/null
+    local _rc=$?
+    rm -f "$CI_CHECKER_STDOUT" 2>/dev/null
+    if grep -q 'bin/uv' "$_stdout_tmp" 2>/dev/null; then
+        echo "FAIL: ci_run_python_checker leaked uv path to stdout:" >&2
+        cat "$_stdout_tmp" >&2
+        rm -f "$_stdout_tmp"
+        return 1
+    fi
+    if [[ -s "$_stdout_tmp" ]]; then
+        echo "FAIL: ci_run_python_checker wrote unexpected stdout:" >&2
+        cat "$_stdout_tmp" >&2
+        rm -f "$_stdout_tmp"
+        return 1
+    fi
+    rm -f "$_stdout_tmp"
+    [[ $_rc -eq 0 ]]
+}
+_run_test "fail-closed: ci_run_python_checker does not leak uv path to stdout" \
+    test_ci_run_python_checker_no_uv_stdout_leak
+
+# ---------------------------------------------------------------------------
 # Test: ci_check_silent_swallow fails-closed when config is missing.
 # This is the EXACT scenario that was broken: WORKSPACE-GUARD commits
 # passed because the FileNotFoundError crash was swallowed as a clean pass.

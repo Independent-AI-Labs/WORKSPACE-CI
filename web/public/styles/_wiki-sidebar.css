@@ -1,11 +1,13 @@
 .wiki-sidebar {
+  display: flex;
+  flex-direction: column;
   background: var(--panel);
   border-right: 1px solid var(--border);
   padding: 0;
   position: sticky;
   top: 0;
   height: 100vh;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .wiki-sidebar__header {
@@ -84,10 +86,23 @@
   background: var(--surface-1);
 }
 
+.wiki-sidebar__nav-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .wiki-sidebar__nav {
   list-style: none;
   padding: 0.5rem 0;
   margin: 0;
+}
+
+.wiki-sidebar__nav--pinned {
+  flex-shrink: 0;
+  padding-top: 0.5rem;
+  padding-bottom: 0;
+  border-bottom: 1px solid var(--border);
 }
 
 .wiki-sidebar__divider {
@@ -178,5 +193,13 @@
 
   .wiki-sidebar.is-open {
     left: 0;
+  }
+
+  .wiki-sidebar__header {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .wiki-sidebar__toggle {
+    margin-right: var(--space-1);
   }
 }

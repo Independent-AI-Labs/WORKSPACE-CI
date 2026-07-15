@@ -55,9 +55,9 @@ export function HookList({
           tierCounts={tierCounts}
         />
       </div>
-      <div className="hook-list__count">
+      <p className="list-section__count">
         {filtered.length} of {hooks.length} hooks
-      </div>
+      </p>
       <div className="wiki-card-grid">
         {items.map((item, i) => {
           const hook = filtered[i]

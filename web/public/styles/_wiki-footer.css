@@ -10,4 +10,19 @@
     color: var(--muted);
     font-size: var(--text-xs);
   }
+
+  .wiki-footer__version {
+    margin-left: auto;
+    text-align: right;
+  }
+
+  @media (max-width: 768px) {
+    .wiki-footer {
+      padding: var(--space-3);
+    }
+
+    .wiki-footer__version {
+      width: 100%;
+    }
+  }
 }

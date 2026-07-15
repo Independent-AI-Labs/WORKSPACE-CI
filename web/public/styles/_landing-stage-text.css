@@ -1,4 +1,4 @@
-.landing-stage__slide-panel {
+.landing-stage__copy-panel {
   position: relative;
   isolation: isolate;
   display: inline-block;
@@ -9,27 +9,24 @@
   overflow: hidden;
 }
 
-.landing-stage__slide-panel::before {
+.landing-stage__copy-panel::before {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: color-mix(in oklab, var(--bg) 42%, transparent);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  background: color-mix(in oklab, var(--bg) 36%, transparent);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
   transform: translateZ(0);
-  opacity: 0;
-  transition: opacity ease-in-out;
-  transition-duration: var(--landing-text-fade-ms, var(--landing-fade-ms, 1200ms));
+  opacity: 1;
   z-index: -1;
 }
 
-.landing-stage__text-layer.is-active .landing-stage__slide-panel::before {
-  opacity: 1;
-}
-
-.landing-stage__text-layer.is-leaving .landing-stage__slide-panel::before {
-  opacity: 0;
+.landing-stage__slide-panel {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 100%;
 }
 
 .landing-stage__subtitle {
@@ -41,12 +38,16 @@
   text-wrap: balance;
   opacity: 0;
   filter: blur(10px);
-  transform: translate3d(0, 0.75rem, 0);
+  transform: translate3d(
+    calc(1.5rem * var(--landing-text-direction, 1)),
+    0,
+    0
+  );
   transition:
     opacity ease-in-out,
     filter ease-in-out,
     transform ease-in-out;
-  transition-duration: var(--landing-text-fade-ms, var(--landing-fade-ms, 1200ms));
+  transition-duration: var(--landing-text-fade-ms, 450ms);
 }
 
 .landing-stage__text-layer.is-active .landing-stage__subtitle {
@@ -58,7 +59,11 @@
 .landing-stage__text-layer.is-leaving .landing-stage__subtitle {
   opacity: 0;
   filter: blur(8px);
-  transform: translate3d(0, -0.5rem, 0);
+  transform: translate3d(
+    calc(-1.25rem * var(--landing-text-direction, 1)),
+    0,
+    0
+  );
 }
 
 .landing-stage__text-layer.is-reduced-motion .landing-stage__subtitle {
@@ -68,15 +73,13 @@
 
 .landing-stage__text-layer.is-reduced-motion.is-active .landing-stage__subtitle,
 .landing-stage__text-layer.is-reduced-motion.is-active .landing-stage__body,
-.landing-stage__text-layer.is-reduced-motion.is-active .landing-stage__links,
-.landing-stage__text-layer.is-reduced-motion.is-active .landing-stage__slide-panel::before {
+.landing-stage__text-layer.is-reduced-motion.is-active .landing-stage__links {
   opacity: 1;
 }
 
 .landing-stage__text-layer.is-reduced-motion.is-leaving .landing-stage__subtitle,
 .landing-stage__text-layer.is-reduced-motion.is-leaving .landing-stage__body,
-.landing-stage__text-layer.is-reduced-motion.is-leaving .landing-stage__links,
-.landing-stage__text-layer.is-reduced-motion.is-leaving .landing-stage__slide-panel::before {
+.landing-stage__text-layer.is-reduced-motion.is-leaving .landing-stage__links {
   opacity: 0;
 }
 
@@ -84,12 +87,16 @@
 .landing-stage__links {
   opacity: 0;
   filter: blur(10px);
-  transform: translate3d(0, 0.75rem, 0);
+  transform: translate3d(
+    calc(1.5rem * var(--landing-text-direction, 1)),
+    0,
+    0
+  );
   transition:
     opacity ease-in-out,
     filter ease-in-out,
     transform ease-in-out;
-  transition-duration: var(--landing-text-fade-ms, var(--landing-fade-ms, 1200ms));
+  transition-duration: var(--landing-text-fade-ms, 450ms);
 }
 
 .landing-stage__text-layer.is-active .landing-stage__body,
@@ -103,7 +110,11 @@
 .landing-stage__text-layer.is-leaving .landing-stage__links {
   opacity: 0;
   filter: blur(8px);
-  transform: translate3d(0, -0.5rem, 0);
+  transform: translate3d(
+    calc(-1.25rem * var(--landing-text-direction, 1)),
+    0,
+    0
+  );
 }
 
 .landing-stage__text-layer.is-reduced-motion .landing-stage__body,
@@ -199,23 +210,7 @@
 
   .landing-stage__subtitle,
   .landing-stage__body,
-  .landing-stage__links,
-  .landing-stage__slide-panel::before {
-    transition: none;
-  }
-
-  .landing-stage__subtitle,
-  .landing-stage__body,
   .landing-stage__links {
-    filter: none;
-    transform: none;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .landing-stage__subtitle,
-  .landing-stage__body,
-  .landing-stage__links,
-  .landing-stage__slide-panel::before {
     transition: none;
   }
 

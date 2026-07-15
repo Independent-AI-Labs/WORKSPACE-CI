@@ -8,8 +8,8 @@
     "npm": ">=11"
   },
   "scripts": {
-    "dev": "node scripts/sync-logos.mjs && node scripts/fetch-web-documents.mjs && node scripts/sync-web-content.mjs && next dev",
-    "prebuild": "node scripts/sync-logos.mjs && node scripts/fetch-web-documents.mjs && node scripts/sync-web-content.mjs",
+    "dev": "node scripts/sync-logos.mjs && node scripts/fetch-web-documents.mjs && node scripts/sync-web-content.mjs && node scripts/prerender-landing-pdf-previews.mjs && next dev",
+    "prebuild": "node scripts/sync-logos.mjs && node scripts/fetch-web-documents.mjs && node scripts/sync-web-content.mjs && node scripts/prerender-landing-pdf-previews.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -37,6 +37,7 @@
     "marked": "17.0.6",
     "mermaid": "11.16.0",
     "next": "16.2.10",
+
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "shiki": "4.3.1",

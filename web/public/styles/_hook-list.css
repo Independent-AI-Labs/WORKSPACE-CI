@@ -11,11 +11,6 @@
   align-items: center;
 }
 
-.hook-list__count {
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
-
 .stage-filter,
 .tier-filter {
   display: inline-flex;

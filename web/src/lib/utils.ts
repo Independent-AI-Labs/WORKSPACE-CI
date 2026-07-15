@@ -1,3 +1,5 @@
+import { getNavLabelForHref } from '@/lib/wiki-nav'
+
 export function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -74,19 +76,7 @@ export function formatValueHtml(value: unknown, indent = 0): string {
 }
 
 export function pageTitle(path: string): string {
-  const map: Record<string, string> = {
-    '/': 'Home',
-    '/projects': 'Projects',
-    '/patterns': 'Code Anti-Patterns',
-    '/hooks': 'Git Hooks',
-    '/config': 'Config Files',
-    '/guard': 'Guard Policies',
-    '/checks': 'Static Analysis',
-    '/playground': 'Playground',
-    '/tooling': 'Tools & Scripts',
-    '/integration': 'Integration Guide',
-  }
-  return map[path] ?? path
+  return getNavLabelForHref(path) ?? path
 }
 
 export function truncateMarkdown(text: string, maxLength: number): string {

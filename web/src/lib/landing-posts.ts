@@ -47,12 +47,15 @@ export interface LandingUi {
   next_slide_aria_label: string
   posts_tablist_aria_label: string
   post_tab_aria_label_template: string
+  post_tabs_scroll_prev_aria_label: string
+  post_tabs_scroll_next_aria_label: string
 }
 
 export interface LandingSettings {
   post_interval_ms: number
   slide_interval_ms: number
   transition_ms: number
+  text_transition_ms: number
   background_pan_duration_ms: number
 }
 
@@ -87,6 +90,13 @@ function requireString(value: unknown, field: string): string {
     throw new Error(`landing-posts.yaml: ${field} is required`)
   }
   return value
+}
+
+function optionalString(value: unknown, defaultValue: string): string {
+  if (typeof value === 'string' && value.trim()) {
+    return value
+  }
+  return defaultValue
 }
 
 function assertSlide(slide: unknown, postId: string, index: number): LandingSlide {
@@ -155,6 +165,14 @@ export function parseLandingPostsConfig(raw: unknown): LandingPostsConfig {
       u.post_tab_aria_label_template,
       'ui.post_tab_aria_label_template',
     ),
+    post_tabs_scroll_prev_aria_label: optionalString(
+      u.post_tabs_scroll_prev_aria_label,
+      'Scroll tabs left',
+    ),
+    post_tabs_scroll_next_aria_label: optionalString(
+      u.post_tabs_scroll_next_aria_label,
+      'Scroll tabs right',
+    ),
   }
 
   const heroRaw = data.hero
@@ -174,10 +192,15 @@ export function parseLandingPostsConfig(raw: unknown): LandingPostsConfig {
     throw new Error('landing-posts.yaml: settings is required')
   }
   const s = settingsRaw as Record<string, unknown>
+  const transitionMs = requireNumber(s.transition_ms, 'settings.transition_ms')
   const settings: LandingSettings = {
     post_interval_ms: requireNumber(s.post_interval_ms, 'settings.post_interval_ms'),
     slide_interval_ms: requireNumber(s.slide_interval_ms, 'settings.slide_interval_ms'),
-    transition_ms: requireNumber(s.transition_ms, 'settings.transition_ms'),
+    transition_ms: transitionMs,
+    text_transition_ms:
+      typeof s.text_transition_ms === 'number'
+        ? s.text_transition_ms
+        : Math.round(transitionMs * 0.4),
     background_pan_duration_ms: requireNumber(
       s.background_pan_duration_ms,
       'settings.background_pan_duration_ms',

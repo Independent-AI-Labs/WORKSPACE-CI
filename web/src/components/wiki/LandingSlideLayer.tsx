@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import type { LandingSlide } from '@/lib/landing-posts'
 import { landingPdfEmbedSrc } from '@/lib/landing-pdf-embed'
+import { landingPdfPreviewImageSrc } from '@/lib/landing-pdf-render'
 import { panMotionStyle, type SlidePan } from '@/lib/landing-pan'
 
 export function LandingSlideLayer({
@@ -39,14 +40,18 @@ export function LandingSlideLayer({
         <div key={pan.token} className={panClass} style={panMotionStyle(pan)}>
           {slide.type === 'image' ? (
             <img src={slide.src} alt="" className="landing-stage__image" decoding="async" />
+          ) : slide.type === 'document' ? (
+            <img
+              src={landingPdfPreviewImageSrc(slide.src)}
+              alt=""
+              className="landing-stage__image landing-stage__image--pdf-preview"
+              decoding="async"
+            />
           ) : (
             <iframe
-              src={slide.type === 'document' ? landingPdfEmbedSrc(slide.src) : slide.src}
+              src={landingPdfEmbedSrc(slide.src)}
               title={slide.subtitle}
-              className={clsx(
-                'landing-stage__iframe',
-                slide.type === 'document' && 'landing-stage__iframe--pdf',
-              )}
+              className="landing-stage__iframe"
               tabIndex={-1}
             />
           )}

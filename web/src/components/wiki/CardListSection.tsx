@@ -46,9 +46,9 @@ export function CardListSection({
         deselectAll={deselectAll}
         categoryCounts={categoryCounts}
       />
-      <div className="card-list-section__count">
+      <p className="list-section__count">
         {visibleCount} of {totalCount} {itemLabel}
-      </div>
+      </p>
       <div className="wiki-card-grid">
         {filtered.map((item) => (
           <WikiCard key={item.id} item={item}>

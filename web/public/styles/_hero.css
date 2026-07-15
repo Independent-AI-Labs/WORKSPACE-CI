@@ -28,8 +28,29 @@
   letter-spacing: 0.01em;
 }
 
+@media (max-width: 768px) {
+  .hero__title {
+    font-size: var(--text-2xl);
+    letter-spacing: var(--tracking-normal);
+  }
+
+  .hero__subtitle {
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+  }
+
+  .hero__subtitle strong {
+    font-size: 1em;
+  }
+}
+
 @media (max-width: 480px) {
   .hero {
     padding: var(--space-4) var(--space-3);
+    margin-bottom: var(--space-6);
+  }
+
+  .hero__title {
+    font-size: var(--text-xl);
   }
 }

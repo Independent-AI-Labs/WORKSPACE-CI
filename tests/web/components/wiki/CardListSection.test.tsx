@@ -31,7 +31,9 @@ describe('CardListSection', () => {
         cardContent={cardContent}
       />,
     )
-    expect(screen.getByText('3 of 3 items')).toBeInTheDocument()
+    const count = screen.getByText('3 of 3 items')
+    expect(count).toBeInTheDocument()
+    expect(count).toHaveClass('list-section__count')
     expect(screen.getByText('Item A')).toBeInTheDocument()
     expect(screen.getByText('Item B')).toBeInTheDocument()
     expect(screen.getByText('Item C')).toBeInTheDocument()

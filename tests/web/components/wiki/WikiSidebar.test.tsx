@@ -4,8 +4,10 @@ import { WikiSidebar } from '@/components/wiki/WikiSidebar'
 import type { WikiStats } from '@/lib/search-data'
 import type { Branding } from '@/lib/branding'
 
+const mockUsePathname = vi.fn(() => '/patterns')
+
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/patterns',
+  usePathname: () => mockUsePathname(),
 }))
 
 const mockStats: WikiStats = {
@@ -75,6 +77,15 @@ describe('WikiSidebar', () => {
     renderSidebar(true)
     expect(screen.getByText('Home')).toBeInTheDocument()
     expect(screen.getByText('Open Source')).toBeInTheDocument()
+  })
+
+  it('pins Home in a dedicated nav section when landing flag is enabled', () => {
+    mockUsePathname.mockReturnValue('/hooks')
+    const { container } = renderSidebar(true)
+    const pinned = container.querySelector('.wiki-sidebar__nav--pinned')
+    expect(pinned).toBeTruthy()
+    expect(pinned?.querySelector('a[href="/"]')).toBeTruthy()
+    expect(screen.getByText('Home')).toBeInTheDocument()
   })
 
   it('hides Home nav when landing flag is disabled', () => {
