@@ -8,12 +8,12 @@
 FROM docker.io/library/python:3.13-slim-bookworm AS extract
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends cloc git \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip install --no-cache-dir PyYAML==6.0.3
+    && apt-get install -y --no-install-recommends cloc git curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace/CI
 
+COPY CI/pyproject.toml CI/uv.lock ./
 COPY CI/ci ./ci
 COPY CI/lib ./lib
 COPY CI/scripts ./scripts
@@ -22,11 +22,16 @@ COPY CI/Makefile ./
 COPY CI/web/src/data ./web/src/data
 
 ENV CI_WEB_DATA_DIR=/workspace/CI/web/src/data
+ENV CI_CONFIG_DIR=/workspace/CI/config
+ENV CI_PROJECT_ROOT=/workspace/CI
+ENV UV_VERSION=0.11.23
 # code-stats.json is copied from the repo above; the extract stage has no sibling
 # git repos, so regenerate hook/script/swallow data only.
-RUN /usr/local/bin/python3.13 scripts/extract-hook-sources.py \
-    && /usr/local/bin/python3.13 scripts/extract-script-sources.py \
-    && /usr/local/bin/python3.13 scripts/extract-swallow-source.py
+RUN bash scripts/bootstrap-uv \
+    && PATH="/workspace/CI/.boot-linux/bin:$$PATH" uv sync --frozen \
+    && PATH="/workspace/CI/.boot-linux/bin:$$PATH" uv run python scripts/extract-hook-sources.py \
+    && PATH="/workspace/CI/.boot-linux/bin:$$PATH" uv run python scripts/extract-script-sources.py \
+    && PATH="/workspace/CI/.boot-linux/bin:$$PATH" uv run python scripts/extract-swallow-source.py
 
 # -----------------------------------------------------------------------------
 # Stage 2: build Next.js standalone bundle
