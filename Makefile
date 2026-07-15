@@ -222,8 +222,12 @@ _test-impl:
 	./tests/run_tests.sh
 	$(PYTEST) tests/unit tests/integration -v --timeout=30
 
+# =============================================================================
+# Selective Tests
+# =============================================================================
 # Convenience targets for selective test runs (not part of the moon
 # DAG; call directly when you want to run only one half).
+
 .PHONY: test-shell
 test-shell: ## Run shell tests only (no moon caching)
 	./tests/run_tests.sh
@@ -252,8 +256,9 @@ _test-push-impl:
 	$(PYTEST) tests/integration --cov=ci --cov-report=term-missing --cov-fail-under=5 --tb=short -q
 	$(MAKE) -C web lint type-check test
 
+# Wiki dev server: delegates to web/Makefile; systemd user service on :3001
 # =============================================================================
-# Wiki Dev Server (delegates to web/Makefile; systemd user service on :3001)
+# Wiki Dev Server
 # =============================================================================
 
 .PHONY: start wiki-dev-start wiki-dev wiki-dev-stop wiki-dev-restart wiki-dev-status wiki-dev-logs
@@ -272,10 +277,10 @@ wiki-dev-status: ## Show wiki dev server status
 wiki-dev-logs: ## Tail wiki dev server logs
 	$(MAKE) -C web dev-logs
 
+# Wiki production: Podman on :8080/:8443 (no root). Env overrides: PODMAN,
+# COMPOSE_CMD, WIKI_HTTP_PORT, WIKI_HTTPS_PORT, PROD_HTTP_PORT, PROD_HTTPS_PORT.
 # =============================================================================
-# Wiki Production (Podman; ports 8080/8443, no root)
-# Env overrides: PODMAN, COMPOSE_CMD, WIKI_HTTP_PORT, WIKI_HTTPS_PORT, PROD_HTTP_PORT, PROD_HTTPS_PORT
-# Override to :80/:443 only if you have root or sysctl unprivileged_port_start lowered.
+# Wiki Production
 # =============================================================================
 
 .PHONY: wiki-prod-check-syntax wiki-prod-build wiki-prod-start wiki-prod-stop wiki-prod-restart wiki-prod-status wiki-prod-logs
@@ -303,9 +308,9 @@ wiki-prod-undeploy: ## Disable + remove wiki prod systemd unit
 wiki-prod-systemd-logs: ## Tail wiki prod systemd unit logs
 	journalctl --user -u wiki-prod-compose -f
 
+# Wiki Cloudflare tunnel: systemd user unit. Configure in .env (see .env.example).
 # =============================================================================
-# Wiki Cloudflare Tunnel (systemd user; no VM tunnel wrapper)
-# Configure in .env (see .env.example) or override on command line.
+# Wiki Cloudflare Tunnel
 # =============================================================================
 
 ifeq ($(TUNNEL_CONFIG),)
@@ -344,8 +349,9 @@ wiki-tunnel-logs: ## Tail wiki tunnel logs
 wiki-tunnel-route-dns: ## Route DNS (WIKI_TUNNEL_HOSTNAME from .env)
 	$(ANSIBLE_TUNNEL) --tags route-dns
 
+# Wiki TLS: Let's Encrypt DNS-01 via Cloudflare
 # =============================================================================
-# Wiki TLS (Let's Encrypt DNS-01 via Cloudflare; generic playbook)
+# Wiki TLS
 # =============================================================================
 
 ANSIBLE_LETSENCRYPT_ENV := CLOUDFLARE_API_TOKEN="$(CLOUDFLARE_API_TOKEN)" \
@@ -436,8 +442,9 @@ extract-wiki-data: extract-code-stats extract-hook-sources extract-script-source
 scaffold-ci: ## Generate CI integration files for a consumer project
 	bash scripts/scaffold-ci $(ARGS)
 
+# System hardening (requires sudo)
 # =============================================================================
-# System Hardening (requires sudo)
+# System Hardening
 # =============================================================================
 
 .PHONY: enforce-syslog-limits
@@ -445,8 +452,9 @@ enforce-syslog-limits: ## Enforce system-level log ceilings: logrotate maxsize +
 	@echo "==> Enforcing system log ceilings..."
 	$(SUDO) bash scripts/enforce-syslog-limits
 
-# =============================================================================
 # WORKSPACE-GUARD: compiled git protection (opt-in)
+# =============================================================================
+# WORKSPACE-GUARD
 # =============================================================================
 
 .PHONY: build-guard install-guard install-guard-host-exec reconcile-guard-host-exec uninstall-guard purge-guard-state check-guard check-guard-host-exec
