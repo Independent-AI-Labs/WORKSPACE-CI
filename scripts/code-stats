@@ -140,7 +140,12 @@ _per_repo_lang="$_tmpdir/per_repo_lang.tsv"
 # Track failures to distinguish "0 lines" from "skipped".
 _failed_repos=()
 
-[[ $_json -eq 0 ]] && ci_info "Scanning ${#_repos[@]} repo(s) under ${_root#$HOME/~}..."
+if [[ $_json -eq 1 ]]; then
+    printf '[code-stats] scanning %s repo(s) under %s...\n' \
+        "${#_repos[@]}" "${_root#$HOME/~}" >&2
+else
+    ci_info "Scanning ${#_repos[@]} repo(s) under ${_root#$HOME/~}..."
+fi
 
 for _repo in "${_repos[@]}"; do
     _is_umbrella=0
@@ -152,7 +157,17 @@ for _repo in "${_repos[@]}"; do
         [[ "$_rel" == projects/* ]] && _rel="${_rel#projects/}"
     fi
 
-    _cloc_args=(--quiet --json --not-match-f='package-lock\.json')
+    if [[ $_json -eq 1 ]]; then
+        printf '[code-stats] cloc: %s (running; large repos may take several minutes)...\n' \
+            "$_rel" >&2
+    fi
+
+    if [[ $_json -eq 1 ]]; then
+        # No --quiet: cloc progress goes to stderr (visible during long repos).
+        _cloc_args=(--json --not-match-f='package-lock\.json')
+    else
+        _cloc_args=(--quiet --json --not-match-f='package-lock\.json')
+    fi
     # Always use --exclude-dir instead of --vcs=git because the workspace
     # guard blocks ``git -c safe.directory=* ls-files`` (the command cloc
     # invokes internally under --vcs=git).  The expanded exclude list covers

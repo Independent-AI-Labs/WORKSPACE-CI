@@ -124,3 +124,118 @@ def detect_js_soft_fail_multiline(
             pid = _check_warn_and_return(lines, lineno)
             if pid is not None:
                 yield lines[lineno], pid
+
+
+_FAILURE_BATCH_RE = re.compile(r"\bfailures\.(?:length|filter)\b")
+_KEEP_EXISTING_RE = re.compile(
+    r"keeping\s+existing|fall\s+back",
+    re.IGNORECASE,
+)
+_SOFT_RETURN_RE = re.compile(
+    r"^\s*return\s+(?:false|null|undefined|0)\s*;?\s*(?://.*)?$",
+)
+_PROD_GUARD_RE = re.compile(r"\b(?:CI_WIKI_PROD_BUILD|abortOrWarn)\b")
+_PREBUILD_SCRIPTS = frozenset(
+    {
+        "web/scripts/sync-logos.mjs",
+        "web/scripts/fetch-web-documents.mjs",
+        "web/scripts/sync-web-content.mjs",
+    },
+)
+
+
+def _check_warn_batch_no_exit(
+    lines: dict[int, AddedLine],
+    lineno: int,
+) -> str | None:
+    header = lines.get(lineno)
+    if header is None or not _FAILURE_BATCH_RE.search(header.text):
+        return None
+    for offset in range(0, 6):
+        body = lines.get(lineno + offset)
+        if body is None:
+            continue
+        if _PROCESS_EXIT_RE.search(body.text):
+            return None
+        if _WARN_RE.search(body.text):
+            return "js-warn-batch-no-exit"
+    return None
+
+
+def _check_catch_warn_return_soft(
+    lines: dict[int, AddedLine],
+    lineno: int,
+    header_indent: int,
+) -> str | None:
+    saw_warn = False
+    for offset in range(1, 6):
+        body = lines.get(lineno + offset)
+        if body is None:
+            continue
+        if body.text.strip() == "}":
+            break
+        if _THROW_RE.search(body.text) or _PROCESS_EXIT_RE.search(body.text):
+            return None
+        if _WARN_RE.search(body.text):
+            saw_warn = True
+            continue
+        if saw_warn and _SOFT_RETURN_RE.match(body.text):
+            return "js-catch-return-soft"
+        if body.text.strip() and not body.text.strip().startswith("//"):
+            return None
+    return None
+
+
+def _check_warn_keep_existing(
+    lines: dict[int, AddedLine],
+    lineno: int,
+) -> str | None:
+    header = lines.get(lineno)
+    if header is None or not _WARN_RE.search(header.text):
+        return None
+    if not _KEEP_EXISTING_RE.search(header.text):
+        return None
+    for offset in range(-5, 6):
+        body = lines.get(lineno + offset)
+        if body is None:
+            continue
+        if _PROD_GUARD_RE.search(body.text) or _PROCESS_EXIT_RE.search(body.text):
+            return None
+    return "js-warn-keep-existing"
+
+
+def detect_js_prod_fail_multiline(
+    added: list[AddedLine],
+) -> Iterator[tuple[AddedLine, str]]:
+    by_file: dict[str, dict[int, AddedLine]] = {}
+    for a in added:
+        if not is_js_file(a.path):
+            continue
+        by_file.setdefault(a.path, {})[a.lineno] = a
+
+    for path, lines in by_file.items():
+        for lineno, header in sorted(lines.items()):
+            if path in _PREBUILD_SCRIPTS:
+                m = JS_CATCH_HEADER.match(header.text)
+                if m:
+                    header_indent = len(m.group("indent"))
+                    pid = _check_catch_warn_return_soft(
+                        lines,
+                        lineno,
+                        header_indent,
+                    )
+                    if pid is not None:
+                        yield header, pid
+                        continue
+
+            if not path.startswith("web/scripts/"):
+                continue
+
+            for check in (
+                _check_warn_batch_no_exit,
+                _check_warn_keep_existing,
+            ):
+                pid = check(lines, lineno)
+                if pid is not None:
+                    yield lines[lineno], pid
+                    break

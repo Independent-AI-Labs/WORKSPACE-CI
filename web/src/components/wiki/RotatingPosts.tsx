@@ -15,6 +15,7 @@ import {
   typographyFromComputed,
   type PretextTypography,
 } from '@/lib/landing-pretext'
+import { LandingPostTabs } from '@/components/wiki/LandingPostTabs'
 import { LandingSlideLayer } from '@/components/wiki/LandingSlideLayer'
 import { SlideTextLayer } from '@/components/wiki/SlideTextLayer'
 
@@ -34,14 +35,6 @@ function formatSlideTabLabel(template: string, index: number, total: number): st
   return template.replace('{n}', String(index + 1)).replace('{total}', String(total))
 }
 
-function formatPostTabLabel(template: string, label: string): string {
-  return template.replace('{label}', label)
-}
-
-function postTabLabel(post: LandingPost): string {
-  return post.tab_label ?? post.title
-}
-
 export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
   const [activeSlide, setActiveSlide] = useState<SlidePosition>({ postIndex: 0, slideIndex: 0 })
   const [leavingSlide, setLeavingSlide] = useState<SlidePosition | null>(null)
@@ -57,7 +50,6 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
   const activeSlideRef = useRef(activeSlide)
   const contentRef = useRef<HTMLDivElement>(null)
   const probeRef = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
     activeSlideRef.current = activeSlide
   }, [activeSlide])
@@ -281,15 +273,16 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
     [post, slideIndex],
   )
 
-  const subtitleTypography = subtitleType ?? { font: '700 42px Montserrat', lineHeightPx: 52.5 }
-  const bodyTypography = bodyType ?? { font: '400 28px Montserrat', lineHeightPx: 45.5 }
+  const subtitleTypography = subtitleType ?? { font: '700 32px Montserrat', lineHeightPx: 40 }
+  const bodyTypography = bodyType ?? { font: '400 22px Montserrat', lineHeightPx: 36 }
 
   const textStackHeight = useMemo(() => {
     if (contentWidth <= 0) return undefined
     let maxHeight = 0
     for (const p of posts) {
       for (const s of p.slides) {
-        const includeLinks = s.type === 'document' || Boolean(s.source_url)
+        const linkCount =
+          (s.type === 'document' ? 1 : 0) + (s.source_url ? 1 : 0)
         maxHeight = Math.max(
           maxHeight,
           measureSlideTextHeight(
@@ -298,7 +291,7 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
             contentWidth,
             subtitleTypography,
             bodyTypography,
-            includeLinks,
+            linkCount,
           ),
         )
       }
@@ -401,7 +394,7 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
 
           <div
             className="landing-stage__text-stack"
-            style={textStackHeight ? { height: textStackHeight } : undefined}
+            style={textStackHeight ? { minHeight: textStackHeight } : undefined}
           >
             {renderedPostIndices.map((pi) => {
               const renderedPost = posts[pi]
@@ -437,25 +430,13 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
         </div>
       </div>
 
-      <div
-        className="landing-stage__post-tabs"
-        role="tablist"
-        aria-label={ui.posts_tablist_aria_label}
-      >
-        {posts.map((p, i) => (
-          <button
-            key={p.id}
-            type="button"
-            role="tab"
-            aria-selected={i === postIndex}
-            aria-label={formatPostTabLabel(ui.post_tab_aria_label_template, postTabLabel(p))}
-            className={clsx('landing-stage__post-tab', i === postIndex && 'is-active')}
-            onClick={() => handlePostTab(i)}
-          >
-            {postTabLabel(p)}
-          </button>
-        ))}
-      </div>
+      <LandingPostTabs
+        posts={posts}
+        postIndex={postIndex}
+        ui={ui}
+        reducedMotion={reducedMotion}
+        onPostTab={handlePostTab}
+      />
     </section>
   )
 }

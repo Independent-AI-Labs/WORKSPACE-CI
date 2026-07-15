@@ -52,6 +52,14 @@ FROM docker.io/library/node:24-bookworm AS build
 ENV NODE_OPTIONS=--max-old-space-size=4096
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV WORKSPACE_PROJECTS_ROOT=/workspace
+ENV CHROME_BIN=/usr/bin/chromium
+
+RUN set -eux \
+    && echo "[wiki-build] apt-get update" \
+    && apt-get update \
+    && echo "[wiki-build] install chromium for html_to_pdf prebuild" \
+    && apt-get install -y --no-install-recommends chromium \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
 

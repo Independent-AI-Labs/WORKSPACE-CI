@@ -28,12 +28,14 @@ from check_silent_swallow_ansible import (
     is_ansible_file,
 )
 from check_silent_swallow_base import AddedLine, parse_diff
+from check_silent_swallow_bootstrap import detect_bootstrap_multiline
 from check_silent_swallow_container import (
     detect_container_multiline,
     is_container_file,
 )
 from check_silent_swallow_js import (
     detect_js_multiline,
+    detect_js_prod_fail_multiline,
     detect_js_soft_fail_multiline,
     is_js_file,
 )
@@ -164,10 +166,12 @@ def _collect_multiline_violations(
         "detect_python_capture_multiline": detect_python_capture_multiline,
         "detect_js_multiline": detect_js_multiline,
         "detect_js_soft_fail_multiline": detect_js_soft_fail_multiline,
+        "detect_js_prod_fail_multiline": detect_js_prod_fail_multiline,
         "detect_ansible_tasks": detect_ansible_tasks,
         "detect_registered_output_swallow": detect_registered_output_swallow,
         "detect_shell_multiline": detect_shell_multiline,
         "detect_container_multiline": detect_container_multiline,
+        "detect_bootstrap_multiline": detect_bootstrap_multiline,
     }
 
     lang_checker = dict(_LANGUAGE_CHECKERS)

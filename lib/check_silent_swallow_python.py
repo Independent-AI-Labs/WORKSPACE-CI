@@ -310,32 +310,130 @@ def detect_python_multiline(
             yield header, pid
 
 
+_SUBPROCESS_CALL_RE = re.compile(r"\bsubprocess\.(?:run|call|Popen)\s*\(")
 _CAPTURE_OUTPUT_RE = re.compile(r"\bcapture_output\s*=\s*True\b")
+_STDOUT_PIPE_RE = re.compile(r"\bstdout\s*=\s*(?:subprocess\.)?PIPE\b")
 _STDERR_SURFACED_RE = re.compile(
     r"\b(?:stderr|exc\.stderr|result\.stderr|completed\.stderr)\b"
     r"|sys\.stderr\.write|print\s*\([^)]*stderr"
 )
-_RAISE_OR_CHECK_RE = re.compile(
-    r"\braise\b|check\s*=\s*True|returncode\s*!=\s*0|CalledProcessError"
+_RAISE_OR_CHECK_RE = re.compile(r"\braise\b|returncode\s*!=\s*0")
+_PROGRESS_RE = re.compile(
+    r"print\s*\([^)]*file\s*=\s*sys\.stderr"
+    r"|sys\.stderr\.write\s*\("
+    r"|(?:logger|log|logging)\.(?:info|warning)\s*\("
+    r"|\[[\w-]+\].*(?:running|progress|slow|cloc|workspace|per-repo)"
+    r"|\b_log\s+"
 )
+_CALL_WINDOW = 12
+_PROGRESS_LOOKBACK = 25
+_SURFACING_LOOKAHEAD = 16
 
 
-def _capture_output_unsurfaced(
+def _subprocess_call_anchor(
     lines: dict[int, AddedLine],
     lineno: int,
-) -> str | None:
+) -> int | None:
     header = lines.get(lineno)
-    if header is None or not _CAPTURE_OUTPUT_RE.search(header.text):
+    if header is None:
         return None
-    for offset in range(0, 16):
-        body = lines.get(lineno + offset)
+    if _SUBPROCESS_CALL_RE.search(header.text):
+        return lineno
+    for back in range(1, 8):
+        prev = lines.get(lineno - back)
+        if prev is None:
+            break
+        if _SUBPROCESS_CALL_RE.search(prev.text):
+            return lineno - back
+    return None
+
+
+def _subprocess_call_block(
+    lines: dict[int, AddedLine],
+    anchor: int,
+) -> list[AddedLine]:
+    block: list[AddedLine] = []
+    for offset in range(0, _CALL_WINDOW):
+        body = lines.get(anchor + offset)
+        if body is None:
+            break
+        block.append(body)
+    return block
+
+
+def _call_captures_stdout(block: list[AddedLine]) -> bool:
+    return any(
+        _CAPTURE_OUTPUT_RE.search(line.text) or _STDOUT_PIPE_RE.search(line.text)
+        for line in block
+    )
+
+
+def _has_progress_before(
+    lines: dict[int, AddedLine],
+    anchor: int,
+) -> bool:
+    for back in range(1, _PROGRESS_LOOKBACK + 1):
+        prev = lines.get(anchor - back)
+        if prev is None:
+            continue
+        if _PROGRESS_RE.search(prev.text):
+            return True
+    return False
+
+
+def _surfaces_after_call(
+    lines: dict[int, AddedLine],
+    anchor: int,
+) -> bool:
+    for offset in range(0, _SURFACING_LOOKAHEAD):
+        body = lines.get(anchor + offset)
         if body is None:
             continue
         if _STDERR_SURFACED_RE.search(body.text) or _RAISE_OR_CHECK_RE.search(
             body.text
         ):
-            return None
+            return True
+    return False
+
+
+def _capture_output_unsurfaced(
+    lines: dict[int, AddedLine],
+    anchor: int,
+    block: list[AddedLine],
+) -> str | None:
+    if not any(_CAPTURE_OUTPUT_RE.search(line.text) for line in block):
+        return None
+    if _surfaces_after_call(lines, anchor):
+        return None
     return "py-capture-output-unsurfaced"
+
+
+def _subprocess_pipe_no_progress(
+    lines: dict[int, AddedLine],
+    anchor: int,
+    block: list[AddedLine],
+) -> str | None:
+    if not any(_STDOUT_PIPE_RE.search(line.text) for line in block):
+        return None
+    if _has_progress_before(lines, anchor):
+        return None
+    return "py-subprocess-pipe-no-progress"
+
+
+def _classify_subprocess_capture(
+    lines: dict[int, AddedLine],
+    lineno: int,
+) -> str | None:
+    anchor = _subprocess_call_anchor(lines, lineno)
+    if anchor is None:
+        return None
+    block = _subprocess_call_block(lines, anchor)
+    if not _call_captures_stdout(block):
+        return None
+    pid = _capture_output_unsurfaced(lines, anchor, block)
+    if pid is not None:
+        return pid
+    return _subprocess_pipe_no_progress(lines, anchor, block)
 
 
 def detect_python_capture_multiline(
@@ -347,8 +445,17 @@ def detect_python_capture_multiline(
             continue
         by_file.setdefault(a.path, {})[a.lineno] = a
 
-    for lines in by_file.values():
+    for path, lines in by_file.items():
+        reported: set[tuple[str, int, str]] = set()
         for lineno in sorted(lines):
-            pid = _capture_output_unsurfaced(lines, lineno)
-            if pid is not None:
-                yield lines[lineno], pid
+            pid = _classify_subprocess_capture(lines, lineno)
+            if pid is None:
+                continue
+            anchor = _subprocess_call_anchor(lines, lineno)
+            if anchor is None:
+                continue
+            key = (path, anchor, pid)
+            if key in reported:
+                continue
+            reported.add(key)
+            yield lines[anchor], pid

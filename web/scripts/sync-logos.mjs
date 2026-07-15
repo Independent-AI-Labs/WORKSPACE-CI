@@ -18,6 +18,14 @@ const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT
   ?? path.resolve(WEB_DIR, '..', '..')
 const DEST_DIR = path.resolve(WEB_DIR, 'public', 'logos')
 
+function abortOrWarn(message) {
+  if (process.env.CI_WIKI_PROD_BUILD === '1') {
+    console.error(message)
+    process.exit(1)
+  }
+  console.warn(message)
+}
+
 // Local branding logos (themed variants) copied from this repo's res/ dir
 // into public/ so branding.yaml paths resolve. Named explicitly so a stale
 // file in public/ never survives a sync.
@@ -71,7 +79,9 @@ async function syncLogos() {
   }
   const failures = results.filter((r) => !r.ok)
   if (failures.length > 0) {
-    console.warn(`[sync-logos] ${failures.length} repo(s) had no logo; wiki will fall back to icons.`)
+    abortOrWarn(
+      `[sync-logos] ${failures.length} repo(s) had no logo; wiki will fall back to icons.`,
+    )
   }
 
   // Local branding logos (themed variants) -> public/

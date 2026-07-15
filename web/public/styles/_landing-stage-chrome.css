@@ -1,0 +1,92 @@
+.landing-stage__nav {
+  position: absolute;
+  top: 50%;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  border-radius: var(--radius-full);
+  background: color-mix(in oklab, var(--bg) 55%, transparent);
+  color: var(--text);
+  cursor: pointer;
+  transform: translateY(-50%);
+  backdrop-filter: blur(4px);
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.landing-stage__nav:hover {
+  background: color-mix(in oklab, var(--bg) 75%, transparent);
+  border-color: var(--border);
+}
+
+.landing-stage__nav--prev {
+  left: var(--space-4);
+}
+
+.landing-stage__nav--next {
+  right: var(--space-4);
+}
+
+.landing-stage__nav i {
+  font-size: var(--text-xl);
+  line-height: 1;
+}
+
+.landing-stage__indicators {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-4);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  transform: translateX(-50%);
+}
+
+.landing-stage__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  padding: 0;
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  border-radius: var(--radius-full);
+  background: color-mix(in oklab, var(--bg) 40%, transparent);
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.landing-stage__dot:hover {
+  border-color: var(--text);
+  transform: scale(1.15);
+}
+
+.landing-stage__dot.is-active {
+  background: var(--text);
+  border-color: var(--text);
+}
+
+@media (max-width: 640px) {
+  .landing-stage__nav--prev {
+    left: var(--space-2);
+  }
+
+  .landing-stage__nav--next {
+    right: var(--space-2);
+  }
+
+  .landing-stage__nav {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-stage__post-tab-indicator.is-ready:not(.is-reduced-motion),
+  .landing-stage__post-tab-indicator.is-ready:not(.is-reduced-motion)::after {
+    transition: none;
+  }
+}

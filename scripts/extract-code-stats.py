@@ -44,10 +44,18 @@ def main() -> int:
     env = dict(os.environ)
     env["CI_WORKSPACE_ROOT"] = workspace_root
 
+    print(
+        "[extract-code-stats] running cloc across workspace "
+        f"({workspace_root}; per-repo progress on stderr)...",
+        file=sys.stderr,
+        flush=True,
+    )
+
     try:
         result = subprocess.run(
             ["bash", str(_CODE_STATS), "--json"],
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=None,
             text=True,
             env=env,
             cwd=str(_REPO_ROOT),
@@ -58,9 +66,9 @@ def main() -> int:
             f"ERROR: code-stats failed (rc={exc.returncode})",
             file=sys.stderr,
         )
-        if exc.stderr:
-            print(exc.stderr, file=sys.stderr)
-        return exc.returncode
+        if exc.stdout:
+            print(exc.stdout, file=sys.stderr)
+        return exc.returncode if exc.returncode is not None else 1
 
     try:
         data = json.loads(result.stdout)

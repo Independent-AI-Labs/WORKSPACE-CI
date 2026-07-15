@@ -12,7 +12,9 @@ Environment="WIKI_DEV_PORT=__DEV_PORT__"
 Environment="WIKI_DEV_HOST=0.0.0.0"
 EnvironmentFile=%h/.config/wiki-ci-dev.env
 ExecStart=__NODE__ scripts/dev-single.mjs
-Restart=always
+# Dev: only restart on failure, not on clean exit (Restart=always resurrected
+# stale processes and fought manual stop/restart during development).
+Restart=on-failure
 RestartSec=5
 MemoryHigh=4G
 MemoryMax=6G

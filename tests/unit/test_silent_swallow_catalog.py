@@ -227,7 +227,10 @@ PASSING_CASES: list[SwallowCase] = [
     SwallowCase(
         "cat5_safe_stderr_to_log",
         "tests/integration/test_stack_up.sh",
-        ['podman-compose -f "$COMPOSE_FILE" down 2>&1 | tee -a /tmp/teardown.log'],
+        [
+            'podman-compose -f "$COMPOSE_FILE" down 2>&1 | tee -a /tmp/teardown.log',
+            "teardown_rc=${PIPESTATUS[0]}",
+        ],
         _SHOULD_PASS,
         None,
     ),

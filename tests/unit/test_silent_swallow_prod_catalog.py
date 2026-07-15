@@ -91,6 +91,71 @@ BLOCKED_CASES: list[SwallowCase] = [
         _SHOULD_BLOCK,
         "systemd-journal-only",
     ),
+    SwallowCase(
+        "prod_build_log_not_surfaced",
+        "web/scripts/prod.sh",
+        [
+            '    echo "ERROR: podman build failed (rc=${PIPESTATUS[0]}); see ${BUILD_LOG}" >&2',
+            "    exit 1",
+        ],
+        _SHOULD_BLOCK,
+        "sh-build-log-not-surfaced",
+    ),
+    SwallowCase(
+        "sync_logos_warn_batch",
+        "web/scripts/sync-logos.mjs",
+        [
+            "  const failures = results.filter((r) => !r.ok)",
+            "  if (failures.length > 0) {",
+            "    console.warn(`[sync-logos] ${failures.length} repo(s) had no logo`)",
+            "  }",
+        ],
+        _SHOULD_BLOCK,
+        "js-warn-batch-no-exit",
+    ),
+    SwallowCase(
+        "bootstrap_gap_no_log",
+        "scripts/bootstrap-uv",
+        [
+            '    _log "checksum OK ($expected_sha)"',
+            '    if ! tar -xzf "${tmp}/${tarball}" -C "$tmp"; then',
+        ],
+        _SHOULD_BLOCK,
+        "sh-bootstrap-gap-no-log",
+    ),
+    SwallowCase(
+        "grafana_curl_silent",
+        "web/scripts/verify-grafana-embed.sh",
+        ['health_code="$(curl -sk -o /dev/null -w \'%{http_code}\' "${BASE}/grafana/api/health")"'],
+        _SHOULD_BLOCK,
+        "sh-curl-s-without-S",
+    ),
+    SwallowCase(
+        "pipe_tee_no_pipestatus",
+        "web/scripts/prod.sh",
+        [
+            '"${PODMAN}" build --progress=plain -f "${WEB_DIR}/Containerfile" '
+            '-t "${PROD_IMAGE}" "${PROJECTS_ROOT}" 2>&1 | tee "${BUILD_LOG}"',
+        ],
+        _SHOULD_BLOCK,
+        "sh-pipe-tee-no-pipestatus",
+    ),
+    SwallowCase(
+        "extract_code_stats_silent_pipe",
+        "scripts/extract-code-stats.py",
+        [
+            "    try:",
+            "        result = subprocess.run(",
+            '            ["bash", str(_CODE_STATS), "--json"],',
+            "            stdout=subprocess.PIPE,",
+            "            stderr=None,",
+            "            text=True,",
+            "            check=True,",
+            "        )",
+        ],
+        _SHOULD_BLOCK,
+        "py-subprocess-pipe-no-progress",
+    ),
 ]
 
 PASSING_CASES: list[SwallowCase] = [
@@ -139,6 +204,50 @@ PASSING_CASES: list[SwallowCase] = [
         "web/scripts/prod.sh",
         [
             '    echo "ERROR: podman build failed (rc=${PIPESTATUS[0]}); see ${BUILD_LOG}" >&2',
+            '    tail -n 80 "${BUILD_LOG}" >&2',
+        ],
+        _SHOULD_PASS,
+        None,
+    ),
+    SwallowCase(
+        "prod_podman_build_tee_pipestatus",
+        "web/scripts/prod.sh",
+        [
+            '"${PODMAN}" build --progress=plain -f "${WEB_DIR}/Containerfile" '
+            '-t "${PROD_IMAGE}" "${PROJECTS_ROOT}" 2>&1 | tee "${BUILD_LOG}"',
+            'if [[ "${PIPESTATUS[0]}" -ne 0 ]]; then',
+        ],
+        _SHOULD_PASS,
+        None,
+    ),
+    SwallowCase(
+        "sync_logos_abort_or_warn",
+        "web/scripts/sync-logos.mjs",
+        [
+            "  if (failures.length > 0) {",
+            "    abortOrWarn(`[sync-logos] ${failures.length} repo(s) had no logo`)",
+            "  }",
+        ],
+        _SHOULD_PASS,
+        None,
+    ),
+    SwallowCase(
+        "extract_code_stats_with_progress",
+        "scripts/extract-code-stats.py",
+        [
+            "    print(",
+            '        "[extract-code-stats] running cloc across workspace",',
+            "        file=sys.stderr,",
+            "        flush=True,",
+            "    )",
+            "    try:",
+            "        result = subprocess.run(",
+            '            ["bash", str(_CODE_STATS), "--json"],',
+            "            stdout=subprocess.PIPE,",
+            "            stderr=None,",
+            "            text=True,",
+            "            check=True,",
+            "        )",
         ],
         _SHOULD_PASS,
         None,

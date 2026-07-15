@@ -146,7 +146,7 @@ async function main() {
     if (signal) {
       process.kill(process.pid, signal)
     } else {
-      process.exit(code || 1)
+      process.exit(code ?? 1)
     }
   })
 

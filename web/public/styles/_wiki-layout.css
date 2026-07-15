@@ -46,6 +46,17 @@
   width: 100%;
 }
 
+.wiki-content:not(.wiki-content--landing) {
+  font-size: 0.8125rem;
+}
+
+.wiki-content:not(.wiki-content--landing) > h1 {
+  margin: 0 0 var(--space-4);
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: var(--leading-tight);
+}
+
 .wiki-body {
   margin: 0;
   padding: 0;

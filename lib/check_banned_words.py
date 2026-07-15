@@ -28,6 +28,8 @@ import yaml
 
 from ci.paths import resolve_config_path
 
+_NULL_STDIN = subprocess.DEVNULL
+
 
 def _scan_root() -> Path | None:
     """Repo root to scan (sibling hooks set CI_SCAN_ROOT before ci_uv_run)."""
@@ -144,7 +146,7 @@ def _get_files(argv_files: list[str]) -> list[str]:
             git_cmd,
             capture_output=True,
             text=True,
-            stdin=subprocess.DEVNULL,
+            stdin=_NULL_STDIN,
             check=True,
         )
     except subprocess.CalledProcessError as exc:

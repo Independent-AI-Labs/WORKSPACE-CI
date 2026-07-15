@@ -57,6 +57,13 @@ describe('RotatingPosts', () => {
     expect(screen.getByText('Slide A')).toBeInTheDocument()
   })
 
+  it('renders a sliding indicator behind post tabs', () => {
+    const { container } = render(<RotatingPosts posts={posts} settings={settings} ui={ui} />)
+    const indicator = container.querySelector('.landing-stage__post-tab-indicator')
+    expect(indicator).toBeTruthy()
+    expect(indicator).toHaveClass('is-ready')
+  })
+
   it('renders post tabs and slide dots for the active post', () => {
     render(<RotatingPosts posts={posts} settings={settings} ui={ui} />)
     expect(screen.getByRole('tab', { name: 'First' })).toHaveAttribute('aria-selected', 'true')

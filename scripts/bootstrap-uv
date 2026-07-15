@@ -141,6 +141,7 @@ main() {
     fi
     _log "checksum OK ($expected_sha)"
 
+    _log "extracting ${tarball} to ${tmp}"
     if ! tar -xzf "${tmp}/${tarball}" -C "$tmp"; then
         _log "tar extraction failed"
         return 1
@@ -158,6 +159,7 @@ main() {
         return 1
     fi
 
+    _log "installing uv to ${target}"
     if ! install -m 0755 "$uv_src" "$target"; then
         _log "install (copy) failed: $uv_src -> $target"
         return 1

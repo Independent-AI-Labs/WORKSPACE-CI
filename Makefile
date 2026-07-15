@@ -261,7 +261,7 @@ _test-push-impl:
 # Wiki Dev Server
 # =============================================================================
 
-.PHONY: start wiki-dev-start wiki-dev wiki-dev-stop wiki-dev-restart wiki-dev-status wiki-dev-logs
+.PHONY: start wiki-dev-start wiki-dev wiki-dev-stop wiki-dev-restart wiki-dev-restart-refresh wiki-dev-status wiki-dev-logs
 start: wiki-dev-start ## Alias for wiki-dev-start (make start)
 	:
 wiki-dev-start: extract-wiki-data ## Start wiki dev server (Next.js HMR on :3001)
@@ -270,7 +270,13 @@ wiki-dev: wiki-dev-start ## Alias for wiki-dev-start
 	:
 wiki-dev-stop: ## Stop wiki dev server
 	$(MAKE) -C web dev-stop
-wiki-dev-restart: ## Restart wiki dev server (stop + start; does not re-run extract-wiki-data)
+wiki-dev-restart: ## Restart wiki dev server (stop + start; fast, no cloc)
+	echo "[wiki-dev-restart] stop + start (skip extract-wiki-data; use wiki-dev-restart-refresh for cloc)"
+	$(MAKE) -C web dev-restart
+wiki-dev-restart-refresh: ## Restart wiki dev server after regenerating wiki JSON (cloc may take minutes)
+	echo "[wiki-dev-restart-refresh] phase 1/2: extract-wiki-data (code-stats/cloc may take several minutes)"
+	$(MAKE) extract-wiki-data
+	echo "[wiki-dev-restart-refresh] phase 2/2: dev server stop + start"
 	$(MAKE) -C web dev-restart
 wiki-dev-status: ## Show wiki dev server status
 	$(MAKE) -C web dev-status
@@ -425,17 +431,23 @@ code-stats: ## Codebase statistics across the workspace via cloc (lines, files, 
 
 .PHONY: extract-code-stats
 extract-code-stats: ## Generate web/src/data/code-stats.json for wiki Project Catalogue badges
+	echo "[extract-wiki-data] code-stats (cloc across workspace; slow)..."
 	uv run python scripts/extract-code-stats.py
 
 .PHONY: extract-hook-sources extract-script-sources extract-swallow-source extract-wiki-data
+_WIKI_EXTRACT_ENV = CI_CONFIG_DIR=config
+
 extract-hook-sources: ## Generate web/src/data/hook-sources.json for wiki Hook EntryPointDialog
-	uv run python scripts/extract-hook-sources.py
+	echo "[extract-wiki-data] hook-sources..."
+	$(_WIKI_EXTRACT_ENV) uv run python scripts/extract-hook-sources.py
 
 extract-script-sources: ## Generate web/src/data/script-sources.json for wiki Tooling EntryPointDialog
-	uv run python scripts/extract-script-sources.py
+	echo "[extract-wiki-data] script-sources..."
+	$(_WIKI_EXTRACT_ENV) uv run python scripts/extract-script-sources.py
 
 extract-swallow-source: ## Generate web/src/data/swallow-detectors.json for wiki Silent Swallow Detectors
-	uv run python scripts/extract-swallow-source.py
+	echo "[extract-wiki-data] swallow-detectors..."
+	$(_WIKI_EXTRACT_ENV) uv run python scripts/extract-swallow-source.py
 
 extract-wiki-data: extract-code-stats extract-hook-sources extract-script-sources extract-swallow-source ## Regenerate all wiki JSON data files
 

@@ -132,11 +132,24 @@ async function downloadDocument(postsDir, doc) {
     if (!wantsPdf) {
       throw new Error(`${doc.id}: html_to_pdf requires a .pdf destination file`)
     }
+    const forceFetch = process.env.WIKI_FORCE_FETCH_DOCUMENTS === '1'
+    const isProd = process.env.CI_WIKI_PROD_BUILD === '1'
+    if (!forceFetch && existsSync(dest)) {
+      const existing = await fs.readFile(dest)
+      if (isPdfBuffer(existing) && existing.length >= 10_000) {
+        if (!isProd) {
+          console.log(
+            `[fetch-web-documents] ${doc.id}: reusing existing PDF (${existing.length} bytes)`,
+          )
+          return { bytes: existing.length, method: 'existing_pdf' }
+        }
+      }
+    }
     if (!resolveChromeBinary()) {
       if (existsSync(dest)) {
         const existing = await fs.readFile(dest)
         if (isPdfBuffer(existing) && existing.length >= 10_000) {
-          console.warn(`[fetch-web-documents] ${doc.id}: chrome missing; keeping existing PDF`)
+          abortOrWarn(`[fetch-web-documents] ${doc.id}: chrome missing; keeping existing PDF`)
           return { bytes: existing.length, method: 'existing_pdf' }
         }
       }

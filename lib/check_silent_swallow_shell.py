@@ -18,6 +18,17 @@ _RC_ASSIGN_RE = re.compile(r"^\s*(?:local\s+)?[_a-zA-Z]+\w*=\$\?")
 _RC_ASSIGN_INLINE_RE = re.compile(r"(?:local\s+)?[_a-zA-Z]+\w*=\$\?")
 _STDERR_TEMP_RE = re.compile(r'2>\s*"\$_[^"]*"')
 _IF_NEGATED_RE = re.compile(r"^\s*if\s+!")
+_PIPE_TEE_RE = re.compile(r"\|\s*tee\b")
+_PIPESTATUS_RE = re.compile(r"\bPIPESTATUS\b")
+_BUILD_LOG_REF_RE = re.compile(
+    r"(?:BUILD_LOG|build\.log).*(?:ERROR|FAIL|failed)|"
+    r"(?:ERROR|FAIL|failed).*(?:BUILD_LOG|build\.log)",
+    re.IGNORECASE,
+)
+_BUILD_LOG_SURF_RE = re.compile(
+    r"\b(?:tail|cat|sed)\b[^\n]*(?:BUILD_LOG|build\.log|\$\{BUILD_LOG\})",
+    re.IGNORECASE,
+)
 
 
 def _check_if_then_colon_noop(lines: list[AddedLine], i: int) -> str | None:
@@ -61,11 +72,48 @@ def _check_stderr_temp_without_rc(lines: list[AddedLine], i: int) -> str | None:
     return "sh-stderr-temp-discard"
 
 
+def _check_pipe_tee_without_pipestatus(
+    lines: list[AddedLine],
+    i: int,
+) -> str | None:
+    text = lines[i].text
+    if re.match(r"^\s*#", text):
+        return None
+    if not _PIPE_TEE_RE.search(text):
+        return None
+    if _PIPESTATUS_RE.search(text):
+        return None
+    for j in range(i, min(i + 7, len(lines))):
+        if _PIPESTATUS_RE.search(lines[j].text):
+            return None
+    return "sh-pipe-tee-no-pipestatus"
+
+
+def _check_build_log_not_surfaced(
+    lines: list[AddedLine],
+    i: int,
+) -> str | None:
+    text = lines[i].text
+    if not _BUILD_LOG_REF_RE.search(text):
+        return None
+    if _BUILD_LOG_SURF_RE.search(text):
+        return None
+    for j in range(i + 1, min(i + 9, len(lines))):
+        if _BUILD_LOG_SURF_RE.search(lines[j].text):
+            return None
+    return "sh-build-log-not-surfaced"
+
+
 def detect_shell_multiline(
     added_lines: list[AddedLine],
 ) -> list[tuple[AddedLine, str]]:
     violations: list[tuple[AddedLine, str]] = []
-    checks = (_check_if_then_colon_noop, _check_stderr_temp_without_rc)
+    checks = (
+        _check_if_then_colon_noop,
+        _check_stderr_temp_without_rc,
+        _check_pipe_tee_without_pipestatus,
+        _check_build_log_not_surfaced,
+    )
     for i, _line in enumerate(added_lines):
         for check in checks:
             pid = check(added_lines, i)

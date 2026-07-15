@@ -135,6 +135,16 @@ inline_patterns:
     language: shell
     description: 'Make @ prefix hides the recipe command from the operator.'
 
+  - id: sh-curl-s-without-S
+    regex: 'curl\b[^\n]*\s-s(?!S)'
+    language: shell
+    description: 'curl -s without -S hides errors on stderr; use -sS or capture stderr explicitly.'
+
+  - id: sh-npm-silent
+    regex: 'npm\b[^\n]*(?:--silent\b|--loglevel\s+(?:silent|error)\b)'
+    language: shell
+    description: 'npm --silent or quiet loglevel hides install failure context.'
+
   # ── JS/TS patterns (6) ──────────────────────────────────────────────
   - id: js-empty-catch
     regex: '\}\s*catch\s*\([^)]*\)\s*\{\s*\}'
@@ -219,6 +229,11 @@ inline_patterns:
 
   # capture_output=True: enforced by multiline py-capture-output-unsurfaced
   # (inline regex collided with ruff UP022 and flagged safe stderr surfacing).
+
+  - id: py-subprocess-stdin-devnull
+    regex: 'stdin\s*=\s*subprocess\.DEVNULL'
+    language: python
+    description: 'subprocess with stdin=DEVNULL discards stdin; can hide interactive prompts and errors.'
 
   # ── Ansible patterns (5) ────────────────────────────────────────────
   - id: ansible-shell-or-true
@@ -372,6 +387,27 @@ multiline_detectors:
     language: shell
     description: 'Stderr redirected to a temp path variable without rc capture on the same or next lines.'
 
+  - id: sh-pipe-tee-no-pipestatus
+    detector: detect_shell_multiline
+    source_function: _check_pipe_tee_without_pipestatus
+    source_file: lib/check_silent_swallow_shell.py
+    language: shell
+    description: 'Pipe to tee without checking PIPESTATUS[0]; upstream command failure can be masked.'
+
+  - id: sh-build-log-not-surfaced
+    detector: detect_shell_multiline
+    source_function: _check_build_log_not_surfaced
+    source_file: lib/check_silent_swallow_shell.py
+    language: shell
+    description: 'Failure message references BUILD_LOG but does not tail/cat the log for the operator.'
+
+  - id: sh-bootstrap-gap-no-log
+    detector: detect_bootstrap_multiline
+    source_function: _check_bootstrap_gap_no_log
+    source_file: lib/check_silent_swallow_bootstrap.py
+    language: shell
+    description: 'Bootstrap script runs tar/install/curl/uv sync after _log with no progress log before the blocking step.'
+
   # ── JS/TS soft-fail multiline (2 patterns) ──────────────────────────
   - id: js-warn-return-softfail
     detector: detect_js_soft_fail_multiline
@@ -387,13 +423,41 @@ multiline_detectors:
     language: js_ts
     description: 'console.warn with "skipping" then return hides a missing dependency.'
 
-  # ── Python capture_output multiline (1 pattern) ─────────────────────
+  - id: js-warn-batch-no-exit
+    detector: detect_js_prod_fail_multiline
+    source_function: _check_warn_batch_no_exit
+    source_file: lib/check_silent_swallow_js.py
+    language: js_ts
+    description: 'Batch failure summary warns but exits 0; prod prebuild should hard-fail.'
+
+  - id: js-catch-return-soft
+    detector: detect_js_prod_fail_multiline
+    source_function: _check_catch_warn_return_soft
+    source_file: lib/check_silent_swallow_js.py
+    language: js_ts
+    description: 'Catch block warns then returns a soft value without throw or process.exit.'
+
+  - id: js-warn-keep-existing
+    detector: detect_js_prod_fail_multiline
+    source_function: _check_warn_keep_existing
+    source_file: lib/check_silent_swallow_js.py
+    language: js_ts
+    description: 'console.warn keeps existing asset on failure path without prod hard-fail guard.'
+
+  # ── Python subprocess capture multiline (2 patterns) ────────────────
   - id: py-capture-output-unsurfaced
     detector: detect_python_capture_multiline
     source_function: _capture_output_unsurfaced
     source_file: lib/check_silent_swallow_python.py
     language: python
     description: 'subprocess capture_output=True without printing stderr or re-raising within the block.'
+
+  - id: py-subprocess-pipe-no-progress
+    detector: detect_python_capture_multiline
+    source_function: _subprocess_pipe_no_progress
+    source_file: lib/check_silent_swallow_python.py
+    language: python
+    description: 'subprocess stdout=PIPE (or PIPE alias) on a long wrapper with no stderr progress banner before the call.'
 
   # ── Container multiline (1 pattern) ─────────────────────────────────
   - id: container-run-chained-no-trace
@@ -402,3 +466,10 @@ multiline_detectors:
     source_file: lib/check_silent_swallow_container.py
     language: container
     description: 'Containerfile RUN chains multiple commands without echo or set -x trace markers.'
+
+  - id: container-run-step-missing-echo
+    detector: detect_container_multiline
+    source_function: _check_run_step_missing_echo
+    source_file: lib/check_silent_swallow_container.py
+    language: container
+    description: 'Traced RUN chain lacks echo before tar/npm/uv/bash scripts step.'

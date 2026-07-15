@@ -110,6 +110,10 @@ cmd_build() {
     "${PROJECTS_ROOT}" 2>&1 | tee "${BUILD_LOG}"
   if [[ "${PIPESTATUS[0]}" -ne 0 ]]; then
     echo "ERROR: podman build failed (rc=${PIPESTATUS[0]}); see ${BUILD_LOG}" >&2
+    if [[ -f "${BUILD_LOG}" ]]; then
+      echo "--- last 80 lines of ${BUILD_LOG} ---" >&2
+      tail -n 80 "${BUILD_LOG}" >&2
+    fi
     exit 1
   fi
   echo "[prod-build] OK tagged ${PROD_IMAGE}"
@@ -163,7 +167,7 @@ cmd_status() {
   body_tmp="$(mktemp)"
   curl_err="$(mktemp)"
   if ! https_code="$(
-    curl -sk -o "${body_tmp}" -w '%{http_code}' --max-time 10 \
+    curl -sSk -o "${body_tmp}" -w '%{http_code}' --max-time 10 \
       "https://127.0.0.1:${PROD_HTTPS_PORT}/" 2>"${curl_err}"
   )"; then
     echo "  WARNING: HTTPS probe failed" >&2

@@ -115,6 +115,7 @@ main() {
     fi
     _log "checksum OK ($CLOC_SHA256)"
 
+    _log "installing cloc to ${target}"
     if ! install -m 0755 "${tmp}/${asset}" "$target"; then
         _log "install (copy) failed to $target"
         return 1

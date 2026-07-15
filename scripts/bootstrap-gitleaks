@@ -134,10 +134,12 @@ main() {
     fi
     _log "checksum OK ($expected_sha)"
 
+    _log "extracting ${tarball} to ${tmp}"
     if ! tar -xzf "${tmp}/${tarball}" -C "$tmp" gitleaks; then
         _log "tar extraction failed"
         return 1
     fi
+    _log "installing gitleaks to ${target}"
     if ! install -m 0755 "${tmp}/gitleaks" "$target"; then
         _log "install (copy) failed to $target"
         return 1

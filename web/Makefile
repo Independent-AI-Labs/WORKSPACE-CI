@@ -106,7 +106,9 @@ dev-start: ## Start dev server (Next.js HMR)
 	fi
 	echo "[dev-start] systemctl --user restart $(SYSTEMD_UNIT)"
 	systemctl --user restart $(SYSTEMD_UNIT)
-	systemctl --user enable $(SYSTEMD_UNIT)
+	if systemctl --user is-enabled $(SYSTEMD_UNIT) 2>&1; then \
+		echo "[dev-start] NOTE: $(SYSTEMD_UNIT) is enabled (autostart on login). Run 'make dev-disable-autostart' to turn off."; \
+	fi
 	echo "[dev-start] startup log snapshot (last 30 lines):"
 	journalctl --user -u $(SYSTEMD_UNIT) -n 30 --no-pager
 	sleep 3
@@ -122,15 +124,15 @@ dev-start: ## Start dev server (Next.js HMR)
 		echo "Hint: Result=exec/203 = binary path wrong or not executable; start-limit-hit = crash-looped."; \
 		exit 1; \
 	fi
-	echo "[dev-start] process alive, waiting for HTTP on port $(DEV_PORT) (max 40s)..."
-	for i in $$(seq 1 20); do \
+	echo "[dev-start] process alive, waiting for HTTP on port $(DEV_PORT) (max 120s)..."
+	for i in $$(seq 1 60); do \
 		state=$$(systemctl --user is-active $(SYSTEMD_UNIT) 2>&1); \
 		nrest=$$(systemctl --user show $(SYSTEMD_UNIT) -p NRestarts --value 2>&1); \
 		_curl_tmp=$$(mktemp); _curl_err=$$(mktemp); \
 		code=$$(curl -sS -o "$$_curl_tmp" -w "%{http_code}" --max-time 3 http://127.0.0.1:$(DEV_PORT)/ 2>"$$_curl_err"); _curl_rc=$$?; \
 		if [ $$_curl_rc -ne 0 ]; then echo "[dev-start] curl probe (rc=$$_curl_rc): $$(cat "$$_curl_err")" >&2; fi; \
 		rm -f "$$_curl_tmp" "$$_curl_err"; \
-		echo "[dev-start] attempt $$i/20: state=$$state http=$$code restarts=$$nrest"; \
+		echo "[dev-start] attempt $$i/60: state=$$state http=$$code restarts=$$nrest"; \
 		if [ "$$state" = "failed" ] || [ "$$state" = "inactive" ]; then \
 			echo ""; \
 			echo "ERROR: $(SYSTEMD_UNIT) is $$state - not retrying further."; \
@@ -147,7 +149,7 @@ dev-start: ## Start dev server (Next.js HMR)
 			echo "----- end journal -----"; \
 			exit 1; \
 		fi; \
-		if echo "$$code" | grep -qE '^[2-5]'; then \
+		if echo "$$code" | grep -qE '^2'; then \
 			echo ""; \
 			echo "[dev-start] Dev server ready - http://0.0.0.0:$(DEV_PORT)"; \
 			echo "[dev-start] Logs:  make dev-logs"; \
@@ -157,7 +159,7 @@ dev-start: ## Start dev server (Next.js HMR)
 		sleep 2; \
 	done; \
 	echo ""; \
-	echo "ERROR: Dev server did not respond within 40s (process alive but no HTTP)."; \
+	echo "ERROR: Dev server did not respond within 120s (process alive but no HTTP)."; \
 	echo "----- journalctl --user -u $(SYSTEMD_UNIT) -n 80 --no-pager -----"; \
 	journalctl --user -u $(SYSTEMD_UNIT) -n 80 --no-pager; \
 	echo "----- end journal -----"; \
@@ -165,6 +167,13 @@ dev-start: ## Start dev server (Next.js HMR)
 
 .PHONY: dev
 dev: dev-start ## Alias for dev-start
+
+.PHONY: dev-disable-autostart
+dev-disable-autostart: ## Disable wiki-ci-dev autostart on login (stops systemd resurrecting old runs)
+	systemctl --user disable $(SYSTEMD_UNIT) 2>&1; rc=$$?; if [ $$rc -ne 0 ]; then \
+		echo "[dev-disable-autostart] disable returned $$rc (ok if unit missing)"; \
+	fi
+	echo "[dev-disable-autostart] $(SYSTEMD_UNIT) will not start on login until 'make dev-start' runs again."
 
 .PHONY: dev-stop
 dev-stop: ## Stop dev server
@@ -184,8 +193,10 @@ dev-stop: ## Stop dev server
 	echo "[dev-stop] Done. Unit file removed."
 
 .PHONY: dev-restart
-dev-restart: ## Restart dev server (stop + start)
+dev-restart: ## Restart dev server (stop, wipe .next turbopack cache, start)
 	$(MAKE) dev-stop
+	$(MAKE) clean-build
+	echo "[dev-restart] wiped .next (fixes stale @swc/helpers turbopack chunks)"
 	$(MAKE) dev-start
 
 .PHONY: dev-status

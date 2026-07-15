@@ -142,6 +142,7 @@ main() {
     fi
     _log "checksum OK ($expected_sha)"
 
+    _log "extracting ${tarball} to ${tmp}"
     # moon tarballs are .tar.xz; -J selects xz decompression (BSD tar and
     # GNU tar both support it; CI Makefile prepends GNU coreutils gnubin).
     if ! tar -xJf "${tmp}/${tarball}" -C "$tmp"; then
@@ -161,6 +162,7 @@ main() {
         return 1
     fi
 
+    _log "installing moon to ${target}"
     if ! install -m 0755 "$moon_src" "$target"; then
         _log "install (copy) failed: $moon_src -> $target"
         return 1

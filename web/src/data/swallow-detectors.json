@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-15T11:22:46.659120+00:00",
+  "generated_at": "2026-07-15T12:42:41.151003+00:00",
   "source_version": "",
   "detectors": [
     {
@@ -96,7 +96,25 @@
       "name": "_check_stderr_temp_without_rc",
       "source_file": "lib/check_silent_swallow_shell.py",
       "docstring": null,
-      "source": "def _check_stderr_temp_without_rc(lines: list[AddedLine], i: int) -> str | None:\n    text = lines[i].text\n    if not _STDERR_TEMP_RE.search(text):\n        return None\n    if _RC_CAPTURE_RE.search(text):\n        return None\n    if _IF_NEGATED_RE.search(text):\n        return None\n    for j in range(i + 1, min(i + 4, len(lines))):\n        if _RC_ASSIGN_RE.match(lines[j].text):\n            return None\n    return \"sh-stderr-temp-discard\""
+      "source": "def _check_stderr_temp_without_rc(lines: list[AddedLine], i: int) -> str | None:\n    text = lines[i].text\n    if not _STDERR_TEMP_RE.search(text):\n        return None\n    if _RC_CAPTURE_RE.search(text):\n        return None\n    if _RC_ASSIGN_INLINE_RE.search(text):\n        return None\n    if _IF_NEGATED_RE.search(text):\n        return None\n    for j in range(i + 1, min(i + 4, len(lines))):\n        if _RC_ASSIGN_RE.match(lines[j].text):\n            return None\n    return \"sh-stderr-temp-discard\""
+    },
+    {
+      "name": "_check_pipe_tee_without_pipestatus",
+      "source_file": "lib/check_silent_swallow_shell.py",
+      "docstring": null,
+      "source": "def _check_pipe_tee_without_pipestatus(\n    lines: list[AddedLine],\n    i: int,\n) -> str | None:\n    text = lines[i].text\n    if re.match(r\"^\\s*#\", text):\n        return None\n    if not _PIPE_TEE_RE.search(text):\n        return None\n    if _PIPESTATUS_RE.search(text):\n        return None\n    for j in range(i, min(i + 7, len(lines))):\n        if _PIPESTATUS_RE.search(lines[j].text):\n            return None\n    return \"sh-pipe-tee-no-pipestatus\""
+    },
+    {
+      "name": "_check_build_log_not_surfaced",
+      "source_file": "lib/check_silent_swallow_shell.py",
+      "docstring": null,
+      "source": "def _check_build_log_not_surfaced(\n    lines: list[AddedLine],\n    i: int,\n) -> str | None:\n    text = lines[i].text\n    if not _BUILD_LOG_REF_RE.search(text):\n        return None\n    if _BUILD_LOG_SURF_RE.search(text):\n        return None\n    for j in range(i + 1, min(i + 9, len(lines))):\n        if _BUILD_LOG_SURF_RE.search(lines[j].text):\n            return None\n    return \"sh-build-log-not-surfaced\""
+    },
+    {
+      "name": "_check_bootstrap_gap_no_log",
+      "source_file": "lib/check_silent_swallow_bootstrap.py",
+      "docstring": null,
+      "source": "def _check_bootstrap_gap_no_log(\n    lines: dict[int, AddedLine],\n    lineno: int,\n) -> str | None:\n    header = lines.get(lineno)\n    if header is None or not _COMPLETION_LOG_RE.search(header.text):\n        return None\n    for offset in range(1, 8):\n        body = lines.get(lineno + offset)\n        if body is None:\n            continue\n        text = body.text.strip()\n        if not text or text.startswith(\"#\"):\n            continue\n        if _LOG_RE.search(body.text):\n            return None\n        if _BLOCKING_RE.search(body.text):\n            return \"sh-bootstrap-gap-no-log\"\n        return None\n    return None"
     },
     {
       "name": "_check_warn_and_return",
@@ -105,16 +123,46 @@
       "source": "def _check_warn_and_return(\n    lines: dict[int, AddedLine],\n    lineno: int,\n) -> str | None:\n    header = lines.get(lineno)\n    if header is None or not _WARN_RE.search(header.text):\n        return None\n    for offset in range(1, 5):\n        body = lines.get(lineno + offset)\n        if body is None:\n            continue\n        if _THROW_RE.search(body.text) or _PROCESS_EXIT_RE.search(body.text):\n            return None\n        if _RETURN_RE.match(body.text):\n            if \"skipping\" in header.text.lower():\n                return \"js-warn-skip-return\"\n            return \"js-warn-return-softfail\"\n        if body.text.strip() and not body.text.strip().startswith(\"//\"):\n            return None\n    return None"
     },
     {
+      "name": "_check_warn_batch_no_exit",
+      "source_file": "lib/check_silent_swallow_js.py",
+      "docstring": null,
+      "source": "def _check_warn_batch_no_exit(\n    lines: dict[int, AddedLine],\n    lineno: int,\n) -> str | None:\n    header = lines.get(lineno)\n    if header is None or not _FAILURE_BATCH_RE.search(header.text):\n        return None\n    for offset in range(0, 6):\n        body = lines.get(lineno + offset)\n        if body is None:\n            continue\n        if _PROCESS_EXIT_RE.search(body.text):\n            return None\n        if _WARN_RE.search(body.text):\n            return \"js-warn-batch-no-exit\"\n    return None"
+    },
+    {
+      "name": "_check_catch_warn_return_soft",
+      "source_file": "lib/check_silent_swallow_js.py",
+      "docstring": null,
+      "source": "def _check_catch_warn_return_soft(\n    lines: dict[int, AddedLine],\n    lineno: int,\n    header_indent: int,\n) -> str | None:\n    saw_warn = False\n    for offset in range(1, 6):\n        body = lines.get(lineno + offset)\n        if body is None:\n            continue\n        if body.text.strip() == \"}\":\n            break\n        if _THROW_RE.search(body.text) or _PROCESS_EXIT_RE.search(body.text):\n            return None\n        if _WARN_RE.search(body.text):\n            saw_warn = True\n            continue\n        if saw_warn and _SOFT_RETURN_RE.match(body.text):\n            return \"js-catch-return-soft\"\n        if body.text.strip() and not body.text.strip().startswith(\"//\"):\n            return None\n    return None"
+    },
+    {
+      "name": "_check_warn_keep_existing",
+      "source_file": "lib/check_silent_swallow_js.py",
+      "docstring": null,
+      "source": "def _check_warn_keep_existing(\n    lines: dict[int, AddedLine],\n    lineno: int,\n) -> str | None:\n    header = lines.get(lineno)\n    if header is None or not _WARN_RE.search(header.text):\n        return None\n    if not _KEEP_EXISTING_RE.search(header.text):\n        return None\n    for offset in range(-5, 6):\n        body = lines.get(lineno + offset)\n        if body is None:\n            continue\n        if _PROD_GUARD_RE.search(body.text) or _PROCESS_EXIT_RE.search(body.text):\n            return None\n    return \"js-warn-keep-existing\""
+    },
+    {
       "name": "_capture_output_unsurfaced",
       "source_file": "lib/check_silent_swallow_python.py",
       "docstring": null,
-      "source": "def _capture_output_unsurfaced(\n    lines: dict[int, AddedLine],\n    lineno: int,\n) -> str | None:\n    header = lines.get(lineno)\n    if header is None or not _CAPTURE_OUTPUT_RE.search(header.text):\n        return None\n    for offset in range(0, 16):\n        body = lines.get(lineno + offset)\n        if body is None:\n            continue\n        if _STDERR_SURFACED_RE.search(body.text) or _RAISE_OR_CHECK_RE.search(\n            body.text\n        ):\n            return None\n    return \"py-capture-output-unsurfaced\""
+      "source": "def _capture_output_unsurfaced(\n    lines: dict[int, AddedLine],\n    anchor: int,\n    block: list[AddedLine],\n) -> str | None:\n    if not any(_CAPTURE_OUTPUT_RE.search(line.text) for line in block):\n        return None\n    if _surfaces_after_call(lines, anchor):\n        return None\n    return \"py-capture-output-unsurfaced\""
+    },
+    {
+      "name": "_subprocess_pipe_no_progress",
+      "source_file": "lib/check_silent_swallow_python.py",
+      "docstring": null,
+      "source": "def _subprocess_pipe_no_progress(\n    lines: dict[int, AddedLine],\n    anchor: int,\n    block: list[AddedLine],\n) -> str | None:\n    if not any(_STDOUT_PIPE_RE.search(line.text) for line in block):\n        return None\n    if _has_progress_before(lines, anchor):\n        return None\n    return \"py-subprocess-pipe-no-progress\""
     },
     {
       "name": "_check_run_chained_no_trace",
       "source_file": "lib/check_silent_swallow_container.py",
       "docstring": null,
       "source": "def _check_run_chained_no_trace(text: str) -> str | None:\n    if not _RUN_RE.match(text):\n        return None\n    if text.count(\"&&\") < 2:\n        return None\n    if _TRACE_RE.search(text):\n        return None\n    return \"container-run-chained-no-trace\""
+    },
+    {
+      "name": "_check_run_step_missing_echo",
+      "source_file": "lib/check_silent_swallow_container.py",
+      "docstring": null,
+      "source": "def _check_run_step_missing_echo(text: str) -> str | None:\n    if not _RUN_RE.match(text):\n        return None\n    if not _SET_TRACE_RE.search(text):\n        return None\n    if \"&&\" not in text:\n        return None\n    segments = re.split(r\"\\s*&&\\s*\", text)\n    for idx, segment in enumerate(segments):\n        seg = segment.strip()\n        if not _STEP_CMD_RE.match(seg):\n            continue\n        has_echo = bool(_ECHO_STEP_RE.search(seg))\n        if idx > 0 and _ECHO_STEP_RE.search(segments[idx - 1]):\n            has_echo = True\n        if not has_echo:\n            return \"container-run-step-missing-echo\"\n    return None"
     }
   ]
 }

@@ -13,8 +13,11 @@ export const SLIDE_PANEL_PADDING_X_PX = 48
 /** Vertical padding on `.landing-stage__slide-panel` (space-5 × 2). */
 export const SLIDE_PANEL_PADDING_Y_PX = 40
 
-/** `.landing-stage__links` margin-top (space-4) + one link row height. */
-export const SLIDE_LINKS_BLOCK_HEIGHT_PX = 44
+/** `.landing-stage__links` margin-top (space-4) + one link pill row. */
+export const SLIDE_LINKS_BLOCK_HEIGHT_PX = 52
+
+/** Two link pills (download + source), including wrap on narrow panels. */
+export const SLIDE_LINKS_DOUBLE_BLOCK_HEIGHT_PX = 96
 
 export function typographyFromComputed(style: CSSStyleDeclaration): PretextTypography {
   const weight = style.fontWeight || '400'
@@ -55,18 +58,24 @@ export function measureTextHeight(
   }
 }
 
+export function linksBlockHeight(linkCount: number): number {
+  if (linkCount <= 0) return 0
+  if (linkCount >= 2) return SLIDE_LINKS_DOUBLE_BLOCK_HEIGHT_PX
+  return SLIDE_LINKS_BLOCK_HEIGHT_PX
+}
+
 export function measureSlideTextHeight(
   subtitle: string,
   body: string,
   contentWidth: number,
   subtitleType: PretextTypography,
   bodyType: PretextTypography,
-  includeLinks = false,
+  linkCount = 0,
 ): number {
   const bodyTextWidth = panelBodyTextWidth(contentWidth)
   const subtitleHeight = measureTextHeight(subtitle, contentWidth, subtitleType)
   const bodyHeight = measureTextHeight(body, bodyTextWidth, bodyType)
-  const linksHeight = includeLinks ? SLIDE_LINKS_BLOCK_HEIGHT_PX : 0
+  const linksHeight = linksBlockHeight(linkCount)
   return subtitleHeight + SUBTITLE_GAP_PX + SLIDE_PANEL_PADDING_Y_PX + bodyHeight + linksHeight
 }
 
