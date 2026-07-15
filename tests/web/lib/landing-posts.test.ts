@@ -7,7 +7,9 @@ const minimal = {
     missing_content_message: 'Missing',
     source_link_label: 'Source',
     carousel_aria_label: 'Carousel',
-    post_tab_aria_label_template: 'Post {n}: {title}',
+    slide_tab_aria_label_template: 'Page {n} of {total}',
+    prev_slide_aria_label: 'Previous page',
+    next_slide_aria_label: 'Next page',
   },
   mission: {
     headline: 'Test',

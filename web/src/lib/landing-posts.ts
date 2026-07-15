@@ -29,7 +29,9 @@ export interface LandingUi {
   missing_content_message: string
   source_link_label: string
   carousel_aria_label: string
-  post_tab_aria_label_template: string
+  slide_tab_aria_label_template: string
+  prev_slide_aria_label: string
+  next_slide_aria_label: string
 }
 
 export interface LandingSettings {
@@ -109,10 +111,12 @@ export function parseLandingPostsConfig(raw: unknown): LandingPostsConfig {
     missing_content_message: requireString(u.missing_content_message, 'ui.missing_content_message'),
     source_link_label: requireString(u.source_link_label, 'ui.source_link_label'),
     carousel_aria_label: requireString(u.carousel_aria_label, 'ui.carousel_aria_label'),
-    post_tab_aria_label_template: requireString(
-      u.post_tab_aria_label_template,
-      'ui.post_tab_aria_label_template',
+    slide_tab_aria_label_template: requireString(
+      u.slide_tab_aria_label_template,
+      'ui.slide_tab_aria_label_template',
     ),
+    prev_slide_aria_label: requireString(u.prev_slide_aria_label, 'ui.prev_slide_aria_label'),
+    next_slide_aria_label: requireString(u.next_slide_aria_label, 'ui.next_slide_aria_label'),
   }
 
   const mission = data.mission
