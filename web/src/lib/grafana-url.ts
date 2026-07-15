@@ -120,6 +120,7 @@ export function resolveGrafanaHealthUrl(base: string): string {
 
 /** Server-side probe URL (container DNS). Browser embeds use resolveGrafanaHealthUrl. */
 export function resolveGrafanaHealthUrlForServerProbe(publicBase: string): string {
+  void publicBase
   const internal = process.env.GRAFANA_INTERNAL_HEALTH_URL?.trim()
   if (internal) return internal
   if (process.env.NODE_ENV === 'production') {
