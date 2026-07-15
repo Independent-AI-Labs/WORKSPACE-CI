@@ -119,28 +119,31 @@ async function downloadDirect(fetchUrl) {
   return buf
 }
 
+async function tryReuseExistingPdf(dest, docId) {
+  if (!existsSync(dest)) return null
+  const existing = await fs.readFile(dest)
+  if (isPdfBuffer(existing) && existing.length >= 10_000) {
+    console.log(`[fetch-web-documents] ${docId}: reusing existing PDF (${existing.length} bytes)`)
+    return { bytes: existing.length, method: 'existing_pdf' }
+  }
+  return null
+}
+
 async function downloadDocument(postsDir, doc) {
   const dest = path.join(postsDir, doc.file)
   await fs.mkdir(path.dirname(dest), { recursive: true })
   const mode = doc.fetch_mode ?? 'direct'
   const wantsPdf = doc.file.toLowerCase().endsWith('.pdf')
+  const forceFetch = process.env.WIKI_FORCE_FETCH_DOCUMENTS === '1'
+
+  if (!forceFetch) {
+    const reused = await tryReuseExistingPdf(dest, doc.id)
+    if (reused) return reused
+  }
 
   if (mode === 'html_to_pdf') {
     if (!wantsPdf) {
       throw new Error(`${doc.id}: html_to_pdf requires a .pdf destination file`)
-    }
-    const forceFetch = process.env.WIKI_FORCE_FETCH_DOCUMENTS === '1'
-    const isProd = process.env.CI_WIKI_PROD_BUILD === '1'
-    if (!forceFetch && existsSync(dest)) {
-      const existing = await fs.readFile(dest)
-      if (isPdfBuffer(existing) && existing.length >= 10_000) {
-        if (!isProd) {
-          console.log(
-            `[fetch-web-documents] ${doc.id}: reusing existing PDF (${existing.length} bytes)`,
-          )
-          return { bytes: existing.length, method: 'existing_pdf' }
-        }
-      }
     }
     if (!resolveChromeBinary()) {
       if (existsSync(dest)) {
@@ -152,20 +155,40 @@ async function downloadDocument(postsDir, doc) {
       }
       throw new Error(`${doc.id}: html_to_pdf requires google-chrome or chromium on PATH (set CHROME_BIN)`)
     }
-    const bytes = await convertHtmlUrlToPdf(doc.fetch_url, dest)
-    return { bytes, method: 'html_to_pdf' }
+    try {
+      const bytes = await convertHtmlUrlToPdf(doc.fetch_url, dest)
+      return { bytes, method: 'html_to_pdf' }
+    } catch (err) {
+      const reused = await tryReuseExistingPdf(dest, doc.id)
+      if (reused) {
+        const message = err instanceof Error ? err.message : String(err)
+        console.warn(`[fetch-web-documents] ${doc.id}: html_to_pdf failed (${message}); reusing existing PDF`)
+        return reused
+      }
+      throw err
+    }
   }
 
-  const buf = await downloadDirect(doc.fetch_url)
-  if (wantsPdf && !isPdfBuffer(buf)) {
-    console.warn(`[fetch-web-documents] ${doc.id}: direct fetch was not PDF; converting HTML`)
-    await fs.writeFile(`${dest}.source.html`, buf)
-    const bytes = await convertHtmlUrlToPdf(doc.fetch_url, dest)
-    return { bytes, method: 'html_to_pdf_fallback' }
-  }
+  try {
+    const buf = await downloadDirect(doc.fetch_url)
+    if (wantsPdf && !isPdfBuffer(buf)) {
+      console.warn(`[fetch-web-documents] ${doc.id}: direct fetch was not PDF; converting HTML`)
+      await fs.writeFile(`${dest}.source.html`, buf)
+      const bytes = await convertHtmlUrlToPdf(doc.fetch_url, dest)
+      return { bytes, method: 'html_to_pdf_fallback' }
+    }
 
-  await fs.writeFile(dest, buf)
-  return { bytes: buf.length, method: 'direct' }
+    await fs.writeFile(dest, buf)
+    return { bytes: buf.length, method: 'direct' }
+  } catch (err) {
+    const reused = await tryReuseExistingPdf(dest, doc.id)
+    if (reused) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.warn(`[fetch-web-documents] ${doc.id}: fetch failed (${message}); reusing existing PDF`)
+      return reused
+    }
+    throw err
+  }
 }
 
 async function fetchWebDocuments() {
