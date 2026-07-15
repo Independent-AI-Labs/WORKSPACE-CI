@@ -51,7 +51,7 @@ describe('parseCodeFences', () => {
     expect(segments[0]).toEqual({ type: 'md', text: 'Before\n\n' })
     expect(segments[1]).toMatchObject({ type: 'code', lang: 'bash' })
     expect(segments[1].type === 'code' && segments[1].code).toContain('echo hi')
-    expect(segments[2].text).toContain('After')
+    expect(segments[2]).toMatchObject({ type: 'md', text: expect.stringContaining('After') })
   })
 
   it('parses multiple fences in order', () => {
