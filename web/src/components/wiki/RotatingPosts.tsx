@@ -199,26 +199,6 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
 
   return (
     <section className="landing-stage" aria-live="polite" aria-atomic="true">
-      <div
-        className="landing-stage__post-tabs"
-        role="tablist"
-        aria-label={ui.posts_tablist_aria_label}
-      >
-        {posts.map((p, i) => (
-          <button
-            key={p.id}
-            type="button"
-            role="tab"
-            aria-selected={i === postIndex}
-            aria-label={formatPostTabLabel(ui.post_tab_aria_label_template, postTabLabel(p))}
-            className={clsx('landing-stage__post-tab', i === postIndex && 'is-active')}
-            onClick={() => goToPost(i)}
-          >
-            {postTabLabel(p)}
-          </button>
-        ))}
-      </div>
-
       <div className="landing-stage__viewport">
         <div className="landing-stage__backdrop">
           {post.slides.map((s, i) => (
@@ -290,6 +270,26 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
             </div>
           )}
         </div>
+      </div>
+
+      <div
+        className="landing-stage__post-tabs"
+        role="tablist"
+        aria-label={ui.posts_tablist_aria_label}
+      >
+        {posts.map((p, i) => (
+          <button
+            key={p.id}
+            type="button"
+            role="tab"
+            aria-selected={i === postIndex}
+            aria-label={formatPostTabLabel(ui.post_tab_aria_label_template, postTabLabel(p))}
+            className={clsx('landing-stage__post-tab', i === postIndex && 'is-active')}
+            onClick={() => goToPost(i)}
+          >
+            {postTabLabel(p)}
+          </button>
+        ))}
       </div>
     </section>
   )
