@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { parseLandingPostsConfig } from '@/lib/landing-posts'
+import {
+  parseLandingPostsConfig,
+  resolveSubtitleColor,
+  isInternalSourceUrl,
+  isExternalSourceUrl,
+} from '@/lib/landing-posts'
 
 const minimal = {
   version: 1,
@@ -51,6 +56,98 @@ describe('parseLandingPostsConfig', () => {
     expect(config.posts[0].slides[0].type).toBe('image')
   })
 
+  it('accepts internal source_url on image slides', () => {
+    const config = parseLandingPostsConfig({
+      ...minimal,
+      posts: [
+        {
+          id: 'clankers',
+          title: 'Clankers',
+          slides: [
+            {
+              type: 'image',
+              src: '/landing/clankers/grok-bad.png',
+              source_url: '/hooks',
+              source_label: 'Git Hooks',
+              subtitle: 'Unbounded agents',
+              content: 'Body',
+            },
+          ],
+        },
+      ],
+    })
+    expect(config.posts[0].slides[0].source_url).toBe('/hooks')
+    expect(config.posts[0].slides[0].source_label).toBe('Git Hooks')
+  })
+
+  it('resolves semantic subtitle_color tokens', () => {
+    const config = parseLandingPostsConfig({
+      ...minimal,
+      posts: [
+        {
+          id: 'a',
+          title: 'Post A',
+          slides: [
+            {
+              type: 'image',
+              src: '/landing/a.png',
+              subtitle: 'Sub',
+              subtitle_color: 'error',
+              content: 'Body',
+            },
+          ],
+        },
+      ],
+    })
+    expect(config.posts[0].slides[0].subtitle_color).toBe('var(--error)')
+  })
+
+  it('rejects invalid source_url schemes', () => {
+    expect(() =>
+      parseLandingPostsConfig({
+        ...minimal,
+        posts: [
+          {
+            id: 'a',
+            title: 'Post A',
+            slides: [
+              {
+                type: 'image',
+                src: '/landing/a.png',
+                source_url: 'ftp://example.com',
+                subtitle: 'Sub',
+                content: 'Body',
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/source_url must start with/)
+  })
+
+  it('rejects invalid subtitle_color values', () => {
+    expect(() =>
+      parseLandingPostsConfig({
+        ...minimal,
+        posts: [
+          {
+            id: 'a',
+            title: 'Post A',
+            slides: [
+              {
+                type: 'image',
+                src: '/landing/a.png',
+                subtitle: 'Sub',
+                subtitle_color: 'not-a-color',
+                content: 'Body',
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/subtitle_color/)
+  })
+
   it('accepts document slides with source_url', () => {
     const config = parseLandingPostsConfig({
       ...minimal,
@@ -83,5 +180,26 @@ describe('parseLandingPostsConfig', () => {
 
   it('rejects empty posts', () => {
     expect(() => parseLandingPostsConfig({ ...minimal, posts: [] })).toThrow()
+  })
+})
+
+describe('resolveSubtitleColor', () => {
+  it('maps semantic tokens to CSS variables', () => {
+    expect(resolveSubtitleColor('warn')).toBe('var(--warn)')
+    expect(resolveSubtitleColor('accent')).toBe('var(--accent)')
+  })
+
+  it('passes through var() and hex colors', () => {
+    expect(resolveSubtitleColor('var(--custom)')).toBe('var(--custom)')
+    expect(resolveSubtitleColor('#f25f5c')).toBe('#f25f5c')
+  })
+})
+
+describe('source url helpers', () => {
+  it('classifies internal and external urls', () => {
+    expect(isInternalSourceUrl('/hooks')).toBe(true)
+    expect(isInternalSourceUrl('//cdn.example.com')).toBe(false)
+    expect(isExternalSourceUrl('https://eur-lex.europa.eu/example')).toBe(true)
+    expect(isExternalSourceUrl('/hooks')).toBe(false)
   })
 })

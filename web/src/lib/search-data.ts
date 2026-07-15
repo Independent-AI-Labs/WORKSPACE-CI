@@ -199,6 +199,7 @@ export const buildSearchData = cache((): SearchIndexEntry[] => {
 })
 
 export interface WikiStats {
+  projects: number
   hooks: number
   patterns: number
   configs: number
@@ -211,6 +212,7 @@ export interface WikiStats {
 export const getWikiStats = cache((): WikiStats => {
   const data = buildSearchData()
   return {
+    projects: PROJECTS.length,
     hooks: data.filter((d) => d.type === 'hook').length,
     patterns: data.filter((d) => d.type === 'pattern').length,
     configs: data.filter((d) => d.type === 'config').length,

@@ -10,6 +10,7 @@ import {
   resolveGrafanaBaseUrlSync,
   resolveGrafanaDashboards,
   DEV_GRAFANA_BASE_URL,
+  normalizeGrafanaPublicBase,
 } from '@/lib/grafana-url'
 
 export type { GrafanaDashboardConfig } from '@/lib/grafana-url'
@@ -54,8 +55,9 @@ export function applyGrafanaBaseUrl(branding: Branding, base?: string): Branding
   if (!resolvedBase) {
     return branding
   }
+  let normalizedBase: string
   try {
-    new URL(resolvedBase.endsWith('/') ? resolvedBase : `${resolvedBase}/`)
+    normalizedBase = normalizeGrafanaPublicBase(resolvedBase)
   } catch {
     return branding
   }
@@ -66,7 +68,7 @@ export function applyGrafanaBaseUrl(branding: Branding, base?: string): Branding
   }))
   return {
     ...branding,
-    grafana_dashboards: resolveGrafanaDashboards(sources, resolvedBase),
+    grafana_dashboards: resolveGrafanaDashboards(sources, normalizedBase),
   }
 }
 

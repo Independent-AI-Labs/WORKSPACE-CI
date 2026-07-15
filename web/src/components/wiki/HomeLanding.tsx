@@ -10,10 +10,6 @@ function renderHeroIntro(text: string): string {
 
 export function HomeLanding() {
   const config = getLandingPostsConfig()
-  if (!config) {
-    return null
-  }
-
   const branding = getBranding()
 
   return (

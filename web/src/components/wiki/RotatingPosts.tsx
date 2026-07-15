@@ -10,6 +10,7 @@ import {
   resolveSlidePan,
   type SlidePan,
 } from '@/lib/landing-pan'
+import { normalizeWindowPointer, parallaxOffset } from '@/lib/landing-pan-parallax'
 import {
   measureSlideTextHeight,
   typographyFromComputed,
@@ -50,6 +51,7 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
   const activeSlideRef = useRef(activeSlide)
   const contentRef = useRef<HTMLDivElement>(null)
   const probeRef = useRef<HTMLDivElement>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     activeSlideRef.current = activeSlide
   }, [activeSlide])
@@ -250,6 +252,44 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
     return () => mq.removeEventListener('change', update)
   }, [])
 
+  const resetParallax = useCallback(() => {
+    const viewport = viewportRef.current
+    if (!viewport) return
+    viewport.style.setProperty('--landing-parallax-x', '0')
+    viewport.style.setProperty('--landing-parallax-y', '0')
+  }, [])
+
+  useEffect(() => {
+    if (reducedMotion) {
+      resetParallax()
+      return
+    }
+
+    const onMove = (event: MouseEvent) => {
+      const viewport = viewportRef.current
+      if (!viewport) return
+      const norm = normalizeWindowPointer(
+        event.clientX,
+        event.clientY,
+        window.innerWidth,
+        window.innerHeight,
+      )
+      const offset = parallaxOffset(norm)
+      viewport.style.setProperty('--landing-parallax-x', String(offset.x))
+      viewport.style.setProperty('--landing-parallax-y', String(offset.y))
+    }
+
+    const onLeave = () => resetParallax()
+
+    window.addEventListener('mousemove', onMove, { passive: true })
+    document.documentElement.addEventListener('mouseleave', onLeave)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      document.documentElement.removeEventListener('mouseleave', onLeave)
+      resetParallax()
+    }
+  }, [reducedMotion, resetParallax])
+
   useEffect(() => {
     if (reducedMotion || posts.length === 0) return
     const id = window.setInterval(goNext, settings.slide_interval_ms)
@@ -306,7 +346,14 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
 
   return (
     <section className="landing-stage" aria-live="polite" aria-atomic="true">
-      <div className="landing-stage__viewport">
+      <div
+        className="landing-stage__viewport"
+        ref={viewportRef}
+        style={{
+          ['--landing-parallax-max-x' as string]: '4',
+          ['--landing-parallax-max-y' as string]: '3',
+        }}
+      >
         <div
           className={clsx(
             'landing-stage__backdrop',
@@ -345,6 +392,59 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
           </div>
           <div className="landing-stage__scrim" />
 
+          <div className="landing-stage__content" ref={contentRef}>
+            <div className="landing-stage__pretext-probe" ref={probeRef} aria-hidden="true">
+              <span className="landing-stage__subtitle">Probe</span>
+              <span className="landing-stage__body">Probe</span>
+            </div>
+
+            <div
+              className="landing-stage__title-stack"
+              style={{ ['--landing-fade-ms' as string]: `${settings.transition_ms}ms` }}
+            >
+              {leavingPostTitle && (
+                <p className="landing-stage__post-title is-leaving">{leavingPostTitle}</p>
+              )}
+              <p className="landing-stage__post-title is-active">{post.title}</p>
+            </div>
+
+            <div
+              className="landing-stage__text-stack"
+              style={textStackHeight ? { minHeight: textStackHeight } : undefined}
+            >
+              {renderedPostIndices.map((pi) => {
+              const renderedPost = posts[pi]
+              if (!renderedPost) return null
+                return renderedPost.slides.map((s, i) => {
+                  const slideShowDownload = s.type === 'document'
+                  const slideShowLinks = slideShowDownload || Boolean(s.source_url)
+                  const isLeaving =
+                    leavingSlide !== null &&
+                    leavingSlide.postIndex === pi &&
+                    leavingSlide.slideIndex === i
+                  return (
+                    <SlideTextLayer
+                      key={`${renderedPost.id}-text-${s.src}-${i}`}
+                      slide={s}
+                      active={
+                        activeSlide.postIndex === pi && activeSlide.slideIndex === i && !isLeaving
+                      }
+                      leaving={isLeaving}
+                      transitionMs={settings.transition_ms}
+                      subtitleType={subtitleTypography}
+                      bodyType={bodyTypography}
+                      reducedMotion={reducedMotion}
+                      showDownload={slideShowDownload}
+                      showLinks={slideShowLinks}
+                      downloadLabel={s.download_label ?? ui.download_link_label}
+                      sourceLabel={s.source_label ?? ui.source_link_label}
+                    />
+                  )
+                })
+              })}
+            </div>
+          </div>
+
           <button
             type="button"
             className="landing-stage__nav landing-stage__nav--prev"
@@ -373,59 +473,6 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
                 onClick={() => goToSlide(i)}
               />
             ))}
-          </div>
-        </div>
-
-        <div className="landing-stage__content" ref={contentRef}>
-          <div className="landing-stage__pretext-probe" ref={probeRef} aria-hidden="true">
-            <span className="landing-stage__subtitle">Probe</span>
-            <span className="landing-stage__body">Probe</span>
-          </div>
-
-          <div
-            className="landing-stage__title-stack"
-            style={{ ['--landing-fade-ms' as string]: `${settings.transition_ms}ms` }}
-          >
-            {leavingPostTitle && (
-              <p className="landing-stage__post-title is-leaving">{leavingPostTitle}</p>
-            )}
-            <p className="landing-stage__post-title is-active">{post.title}</p>
-          </div>
-
-          <div
-            className="landing-stage__text-stack"
-            style={textStackHeight ? { minHeight: textStackHeight } : undefined}
-          >
-            {renderedPostIndices.map((pi) => {
-              const renderedPost = posts[pi]
-              if (!renderedPost) return null
-              return renderedPost.slides.map((s, i) => {
-                const slideShowDownload = s.type === 'document'
-                const slideShowLinks = slideShowDownload || Boolean(s.source_url)
-                const isLeaving =
-                  leavingSlide !== null &&
-                  leavingSlide.postIndex === pi &&
-                  leavingSlide.slideIndex === i
-                return (
-                  <SlideTextLayer
-                    key={`${renderedPost.id}-text-${s.src}-${i}`}
-                    slide={s}
-                    active={
-                      activeSlide.postIndex === pi && activeSlide.slideIndex === i && !isLeaving
-                    }
-                    leaving={isLeaving}
-                    transitionMs={settings.transition_ms}
-                    subtitleType={subtitleTypography}
-                    bodyType={bodyTypography}
-                    reducedMotion={reducedMotion}
-                    showDownload={slideShowDownload}
-                    showLinks={slideShowLinks}
-                    downloadLabel={s.download_label ?? ui.download_link_label}
-                    sourceLabel={s.source_label ?? ui.source_link_label}
-                  />
-                )
-              })
-            })}
           </div>
         </div>
       </div>

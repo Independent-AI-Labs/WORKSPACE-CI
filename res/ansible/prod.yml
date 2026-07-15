@@ -19,6 +19,7 @@
     wiki_tls_mode: "{{ lookup('env', 'WIKI_TLS_MODE') | default('auto', true) }}"
     wiki_tls_cn: "{{ lookup('env', 'WIKI_TLS_CN') | default(lookup('env', 'WIKI_TUNNEL_HOSTNAME') | default('localhost', true), true) }}"
     wiki_tls_dir: "{{ lookup('env', 'WIKI_TLS_DIR') | default('', true) }}"
+    wiki_home_landing_enabled: "{{ lookup('env', 'WIKI_HOME_LANDING_ENABLED') | default('true', true) }}"
 
   tasks:
     - name: Resolve project root

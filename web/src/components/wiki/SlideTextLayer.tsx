@@ -1,7 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import clsx from 'clsx'
-import type { LandingSlide } from '@/lib/landing-posts'
+import { isInternalSourceUrl, type LandingSlide } from '@/lib/landing-slide'
 import type { PretextTypography } from '@/lib/landing-pretext'
 
 interface SlideTextLayerProps {
@@ -32,7 +33,13 @@ export function SlideTextLayer({
   sourceLabel,
 }: SlideTextLayerProps) {
   const layerStyle = {
-    transitionDuration: `${transitionMs}ms`,
+    ['--landing-text-fade-ms' as string]: `${transitionMs}ms`,
+  }
+
+  const subtitleStyle = {
+    font: subtitleType.font,
+    lineHeight: `${subtitleType.lineHeightPx}px`,
+    ...(slide.subtitle_color ? { color: slide.subtitle_color } : {}),
   }
 
   return (
@@ -46,10 +53,7 @@ export function SlideTextLayer({
       style={layerStyle}
       aria-hidden={!active}
     >
-      <h2
-        className="landing-stage__subtitle"
-        style={{ font: subtitleType.font, lineHeight: `${subtitleType.lineHeightPx}px` }}
-      >
+      <h2 className="landing-stage__subtitle" style={subtitleStyle}>
         {slide.subtitle}
       </h2>
       <div className="landing-stage__slide-panel">
@@ -68,17 +72,23 @@ export function SlideTextLayer({
                 {downloadLabel}
               </a>
             )}
-            {slide.source_url && (
-              <a
-                href={slide.source_url}
-                className="landing-stage__link landing-stage__link--external"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <i className="ri-external-link-line" aria-hidden="true" />
-                {sourceLabel}
-              </a>
-            )}
+            {slide.source_url &&
+              (isInternalSourceUrl(slide.source_url) ? (
+                <Link href={slide.source_url} className="landing-stage__link landing-stage__link--internal">
+                  <i className="ri-arrow-right-s-line" aria-hidden="true" />
+                  {sourceLabel}
+                </Link>
+              ) : (
+                <a
+                  href={slide.source_url}
+                  className="landing-stage__link landing-stage__link--external"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <i className="ri-external-link-line" aria-hidden="true" />
+                  {sourceLabel}
+                </a>
+              ))}
           </div>
         )}
       </div>

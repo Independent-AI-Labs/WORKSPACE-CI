@@ -156,6 +156,31 @@ describe('RotatingPosts', () => {
     expect(screen.getByText('Slide A')).toBeInTheDocument()
   })
 
+  it('renders internal wiki link for image slides with site-relative source_url', () => {
+    const clankerPosts: LandingPost[] = [
+      {
+        id: 'clankers',
+        title: 'CLANKERS',
+        slides: [
+          {
+            type: 'image',
+            src: '/landing/clankers/grok-bad.png',
+            source_url: '/hooks',
+            source_label: 'Git Hooks',
+            subtitle: 'Unbounded agents',
+            content: 'Body text',
+          },
+        ],
+      },
+    ]
+    render(<RotatingPosts posts={clankerPosts} settings={settings} ui={ui} />)
+
+    const link = screen.getByRole('link', { name: 'Git Hooks' })
+    expect(link).toHaveAttribute('href', '/hooks')
+    expect(link).not.toHaveAttribute('target', '_blank')
+    expect(link).toHaveClass('landing-stage__link--internal')
+  })
+
   it('renders download and official links for document slides', () => {
     const docPosts: LandingPost[] = [
       {

@@ -299,11 +299,13 @@ wiki-build-prod: wiki-prod-build ## Alias for wiki-prod-build
 wiki-prod-start: ## Start wiki production stack on :8080/:8443
 	$(MAKE) -C web prod-start WIKI_HTTP_PORT="$(WIKI_HTTP_PORT)" WIKI_HTTPS_PORT="$(WIKI_HTTPS_PORT)" \
 		WIKI_TLS_DIR="$(WIKI_TLS_DIR)" WIKI_TLS_MODE="$(WIKI_TLS_MODE)" WIKI_TLS_CN="$(WIKI_TLS_CN)" \
-		ALLOWED_ORIGINS="$(ALLOWED_ORIGINS)"
+		ALLOWED_ORIGINS="$(ALLOWED_ORIGINS)" WIKI_HOME_LANDING_ENABLED="$(WIKI_HOME_LANDING_ENABLED)"
 wiki-prod-stop: ## Stop wiki production stack
 	$(MAKE) -C web prod-stop
 wiki-prod-restart: ## Restart wiki production stack
-	$(MAKE) -C web prod-restart
+	$(MAKE) -C web prod-restart WIKI_HTTP_PORT="$(WIKI_HTTP_PORT)" WIKI_HTTPS_PORT="$(WIKI_HTTPS_PORT)" \
+		WIKI_TLS_DIR="$(WIKI_TLS_DIR)" WIKI_TLS_MODE="$(WIKI_TLS_MODE)" WIKI_TLS_CN="$(WIKI_TLS_CN)" \
+		ALLOWED_ORIGINS="$(ALLOWED_ORIGINS)" WIKI_HOME_LANDING_ENABLED="$(WIKI_HOME_LANDING_ENABLED)"
 wiki-prod-status: ## Show wiki production stack status
 	$(MAKE) -C web prod-status
 wiki-prod-logs: ## Tail wiki production stack logs

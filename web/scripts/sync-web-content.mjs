@@ -16,14 +16,6 @@ const WEB_DIR = process.cwd()
 const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT
   ?? path.resolve(WEB_DIR, '..', '..')
 
-function abortOrWarn(message) {
-  if (process.env.CI_WIKI_PROD_BUILD === '1') {
-    console.error(message)
-    process.exit(1)
-  }
-  console.warn(message)
-}
-
 function abort(message) {
   console.error(message)
   process.exit(1)
@@ -38,7 +30,6 @@ function resolveContentRoot() {
   return null
 }
 
-/** Merge copy: overwrite matching paths, never delete extra files or dirs in dest. */
 async function copyDirMerge(src, dest) {
   await fs.mkdir(dest, { recursive: true })
   const entries = await fs.readdir(src, { withFileTypes: true })
@@ -53,6 +44,33 @@ async function copyDirMerge(src, dest) {
   }
 }
 
+async function mirrorPostAssets(postsSrc, landingDest, postIds) {
+  await fs.mkdir(landingDest, { recursive: true })
+  const activeIds = new Set(postIds)
+
+  const existing = await fs.readdir(landingDest, { withFileTypes: true })
+  for (const entry of existing) {
+    if (!entry.isDirectory()) continue
+    if (!activeIds.has(entry.name)) {
+      await fs.rm(path.join(landingDest, entry.name), { recursive: true, force: true })
+      console.log(`[sync-web-content] removed stale ${path.relative(WEB_DIR, path.join(landingDest, entry.name))}`)
+    }
+  }
+
+  for (const id of postIds) {
+    const srcDir = path.join(postsSrc, id)
+    const destDir = path.join(landingDest, id)
+    if (!existsSync(srcDir)) {
+      abort(`[sync-web-content] missing posts/${id}/ under WORKSPACE-WEB-CONTENT`)
+    }
+    await fs.rm(destDir, { recursive: true, force: true })
+    await copyDirMerge(srcDir, destDir)
+    console.log(
+      `[sync-web-content] posts/${id} -> ${path.relative(WEB_DIR, destDir)}`,
+    )
+  }
+}
+
 function postIds(config) {
   if (!config || typeof config !== 'object') return []
   const posts = config.posts
@@ -62,13 +80,8 @@ function postIds(config) {
 
 async function readYamlPostIds(filePath) {
   if (!existsSync(filePath)) return []
-  try {
-    const raw = await fs.readFile(filePath, 'utf8')
-    return postIds(load(raw))
-  } catch (err) {
-    console.warn(`[sync-web-content] could not parse ${filePath}: ${err.message}`)
-    return []
-  }
+  const raw = await fs.readFile(filePath, 'utf8')
+  return postIds(load(raw))
 }
 
 async function assertYamlWillNotDropPosts(yamlSrc, yamlDest) {
@@ -87,16 +100,14 @@ async function assertYamlWillNotDropPosts(yamlSrc, yamlDest) {
 async function syncWebContent() {
   const contentRoot = resolveContentRoot()
   if (!contentRoot) {
-    abortOrWarn(
-      '[sync-web-content] WORKSPACE-WEB-CONTENT not found; skipping (set WORKSPACE_WEB_CONTENT_ROOT)',
+    abort(
+      '[sync-web-content] WORKSPACE-WEB-CONTENT not found (set WORKSPACE_WEB_CONTENT_ROOT)',
     )
-    return
   }
 
   const yamlSrc = path.join(contentRoot, 'landing-posts.yaml')
   if (!existsSync(yamlSrc)) {
-    abortOrWarn(`[sync-web-content] missing ${yamlSrc}; skipping`)
-    return
+    abort(`[sync-web-content] missing ${yamlSrc}`)
   }
 
   const contentDestDir = path.resolve(WEB_DIR, 'content')
@@ -106,14 +117,18 @@ async function syncWebContent() {
   await fs.copyFile(yamlSrc, yamlDest)
   console.log(`[sync-web-content] yaml -> ${path.relative(WEB_DIR, yamlDest)}`)
 
-  const postsSrc = path.join(contentRoot, 'posts')
-  if (existsSync(postsSrc)) {
-    const landingDest = path.resolve(WEB_DIR, 'public', 'landing')
-    await copyDirMerge(postsSrc, landingDest)
-    console.log(
-      `[sync-web-content] posts -> ${path.relative(WEB_DIR, landingDest)} (merge; extra wiki assets kept)`,
-    )
+  const raw = await fs.readFile(yamlSrc, 'utf8')
+  const ids = postIds(load(raw))
+  if (ids.length === 0) {
+    abort('[sync-web-content] landing-posts.yaml: posts must be a non-empty list')
   }
+
+  const postsSrc = path.join(contentRoot, 'posts')
+  if (!existsSync(postsSrc)) {
+    abort(`[sync-web-content] missing ${postsSrc}`)
+  }
+  const landingDest = path.resolve(WEB_DIR, 'public', 'landing')
+  await mirrorPostAssets(postsSrc, landingDest, ids)
 }
 
 await syncWebContent()

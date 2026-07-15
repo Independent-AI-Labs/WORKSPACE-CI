@@ -11,6 +11,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/lib/search-data', () => ({
   buildSearchData: () => [],
   getWikiStats: () => ({
+    projects: 0,
     hooks: 0,
     patterns: 0,
     configs: 0,

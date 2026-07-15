@@ -1,7 +1,7 @@
-import Image from 'next/image'
 import clsx from 'clsx'
 import type { LandingSlide } from '@/lib/landing-posts'
-import { panAxisStyle, type SlidePan } from '@/lib/landing-pan'
+import { landingPdfEmbedSrc } from '@/lib/landing-pdf-embed'
+import { panMotionStyle, type SlidePan } from '@/lib/landing-pan'
 
 export function LandingSlideLayer({
   slide,
@@ -25,29 +25,32 @@ export function LandingSlideLayer({
 
   const layerClass = clsx(
     'landing-stage__layer',
+    slide.type === 'image' && 'landing-stage__layer--image',
     slide.type !== 'image' && 'landing-stage__layer--doc',
     active && 'is-active',
     leaving && 'is-leaving',
   )
 
-  const panClass = clsx(
-    'landing-stage__pan',
-    slide.type !== 'image' && 'landing-stage__pan--doc',
-  )
+  const panClass = 'landing-stage__pan'
 
   return (
     <div className={layerClass} style={layerStyle} aria-hidden={!active}>
-      <div key={pan.token} className={panClass} style={panAxisStyle(pan.axis)}>
-        {slide.type === 'image' ? (
-          <Image src={slide.src} alt="" fill className="landing-stage__image" sizes="100vw" unoptimized />
-        ) : (
-          <iframe
-            src={slide.src}
-            title={slide.subtitle}
-            className="landing-stage__iframe"
-            tabIndex={-1}
-          />
-        )}
+      <div className="landing-stage__pan-parallax">
+        <div key={pan.token} className={panClass} style={panMotionStyle(pan)}>
+          {slide.type === 'image' ? (
+            <img src={slide.src} alt="" className="landing-stage__image" decoding="async" />
+          ) : (
+            <iframe
+              src={slide.type === 'document' ? landingPdfEmbedSrc(slide.src) : slide.src}
+              title={slide.subtitle}
+              className={clsx(
+                'landing-stage__iframe',
+                slide.type === 'document' && 'landing-stage__iframe--pdf',
+              )}
+              tabIndex={-1}
+            />
+          )}
+        </div>
       </div>
     </div>
   )

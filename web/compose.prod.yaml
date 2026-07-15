@@ -15,13 +15,15 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://localhost,https://127.0.0.1}
       # Unset = auto-derive https://<request-host>/grafana per request (same-origin iframes).
       GRAFANA_BASE_URL: ${GRAFANA_BASE_URL:-}
-      WIKI_HOME_LANDING_ENABLED: ${WIKI_HOME_LANDING_ENABLED:-false}
+      WIKI_HOME_LANDING_ENABLED: ${WIKI_HOME_LANDING_ENABLED:-true}
+      WORKSPACE_WEB_CONTENT_ROOT: /workspace/WORKSPACE-WEB-CONTENT
     expose:
       - "3000"
     volumes:
       - wiki-feedback:/workspace/CI/web/data/feedback
     networks:
       - wiki
+      - gateway
     restart: unless-stopped
 
   wiki-nginx:

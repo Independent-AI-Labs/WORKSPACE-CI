@@ -221,12 +221,12 @@ PASSING_CASES: list[SwallowCase] = [
         None,
     ),
     SwallowCase(
-        "sync_logos_abort_or_warn",
+        "sync_logos_hard_abort",
         "web/scripts/sync-logos.mjs",
         [
-            "  if (failures.length > 0) {",
-            "    abortOrWarn(`[sync-logos] ${failures.length} repo(s) had no logo`)",
-            "  }",
+            "    } else {",
+            "      abort(`[sync-logos] ${r.slug}: ${r.reason}`)",
+            "    }",
         ],
         _SHOULD_PASS,
         None,

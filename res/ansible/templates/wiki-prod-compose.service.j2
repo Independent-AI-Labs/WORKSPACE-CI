@@ -14,6 +14,7 @@ Environment=ALLOWED_ORIGINS={{ allowed_origins }}
 Environment=WIKI_TLS_DIR={{ wiki_tls_dir }}
 Environment=WIKI_TLS_MODE={{ wiki_tls_mode }}
 Environment=WIKI_TLS_CN={{ wiki_tls_cn }}
+Environment=WIKI_HOME_LANDING_ENABLED={{ wiki_home_landing_enabled | default('true') }}
 ExecStart={{ compose_cmd }} --podman-path {{ podman_path }} -f {{ compose_file }} up --remove-orphans
 ExecStop={{ compose_cmd }} --podman-path {{ podman_path }} -f {{ compose_file }} down
 Restart=always

@@ -2,14 +2,31 @@ import type { LandingPost } from '@/lib/landing-posts'
 
 export type PanAxis = { x: 1 | -1; y: 1 | -1 }
 
-export type SlidePan = { axis: PanAxis; token: number }
+export type PanOrigin = { x: number; y: number }
 
-export const DEFAULT_PAN: SlidePan = { axis: { x: 1, y: 1 }, token: 0 }
+export type SlidePan = { axis: PanAxis; origin: PanOrigin; token: number }
+
+export const DEFAULT_PAN: SlidePan = {
+  axis: { x: 1, y: 1 },
+  origin: { x: 50, y: 50 },
+  token: 0,
+}
+
+const ORIGIN_MIN = 30
+const ORIGIN_MAX = 70
 
 function randomPanAxis(): PanAxis {
   return {
     x: Math.random() < 0.5 ? 1 : -1,
     y: Math.random() < 0.5 ? 1 : -1,
+  }
+}
+
+function randomPanOrigin(): PanOrigin {
+  const span = ORIGIN_MAX - ORIGIN_MIN
+  return {
+    x: ORIGIN_MIN + Math.random() * span,
+    y: ORIGIN_MIN + Math.random() * span,
   }
 }
 
@@ -30,10 +47,21 @@ function seededPanAxis(postId: string, slideIndex: number, slideSrc: string): Pa
   }
 }
 
-export function panAxisStyle(axis: PanAxis): Record<string, string> {
+function seededPanOrigin(postId: string, slideIndex: number, slideSrc: string): PanOrigin {
+  const hash = hashString(`${postId}:${slideIndex}:${slideSrc}:origin`)
+  const span = ORIGIN_MAX - ORIGIN_MIN
   return {
-    ['--pan-x']: String(axis.x),
-    ['--pan-y']: String(axis.y),
+    x: ORIGIN_MIN + (hash % 1000) / 1000 * span,
+    y: ORIGIN_MIN + (Math.floor(hash / 1000) % 1000) / 1000 * span,
+  }
+}
+
+export function panMotionStyle(pan: SlidePan): Record<string, string> {
+  return {
+    ['--pan-x']: String(pan.axis.x),
+    ['--pan-y']: String(pan.axis.y),
+    ['--pan-origin-x']: `${pan.origin.x}%`,
+    ['--pan-origin-y']: `${pan.origin.y}%`,
   }
 }
 
@@ -52,6 +80,7 @@ export function assignPanAxisForSlide(
     ...prev,
     [key]: {
       axis: randomPanAxis(),
+      origin: randomPanOrigin(),
       token: (prev[key]?.token ?? seed?.token ?? 0) + 1,
     },
   }
@@ -64,6 +93,7 @@ export function buildInitialPanMap(posts: LandingPost[]): Record<string, SlidePa
       const slide = p.slides[i]
       map[panSlideKey(p.id, i)] = {
         axis: seededPanAxis(p.id, i, slide.src),
+        origin: seededPanOrigin(p.id, i, slide.src),
         token: 1,
       }
     }

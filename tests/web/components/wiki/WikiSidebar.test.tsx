@@ -9,6 +9,7 @@ vi.mock('next/navigation', () => ({
 }))
 
 const mockStats: WikiStats = {
+  projects: 4,
   hooks: 20,
   patterns: 105,
   configs: 12,
@@ -45,9 +46,19 @@ const mockBranding: Branding = {
   contact_issuer_store_template: '{issuer} Store',
 }
 
+function renderSidebar(homeLandingEnabled = false) {
+  return render(
+    <WikiSidebar
+      stats={mockStats}
+      branding={mockBranding}
+      homeLandingEnabled={homeLandingEnabled}
+    />,
+  )
+}
+
 describe('WikiSidebar', () => {
   it('renders navigation links', () => {
-    render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
+    renderSidebar()
     expect(screen.getByText('Code Anti-Patterns')).toBeInTheDocument()
     expect(screen.getByText('Git Hooks')).toBeInTheDocument()
     expect(screen.getByText('Config Files')).toBeInTheDocument()
@@ -55,25 +66,37 @@ describe('WikiSidebar', () => {
   })
 
   it('highlights active route', () => {
-    render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
+    renderSidebar()
     const patternsLink = screen.getByText('Code Anti-Patterns').closest('a')
     expect(patternsLink).toHaveClass('is-active')
   })
 
-  it('renders Home and Projects nav items', () => {
-    render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
+  it('shows Home nav when landing flag is enabled', () => {
+    renderSidebar(true)
     expect(screen.getByText('Home')).toBeInTheDocument()
-    expect(screen.getByText('Projects')).toBeInTheDocument()
+    expect(screen.getByText('Open Source')).toBeInTheDocument()
   })
 
-  it('renders clickable brand link to home', () => {
-    render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
+  it('hides Home nav when landing flag is disabled', () => {
+    renderSidebar(false)
+    expect(screen.queryByText('Home')).not.toBeInTheDocument()
+    expect(screen.getByText('Open Source')).toBeInTheDocument()
+  })
+
+  it('links brand to home when landing flag is enabled', () => {
+    renderSidebar(true)
     const brand = screen.getByRole('link', { name: /workspace.*guardrails logo/i })
     expect(brand).toHaveAttribute('href', '/')
   })
 
+  it('links brand to projects when landing flag is disabled', () => {
+    renderSidebar(false)
+    const brand = screen.getByRole('link', { name: /workspace.*guardrails logo/i })
+    expect(brand).toHaveAttribute('href', '/projects')
+  })
+
   it('renders all nav items', () => {
-    render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
+    renderSidebar()
     expect(screen.getByText('Runtime Hooks')).toBeInTheDocument()
     expect(screen.getByText('Guard Policies')).toBeInTheDocument()
     expect(screen.getByText('LLM Gateway')).toBeInTheDocument()
@@ -83,7 +106,7 @@ describe('WikiSidebar', () => {
   })
 
   it('renders counts in brackets for items with counts', () => {
-    render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
+    renderSidebar()
     expect(screen.getAllByText('[20]')).toHaveLength(2)
     expect(screen.getAllByText('[12]')).toHaveLength(2)
     expect(screen.getByText('[105]')).toBeInTheDocument()
@@ -92,19 +115,25 @@ describe('WikiSidebar', () => {
   })
 
   it('renders [0] for Runtime Hooks', () => {
-    render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
+    renderSidebar()
     const runtimeHooksLink = screen.getByText('Runtime Hooks').closest('a')
     expect(runtimeHooksLink).toHaveTextContent('[0]')
   })
 
+  it('renders project count on Open Source nav item', () => {
+    renderSidebar()
+    const openSourceLink = screen.getByText('Open Source').closest('a')
+    expect(openSourceLink).toHaveTextContent('[4]')
+  })
+
   it('renders collapse toggle button', () => {
-    render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
+    renderSidebar()
     const toggle = screen.getByRole('button', { name: 'Collapse sidebar' })
     expect(toggle).toBeInTheDocument()
   })
 
   it('places AI Governance before LLM Gateway', () => {
-    const { container } = render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
+    const { container } = renderSidebar()
     const links = container.querySelectorAll('.wiki-sidebar__link')
     const labels = Array.from(links).map((l) => l.textContent?.replace(/\[\d+\]/g, '').trim())
     const standardsIdx = labels.indexOf('AI Governance')
@@ -115,7 +144,7 @@ describe('WikiSidebar', () => {
   })
 
   it('places AI Governance after Guard Policies', () => {
-    const { container } = render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
+    const { container } = renderSidebar()
     const links = container.querySelectorAll('.wiki-sidebar__link')
     const labels = Array.from(links).map((l) => l.textContent?.replace(/\[\d+\]/g, '').trim())
     const standardsIdx = labels.indexOf('AI Governance')
@@ -124,13 +153,13 @@ describe('WikiSidebar', () => {
   })
 
   it('renders globe icon on LLM Gateway nav item', () => {
-    render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
+    renderSidebar()
     const llmLink = screen.getByRole('link', { name: 'LLM Gateway' })
     expect(llmLink.querySelector('i.ri-globe-line')).toBeTruthy()
   })
 
   it('renders dividers around LLM Gateway, Static Analysis, and Playground group', () => {
-    const { container } = render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
+    const { container } = renderSidebar()
     const items = Array.from(container.querySelectorAll('.wiki-sidebar__nav > li'))
     const labels = items.map((li) => {
       const link = li.querySelector('.wiki-sidebar__link')

@@ -18,12 +18,9 @@ const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT
   ?? path.resolve(WEB_DIR, '..', '..')
 const DEST_DIR = path.resolve(WEB_DIR, 'public', 'logos')
 
-function abortOrWarn(message) {
-  if (process.env.CI_WIKI_PROD_BUILD === '1') {
-    console.error(message)
-    process.exit(1)
-  }
-  console.warn(message)
+function abort(message) {
+  console.error(message)
+  process.exit(1)
 }
 
 // Local branding logos (themed variants) copied from this repo's res/ dir
@@ -74,14 +71,8 @@ async function syncLogos() {
     if (r.ok) {
       console.log(`[sync-logos] ${r.slug}: copied -> ${path.relative(WEB_DIR, r.dest)}`)
     } else {
-      console.warn(`[sync-logos] ${r.slug}: ${r.reason}`)
+      abort(`[sync-logos] ${r.slug}: ${r.reason}`)
     }
-  }
-  const failures = results.filter((r) => !r.ok)
-  if (failures.length > 0) {
-    abortOrWarn(
-      `[sync-logos] ${failures.length} repo(s) had no logo; wiki will fall back to icons.`,
-    )
   }
 
   // Local branding logos (themed variants) -> public/
@@ -89,8 +80,7 @@ async function syncLogos() {
     const srcAbs = path.resolve(WEB_DIR, src)
     const destAbs = path.resolve(WEB_DIR, dest)
     if (!existsSync(srcAbs)) {
-      console.warn(`[sync-logos] local logo missing: ${src}`)
-      continue
+      abort(`[sync-logos] local logo missing: ${src}`)
     }
     await fs.copyFile(srcAbs, destAbs)
     console.log(`[sync-logos] local: ${src} -> ${path.relative(WEB_DIR, destAbs)}`)

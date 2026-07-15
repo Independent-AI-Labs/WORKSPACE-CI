@@ -104,6 +104,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV WORKSPACE_PROJECTS_ROOT=/workspace
+ENV WORKSPACE_WEB_CONTENT_ROOT=/workspace/WORKSPACE-WEB-CONTENT
 
 WORKDIR /workspace
 
@@ -130,6 +131,7 @@ COPY --from=build /workspace/CI/web/public ./public
 COPY --from=build /workspace/CI/web/.next/standalone ./
 COPY --from=build /workspace/CI/web/.next/static ./.next/static
 COPY --from=build /workspace/CI/web/branding.yaml ./branding.yaml
+COPY --from=build /workspace/CI/web/content ./content
 COPY --from=build /workspace/CI/web/src/data ./src/data
 
 RUN mkdir -p data/feedback

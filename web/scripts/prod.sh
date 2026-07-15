@@ -91,6 +91,7 @@ compose_run() {
     cd "${WEB_DIR}"
     WIKI_HTTP_PORT="${PROD_HTTP_PORT}" WIKI_HTTPS_PORT="${PROD_HTTPS_PORT}" \
       ALLOWED_ORIGINS="${ALLOWED_ORIGINS:-}" \
+      WIKI_HOME_LANDING_ENABLED="${WIKI_HOME_LANDING_ENABLED:-true}" \
       WIKI_TLS_DIR="${tls_dir}" \
       WIKI_TLS_MODE="${WIKI_TLS_MODE:-auto}" \
       WIKI_TLS_CN="${WIKI_TLS_CN:-localhost}" \

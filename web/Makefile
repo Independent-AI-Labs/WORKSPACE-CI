@@ -93,6 +93,20 @@ dev-start: ## Start dev server (Next.js HMR)
 		cp grafana.env.example $$HOME/.config/wiki-ci-dev.env; \
 		echo "[dev-start] Edit it to set GRAFANA_BASE_URL to the reachable Grafana origin."; \
 	fi
+	if [ -f $$HOME/.config/wiki-ci-dev.env ]; then \
+		_grafana_url=$$(grep -E '^GRAFANA_BASE_URL=' $$HOME/.config/wiki-ci-dev.env | tail -1 | cut -d= -f2-); \
+		if [ -n "$$_grafana_url" ]; then \
+			_health_url=$${_grafana_url%/}/api/health; \
+			_health_tmp=$$(mktemp); \
+			_health_err=$$(mktemp); \
+			if ! curl -fsS --max-time 3 "$$_health_url" -o "$$_health_tmp" 2>"$$_health_err"; then \
+				echo "[dev-start] WARNING: Grafana health probe failed at $$_health_url"; \
+				[ -s "$$_health_err" ] && cat "$$_health_err" >&2; \
+				echo "[dev-start] Dev wiki proxies /grafana to loopback :3030; leave GRAFANA_BASE_URL unset"; \
+			fi; \
+			rm -f "$$_health_tmp" "$$_health_err"; \
+		fi; \
+	fi
 	echo "[dev-start] Installing systemd user unit -> $(SYSTEMD_DIR)/$(SYSTEMD_UNIT)"
 	sed \
 		-e 's|__PROJECT_ROOT__|$(PROJECT_ROOT)|g' \

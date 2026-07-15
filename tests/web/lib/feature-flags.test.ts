@@ -13,13 +13,13 @@ describe('isHomeLandingEnabled', () => {
     }
   })
 
-  it('returns true in development when unset', () => {
+  it('returns false when unset in development', () => {
     vi.stubEnv('WIKI_HOME_LANDING_ENABLED', '')
     vi.stubEnv('NODE_ENV', 'development')
-    expect(isHomeLandingEnabled()).toBe(true)
+    expect(isHomeLandingEnabled()).toBe(false)
   })
 
-  it('returns false in production when unset', () => {
+  it('returns false when unset in production', () => {
     vi.stubEnv('WIKI_HOME_LANDING_ENABLED', '')
     vi.stubEnv('NODE_ENV', 'production')
     expect(isHomeLandingEnabled()).toBe(false)

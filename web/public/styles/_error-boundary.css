@@ -73,6 +73,20 @@
   padding: 0.15rem 0.75rem;
 }
 
+.coming-soon__badge--warn {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.coming-soon--compact {
+  padding: 3rem 1.5rem;
+  min-height: clamp(400px, 80vh, 1200px);
+}
+
+.coming-soon--compact h1 {
+  font-size: var(--text-xl);
+}
+
 .coming-soon__description {
   color: var(--muted);
   max-width: 32rem;

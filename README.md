@@ -229,6 +229,13 @@ Production deploy (boot-persistent): copy [`.env.example`](.env.example) to `.en
 2. `make wiki-prod-build && make wiki-prod-deploy`: wiki prod on boot (TLS + renewal timer)
 3. `make wiki-tunnel-deploy`: syncs Cloudflare ingress to `WIKI_TUNNEL_ORIGIN` and starts tunnel
 
+Grafana lives in WORKSPACE-GATEWAY (`gw-grafana`, loopback `:3030`, `GRAFANA_ROOT_URL` for prod).
+Dev wiki proxies `/grafana/` to `:3030` with auth headers (same pattern as prod nginx); leave
+`GRAFANA_BASE_URL` unset in `~/.config/wiki-ci-dev.env` so iframe URLs stay same-origin on
+`:3001`. Direct `:3030/d/...` embeds redirect to `workspaceguardrails.com` when the gateway
+is configured for production. Prod wiki proxies `/grafana/` through nginx to `gw-grafana`. If
+Grafana is down, `/llm-gateway` shows a styled Service Unavailable panel instead of a blank iframe.
+
 Token-mode tunnels read ingress from Cloudflare remotely; `wiki-tunnel-deploy` pushes
 `https://127.0.0.1:<WIKI_HTTPS_PORT>` via the Cloudflare API when `WIKI_TUNNEL_ID` and
 API credentials are set. See [`res/ansible/tunnel.yml`](res/ansible/tunnel.yml).

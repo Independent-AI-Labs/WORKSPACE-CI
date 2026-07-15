@@ -2,18 +2,24 @@ import { cache } from 'react'
 import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { load } from 'js-yaml'
+import {
+  isExternalSourceUrl,
+  isInternalSourceUrl,
+  resolveSubtitleColor,
+  type LandingSlide,
+} from '@/lib/landing-slide'
 
-export type SlideType = 'image' | 'iframe' | 'document'
+export type {
+  SlideType,
+  LandingSourceUrl,
+  LandingSlide,
+} from '@/lib/landing-slide'
 
-export interface LandingSlide {
-  type: SlideType
-  src: string
-  subtitle: string
-  content: string
-  source_url?: string
-  source_label?: string
-  download_label?: string
-}
+export {
+  isInternalSourceUrl,
+  isExternalSourceUrl,
+  resolveSubtitleColor,
+} from '@/lib/landing-slide'
 
 export interface LandingPost {
   id: string
@@ -99,13 +105,22 @@ function assertSlide(slide: unknown, postId: string, index: number): LandingSlid
     content: requireString(s.content, `posts.${postId}.slides[${index}].content`),
   }
   if (typeof s.source_url === 'string' && s.source_url.trim()) {
-    result.source_url = s.source_url.trim()
+    const sourceUrl = s.source_url.trim()
+    if (!isInternalSourceUrl(sourceUrl) && !isExternalSourceUrl(sourceUrl)) {
+      throw new Error(
+        `Post "${postId}" slide ${index}: source_url must start with /, http://, or https://`,
+      )
+    }
+    result.source_url = sourceUrl
   }
   if (typeof s.source_label === 'string' && s.source_label.trim()) {
     result.source_label = s.source_label.trim()
   }
   if (typeof s.download_label === 'string' && s.download_label.trim()) {
     result.download_label = s.download_label.trim()
+  }
+  if (typeof s.subtitle_color === 'string' && s.subtitle_color.trim()) {
+    result.subtitle_color = resolveSubtitleColor(s.subtitle_color)
   }
   return result
 }
@@ -216,9 +231,20 @@ function requireNumber(value: unknown, field: string): number {
   return value
 }
 
-export const getLandingPostsConfig = cache((): LandingPostsConfig | null => {
+export const getLandingPostsConfig = cache((): LandingPostsConfig => {
   const yamlPath = resolveLandingYamlPath()
-  if (!yamlPath) return null
-  const raw = load(readFileSync(yamlPath, 'utf8'))
+  if (!yamlPath) {
+    throw new Error(
+      'landing-posts.yaml not found. Run node scripts/sync-web-content.mjs from CI/web ' +
+        'with WORKSPACE-WEB-CONTENT checked out.',
+    )
+  }
+  let raw: unknown
+  try {
+    raw = load(readFileSync(yamlPath, 'utf8'))
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    throw new Error(`landing-posts.yaml (${yamlPath}): ${message}`)
+  }
   return parseLandingPostsConfig(raw)
 })

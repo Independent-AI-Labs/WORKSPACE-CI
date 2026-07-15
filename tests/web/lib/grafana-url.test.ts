@@ -3,11 +3,16 @@ import {
   DEV_GRAFANA_BASE_URL,
   appendGrafanaEmbedParams,
   buildGrafanaDashboardUrl,
+  checkGrafanaHealth,
+  checkGrafanaHealthViaApi,
+  GRAFANA_HEALTH_API_PATH,
   normalizeGrafanaDashboardSource,
   resolveGrafanaBaseUrl,
   resolveGrafanaBaseUrlFromEnv,
   resolveGrafanaBaseUrlSync,
   resolveGrafanaDashboards,
+  resolveGrafanaHealthUrl,
+  resolveGrafanaHealthUrlForServerProbe,
 } from '@/lib/grafana-url'
 
 describe('normalizeGrafanaDashboardSource', () => {
@@ -73,8 +78,8 @@ describe('resolveGrafanaBaseUrlSync', () => {
     delete process.env.GRAFANA_BASE_URL
   })
 
-  it('defaults to dev loopback when env unset', () => {
-    expect(resolveGrafanaBaseUrlSync()).toBe(DEV_GRAFANA_BASE_URL)
+  it('defaults to dev wiki /grafana proxy when env unset', () => {
+    expect(resolveGrafanaBaseUrlSync()).toBe('http://127.0.0.1:3001/grafana')
   })
 })
 
@@ -97,11 +102,13 @@ describe('resolveGrafanaDashboards', () => {
 describe('resolveGrafanaBaseUrl', () => {
   afterEach(() => {
     vi.unstubAllEnvs()
+    vi.resetModules()
   })
 
-  it('uses dev default outside production when env unset', async () => {
-    vi.stubEnv('NODE_ENV', 'development')
-    expect(await resolveGrafanaBaseUrl()).toBe(DEV_GRAFANA_BASE_URL)
+  it('normalizes direct :3030 env base to /grafana subpath', async () => {
+    vi.stubEnv('GRAFANA_BASE_URL', 'http://127.0.0.1:3030')
+    const { resolveGrafanaBaseUrl: resolve } = await import('@/lib/grafana-url')
+    expect(await resolve()).toBe('http://127.0.0.1:3030/grafana')
   })
 })
 
@@ -114,5 +121,91 @@ describe('appendGrafanaEmbedParams', () => {
     expect(u.searchParams.get('theme')).toBe('dark')
     expect(u.searchParams.getAll('kiosk')).toEqual(['true'])
     expect(u.searchParams.get('orgId')).toBe('1')
+  })
+})
+
+describe('resolveGrafanaHealthUrl', () => {
+  it('appends api/health to dev loopback base', () => {
+    expect(resolveGrafanaHealthUrl(DEV_GRAFANA_BASE_URL)).toBe(
+      'http://127.0.0.1:3030/api/health',
+    )
+  })
+
+  it('appends api/health to prod subpath base', () => {
+    expect(resolveGrafanaHealthUrl('https://127.0.0.1/grafana')).toBe(
+      'https://127.0.0.1/grafana/api/health',
+    )
+  })
+})
+
+describe('resolveGrafanaHealthUrlForServerProbe', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    delete process.env.GRAFANA_INTERNAL_HEALTH_URL
+  })
+
+  it('uses internal env override when set', () => {
+    process.env.GRAFANA_INTERNAL_HEALTH_URL = 'http://gw-grafana:3000/api/health'
+    expect(resolveGrafanaHealthUrlForServerProbe('https://127.0.0.1/grafana')).toBe(
+      'http://gw-grafana:3000/api/health',
+    )
+  })
+
+  it('uses gw-grafana in production', () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    expect(resolveGrafanaHealthUrlForServerProbe('https://127.0.0.1/grafana')).toBe(
+      'http://gw-grafana:3000/api/health',
+    )
+  })
+
+  it('uses loopback gateway health outside production', () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    expect(resolveGrafanaHealthUrlForServerProbe('http://127.0.0.1:3001/grafana')).toBe(
+      'http://127.0.0.1:3030/api/health',
+    )
+  })
+})
+
+describe('checkGrafanaHealth', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('returns true when fetch succeeds with ok status', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true }),
+    )
+    await expect(checkGrafanaHealth('http://127.0.0.1:3030/api/health')).resolves.toBe(true)
+  })
+
+  it('returns false when fetch fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')))
+    await expect(checkGrafanaHealth('http://127.0.0.1:3030/api/health')).resolves.toBe(false)
+  })
+
+  it('returns false when response is not ok', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false }),
+    )
+    await expect(checkGrafanaHealth('http://127.0.0.1:3030/api/health')).resolves.toBe(false)
+  })
+})
+
+describe('checkGrafanaHealthViaApi', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('probes the same-origin api route', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(checkGrafanaHealthViaApi()).resolves.toBe(true)
+    expect(fetchMock).toHaveBeenCalledWith(
+      GRAFANA_HEALTH_API_PATH,
+      expect.objectContaining({ method: 'GET', cache: 'no-store' }),
+    )
   })
 })

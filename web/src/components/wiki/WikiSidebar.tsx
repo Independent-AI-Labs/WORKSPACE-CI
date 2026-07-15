@@ -16,9 +16,10 @@ interface NavItem {
   divider?: boolean
 }
 
+const HOME_NAV_ITEM: NavItem = { href: '/', label: 'Home', icon: 'ri-home-line' }
+
 const NAV_ITEMS: NavItem[] = [
-  { href: '/', label: 'Home', icon: 'ri-home-line' },
-  { href: '/projects', label: 'Projects', icon: 'ri-dna-line' },
+  { href: '/projects', label: 'Open Source', icon: 'ri-dna-line', count: 'projects' },
   { href: '/hooks', label: 'Git Hooks', icon: 'ri-git-commit-line', count: 'hooks' },
   { href: '/runtime-hooks', label: 'Runtime Hooks', icon: 'ri-pulse-line', count: 'runtimeHooks' },
   { href: '/patterns', label: 'Code Anti-Patterns', icon: 'ri-error-warning-line', count: 'patterns' },
@@ -41,22 +42,26 @@ function isPathActive(pathname: string, href: string): boolean {
 interface WikiSidebarProps {
   stats: WikiStats
   branding: Branding
+  homeLandingEnabled: boolean
 }
 
-export function WikiSidebar({ stats, branding }: WikiSidebarProps) {
+export function WikiSidebar({ stats, branding, homeLandingEnabled }: WikiSidebarProps) {
   const pathname = usePathname()
   const collapsed = useSidebarStore((s) => s.collapsed)
   const mobileOpen = useSidebarStore((s) => s.mobileOpen)
   const setMobileOpen = useSidebarStore((s) => s.setMobileOpen)
   const toggle = useSidebarStore((s) => s.toggle)
+  const brandHref = homeLandingEnabled ? '/' : '/projects'
+  const brandTitle = homeLandingEnabled ? 'Home' : 'Projects'
+  const navItems = homeLandingEnabled ? [HOME_NAV_ITEM, ...NAV_ITEMS] : NAV_ITEMS
 
   return (
     <nav id="wiki-sidebar" className={clsx('wiki-sidebar', mobileOpen && 'is-open')} role="navigation" aria-label="Wiki navigation">
       <div className="wiki-sidebar__header">
         <Link
-          href="/"
+          href={brandHref}
           className="wiki-sidebar__brand"
-          title="Home"
+          title={brandTitle}
           onClick={() => setMobileOpen(false)}
         >
           <ThemeLogo
@@ -89,7 +94,7 @@ export function WikiSidebar({ stats, branding }: WikiSidebarProps) {
         </button>
       </div>
       <ul className="wiki-sidebar__nav">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const isActive = isPathActive(pathname, item.href)
           const count = item.count ? stats[item.count] : undefined
           return (

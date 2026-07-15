@@ -73,8 +73,8 @@ describe('applyGrafanaBaseUrl', () => {
     process.env.GRAFANA_BASE_URL = 'http://192.168.50.63:3030'
     const out = applyGrafanaBaseUrl(baseBranding())
     expect(out.grafana_dashboards.map((d) => d.url)).toEqual([
-      'http://192.168.50.63:3030/d/gateway-cost-leaderboard/x?orgId=1&from=now-24h&to=now',
-      'http://192.168.50.63:3030/d/gateway-cost-usage/y?orgId=1&var-model=$__all',
+      'http://192.168.50.63:3030/grafana/d/gateway-cost-leaderboard/x?orgId=1&from=now-24h&to=now',
+      'http://192.168.50.63:3030/grafana/d/gateway-cost-usage/y?orgId=1&var-model=$__all',
     ])
   })
 

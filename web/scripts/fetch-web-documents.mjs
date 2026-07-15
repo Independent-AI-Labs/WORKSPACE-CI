@@ -17,12 +17,9 @@ const WEB_DIR = process.cwd()
 const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT
   ?? path.resolve(WEB_DIR, '..', '..')
 
-function abortOrWarn(message) {
-  if (process.env.CI_WIKI_PROD_BUILD === '1') {
-    console.error(message)
-    process.exit(1)
-  }
-  console.warn(message)
+function abort(message) {
+  console.error(message)
+  process.exit(1)
 }
 
 const CHROME_CANDIDATES = [
@@ -149,7 +146,7 @@ async function downloadDocument(postsDir, doc) {
       if (existsSync(dest)) {
         const existing = await fs.readFile(dest)
         if (isPdfBuffer(existing) && existing.length >= 10_000) {
-          abortOrWarn(`[fetch-web-documents] ${doc.id}: chrome missing; keeping existing PDF`)
+          abort(`[fetch-web-documents] ${doc.id}: chrome missing and no valid existing PDF`)
           return { bytes: existing.length, method: 'existing_pdf' }
         }
       }
@@ -174,13 +171,11 @@ async function downloadDocument(postsDir, doc) {
 async function fetchWebDocuments() {
   const contentRoot = resolveContentRoot()
   if (!contentRoot) {
-    abortOrWarn('[fetch-web-documents] WORKSPACE-WEB-CONTENT not found; skipping')
-    return
+    abort('[fetch-web-documents] WORKSPACE-WEB-CONTENT not found (set WORKSPACE_WEB_CONTENT_ROOT)')
   }
   const docsYaml = path.join(contentRoot, 'documents.yaml')
   if (!existsSync(docsYaml)) {
-    abortOrWarn(`[fetch-web-documents] missing ${docsYaml}; skipping`)
-    return
+    abort(`[fetch-web-documents] missing ${docsYaml}`)
   }
   const raw = await fs.readFile(docsYaml, 'utf8')
   const config = load(raw)
