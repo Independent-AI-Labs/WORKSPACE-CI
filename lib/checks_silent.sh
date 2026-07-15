@@ -57,7 +57,12 @@ ci_check_silent_swallow() {
     # with FileNotFoundError. The Python checker (ci_paths.find_config_dir)
     # also resolves this via __file__ walk-up, but checking here gives a
     # clear, immediate error message.
-    local _config_file="${CI_CONFIG_DIR}/silent_swallow_patterns.yaml"
+    local _config_file
+    _config_file="$(ci_config_path silent_swallow_patterns)" || {
+        ci_fail "Silent-swallow: failed to resolve config path"
+        rm -f "$files_tmp" "$combined_tmp" "$diff_tmp"
+        return 1
+    }
     if [[ ! -f "$_config_file" ]]; then
         ci_fail "Silent-swallow: config not found at $_config_file"
         rm -f "$files_tmp" "$combined_tmp" "$diff_tmp"

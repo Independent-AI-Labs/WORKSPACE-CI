@@ -10,7 +10,8 @@
 # Prevents accidental leakage of credentials, keys, and environment files
 # into version control.
 _load_sensitive_config() {
-    local config="${CI_CONFIG_DIR}/sensitive_files.yaml"
+    local config
+    config="$(ci_config_path sensitive_files)" || return 1
     [[ -f "$config" ]] || return 1
 
     _SENSITIVE_EXTENSIONS=()
@@ -81,7 +82,7 @@ _is_sensitive() {
 }
 
 ci_block_sensitive_files() {
-    _load_sensitive_config || { ci_fail "Config not found: ${CI_CONFIG_DIR}/sensitive_files.yaml"; return 1; }
+    _load_sensitive_config || { ci_fail "Config not found: $(ci_config_path sensitive_files)"; return 1; }
 
     local errors=0
     local sensitive_files=()
@@ -122,10 +123,8 @@ ci_block_sensitive_files() {
 # Scans .py, .sh, .js, .ts, .tsx, .rs, .css, and .lua files, skipping
 # ignored directories.
 ci_check_file_length() {
-    local config="./config/file_length_limits.yaml"
-    if [[ ! -f "$config" ]]; then
-        config="${CI_CONFIG_DIR}/file_length_limits.yaml"
-    fi
+    local config
+    config="$(ci_config_path file_length_limits "./config/file_length_limits.yaml")" || return 1
     local max_lines=512
     local exts=(.py .sh .js .ts .tsx .rs .css .lua)
     local errors=0

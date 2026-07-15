@@ -16,6 +16,90 @@ version: "4.0.0"
 # Universal exceptions -- these paths are exempt from the listed patterns
 # in every project that uses this config.
 universal_exceptions:
+  # Policy definition files MUST quote every forbidden string (patterns,
+  # reasons, examples). Full path exemption for these two files only.
+  - paths:
+      - 'config/banned_words\.yaml$'
+      - 'config/banned_words_exceptions\.yaml$'
+    patterns: ['.*']
+  # CI meta-config and schema files quote pattern names and official standard terms.
+  - paths:
+      - 'config/banned_words\.schema\.yaml$'
+      - 'config/silent_swallow_patterns\.yaml$'
+      - 'config/silent_swallow_patterns\.schema\.yaml$'
+      - 'config/standards\.yaml$'
+      - 'config/standards\.schema\.yaml$'
+      - 'config/wiki_labels\.yaml$'
+    patterns: ['.*']
+  # Audit documents catalog banned patterns by name (not production code).
+  - paths:
+      - 'docs/AUDIT-.*\.md$'
+      - 'docs/audits/'
+    patterns: ['.*']
+  # Binary, generated, or intentional-all-patterns fixture paths.
+  - paths:
+      - 'web/public/standards/.*\.pdf$'
+      - '\.png$'
+      - 'web/package-lock\.json$'
+      - 'web/src/lib/patterns\.ts$'
+      - 'tests/web/lib/patterns\.test\.ts$'
+      - 'tests/unit/test_checks\.sh$'
+      - 'tests/integration/test_e2e_checks\.sh$'
+      - 'web/src/data/hook-sources\.json$'
+      - 'web/src/data/script-sources\.json$'
+    patterns: ['.*']
+  # Verbatim quote archives and generated lockfiles (narrow paths only).
+  - paths: ['docs/references/']
+    patterns: ['.*']
+  - paths: ['uv\.lock$']
+    patterns: ['.*']
+  - paths: ['package-lock\.json$']
+    patterns: ['.*']
+  - paths: ['docs/archive/']
+    patterns: ['.*']
+  # WORKSPACE-VM umbrella: pattern catalog quotes forbidden examples.
+  - paths: ['workspace/config/patterns/']
+    patterns: ['.*']
+  # Root AGENTS.md documents hook/checker policy (meta-references).
+  - paths: ['AGENTS\.md$']
+    patterns:
+      - '#\s*noqa'
+      - '#\s*type:\s*ignore'
+      - '\bsilent'
+      - 'unsafe\s*\{'
+      - 'mypy: ignore-errors'
+      - '\bstubs?\b'
+      - '\bfallback\b'
+      - '\blegacy\b'
+      - '\bmock\b'
+      - '\bpython3?\b'
+      - 'self\.get\('
+      - ' -- '
+      - '\u2014'
+  # Hook config references checker ids/names (e.g. ci-check-silent-swallow).
+  - paths: ['\.pre-commit-config\.yaml$']
+    patterns: ['\bsilent']
+  # Install e2e scripts assert post-bootstrap layout.
+  - paths: ['scripts/setup/test_install_e2e.*\.sh$']
+    patterns: ['\.venv/bin/python']
+  - paths: ['tests/unit/scripts/test_register_extensions\.py$']
+    patterns: ['\.venv/bin/python']
+  # Enforcement config describes legacy subtree policy in comments.
+  - paths:
+      - 'workspace/config/project_enforcement\.yaml$'
+      - 'ci/config/project_enforcement\.yaml$'
+    patterns: ['\blegacy\b']
+  # Workspace YAML comments may quote meta pattern names.
+  - paths: ['workspace/config/']
+    patterns:
+      - '\u2014'
+      - '\.parent\.parent'
+      - '\.parents\['
+      - 'uuid\.uuid[134568]\('
+      - '\buuid[134568]\(\)'
+      - '#\s*type:\s*ignore'
+      - '#\s*noqa'
+      - '\bcompatibility\b'
   - paths: ['tests/']
     patterns:
       - ':\s*Any\b'
@@ -77,9 +161,13 @@ universal_exceptions:
   - paths: ['lib/', 'tests/', 'scripts/']
     patterns:
       - '\bpython3?\b'
-  - paths: ['config/banned_words.yaml']
+  # Boot-layout checker quotes deprecated hook forms in advisory messages.
+  - paths:
+      - 'ci/check_boot_venv_layout\.py$'
+      - 'ci/_boot_layout_helpers\.py$'
+      - 'tests/unit/test_check_boot_venv_layout.*\.py$'
     patterns:
-      - '\bpython3?\b'
+      - '\.venv/bin/python'
   # OCI base image tag and interpreter path in the wiki production Containerfile.
   - paths: ['web/Containerfile$']
     patterns:
@@ -785,6 +873,18 @@ banned:
   - pattern: '\bpython3?\b'
     reason: "Use uv run python for hermetic execution. No bare python/python3 calls."
     category: deprecated-python
+
+  - pattern: '\.venv/bin/python'
+    reason: "Use uv run python (own repo) or uv run --project <path> --no-sync python (cross-repo). Never .venv/bin/python."
+    category: deprecated-python
+
+  # === POLICY INTEGRITY: wildcard exception sabotage ===
+  - pattern: "pattern:\\s*'\\.\\*'"
+    reason: "Wildcard exception pattern: '.*' exempts matching paths from ALL banned rules. Use per-pattern scoped exceptions only."
+    category: policy-integrity
+  - pattern: 'pattern:\s*"\.\*"'
+    reason: "Same as single-quoted form. No wildcard exception keys."
+    category: policy-integrity
 
   # === SELF METHOD PATTERNS ===
   - pattern: 'self\.get\('

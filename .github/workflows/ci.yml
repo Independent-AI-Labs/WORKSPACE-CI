@@ -77,22 +77,22 @@ jobs:
 
       # ── Dependency & config checks ─────────────────────────────────
       - name: Dependency version check
-        run: .venv/bin/python -m ci.check_dependency_versions pyproject.toml web/package.json
+        run: uv run python -m ci.check_dependency_versions pyproject.toml web/package.json
 
       - name: Duplicate dependencies check
-        run: .venv/bin/python -m ci.check_duplicate_dependencies
+        run: uv run python -m ci.check_duplicate_dependencies
 
       - name: Coverage no-devolution
         run: bash -c 'source lib/checks.sh && ci_check_coverage_thresholds_no_devolution'
 
       - name: Required hooks present
-        run: .venv/bin/python -m ci.check_required_hooks_present --quiet
+        run: uv run python -m ci.check_required_hooks_present --quiet
 
       - name: Markdown docs check
-        run: .venv/bin/python -m ci.check_markdown_docs --all-md --check-remote
+        run: uv run python -m ci.check_markdown_docs --all-md --check-remote
 
       - name: Boot venv layout (non-blocking)
-        run: .venv/bin/python -m ci.check_boot_venv_layout
+        run: uv run python -m ci.check_boot_venv_layout
         continue-on-error: true
 
       - name: Dead code analysis (non-blocking)

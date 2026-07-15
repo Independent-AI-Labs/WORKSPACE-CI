@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sys
 import urllib.error
@@ -28,6 +27,7 @@ from ci.models import (
     ParsedDependency,
     PathCheckResult,
 )
+from ci.paths import resolve_config_path
 
 _QUERY_RESULTS: dict[str, int] = {"failures": 0, "successes": 0}
 
@@ -47,19 +47,9 @@ BUILTIN_EXCLUDES = {
 def load_config_excludes(key: str = "excludes") -> set[str]:
     """Load exclusions from the main CI config only (no per-project overrides)."""
     result: set[str] = set()
+    config_path = resolve_config_path("dependency_excludes", required=False)
 
-    ci_config = os.environ.get("CI_CONFIG_DIR")
-    if ci_config:
-        config_path = Path(ci_config) / "dependency_excludes.yaml"
-    else:
-        candidate = Path(__file__).resolve()
-        for _ in range(5):
-            candidate = candidate.parent
-            if (candidate / "config").is_dir():
-                break
-        config_path = candidate / "config" / "dependency_excludes.yaml"
-
-    if config_path.exists():
+    if config_path.is_file():
         try:
             with open(config_path) as f:
                 data = yaml.safe_load(f)

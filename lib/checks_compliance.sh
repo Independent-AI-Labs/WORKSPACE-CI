@@ -40,7 +40,8 @@ ci_compliance_score() {
 
     # Load blocked patterns for Q1
     local _blocked_combined=""
-    local _blocked_cfg="$CI_CONFIG_DIR/blocked_commit_patterns.yaml"
+    local _blocked_cfg
+    _blocked_cfg="$(ci_config_path blocked_commit_patterns)"
     if [[ -f "$_blocked_cfg" ]]; then
         while IFS= read -r _line; do
             if [[ "$_line" =~ pattern:[[:space:]]*[\"\']?(.+)[\"\']?$ ]]; then
@@ -316,7 +317,7 @@ ci_compliance_score() {
     fi
 
     local _bw_rc=0
-    if [[ -f "$CI_CONFIG_DIR/banned_words.yaml" ]]; then
+    if [[ -f "$(ci_config_path banned_words)" ]]; then
         local _bw_tmp; _bw_tmp=$(mktemp)
         (cd "$project_dir" && ci_check_banned_words) \
             </dev/null >"$_bw_tmp" || _bw_rc=$?

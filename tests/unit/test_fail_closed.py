@@ -13,8 +13,7 @@ gated error-counting on BOTH non-zero exit AND non-empty stdout,
 so the crash (empty stdout) was swallowed as a clean pass.
 
 The fix has two layers:
-  1. ci_paths.find_config_dir() resolves config path from __file__,
-     not CWD.
+  1. ci.paths resolves config via CI_CONFIG_DIR env propagated by callers.
   2. _load_config() checks file existence and exits with code 2
      (distinguishable from violation exit code 1) with a clear
      stderr message.
@@ -33,11 +32,11 @@ import pytest
 
 
 def _patch_config_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Patch _CONFIG_PATH to point to a nonexistent file."""
+    """Patch resolve_config_path to point to a nonexistent file."""
     monkeypatch.setattr(
         check_silent_swallow,
-        "_CONFIG_PATH",
-        Path("/nonexistent/config/silent_swallow_patterns.yaml"),
+        "resolve_config_path",
+        lambda _stem: Path("/nonexistent/config/silent_swallow_patterns.yaml"),
     )
 
 
@@ -88,8 +87,8 @@ class TestFailClosedMissingConfig:
     ) -> None:
         monkeypatch.setattr(
             check_silent_swallow,
-            "_CONFIG_PATH",
-            tmp_path / "silent_swallow_patterns.yaml",
+            "resolve_config_path",
+            lambda _stem: tmp_path / "silent_swallow_patterns.yaml",
         )
         diff = "--- a/x.py\n+++ b/x.py\n@@ -0,0 +1,1 @@\n+def f(): return 1\n"
         with pytest.raises(SystemExit) as exc_info:

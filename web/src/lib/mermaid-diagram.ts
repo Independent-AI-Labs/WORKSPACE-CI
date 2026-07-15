@@ -25,6 +25,7 @@ import {
   createButton,
   FullscreenOverlay,
 } from '@/lib/mermaid-fullscreen'
+import { scaleLegendSubgraph } from '@/lib/mermaid-legend'
 
 export interface MermaidRunner {
   run(options?: {
@@ -93,14 +94,30 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
   pre.setAttribute('role', 'group')
   pre.setAttribute('aria-label', 'Diagram viewport, scroll to zoom, drag to pan')
 
+  function fitSvgToContainer(target: SVGSVGElement): void {
+    target.style.display = 'block'
+    target.style.transform = ''
+    target.style.transformOrigin = ''
+    target.style.width = 'auto'
+    target.style.maxWidth = '100%'
+    target.style.height = 'auto'
+    target.style.margin = '0 auto'
+    // Mermaid often emits width="100%", which stretches the canvas and pins
+    // the drawing to the top-left. Prefer the viewBox's intrinsic dimensions.
+    const widthAttr = target.getAttribute('width')
+    const heightAttr = target.getAttribute('height')
+    if (widthAttr?.includes('%')) target.removeAttribute('width')
+    if (heightAttr?.includes('%')) target.removeAttribute('height')
+  }
+
+  function syncPannableState(): void {
+    pre.classList.toggle('is-pannable', svg !== null)
+  }
+
   function syncSvg(): void {
     svg = pre.querySelector<SVGSVGElement>('svg')
     if (!svg) return
-    svg.style.display = 'block'
-    // Clear any inline transform that might have been applied by earlier
-    // rendering attempts so the viewBox is the single source of truth.
-    svg.style.transform = ''
-    svg.style.transformOrigin = ''
+    fitSvgToContainer(svg)
     base = deriveBaseViewBox(svg)
     // Preserve any source-supplied viewBox. The source usually sets one
     // matching base, but in case the platform injected a partial one before
@@ -108,11 +125,14 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
     const live = parseViewBox(svg.getAttribute('viewBox'))
     vb = live ? live : { ...base }
     applyViewBox(svg, vb)
+    scaleLegendSubgraph(svg)
+    syncPannableState()
   }
 
   function setViewBox(next: ViewBox): void {
     vb = next
     if (svg) applyViewBox(svg, vb)
+    syncPannableState()
   }
 
   function cssSize(): { w: number; h: number } {

@@ -61,21 +61,21 @@ ci_check_unstaged() {
 # Per-project exemptions are supported via config/banned_words_exceptions.yaml
 # with granular path and pattern scoping.
 ci_check_banned_words() {
-    local config="${CI_CONFIG_DIR}/banned_words.yaml"
+    local config
+    config="$(ci_config_path banned_words)" || return 1
     if [[ ! -f "$config" ]]; then
         ci_fail "Config not found: $config"
         return 1
     fi
-    local _ci_py="${CI_PROJECT_ROOT:-}/.venv/bin/python"
     local script_path="${CI_LIB_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}/check_banned_words.py"
-    if [[ ! -x "$_ci_py" ]]; then
-        ci_fail "Banned-words: CI venv python not found at $_ci_py"
-        return 1
-    fi
     if [[ ! -f "$script_path" ]]; then
         ci_fail "Banned-words: helper not found at $script_path"
         return 1
     fi
+    # ci_uv_run cds to CI_PROJECT_ROOT; preserve the consuming repo for
+    # git ls-files and per-project exceptions via CI_SCAN_ROOT.
+    local _scan_root="${CI_SCAN_ROOT:-$PWD}"
+    CI_SCAN_ROOT="$_scan_root" \
     CI_CONFIG_DIR="$CI_CONFIG_DIR" \
-        "$_ci_py" "$script_path" "$@" </dev/null
+        ci_uv_run "$script_path" "$@" </dev/null
 }

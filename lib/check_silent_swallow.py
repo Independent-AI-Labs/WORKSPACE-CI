@@ -42,11 +42,10 @@ from check_silent_swallow_system import (
     is_cron_file,
     is_shell_file,
 )
-from ci_paths import find_config_dir
+
+from ci.paths import resolve_config_path
 
 _SNIPPET_MAX = 200
-
-_CONFIG_PATH = find_config_dir() / "silent_swallow_patterns.yaml"
 
 _LANGUAGE_CHECKERS: list[tuple[str, object]] = [
     ("python", is_python_file),
@@ -58,10 +57,11 @@ _LANGUAGE_CHECKERS: list[tuple[str, object]] = [
 
 
 def _load_config() -> dict:
-    if not _CONFIG_PATH.is_file():
-        sys.stderr.write(f"Config not found: {_CONFIG_PATH}\n")
+    config_path = resolve_config_path("silent_swallow_patterns")
+    if not config_path.is_file():
+        sys.stderr.write(f"Config not found: {config_path}\n")
         sys.exit(2)
-    with open(_CONFIG_PATH, encoding="utf-8") as f:
+    with open(config_path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 

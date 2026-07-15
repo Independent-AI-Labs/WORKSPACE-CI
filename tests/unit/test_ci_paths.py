@@ -1,28 +1,22 @@
-"""Unit tests for ci_paths module: shared path resolution.
-
-Tests the path resolution that eliminates CWD-dependent relative-path
-bugs. Proves that find_config_dir() returns the correct absolute path
-regardless of the process's current working directory.
-
-Context: The prior bug was that check_silent_swallow.py used
-``Path(os.environ.get("CI_CONFIG_DIR", "config"))`` which defaulted
-to a relative path. When hooks in sibling repos (WORKSPACE-GUARD)
-``cd`` to their own root, the relative ``config/`` resolved to the
-wrong directory, causing FileNotFoundError. ci_paths.py fixes this
-by walking up from ``__file__`` to find the ``config/`` directory.
-"""
+"""Unit tests for ci.paths module: shared path resolution."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-import ci_paths
+import ci.paths as ci_paths
 import pytest
+import yaml
+
+
+@pytest.fixture(autouse=True)
+def _clear_override_cache() -> None:
+    ci_paths.clear_config_override_cache()
+    yield
+    ci_paths.clear_config_override_cache()
 
 
 class TestFindConfigDir:
-    """Prove find_config_dir() returns an absolute, existing config path."""
-
     def test_returns_absolute_path(self) -> None:
         result = ci_paths.find_config_dir()
         assert result.is_absolute()
@@ -40,35 +34,110 @@ class TestFindConfigDir:
         result = ci_paths.find_config_dir()
         assert result == tmp_path.resolve()
 
-    def test_walk_up_from_file_location(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.delenv("CI_CONFIG_DIR", raising=False)
-        result = ci_paths.find_config_dir()
-        assert result.is_dir()
-        assert (result / "silent_swallow_patterns.yaml").is_file() or (
-            result / "banned_words.yaml"
-        ).is_file()
-
-    def test_works_from_any_cwd(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.delenv("CI_CONFIG_DIR", raising=False)
-        monkeypatch.chdir("/tmp")
-        result = ci_paths.find_config_dir()
-        assert result.is_absolute()
-        assert result.is_dir()
-
-    def test_raises_when_not_found(
+    def test_workspace_ci_config_root_alias(
         self,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
         monkeypatch.delenv("CI_CONFIG_DIR", raising=False)
-        monkeypatch.setattr(ci_paths, "_THIS_FILE", tmp_path / "fake_ci_paths.py")
-        with pytest.raises(FileNotFoundError):
+        monkeypatch.setenv("WORKSPACE_CI_CONFIG_ROOT", str(tmp_path))
+        result = ci_paths.find_config_dir()
+        assert result == tmp_path.resolve()
+
+    def test_raises_when_env_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("CI_CONFIG_DIR", raising=False)
+        monkeypatch.delenv("WORKSPACE_CI_CONFIG_ROOT", raising=False)
+        with pytest.raises(FileNotFoundError, match="CI_CONFIG_DIR"):
             ci_paths.find_config_dir()
 
     def test_config_dir_contains_yaml_files(self) -> None:
         result = ci_paths.find_config_dir()
         yaml_files = list(result.glob("*.yaml"))
         assert len(yaml_files) > 0
+
+
+class TestResolveConfigPath:
+    def test_env_override_wins_over_manifest(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        manifest = tmp_path / "overrides.yaml"
+        custom = tmp_path / "custom.yaml"
+        custom.write_text("version: 1\n", encoding="utf-8")
+        manifest.write_text(
+            yaml.safe_dump({"banned_words": str(tmp_path / "manifest.yaml")}),
+            encoding="utf-8",
+        )
+        (tmp_path / "manifest.yaml").write_text("version: 1\n", encoding="utf-8")
+        monkeypatch.setenv("CI_CONFIG_OVERRIDES", str(manifest))
+        monkeypatch.setenv("CI_CONFIG_PATH_BANNED_WORDS", str(custom))
+
+        result = ci_paths.resolve_config_path("banned_words")
+        assert result == custom.resolve()
+
+    def test_manifest_override_wins_over_config_dir(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        manifest_path = tmp_path / "overrides.yaml"
+        override_file = tmp_path / "override.yaml"
+        override_file.write_text("version: 1\n", encoding="utf-8")
+        manifest_path.write_text(
+            yaml.safe_dump({"banned_words": "override.yaml"}),
+            encoding="utf-8",
+        )
+        (config_dir / "banned_words.yaml").write_text("version: 0\n", encoding="utf-8")
+        monkeypatch.setenv("CI_CONFIG_DIR", str(config_dir))
+        monkeypatch.setenv("CI_CONFIG_OVERRIDES", str(manifest_path))
+
+        result = ci_paths.resolve_config_path("banned_words")
+        assert result == override_file.resolve()
+
+    def test_consumer_path_used_when_default_missing(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        consumer = tmp_path / "local.yaml"
+        consumer.write_text("version: 1\n", encoding="utf-8")
+        monkeypatch.setenv("CI_CONFIG_DIR", str(config_dir))
+        monkeypatch.chdir(tmp_path)
+
+        result = ci_paths.resolve_config_path(
+            "dead_code",
+            consumer_path=Path("local.yaml"),
+        )
+        assert result == consumer.resolve()
+
+    def test_required_false_returns_missing_default(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        monkeypatch.setenv("CI_CONFIG_DIR", str(config_dir))
+
+        result = ci_paths.resolve_config_path("missing_config", required=False)
+        assert result == (config_dir / "missing_config.yaml").resolve()
+
+    def test_guard_namespace_isolated(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        guard_file = tmp_path / "guard_custom.yaml"
+        guard_file.write_text("version: 1\n", encoding="utf-8")
+        monkeypatch.setenv("CI_GUARD_CONFIG_PATH_GUARD_CUSTOM", str(guard_file))
+
+        result = ci_paths.resolve_guard_config_path("guard_custom", required=False)
+        assert result == guard_file.resolve()
 
 
 class TestFindLibDir:
@@ -86,9 +155,10 @@ class TestFindLibDir:
         result = ci_paths.find_lib_dir()
         assert result == tmp_path.resolve()
 
-    def test_contains_ci_paths_py(self) -> None:
+    def test_contains_resolver_script(self) -> None:
         result = ci_paths.find_lib_dir()
-        assert (result / "ci_paths.py").is_file()
+        assert (result / "resolve_config_path.py").is_file()
+        assert (result.parent / "ci" / "paths.py").is_file()
 
 
 class TestFindProjectRoot:

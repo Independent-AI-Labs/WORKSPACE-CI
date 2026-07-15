@@ -2,7 +2,9 @@
 
 AI coding agents ship code fast and cut every corner doing it: skipped
 tests, ignored lint failures, `--no-verify` to bypass hooks, amended history
-to hide the mess. **WORKSPACE-CI** generates native git hooks from a single
+to hide the mess.
+
+**WORKSPACE-CI** generates native git hooks from a single
 config file and hard-enforces lint, tests, secrets, and coverage at commit
 and push time. With **WORKSPACE-GUARD**, it blocks every escape hatch
 (`--no-verify`, `--force`, `--amend`, `git reset`) at the syscall boundary.
@@ -134,6 +136,29 @@ markdown doc targets in [`config/markdown_docs.yaml`](config/markdown_docs.yaml)
 blocked commit patterns in [`config/blocked_commit_patterns.yaml`](config/blocked_commit_patterns.yaml),
 and dependency excludes in [`config/dependency_excludes.yaml`](config/dependency_excludes.yaml).
 Add a pattern, tune a threshold, exclude a path: no code changes needed.
+
+### Runtime config overrides
+
+Any `config/<stem>.yaml` file can be redirected at runtime without copying the
+whole `config/` tree. Resolution is unified across bash hooks, Python checkers,
+and the wiki (`ci/paths.py`, `ci_config_path` in `lib/ci_config_paths.sh`,
+`web/src/lib/config-paths.ts`).
+
+| Variable | Purpose |
+|----------|---------|
+| `CI_CONFIG_DIR` | Config directory (canonical) |
+| `WORKSPACE_CI_CONFIG_ROOT` | Wiki alias for `CI_CONFIG_DIR` |
+| `CI_CONFIG_OVERRIDES` | YAML manifest mapping config stems to file paths |
+| `CI_CONFIG_PATH_{STEM}` | Per-file override (highest precedence) |
+| `CI_GUARD_CONFIG_DIR` / `WORKSPACE_GUARD_CONFIG_ROOT` | Guard policy config directory |
+| `CI_GUARD_CONFIG_OVERRIDES` / `CI_GUARD_CONFIG_PATH_{STEM}` | Guard equivalents |
+
+Example manifest (`CI_CONFIG_OVERRIDES=/path/to/overrides.yaml`):
+
+```yaml
+banned_words: /custom/banned_words.yaml
+required_hooks: ./my-required_hooks.yaml
+```
 
 ---
 

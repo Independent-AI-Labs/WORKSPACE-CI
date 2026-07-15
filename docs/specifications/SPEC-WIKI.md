@@ -760,9 +760,8 @@ import { load } from 'js-yaml'
 // config tree (e.g. a vendored copy, a CI artifact) without code changes.
 // Default: the parent repo's config/ dir, assuming the wiki is served from
 // a checkout of workspace-ci (web/ lives inside the repo).
-// Override via WORKSPACE_CI_CONFIG_ROOT (absolute path or relative to web/).
-const CONFIG_ROOT = process.env.WORKSPACE_CI_CONFIG_ROOT
-  ?? join(process.cwd(), '..', 'config')
+// Resolved via web/src/lib/config-paths.ts (CI_CONFIG_DIR, per-file overrides).
+const CONFIG_ROOT = getConfigRoot()
 
 const DOCS_ROOT = process.env.WORKSPACE_CI_DOCS_ROOT
   ?? join(process.cwd(), '..', 'docs')
@@ -844,10 +843,11 @@ the workspace-ci `config/` and `docs/` trees. The supported deployment shapes:
 
 1. **In-tree (default):** `web/` lives inside a workspace-ci checkout;
    `CONFIG_ROOT` defaults to `../config`. This is the primary mode.
-2. **External config tree:** Set `WORKSPACE_CI_CONFIG_ROOT` to an absolute
-   path (or a path relative to `web/`) pointing at a config tree. Use this
-   to document a forked or vendored config set, or to run the wiki in CI
-   against an artifact.
+2. **External config tree:** Set `CI_CONFIG_DIR` (or wiki alias
+   `WORKSPACE_CI_CONFIG_ROOT`) to an absolute path pointing at a config tree.
+   Redirect individual files with `CI_CONFIG_OVERRIDES` (manifest) or
+   `CI_CONFIG_PATH_{STEM}` (per-file env). Use this to document a forked or
+   vendored config set, or to run the wiki in CI against an artifact.
 3. **Cross-repo guard tree (soft dependency):** The guard policy configs live
    in the sibling `WORKSPACE-GUARD` repo's `config/` tree, resolved by
    `WORKSPACE_GUARD_CONFIG_ROOT` (default `../../WORKSPACE-GUARD/config`

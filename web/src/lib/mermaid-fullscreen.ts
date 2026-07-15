@@ -95,10 +95,17 @@ export class FullscreenOverlay {
     this.stage.setAttribute('tabindex', '0')
 
     svg.style.display = 'block'
-    // Strip any inline CSS transform inherited from the live renderer so the
-    // viewBox is the sole source of truth.
     svg.style.transform = ''
     svg.style.transformOrigin = ''
+    svg.style.width = 'auto'
+    svg.style.maxWidth = '100%'
+    svg.style.maxHeight = '100%'
+    svg.style.height = 'auto'
+    svg.style.margin = 'auto'
+    const widthAttr = svg.getAttribute('width')
+    const heightAttr = svg.getAttribute('height')
+    if (widthAttr?.includes('%')) svg.removeAttribute('width')
+    if (heightAttr?.includes('%')) svg.removeAttribute('height')
 
     // If the cloned svg already has a parsed viewBox, derive base from it;
     // otherwise fall back to the source diagram's base.
@@ -107,6 +114,7 @@ export class FullscreenOverlay {
     this.vb = { ...this.base }
     applyViewBox(svg, this.vb)
     this.stage.appendChild(svg)
+    this.syncPannableState()
 
     this.overlay.appendChild(toolbar)
     this.overlay.appendChild(this.stage)
@@ -143,9 +151,14 @@ export class FullscreenOverlay {
   }
 
   // ------------------------------------------------------------------
+  private syncPannableState(): void {
+    this.stage.classList.add('is-pannable')
+  }
+
   private setViewBox(next: ViewBox): void {
     this.vb = next
     applyViewBox(this.svg, this.vb)
+    this.syncPannableState()
   }
 
   private cssSize(): { w: number; h: number } {

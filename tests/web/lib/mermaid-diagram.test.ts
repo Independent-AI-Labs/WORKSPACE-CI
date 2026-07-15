@@ -171,6 +171,20 @@ describe('mountMermaidDiagram', () => {
     ctrl.destroy()
   })
 
+  it('zoom-out keeps the diagram centered in the canvas', async () => {
+    const frame = makeFrame('graph TD\nA-->B')
+    const ctrl = mountMermaidDiagram(frame)
+    await ctrl.render(fakeRunner())
+    const out = frame.querySelector('[data-action="zoom-out"]') as HTMLButtonElement
+    out.click()
+    const vb = viewBoxObj(frame)
+    expect(vb.w).toBeGreaterThan(100)
+    expect(vb.h).toBeGreaterThan(50)
+    expect(vb.x).toBeLessThan(0)
+    expect(vb.y).toBeLessThan(0)
+    ctrl.destroy()
+  })
+
   it('zoom-out never drops below the minimum scale', async () => {
     const frame = makeFrame('graph TD\nA-->B')
     const ctrl = mountMermaidDiagram(frame)
@@ -260,12 +274,13 @@ describe('mountMermaidDiagram', () => {
     expect(frame.querySelector('.mermaid-toolbar')).toBeNull()
   })
 
-  it('allows panning even at scale 1 (always movable canvas)', async () => {
+  it('pans at scale 1', async () => {
     const frame = makeFrame('graph TD\nA-->B')
     const ctrl = mountMermaidDiagram(frame)
     await ctrl.render(fakeRunner())
     const pre = frame.querySelector('pre.mermaid')!
     expect(viewBoxOf(frame)).toBe('0 0 100 50')
+    expect(pre.classList.contains('is-pannable')).toBe(true)
     pre.dispatchEvent(
       new PointerEvent('pointerdown', {
         clientX: 100,
@@ -283,17 +298,8 @@ describe('mountMermaidDiagram', () => {
       }),
     )
     const vb = viewBoxObj(frame)
-    // Dragging 40 css px right + 10 css px down moves the viewBox origin
-    // by (-dxCss * vb.w / cssW, -dyCss * vb.h / cssH). At scale 1 with
-    // cssW==vb.w==100 the ratio is 1:1, so the origin becomes (-40, -10).
-    // PAN IS NOT CLAMPED (see mermaid-diagram.ts onPointerMove): clamping
-    // at scale 1 would collapse the origin range to {0, 0} (since
-    // base.w - vb.w == 0) and the canvas would never follow the cursor,
-    // which is the regression we are guarding against.
     expect(vb.x).toBe(-40)
     expect(vb.y).toBe(-10)
-    expect(vb.w).toBe(100)
-    expect(vb.h).toBe(50)
     pre.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, bubbles: true }))
     ctrl.destroy()
   })
@@ -336,11 +342,12 @@ describe('mountMermaidDiagram', () => {
     ctrl.destroy()
   })
 
-  it('disables text selection (body class) while dragging', async () => {
+  it('disables text selection (body class) while dragging when zoomed', async () => {
     const frame = makeFrame('graph TD\nA-->B')
     const ctrl = mountMermaidDiagram(frame)
     await ctrl.render(fakeRunner())
     const pre = frame.querySelector('pre.mermaid')!
+    ;(frame.querySelector('[data-action="zoom-out"]') as HTMLButtonElement).click()
     expect(document.body.classList.contains('is-mermaid-dragging')).toBe(false)
     pre.dispatchEvent(
       new PointerEvent('pointerdown', {
@@ -356,14 +363,54 @@ describe('mountMermaidDiagram', () => {
     ctrl.destroy()
   })
 
-  it('does not show is-pannable class toggle (cursor is always grab)', async () => {
+  it('keeps is-pannable at every zoom level', async () => {
     const frame = makeFrame('graph TD\nA-->B')
     const ctrl = mountMermaidDiagram(frame)
     await ctrl.render(fakeRunner())
     const pre = frame.querySelector('pre.mermaid')!
-    expect(pre.classList.contains('is-pannable')).toBe(false)
-    ;(frame.querySelector('[data-action="zoom-in"]') as HTMLButtonElement).click()
-    expect(pre.classList.contains('is-pannable')).toBe(false)
+    const zIn = frame.querySelector('[data-action="zoom-in"]') as HTMLButtonElement
+    const zOut = frame.querySelector('[data-action="zoom-out"]') as HTMLButtonElement
+    const reset = frame.querySelector('[data-action="reset"]') as HTMLButtonElement
+    expect(pre.classList.contains('is-pannable')).toBe(true)
+    zIn.click()
+    expect(pre.classList.contains('is-pannable')).toBe(true)
+    reset.click()
+    expect(pre.classList.contains('is-pannable')).toBe(true)
+    zOut.click()
+    expect(pre.classList.contains('is-pannable')).toBe(true)
+    reset.click()
+    expect(pre.classList.contains('is-pannable')).toBe(true)
+    ctrl.destroy()
+  })
+
+  it('pans when zoomed out', async () => {
+    const frame = makeFrame('graph TD\nA-->B')
+    const ctrl = mountMermaidDiagram(frame)
+    await ctrl.render(fakeRunner())
+    const pre = frame.querySelector('pre.mermaid')!
+    ;(frame.querySelector('[data-action="zoom-out"]') as HTMLButtonElement).click()
+    expect(viewBoxObj(frame).w).toBeGreaterThan(100)
+    const before = viewBoxObj(frame)
+    pre.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        clientX: 0,
+        clientY: 0,
+        pointerId: 4,
+        bubbles: true,
+      }),
+    )
+    pre.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: 20,
+        clientY: 10,
+        pointerId: 4,
+        bubbles: true,
+      }),
+    )
+    const after = viewBoxObj(frame)
+    expect(after.x).toBeLessThan(before.x)
+    expect(after.y).toBeLessThan(before.y)
+    pre.dispatchEvent(new PointerEvent('pointerup', { pointerId: 4, bubbles: true }))
     ctrl.destroy()
   })
 

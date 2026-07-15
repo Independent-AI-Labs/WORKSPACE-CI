@@ -66,10 +66,8 @@ _dc_name_ignored() {
 # Dangle's own test-file heuristic (`test_` prefix or `/tests/` segment)
 # already suppresses reporting there; reference_only_paths covers any extras.
 ci_check_dead_code() {
-    local _dc_cfg="${CI_CONFIG_DIR}/dead_code.yaml"
-    if [[ ! -f "$_dc_cfg" ]]; then
-        _dc_cfg="./config/dead_code.yaml"
-    fi
+    local _dc_cfg
+    _dc_cfg="$(ci_config_path dead_code "./config/dead_code.yaml")" || return 0
     if [[ ! -f "$_dc_cfg" ]]; then
         ci_warn "dead_code.yaml not found; skipping dead-code check"
         return 0

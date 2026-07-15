@@ -2,6 +2,7 @@ import fs from 'fs/promises'
 import { existsSync, readFileSync } from 'fs'
 import path from 'path'
 import { load } from 'js-yaml'
+import { resolveConfigPath } from './config-paths.mjs'
 
 process.on('uncaughtException', (err) => {
   console.error('[sync-logos] uncaughtException:', err)
@@ -15,9 +16,6 @@ process.on('unhandledRejection', (reason) => {
 const WEB_DIR = process.cwd()
 const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT
   ?? path.resolve(WEB_DIR, '..', '..')
-const CONFIG_ROOT = process.env.WORKSPACE_CI_CONFIG_ROOT
-  ?? path.resolve(WEB_DIR, '..', 'config')
-
 const DEST_DIR = path.resolve(WEB_DIR, 'public', 'logos')
 
 // Local branding logos (themed variants) copied from this repo's res/ dir
@@ -30,7 +28,7 @@ const LOCAL_LOGOS = [
 ]
 
 function loadProjects() {
-  const raw = readFileSync(path.join(CONFIG_ROOT, 'projects.yaml'), 'utf8')
+  const raw = readFileSync(resolveConfigPath('projects'), 'utf8')
   const config = load(raw)
   return config.projects ?? []
 }

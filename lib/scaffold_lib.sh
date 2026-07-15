@@ -40,9 +40,9 @@ _scl_render_entry() {
         shell_with_arg)
             printf "bash -c 'source %s/lib/checks.sh && %s \"\$1\"' --" "$REL_CI" "$_entry" ;;
         python_module)
-            printf "%s/.venv/bin/python -m %s" "$REL_CI" "$_entry" ;;
+            printf "uv run --project %s --no-sync python -m %s" "$REL_CI" "$_entry" ;;
         python_module_files)
-            printf "%s/.venv/bin/python -m %s \"\$@\"" "$REL_CI" "$_entry" ;;
+            printf "uv run --project %s --no-sync python -m %s \"\$@\"" "$REL_CI" "$_entry" ;;
         makefile_target)
             printf "make %s" "$_entry" ;;
         *)

@@ -4,7 +4,7 @@ unit:
   path: tests/unit
   min_coverage: 90
   source_path: ci
-  runner: ".venv/bin/python -m pytest"
+  runner: "uv run python -m pytest"
 
 # Integration tests use real git repos, subprocess spawns, and
 # end-to-end pipelines. Coverage is supplementary (5% floor);
@@ -15,5 +15,5 @@ integration:
   path: tests/integration
   min_coverage: 5
   source_path: ci
-  runner: ".venv/bin/python -m pytest"
+  runner: "uv run python -m pytest"
   coverage: "false"

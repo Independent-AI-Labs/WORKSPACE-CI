@@ -4,7 +4,8 @@
 
 # --- Blocked commit patterns (shared by commit-msg and pre-push checks) ---
 _load_blocked_commit_patterns() {
-    local config="${CI_CONFIG_DIR}/blocked_commit_patterns.yaml"
+    local config
+    config="$(ci_config_path blocked_commit_patterns)" || return 1
     _BLOCKED_PATTERNS=()
     _BLOCKED_REASONS=()
 

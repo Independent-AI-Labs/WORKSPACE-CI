@@ -52,6 +52,9 @@ from ci._boot_layout_helpers import (
 from ci._boot_layout_helpers import (
     scan_precommit_project_refs as _scan_precommit_project_refs,
 )
+from ci._boot_layout_helpers import (
+    scan_precommit_venv_python_refs as _scan_precommit_venv_python_refs,
+)
 
 # ---------------------------------------------------------------------------
 # Check functions
@@ -182,6 +185,24 @@ def _check_dependson_alignment(
     return findings
 
 
+def _check_precommit_venv_python_refs(project_dir: Path) -> list[tuple[str, str]]:
+    """Check 6b: warn on deprecated .venv/bin/python -m ci.* hook entries."""
+    findings: list[tuple[str, str]] = []
+    pcc_path = project_dir / ".pre-commit-config.yaml"
+    if not pcc_path.is_file():
+        return findings
+    findings.extend(
+        (
+            "WARN",
+            f".pre-commit-config.yaml line {line_no}:"
+            " use uv run python or uv run --project <path> --no-sync"
+            " python -m ci.<check> (not .venv/bin/python)",
+        )
+        for line_no in _scan_precommit_venv_python_refs(pcc_path)
+    )
+    return findings
+
+
 def _check_precommit_project_refs(project_dir: Path) -> list[tuple[str, str]]:
     """Check 6: .pre-commit-config.yaml --project refs resolve."""
     findings: list[tuple[str, str]] = []
@@ -263,6 +284,7 @@ def main() -> int:
     findings.extend(_check_dependson_alignment(moon))
 
     # Check 6: .pre-commit-config.yaml --project refs
+    findings.extend(_check_precommit_venv_python_refs(project_dir))
     findings.extend(_check_precommit_project_refs(project_dir))
 
     # Check 7: summary

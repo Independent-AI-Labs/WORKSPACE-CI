@@ -4,7 +4,7 @@
 # Takes a consumer directory + ci-profile.yaml and emits:
 #   .pre-commit-config.yaml, Makefile, config/*.yaml, quality_exceptions.yaml
 #
-# Usage: scaffold-ci --consumer PATH [--profile PATH] [--dry-run]
+# Usage: scaffold-ci --consumer PATH [--profile PATH] [--config-overrides PATH] [--dry-run]
 #                   [--apply-precommit] [--apply-makefile] [--apply-configs]
 #                   [--apply-all] [--append-makefile] [--analyze] [--diff]
 #                   [--json] [--yes] [--no-backup] [--lax-applicable]
@@ -29,9 +29,8 @@ if ! source "$_CI_ROOT/lib/scaffold_lib.sh"; then
 fi
 
 _PARSER="$_CI_ROOT/lib/parse_hook_yaml.awk"
-_REGISTRY="$_CI_ROOT/config/required_hooks.yaml"
 _QE_TEMPLATE="$_CI_ROOT/templates/quality_exceptions.template.yaml"
-_CONFIG_DIR="$_CI_ROOT/config"
+_config_overrides=""
 
 _consumer=""
 _profile=""
@@ -53,6 +52,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --consumer)        _consumer="$2"; shift 2 ;;
         --profile)         _profile="$2"; shift 2 ;;
+        --config-overrides) _config_overrides="$2"; shift 2 ;;
         --dry-run)         _dry_run=1; shift ;;
         --force-precommit|--apply-precommit) _force_pc=1; shift ;;
         --force-makefile|--apply-makefile)   _force_mf=1; shift ;;
@@ -77,6 +77,12 @@ while [[ $# -gt 0 ]]; do
         *) ci_fail "Unknown option: $1"; exit 1 ;;
     esac
 done
+
+if [[ -n "$_config_overrides" ]]; then
+    export CI_CONFIG_OVERRIDES="$_config_overrides"
+fi
+_REGISTRY="$(ci_config_path required_hooks)"
+_CONFIG_DIR="${CI_CONFIG_DIR}"
 
 _generated=()
 _skipped=()

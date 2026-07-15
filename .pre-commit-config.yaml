@@ -48,14 +48,14 @@ repos:
 
       - id: check-dependency-versions
         name: Check Dependency Versions (strict pinning + latest)
-        entry: "bash -c '.venv/bin/python -c \"import ci\" || { echo \"FAILED: ci not installed: run: make sync\" >&2; exit 1; }; exec .venv/bin/python -m ci.check_dependency_versions \"$@\"' --"
+        entry: "bash -c 'source lib/ci.sh && exec uv run python -m ci.check_dependency_versions \"$@\"' --"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-duplicate-dependencies
         name: Check Duplicate/Redundant Dependencies
-        entry: "bash -c '.venv/bin/python -c \"import ci\" || { echo \"FAILED: ci not installed: run: make sync\" >&2; exit 1; }; exec .venv/bin/python -m ci.check_duplicate_dependencies \"$@\"' --"
+        entry: "bash -c 'source lib/ci.sh && exec uv run python -m ci.check_duplicate_dependencies \"$@\"' --"
         language: system
         pass_filenames: false
         always_run: true
@@ -118,21 +118,21 @@ repos:
 
       - id: check-markdown-docs
         name: Check Markdown Documentation References
-        entry: ".venv/bin/python -m ci.check_markdown_docs --all-md --check-remote"
+        entry: "bash -c 'source lib/ci.sh && exec uv run python -m ci.check_markdown_docs --all-md --check-remote'"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-required-hooks-present
         name: CI Self-Check (manifest + exceptions + rendered hooks)
-        entry: ".venv/bin/python -m ci.check_required_hooks_present --quiet"
+        entry: "bash -c 'source lib/ci.sh && exec uv run python -m ci.check_required_hooks_present --quiet'"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-boot-venv-layout
         name: Boot Layout Audit (non-blocking)
-        entry: ".venv/bin/python -m ci.check_boot_venv_layout"
+        entry: "bash -c 'source lib/ci.sh && exec uv run python -m ci.check_boot_venv_layout'"
         language: system
         pass_filenames: false
         always_run: true

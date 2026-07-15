@@ -23,7 +23,6 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -42,6 +41,7 @@ from ci._md_checkers import (
 )
 from ci._md_http_client import HttpClient
 from ci._md_refs import ParsedDoc, parse_doc
+from ci.paths import resolve_config_path
 
 
 class MarkdownDocsConfig(BaseModel):
@@ -75,23 +75,8 @@ DEFAULT_HTTP_TIMEOUT = 5.0  # per-attempt (each HEAD + GET counts)
 _MD_SUFFIXES = frozenset({".md", ".markdown", ".mdown"})
 
 
-def _find_config_dir() -> Path | None:
-    env = os.environ.get("CI_CONFIG_DIR")
-    if env:
-        return Path(env).resolve()
-    cursor = Path(__file__).resolve()
-    for _ in range(5):
-        cursor = cursor.parent
-        if (cursor / "config").is_dir():
-            return cursor / "config"
-    return None
-
-
 def _load_config() -> MarkdownDocsConfig:
-    cfg_dir = _find_config_dir()
-    if not cfg_dir:
-        return MarkdownDocsConfig()
-    cfg_file = cfg_dir / "markdown_docs.yaml"
+    cfg_file = resolve_config_path("markdown_docs", required=False)
     if not cfg_file.is_file():
         return MarkdownDocsConfig()
     try:

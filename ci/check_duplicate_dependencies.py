@@ -25,6 +25,8 @@ from typing import Any, NamedTuple
 import tomllib
 import yaml
 
+from ci.paths import resolve_config_path
+
 BUILTIN_EXCLUDES: frozenset[str] = frozenset(
     {
         "python",
@@ -70,16 +72,6 @@ def find_workspace_root() -> Path:
     return cwd
 
 
-def find_config_dir() -> Path:
-    here = Path(__file__).resolve().parent
-    for _ in range(4):
-        config = here / "config"
-        if config.is_dir():
-            return config
-        here = here.parent
-    return Path("config")
-
-
 def _parse_dep_name(dep_str: str) -> str:
     s = dep_str.strip()
     if (s.startswith('"') and s.endswith('"')) or (
@@ -97,8 +89,8 @@ def _parse_dep_name(dep_str: str) -> str:
     return s[:i].lower()
 
 
-def _load_excludes(config_dir: Path) -> set[str]:
-    excludes_path = config_dir / "duplicate_dependency_excludes.yaml"
+def _load_excludes() -> set[str]:
+    excludes_path = resolve_config_path("duplicate_dependency_excludes", required=False)
     if not excludes_path.exists():
         return set()
     try:
@@ -268,8 +260,7 @@ def main() -> int:
     args = parser.parse_args()
 
     root = args.workspace_root or find_workspace_root()
-    config_dir = find_config_dir()
-    excludes = _load_excludes(config_dir)
+    excludes = _load_excludes()
 
     all_issues: list[DuplicateIssue] = []
 

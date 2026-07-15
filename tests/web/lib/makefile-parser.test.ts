@@ -74,7 +74,7 @@ describe('parseMakefile', () => {
     const content = [
       'SHELL := /bin/bash',
       'RUFF := .venv/bin/ruff',
-      'PYTEST := .venv/bin/python -m pytest',
+      'PYTEST := uv run python -m pytest',
       'help: ## Show help',
     ].join('\n')
     const targets = parseMakefile(content)

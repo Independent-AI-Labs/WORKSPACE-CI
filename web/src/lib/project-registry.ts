@@ -4,12 +4,10 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { load } from 'js-yaml'
 import type { ProjectEntry, ProjectSummary, ProjectReadme } from '@/types/projects'
+import { resolveConfigPath } from '@/lib/config-paths'
 
 const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT
   ?? join(process.cwd(), '..', '..')
-
-const CONFIG_ROOT = process.env.WORKSPACE_CI_CONFIG_ROOT
-  ?? join(process.cwd(), '..', 'config')
 
 const DEFAULT_BRANCH = 'main'
 
@@ -28,7 +26,7 @@ interface ProjectsConfig {
 }
 
 function loadProjectsConfig(): ProjectsConfig {
-  const raw = readFileSync(join(CONFIG_ROOT, 'projects.yaml'), 'utf8')
+  const raw = readFileSync(resolveConfigPath('projects'), 'utf8')
   return load(raw) as ProjectsConfig
 }
 

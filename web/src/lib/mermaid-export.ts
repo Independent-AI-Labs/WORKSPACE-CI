@@ -147,13 +147,15 @@ export function panBy(
 }
 
 /**
- * Clamp the viewBox's origin so it cannot show whitespace outside the
- * base diagram region. When the viewBox is wider/taller than the base (zoomed
- * out beyond 1), the origin is aligned with the base origin for that axis.
+ * Clamp the viewBox origin when zoomed in so whitespace outside the base
+ * diagram region is never exposed. When zoomed out (vb wider/taller than base)
+ * the origin is left untouched so zoomAtCenter / zoomAtPoint can keep the
+ * diagram centered or anchored at the pivot instead of snapping top-left.
  */
 export function clampOriginToBase(vb: ViewBox, base: ViewBox): ViewBox {
-  const x = vb.w >= base.w ? base.x : clamp(vb.x, base.x, base.x + base.w - vb.w)
-  const y = vb.h >= base.h ? base.y : clamp(vb.y, base.y, base.y + base.h - vb.h)
+  if (vb.w >= base.w && vb.h >= base.h) return vb
+  const x = vb.w >= base.w ? vb.x : clamp(vb.x, base.x, base.x + base.w - vb.w)
+  const y = vb.h >= base.h ? vb.y : clamp(vb.y, base.y, base.y + base.h - vb.h)
   return { x, y, w: vb.w, h: vb.h }
 }
 

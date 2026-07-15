@@ -17,12 +17,11 @@ SHELL := $(if $(wildcard $(_HB_PREFIX)/bin/bash),$(_HB_PREFIX)/bin/bash,/bin/bas
 
 export PATH := $(_HB_PREFIX)/opt/coreutils/libexec/gnubin:$(_HB_PREFIX)/opt/gnu-sed/libexec/gnubin:$(_HB_PREFIX)/opt/findutils/libexec/gnubin:$(_HB_PREFIX)/bin:$(PATH)
 
-# uv is used for dependency installation (uv sync). Verification tools
-# (ruff, pytest, mypy) are invoked directly from .venv/bin per AGENTS.md §4.1.
+# uv is the hermetic runner for all Python tooling (FR-2.4).
 UV := uv
-RUFF := .venv/bin/ruff
-PYTEST := .venv/bin/python -m pytest
-MYPY := .venv/bin/mypy
+RUFF := uv run ruff
+PYTEST := uv run python -m pytest
+MYPY := uv run mypy
 
 # $(BOOT_NAME)/bin/ holds bootstrapped tools (uv, cargo, rustup, gitleaks).
 # On macOS BOOT_NAME=.boot-macos, on Linux .boot-linux--platform-aware via

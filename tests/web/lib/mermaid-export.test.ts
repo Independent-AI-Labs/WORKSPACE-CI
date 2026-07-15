@@ -213,6 +213,14 @@ describe('zoomAtCenter', () => {
     expect(next.x).toBe(25)
     expect(next.y).toBe(12.5)
   })
+
+  it('stays centered after zoom-out when passed through clampOriginToBase', () => {
+    const zoomedOut = zoomAtCenter(BASE, BASE, 100, 50, 0.8)
+    const clamped = clampOriginToBase(zoomedOut, BASE)
+    expect(clamped).toEqual(zoomedOut)
+    expect(clamped.x).toBe(-12.5)
+    expect(clamped.y).toBe(-6.25)
+  })
 })
 
 describe('panBy', () => {
@@ -250,10 +258,9 @@ describe('clampOriginToBase', () => {
     expect(clampOriginToBase({ ...zoomed, y: 100 }, BASE).y).toBe(25)
   })
 
-  it('aligns the origin with the base origin when vb is wider than base', () => {
-    const wider: ViewBox = { x: 50, y: 0, w: 200, h: 100 }
-    expect(clampOriginToBase(wider, BASE).x).toBe(0)
-    expect(clampOriginToBase(wider, BASE).y).toBe(0)
+  it('preserves the origin when zoomed out so the diagram stays centered', () => {
+    const wider: ViewBox = { x: -50, y: -25, w: 200, h: 100 }
+    expect(clampOriginToBase(wider, BASE)).toEqual(wider)
   })
 })
 

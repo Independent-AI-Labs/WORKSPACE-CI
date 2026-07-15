@@ -17,6 +17,7 @@ implementation does zero subprocess spawns for pattern matching
 (one git ls-files call for file discovery) and completes in <1s.
 """
 
+import os
 import re
 import subprocess
 import sys
@@ -24,7 +25,14 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from ci_paths import find_config_dir
+
+from ci.paths import resolve_config_path
+
+
+def _scan_root() -> Path | None:
+    """Repo root to scan (sibling hooks set CI_SCAN_ROOT before ci_uv_run)."""
+    raw = os.environ.get("CI_SCAN_ROOT", "").strip()
+    return Path(raw) if raw else None
 
 
 def _merge_exceptions(exc_map: dict[str, list[str]], exc_path: Path) -> None:
@@ -40,9 +48,7 @@ def _merge_exceptions(exc_map: dict[str, list[str]], exc_path: Path) -> None:
             exc_map.setdefault(str(pattern), []).extend(paths)
 
 
-def _load_config(
-    config_dir: Path,
-) -> tuple[
+def _load_config() -> tuple[
     list[dict[str, str]],
     dict[str, list[dict[str, str]]],
     list[dict[str, str]],
@@ -62,7 +68,7 @@ def _load_config(
        exceptions (each repo has its own). Skipped if it resolves to the
        same file as #1 (avoids double-loading when running from CI itself).
     """
-    bw_path = config_dir / "banned_words.yaml"
+    bw_path = resolve_config_path("banned_words")
     with open(bw_path) as f:
         bw: Any = yaml.safe_load(f) or {}
 
@@ -80,10 +86,15 @@ def _load_config(
         for pattern in exc.get("patterns") or []:
             exc_map.setdefault(str(pattern), []).extend(paths)
 
-    ci_exc_path = config_dir / "banned_words_exceptions.yaml"
+    ci_exc_path = resolve_config_path("banned_words_exceptions", required=False)
     _merge_exceptions(exc_map, ci_exc_path)
 
-    project_exc_path = Path("config") / "banned_words_exceptions.yaml"
+    root = _scan_root()
+    project_exc_path = (
+        root / "config" / "banned_words_exceptions.yaml"
+        if root is not None
+        else Path("config") / "banned_words_exceptions.yaml"
+    )
     if project_exc_path.resolve() != ci_exc_path.resolve():
         _merge_exceptions(exc_map, project_exc_path)
 
@@ -118,15 +129,19 @@ def _get_files(argv_files: list[str]) -> list[str]:
     """Get file list from argv or git ls-files."""
     if argv_files:
         return argv_files
+    root = _scan_root()
+    git_cmd = [
+        "git",
+        "ls-files",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+    ]
+    if root is not None:
+        git_cmd = ["git", "-C", str(root), *git_cmd[1:]]
     try:
         result = subprocess.run(
-            [
-                "git",
-                "ls-files",
-                "--cached",
-                "--others",
-                "--exclude-standard",
-            ],
+            git_cmd,
             capture_output=True,
             text=True,
             stdin=subprocess.DEVNULL,
@@ -230,6 +245,14 @@ def _scan_directory_rules(
     return errors
 
 
+def _resolve_scan_path(filepath: str) -> Path:
+    """Resolve a git-relative path; prefer CI_SCAN_ROOT over process cwd."""
+    root = _scan_root()
+    if root is not None:
+        return root / filepath
+    return Path(filepath)
+
+
 def _scan_file(
     filepath: str,
     c_banned: list[tuple[re.Pattern[str], str, str]],
@@ -238,7 +261,8 @@ def _scan_file(
     exc_map: dict[str, list[str]],
 ) -> int:
     """Scan a single file for banned patterns. Returns error count."""
-    if not Path(filepath).is_file():
+    scan_path = _resolve_scan_path(filepath)
+    if not scan_path.is_file():
         return 0
 
     bn = filepath.rsplit("/", 1)[-1] if "/" in filepath else filepath
@@ -246,7 +270,7 @@ def _scan_file(
     errors = _scan_filename_rules(filepath, bn, c_filename, exc_map)
 
     try:
-        with open(filepath, errors="replace") as f:
+        with open(scan_path, errors="replace") as f:
             lines = f.readlines()
     except OSError as exc:
         sys.stderr.write(f"WARNING: Cannot read {filepath}: {exc}\n")
@@ -268,10 +292,9 @@ def _compile_dir_rules(
 
 
 def main() -> int:
-    config_dir = find_config_dir()
     argv_files = sys.argv[1:]
 
-    bw_path = config_dir / "banned_words.yaml"
+    bw_path = resolve_config_path("banned_words")
     if not bw_path.is_file():
         sys.stderr.write(f"Config not found: {bw_path}\n")
         return 1
@@ -281,7 +304,7 @@ def main() -> int:
         directory_rules,
         filename_rules,
         exc_map,
-    ) = _load_config(config_dir)
+    ) = _load_config()
 
     files = _get_files(argv_files)
     if not files:

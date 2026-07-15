@@ -35,6 +35,8 @@ categories:
     label: Container Versions
   - id: deprecated-python
     label: Deprecated Python
+  - id: policy-integrity
+    label: Policy Integrity
   - id: self-methods
     label: Self Methods
   - id: special-chars

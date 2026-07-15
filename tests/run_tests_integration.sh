@@ -19,6 +19,7 @@ source "$TESTS_DIR/integration/test_dead_code.sh"
 source "$TESTS_DIR/integration/test_dead_code_real.sh"
 source "$TESTS_DIR/integration/test_silent_swallow.sh"
 source "$TESTS_DIR/integration/test_fail_closed.sh"
+source "$TESTS_DIR/integration/test_config_overrides.sh"
 source "$TESTS_DIR/integration/test_scaffold_ci.sh"
 
 # Summary

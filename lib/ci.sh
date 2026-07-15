@@ -42,7 +42,19 @@ ci_boot_dir() {
 # ---------------------------------------------------------------------------
 CI_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CI_PROJECT_ROOT="$(cd "$CI_LIB_DIR/.." && pwd)"
-CI_CONFIG_DIR="$CI_PROJECT_ROOT/config"
+CI_CONFIG_DIR="${CI_CONFIG_DIR:-$CI_PROJECT_ROOT/config}"
+export CI_LIB_DIR CI_PROJECT_ROOT CI_CONFIG_DIR
+
+# shellcheck source=ci_config_paths.sh
+if ! source "$CI_LIB_DIR/ci_config_paths.sh"; then
+    echo "ERROR: failed to source $CI_LIB_DIR/ci_config_paths.sh" >&2
+    return 1
+fi
+# shellcheck source=ci_helpers.sh
+if ! source "$CI_LIB_DIR/ci_helpers.sh"; then
+    echo "ERROR: failed to source $CI_LIB_DIR/ci_helpers.sh" >&2
+    return 1
+fi
 
 # CI_WORKSPACE_ROOT: the monorepo/workspace root that contains this CI project.
 # Accepts env var override; otherwise walks up from CI_PROJECT_ROOT looking for
@@ -58,46 +70,6 @@ if [[ -z "${CI_WORKSPACE_ROOT:-}" ]]; then
     done
     CI_WORKSPACE_ROOT="${CI_WORKSPACE_ROOT:-$(cd "$CI_PROJECT_ROOT/.." && pwd)}"
 fi
-
-# ---------------------------------------------------------------------------
-# Path utilities
-# ---------------------------------------------------------------------------
-
-# ci_relative_path <from_dir> <to_dir>
-#   Computes the relative path from from_dir to to_dir using pure bash.
-#   No external tools (no realpath, no readlink). Bash 3.2+ compatible.
-ci_relative_path() {
-    local _from="$1" _to="$2"
-
-    # Normalize: strip trailing slashes, split on /
-    _from="${_from%/}"
-    _to="${_to%/}"
-
-    local _from_parts _to_parts
-    IFS='/' read -ra _from_parts <<< "${_from#"/"}"
-    IFS='/' read -ra _to_parts <<< "${_to#"/"}"
-
-    # Find common prefix length
-    local _i=0
-    while [[ $_i -lt ${#_from_parts[@]} && $_i -lt ${#_to_parts[@]} ]]; do
-        [[ "${_from_parts[$_i]}" == "${_to_parts[$_i]}" ]] || break
-        ((_i++))
-    done
-
-    # Build result: ../ for each remaining from_part, then append to_parts
-    local _result=""
-    local _ups=$((${#_from_parts[@]} - _i))
-    for ((; _ups > 0; _ups--)); do
-        _result="../${_result}"
-    done
-    for ((; _i < ${#_to_parts[@]}; _i++)); do
-        _result="${_result}${_to_parts[$_i]}/"
-    done
-
-    _result="${_result%/}"
-    [[ -z "$_result" ]] && _result="."
-    echo "$_result"
-}
 
 # ---------------------------------------------------------------------------
 # Colors (disabled when stdout is not a terminal)
@@ -381,14 +353,13 @@ ci_capture_pipe() {
 # hooks `cd` to their own root before invoking CI checkers.
 ci_run_python_checker() {
     local _script="$1"; shift
-    local _ci_py="${CI_PROJECT_ROOT:-}/.venv/bin/python"
 
-    if [[ ! -x "$_ci_py" ]]; then
-        ci_fail "CI venv python not found at $_ci_py"
-        return 1
-    fi
     if [[ ! -f "$_script" ]]; then
         ci_fail "Checker script not found: $_script"
+        return 1
+    fi
+    if ! ci_uv_bin >/dev/null; then
+        ci_fail "CI uv not found; run: make install-boot-tools"
         return 1
     fi
 
@@ -397,9 +368,14 @@ ci_run_python_checker() {
 
     local _rc=0
     CI_CONFIG_DIR="$CI_CONFIG_DIR" \
+    WORKSPACE_CI_CONFIG_ROOT="${WORKSPACE_CI_CONFIG_ROOT:-}" \
+    CI_CONFIG_OVERRIDES="${CI_CONFIG_OVERRIDES:-}" \
+    CI_GUARD_CONFIG_DIR="${CI_GUARD_CONFIG_DIR:-}" \
+    WORKSPACE_GUARD_CONFIG_ROOT="${WORKSPACE_GUARD_CONFIG_ROOT:-}" \
+    CI_GUARD_CONFIG_OVERRIDES="${CI_GUARD_CONFIG_OVERRIDES:-}" \
     CI_LIB_DIR="$CI_LIB_DIR" \
     CI_PROJECT_ROOT="$CI_PROJECT_ROOT" \
-        "$_ci_py" "$_script" "$@" \
+        ci_uv_run "$_script" "$@" \
         > "$CI_CHECKER_STDOUT" 2>"$CI_CHECKER_STDERR" \
         || _rc=$?
 

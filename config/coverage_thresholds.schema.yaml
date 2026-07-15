@@ -31,7 +31,7 @@ fields:
   - path: unit.runner
     type: string
     required: true
-    description: "Command used to run the test suite (e.g. '.venv/bin/python -m pytest')."
+    description: "Command used to run the test suite (e.g. 'uv run python -m pytest')."
 
   - path: integration
     type: map

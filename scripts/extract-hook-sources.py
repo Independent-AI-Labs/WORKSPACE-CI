@@ -35,13 +35,15 @@ import yaml
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _SCRIPTS_DIR.parent
-_CONFIG_DIR = Path(os.environ.get("CI_CONFIG_DIR") or str(_REPO_ROOT / "config"))
 _LIB_DIR = Path(os.environ.get("CI_LIB_DIR") or str(_REPO_ROOT / "lib"))
 _CI_DIR = Path(os.environ.get("CI_CI_DIR") or str(_REPO_ROOT / "ci"))
 _OUTPUT_DIR = Path(
     os.environ.get("CI_WEB_DATA_DIR") or str(_REPO_ROOT / "web" / "src" / "data")
 )
-CONFIG_PATH = _CONFIG_DIR / "required_hooks.yaml"
+
+from ci.paths import resolve_config_path
+
+CONFIG_PATH = resolve_config_path("required_hooks")
 MAKEFILE_PATH = _REPO_ROOT / "Makefile"
 OUTPUT_PATH = _OUTPUT_DIR / "hook-sources.json"
 

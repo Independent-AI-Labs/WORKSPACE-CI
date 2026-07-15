@@ -7,9 +7,13 @@ ci_verify_coverage() {
     # Project MUST define its own coverage config. No defaults.
     local config="${1:-}"
     if [[ -z "$config" ]]; then
-        for _cand in "./config/coverage_thresholds.yaml" "./coverage_thresholds.yaml"; do
-            if [[ -f "$_cand" ]]; then config="$_cand"; break; fi
-        done
+        if [[ -f "./config/coverage_thresholds.yaml" ]]; then
+            config="./config/coverage_thresholds.yaml"
+        elif [[ -f "./coverage_thresholds.yaml" ]]; then
+            config="./coverage_thresholds.yaml"
+        else
+            config="$(ci_config_path coverage_thresholds)"
+        fi
     fi
 
     if [[ -z "$config" || ! -f "$config" ]]; then
@@ -43,7 +47,7 @@ ci_verify_coverage() {
 
         [[ -z "$path" || -z "$min_cov" ]] && continue
         [[ -z "$source_path" ]] && source_path="."
-        [[ -z "$runner" ]] && runner=".venv/bin/python -m pytest"
+        [[ -z "$runner" ]] && runner="uv run python -m pytest"
         [[ -z "$coverage" ]] && coverage="true"
 
         # Check if test path exists

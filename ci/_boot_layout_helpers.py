@@ -140,6 +140,23 @@ _PROJECT_REF_RE = re.compile(
     r"uv\s+run\s+--project\s+(\S+)\s+--no-sync\s+python\s+-m\s+ci\."
 )
 
+_VENV_PYTHON_CI_RE = re.compile(r"\.venv/bin/python\s+-m\s+ci\.")
+
+
+def scan_precommit_venv_python_refs(pcc_path: Path) -> list[int]:
+    """Yield line numbers for deprecated ``.venv/bin/python -m ci.<check>`` refs."""
+    lines: list[int] = []
+    try:
+        text = pcc_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return lines
+    lines.extend(
+        i
+        for i, line in enumerate(text.splitlines(), start=1)
+        if _VENV_PYTHON_CI_RE.search(line)
+    )
+    return lines
+
 
 def scan_precommit_project_refs(pcc_path: Path) -> list[tuple[int, str]]:
     """Yield (line_no, project_path) for every ``uv run --project X --no-sync

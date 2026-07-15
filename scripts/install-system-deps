@@ -82,7 +82,13 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -z "$MODE" ]] && MODE="check"
-[[ -z "$DEPS_FILE" ]] && DEPS_FILE="$REPO_ROOT/config/system-deps.yaml"
+if [[ -z "$DEPS_FILE" ]]; then
+    if [[ -n "${CI_CONFIG_PATH_SYSTEM_DEPS:-}" ]]; then
+        DEPS_FILE="$CI_CONFIG_PATH_SYSTEM_DEPS"
+    else
+        DEPS_FILE="$REPO_ROOT/config/system-deps.yaml"
+    fi
+fi
 
 # Platform-aware boot bin dir
 if [[ -z "$BOOT_BIN" ]]; then

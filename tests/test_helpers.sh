@@ -103,7 +103,7 @@ _setup_tmpdir() {
              check_silent_swallow.py check_silent_swallow_base.py \
              check_silent_swallow_python.py check_silent_swallow_js.py \
              check_silent_swallow_system.py check_silent_swallow_ansible.py \
-             ci_paths.py; do
+             resolve_config_path.py; do
         local src
         for src in "$LIB_DIR"/$f; do
             [[ -f "$src" ]] && ln -s "$src" "$_ci_dir/lib/$(basename "$src")"

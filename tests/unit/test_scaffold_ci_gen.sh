@@ -275,6 +275,7 @@ hooks:
 EOF
     cd "$PROJECT_DIR"
     bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-pm" > "$TEST_TMP/out" 2>&1
+    grep -q 'uv run --project' "$TEST_TMP/sci-pm/.pre-commit-config.yaml" || { echo "missing uv python module entry"; return 1; }
     grep -q 'python -m ci.check_required_hooks_present' "$TEST_TMP/sci-pm/.pre-commit-config.yaml" || { echo "missing python module entry"; return 1; }
 }
 _run_test "scaffold: python_module renders venv python entry" test_scaffold_entry_python_module

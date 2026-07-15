@@ -1,22 +1,19 @@
 # workspace-ci banned words exceptions.
-# Only the config file that defines patterns and test/lib files.
+# Policy files (banned_words.yaml, banned_words_exceptions.yaml) are fully
+# exempt via universal_exceptions in banned_words.yaml — not listed here.
 exceptions:
-  # Config YAML files define banned patterns and must contain them.
-  # AGENTS.md is the policy file that documents all banned patterns.
-  - pattern: '.*'
-    paths:
-      - 'config/.*\.yaml$'
-      - '\.pre-commit-config\.yaml$'
-      - 'AGENTS\.md$'
-
   # ── Documentation references (docs/) ─────────────────────────────────
-  # Docs reference banned patterns by name in specs, requirements, and
-  # category labels. These are descriptions, not instructions.
   - pattern: ' -- '
     paths: ['docs/']
   - pattern: '#\s*type:\s*ignore'
     paths: ['docs/']
   - pattern: '\bpython3?\b'
+    paths: ['docs/']
+  - pattern: '\.venv/bin/python'
+    paths: ['docs/']
+  - pattern: "pattern:\\s*'\\.\\*'"
+    paths: ['docs/']
+  - pattern: 'pattern:\s*"\.\*"'
     paths: ['docs/']
   - pattern: '\bfallback\b'
     paths: ['docs/']
@@ -47,58 +44,29 @@ exceptions:
   - pattern: 'self\.get\('
     paths: ['docs/']
 
-
   - pattern: '\.suppress'
     paths: ['tests/']
-
-  # Banned-words test files author heredocs containing banned patterns
-  # (leverage, synerg, paradigm, low-hanging fruit, north star, best
-  # practices, move the needle, harness the power of, etc.) as fixture
-  # payload to exercise the detector. Blanket-exempt like patterns.test.ts.
-  - pattern: '.*'
-    paths:
-      - 'tests/unit/test_checks\.sh$'
-      - 'tests/integration/test_e2e_checks\.sh$'
-
-  # Tests need these words for test descriptions and mocking
   - pattern: '\bmock\b'
     paths: ['tests/']
-
-  # check_silent_swallow.py emits the spec'd `<file>:<line>: <pattern> -- <line>`
-  # output format and documents diff/regex syntax containing ` -- `.
-  # scripts/ use ` -- ` as section separators in comments (e.g. `# -- Summary --`).
   - pattern: ' -- '
     paths:
       - 'lib/check_silent_swallow\.py$'
       - 'lib/checks_silent\.sh$'
       - 'tests/integration/test_silent_swallow\.sh$'
       - 'scripts/'
-
   - pattern: ':\s*Any\b'
     paths: ['tests/']
   - pattern: '\bxfail\b'
-    paths: ['config/banned_words.yaml', 'tests/']
+    paths: ['tests/']
 
-  # Audit documents reference all banned patterns by name.
-  - pattern: '.*'
-    paths: ['docs/AUDIT-.*\.md$', 'docs/audits/.*\.md$']
-
-  # swallow-detectors.json is generated data containing Python source code
-  # extracts from lib/check_silent_swallow*.py (which are already exempted).
   - pattern: '\bsilent'
     paths: ['web/src/data/swallow-detectors\.json$']
-
-  # hook-sources.json is generated data containing raw source code of CI
-  # hooks, including ci_check_silent_swallow and python module hooks.
   - pattern: '\bsilent'
     paths: ['web/src/data/hook-sources\.json$']
   - pattern: '\bpython3?\b'
     paths: ['web/src/data/hook-sources\.json$']
   - pattern: ' -- '
     paths: ['web/src/data/hook-sources\.json$']
-
-  # script-sources.json is generated data containing raw source code of CI
-  # scripts, including shebangs, language identifiers, and comment headers.
   - pattern: '\bpython3?\b'
     paths: ['web/src/data/script-sources\.json$']
   - pattern: '\blegacy\b'
@@ -106,70 +74,26 @@ exceptions:
   - pattern: ' -- '
     paths: ['web/src/data/script-sources\.json$']
 
-  # Standards PDFs are binary documents downloaded from external sources
-  # (EU, NIST, OECD, UNESCO, etc.) and may contain any Unicode characters.
-  - pattern: '.*'
-    paths: ['web/public/standards/.*\.pdf$']
-
-  # Logo PNGs are binary images and may contain arbitrary byte sequences
-  # that match banned Unicode patterns (e.g. em-dash U+2014) by coincidence.
-  # Covers repo res/LOGO.png sources and the wiki public/logos/ build output.
-  - pattern: '.*'
-    paths: ['\.png$']
-
-  # ── CI infrastructure references ─────────────────────────────────────
-  # cleanup-precommit references the real .git/hooks/pre-commit.legacy
-  # backup filename (a convention used by pre-commit tooling).
   - pattern: '\blegacy\b'
     paths: ['scripts/cleanup-precommit$']
-
-  # ci_paths.py and extract-swallow-source.py reference the
-  # silent_swallow_patterns.yaml config filename.
   - pattern: '\bsilent'
     paths:
       - 'lib/ci_paths\.py$'
       - 'scripts/extract-swallow-source\.py$'
 
-  # ── Web UI source (language names, npm packages, React APIs) ─────────
-  # "python" is a programming-language name in CodeMirror language
-  # selectors, type labels, and UI descriptions -- never a bare invocation.
   - pattern: '\bpython3?\b'
     paths:
       - 'web/src/.*\.(ts|tsx)$'
       - 'web/app/.*\.(ts|tsx)$'
       - 'web/package\.json$'
-
-  # @codemirror/legacy-modes is an npm package name (CodeMirror language
-  # support for legacy modes like shell/yaml). Cannot be renamed.
   - pattern: '\blegacy\b'
     paths:
       - 'web/src/.*\.(ts|tsx)$'
       - 'web/package\.json$'
-
-  # React ErrorBoundary uses the standard `fallback` prop (React API).
   - pattern: '\bfallback\b'
     paths: ['web/src/components/ui/ErrorBoundary\.tsx$']
-
-  # Web libs reference the silent_swallow_patterns.yaml config filename.
   - pattern: '\bsilent'
     paths:
       - 'web/src/lib/card-adapters\.ts$'
       - 'web/src/lib/search-data\.ts$'
       - 'web/src/lib/yaml-loader\.ts$'
-
-  # patterns.ts categorizes ALL banned patterns by name (string-literal
-  # matching against pattern names like 'fallback', 'legacy', 'silent',
-  # 'skeleton', 'lazy', 'maybe', 'importlib', 'xfail', 'backwards').
-  - pattern: '.*'
-    paths: ['web/src/lib/patterns\.ts$']
-
-  # package-lock.json is a generated file with npm package names.
-  - pattern: '.*'
-    paths: ['web/package-lock\.json$']
-
-  # ── Test fixtures for the banned-words detector ──────────────────────
-  # patterns.test.ts tests the pattern categorization detector with ALL
-  # banned patterns as fixture data (eslint-disable, @dataclass, /home/,
-  # :latest, em-dash, etc.).
-  - pattern: '.*'
-    paths: ['tests/web/lib/patterns\.test\.ts$']

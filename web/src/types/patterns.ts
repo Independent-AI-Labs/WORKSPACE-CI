@@ -13,6 +13,7 @@ export type PatternCategory =
   | 'uuid'
   | 'container-versions'
   | 'deprecated-python'
+  | 'policy-integrity'
   | 'self-methods'
   | 'special-chars'
   | 'filename-rules'
@@ -118,6 +119,7 @@ export const PATTERN_CATEGORIES: { id: PatternCategory; label: string }[] = [
   { id: 'uuid', label: 'UUID' },
   { id: 'container-versions', label: 'Container Versions' },
   { id: 'deprecated-python', label: 'Deprecated Python' },
+  { id: 'policy-integrity', label: 'Policy Integrity' },
   { id: 'self-methods', label: 'Self Methods' },
   { id: 'special-chars', label: 'Special Characters' },
   { id: 'filename-rules', label: 'Filename Rules' },
