@@ -144,7 +144,10 @@ if [[ -z "$_profile" ]]; then
 fi
 [[ -f "$_profile" ]] || { ci_fail "Profile not found: $_profile"; exit 1; }
 
-command -v realpath > /dev/null 2>&1 || { ci_fail "realpath(1) not found, install coreutils >= 8.23"; exit 2; }
+if ! _realpath_path="$(command -v realpath 2>&1)"; then
+    ci_fail "realpath(1) not found, install coreutils >= 8.23"
+    exit 2
+fi
 REL_CI="$(realpath --relative-to="$_consumer" "$_CI_ROOT")"
 
 # ── Parse profile ──────────────────────────────────────────────────────────

@@ -123,11 +123,11 @@ ci_sha256() {
         echo "ci_sha256: cannot read '$file'" >&2
         return 1
     fi
-    if command -v sha256sum >/dev/null 2>&1; then
+    if _sha_path="$(command -v sha256sum 2>&1)"; then
         sha256sum "$file" | awk '{print $1}'
-    elif command -v shasum >/dev/null 2>&1; then
+    elif _sha_path="$(command -v shasum 2>&1)"; then
         shasum -a 256 "$file" | awk '{print $1}'
-    elif command -v python3 >/dev/null 2>&1; then
+    elif _sha_path="$(command -v python3 2>&1)"; then
         python3 -c "import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$file"
     else
         echo "ci_sha256: no checksum tool available (sha256sum, shasum, python3)" >&2
@@ -358,7 +358,7 @@ ci_run_python_checker() {
         ci_fail "Checker script not found: $_script"
         return 1
     fi
-    if ! ci_uv_bin >/dev/null; then
+    if ! ci_uv_bin; then
         ci_fail "CI uv not found; run: make install-boot-tools"
         return 1
     fi
@@ -466,8 +466,8 @@ ci_resolve_tool_path() {
         fi
         walk="$(dirname "$walk")"
     done
-    if command -v "$tool" >/dev/null 2>&1; then
-        command -v "$tool"
+    if _tool_path="$(command -v "$tool" 2>&1)"; then
+        printf '%s\n' "$_tool_path"
         return 0
     fi
     return 1

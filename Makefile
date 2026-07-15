@@ -89,7 +89,7 @@ endif
 
 .PHONY: help
 help: ## Show this help
-	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+	grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # =============================================================================
@@ -101,23 +101,23 @@ SUDO := $(shell if [ "$$EUID" -eq 0 ]; then echo ""; else echo "sudo"; fi)
 
 .PHONY: init
 init: ## Install all system-level dependencies (Homebrew on macOS + apt packages on Linux + Rust toolchain)
-	@echo "==> Installing Homebrew + GNU tools (macOS only)..."
-	@bash scripts/bootstrap-homebrew
-	@echo "==> Installing system packages (from config/system-deps.yaml)..."
+	echo "==> Installing Homebrew + GNU tools (macOS only)..."
+	bash scripts/bootstrap-homebrew
+	echo "==> Installing system packages (from config/system-deps.yaml)..."
 	bash scripts/install-system-deps --install
-	@echo "==> Installing Rust toolchain (if missing)..."
-	@if ! command -v cargo > /dev/null 2>&1; then \
+	echo "==> Installing Rust toolchain (if missing)..."
+	if ! _cargo_path="$$(command -v cargo 2>&1)"; then \
 		bash scripts/bootstrap-rust; \
 	fi
-	@echo "==> System dependencies installed."
+	echo "==> System dependencies installed."
 
 .PHONY: preflight
 preflight: ## Verify environment (curl + tar for bootstrapping; uv is bootstrapped by install-boot-tools)
-	@command -v curl > /dev/null 2>&1 || { echo "ERROR: curl not found"; exit 1; }
-	@command -v tar > /dev/null 2>&1 || { echo "ERROR: tar not found"; exit 1; }
-	@$(SHELL) -c '[ "$${BASH_VERSINFO[0]}" -gt 4 ] || ([ "$${BASH_VERSINFO[0]}" -eq 4 ] && [ "$${BASH_VERSINFO[1]}" -ge 3 ])' \
+	_curl_path="$$(command -v curl 2>&1)" || { echo "ERROR: curl not found: $$_curl_path"; exit 1; }
+	_tar_path="$$(command -v tar 2>&1)" || { echo "ERROR: tar not found: $$_tar_path"; exit 1; }
+	$(SHELL) -c '[ "$${BASH_VERSINFO[0]}" -gt 4 ] || ([ "$${BASH_VERSINFO[0]}" -eq 4 ] && [ "$${BASH_VERSINFO[1]}" -ge 3 ])' \
 		|| { echo "ERROR: bash 4.3+ required (nameref support for portable I/O helpers)."; echo "  On macOS: run 'make init' to install Homebrew bash 5.x, then re-run."; echo "  On Linux: install bash 4.3+ via your package manager."; exit 1; }
-	@echo "✓ Preflight OK"
+	echo "✓ Preflight OK"
 
 .PHONY: install
 install: preflight install-deps ## Full install: deps + bootstrap binaries + hooks
@@ -125,7 +125,7 @@ install: preflight install-deps ## Full install: deps + bootstrap binaries + hoo
 
 .PHONY: install-ci
 install-ci: preflight install-deps ## CI install: deps + bootstrap binaries, no hooks
-	@:
+	:
 
 .PHONY: install-deps
 install-deps: install-boot-tools install-python-deps install-gitleaks install-cloc install-moon install-ansible install-node install-web-deps ## Install boot tools + python .venv deps + gitleaks + cloc + moon + ansible + node + web deps
@@ -165,7 +165,7 @@ install-web-deps: install-node ## npm install web/ dependencies (Next.js wiki)
 
 .PHONY: install-hooks
 install-hooks: ## (Re)generate native git hooks
-	@if [ -f scripts/cleanup-precommit ]; then bash scripts/cleanup-precommit; else echo "[INFO] cleanup-precommit not found, continuing" >&2; fi
+	if [ -f scripts/cleanup-precommit ]; then bash scripts/cleanup-precommit; else echo "[INFO] cleanup-precommit not found, continuing" >&2; fi
 	bash scripts/generate-hooks
 
 .PHONY: sync
@@ -186,19 +186,19 @@ sync: ## Sync .venv deps + reinstall hooks
 
 .PHONY: check
 check: ## Run all quality gates (lint + type-check + test)
-	@$(MAKE) _lint-impl && $(MAKE) _type-check-impl && $(MAKE) _test-impl
+	$(MAKE) _lint-impl && $(MAKE) _type-check-impl && $(MAKE) _test-impl
 
 .PHONY: lint
 lint: ## Runs ruff format and ruff lint with auto-fix on all ci/ modules. Catches style violations, import sorting issues, and unused variables before they reach the remote. Acts as the first stage of the pre-commit quality gate.
-	@$(MAKE) _lint-impl
+	$(MAKE) _lint-impl
 
 .PHONY: type-check
 type-check: ## Runs mypy strict type checking on all ci/ Python modules. Catches type errors, missing annotations, and incompatible signatures before they can break downstream consumers. Acts as the second stage of the pre-commit quality gate after lint passes.
-	@$(MAKE) _type-check-impl
+	$(MAKE) _type-check-impl
 
 .PHONY: test
 test: ## Run all tests (shell + Python)
-	@$(MAKE) _test-impl
+	$(MAKE) _test-impl
 
 # Private implementation targets: invoked by moon's command: field.
 # Not part of the contract; do not call directly from CI.
@@ -246,7 +246,7 @@ test-python: ## Run Python tests only (no moon caching)
 
 .PHONY: check-push
 check-push: ## Single-pass pre-push gate running ruff lint, mypy, shell unit tests, pytest with per-suite coverage, and web/ JS quality (eslint + tsc + vitest) in one invocation. Eliminates the previous redundancy where the same tests ran two to three times across separate targets. Fails the push if any lint, type, test, or coverage threshold check does not pass.
-	@$(MAKE) _lint-impl && $(MAKE) _type-check-impl && $(MAKE) _test-push-impl
+	$(MAKE) _lint-impl && $(MAKE) _type-check-impl && $(MAKE) _test-push-impl
 
 .PHONY: _test-push-impl
 _test-push-impl:
@@ -263,11 +263,11 @@ _test-push-impl:
 
 .PHONY: start wiki-dev-start wiki-dev wiki-dev-stop wiki-dev-restart wiki-dev-status wiki-dev-logs
 start: wiki-dev-start ## Alias for wiki-dev-start (make start)
-	@:
+	:
 wiki-dev-start: extract-wiki-data ## Start wiki dev server (Next.js HMR on :3001)
 	$(MAKE) -C web dev-start
 wiki-dev: wiki-dev-start ## Alias for wiki-dev-start
-	@:
+	:
 wiki-dev-stop: ## Stop wiki dev server
 	$(MAKE) -C web dev-stop
 wiki-dev-restart: ## Restart wiki dev server (stop + start; does not re-run extract-wiki-data)
@@ -289,6 +289,7 @@ wiki-prod-check-syntax: ## Verify wiki prod Makefile recipes parse under bash -n
 	$(MAKE) -C web prod-check-syntax
 wiki-prod-build: ## Build wiki production image (Podman)
 	$(MAKE) -C web prod-build
+wiki-build-prod: wiki-prod-build ## Alias for wiki-prod-build
 wiki-prod-start: ## Start wiki production stack on :8080/:8443
 	$(MAKE) -C web prod-start WIKI_HTTP_PORT="$(WIKI_HTTP_PORT)" WIKI_HTTPS_PORT="$(WIKI_HTTPS_PORT)" \
 		WIKI_TLS_DIR="$(WIKI_TLS_DIR)" WIKI_TLS_MODE="$(WIKI_TLS_MODE)" WIKI_TLS_CN="$(WIKI_TLS_CN)" \
@@ -370,12 +371,12 @@ ANSIBLE_LETSENCRYPT := $(ANSIBLE_LETSENCRYPT_ENV) ansible-playbook res/ansible/l
 
 .PHONY: wiki-tls-issue wiki-tls-renew wiki-tls-verify wiki-tls-deploy wiki-tls-undeploy
 wiki-tls-issue: ## Issue Let's Encrypt cert (DNS-01; LETSENCRYPT_STAGING=1 to test)
-	@test -n "$(WIKI_TUNNEL_HOSTNAME)" || (echo "Set WIKI_TUNNEL_HOSTNAME in .env" >&2; exit 1)
-	@test -n "$(LETSENCRYPT_EMAIL)" || (echo "Set LETSENCRYPT_EMAIL in .env" >&2; exit 1)
-	@test -n "$(CLOUDFLARE_API_TOKEN)" || (echo "Set CLOUDFLARE_API_TOKEN in .env (Zone:DNS:Edit)" >&2; exit 1)
+	test -n "$(WIKI_TUNNEL_HOSTNAME)" || (echo "Set WIKI_TUNNEL_HOSTNAME in .env" >&2; exit 1)
+	test -n "$(LETSENCRYPT_EMAIL)" || (echo "Set LETSENCRYPT_EMAIL in .env" >&2; exit 1)
+	test -n "$(CLOUDFLARE_API_TOKEN)" || (echo "Set CLOUDFLARE_API_TOKEN in .env (Zone:DNS:Edit)" >&2; exit 1)
 	$(ANSIBLE_LETSENCRYPT) --tags issue
 wiki-tls-renew: ## Renew Let's Encrypt cert and reload nginx
-	@test -n "$(WIKI_TUNNEL_HOSTNAME)" || (echo "Set WIKI_TUNNEL_HOSTNAME in .env" >&2; exit 1)
+	test -n "$(WIKI_TUNNEL_HOSTNAME)" || (echo "Set WIKI_TUNNEL_HOSTNAME in .env" >&2; exit 1)
 	$(ANSIBLE_LETSENCRYPT) --tags renew
 wiki-tls-verify: ## Verify TLS cert expiry and SAN
 	$(ANSIBLE_LETSENCRYPT) --tags verify
@@ -449,7 +450,7 @@ scaffold-ci: ## Generate CI integration files for a consumer project
 
 .PHONY: enforce-syslog-limits
 enforce-syslog-limits: ## Enforce system-level log ceilings: logrotate maxsize + journald rate limiting (prevents /var/log/syslog filling root disk)
-	@echo "==> Enforcing system log ceilings..."
+	echo "==> Enforcing system log ceilings..."
 	$(SUDO) bash scripts/enforce-syslog-limits
 
 # WORKSPACE-GUARD: compiled git protection (opt-in)
@@ -472,8 +473,8 @@ build-guard: ## Build git-guard binary (operator: sudo --preserve-env=HOME,SSH_A
 	bash scripts/bootstrap-workspace-guard build-only
 
 install-guard: ## REMOVED: use install-guard-host-exec
-	@echo "ERROR: make install-guard is removed. Use: make install-guard-host-exec" >&2
-	@exit 1
+	echo "ERROR: make install-guard is removed. Use: make install-guard-host-exec" >&2
+	exit 1
 
 install-guard-host-exec: build-guard ## Install git-guard (host-exec; operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make install-guard-host-exec)
 	$(SUDO) bash scripts/bootstrap-workspace-guard install-host-exec
@@ -488,8 +489,8 @@ reconcile-guard-host-exec: build-guard ## Force rebuild + reinstall git guard an
 	GUARD_FORCE_RECONCILE=1 GUARD_SKIP_BUILD=1 $(MAKE) install-guard-host-exec
 
 check-guard: ## REMOVED: use check-guard-host-exec
-	@echo "ERROR: make check-guard is removed. Use: make check-guard-host-exec" >&2
-	@exit 1
+	echo "ERROR: make check-guard is removed. Use: make check-guard-host-exec" >&2
+	exit 1
 
 check-guard-host-exec: ## Check host-exec git-guard installation (read-only, runs as agent)
 	bash scripts/bootstrap-workspace-guard check-host-exec

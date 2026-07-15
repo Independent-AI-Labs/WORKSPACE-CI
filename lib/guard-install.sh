@@ -43,13 +43,13 @@ install_guard_binary() {
         log_error "Invalid build-mode marker '$install_mode' at ${guard_bin}.mode"
         return 1
     fi
-    if [[ "$install_mode" == "capability" ]] && ! command -v setcap >/dev/null; then
+    if [[ "$install_mode" == "capability" ]] && ! _path="$(command -v setcap 2>&1)"; then
         log_error "Binary is capability-mode but setcap is not installed on this host."
         log_error "Capability mode requires setcap (libcap2-bin) to grant non-root git access."
         log_error "Run 'make init', or rebuild root-only: BUILD_MODE=root-only make build-guard"
         return 1
     fi
-    if [[ "$install_mode" == "root-only" ]] && command -v setcap >/dev/null; then
+    if [[ "$install_mode" == "root-only" ]] && _path="$(command -v setcap 2>&1)"; then
         log_warn "setcap is available here, but the binary was built root-only."
         log_warn "A capability build would allow non-root users to run git; root-only will NOT."
     fi
@@ -151,7 +151,7 @@ install_guard_binary() {
         [[ "$h" != "$guard_hash" ]]
     }
 
-    if [[ -f /usr/bin/git.original ]] && command -v chattr >/dev/null; then
+    if [[ -f /usr/bin/git.original ]] && _path="$(command -v chattr 2>&1)"; then
         rc=0; chattr -i /usr/bin/git.original || rc=$?
         if [ $rc -ne 0 ]; then
             echo "chattr -i /usr/bin/git.original: no-op or failed (rc=$rc)" >&2
@@ -203,7 +203,7 @@ install_guard_binary() {
 
     if [[ "$install_mode" == "root-only" ]]; then
         # Root-only: simple copy, no dpkg-divert, no setcap, no chattr
-        if [[ -f /usr/bin/git ]] && command -v chattr >/dev/null; then
+        if [[ -f /usr/bin/git ]] && _path="$(command -v chattr 2>&1)"; then
             rc=0; chattr -i /usr/bin/git || rc=$?
             if [ $rc -ne 0 ]; then
                 echo "chattr -i /usr/bin/git: no-op or failed (rc=$rc)" >&2
@@ -225,12 +225,12 @@ install_guard_binary() {
         chmod 0700 /usr/bin/git.distrib
         chown root:root /usr/bin/git.distrib
 
-        if ! command -v setcap >/dev/null; then
+        if ! _path="$(command -v setcap 2>&1)"; then
             log_error "setcap not found: run 'make init' to install system dependencies"
             return 1
         fi
 
-        if command -v chattr >/dev/null && [[ -f /usr/bin/git ]]; then
+        if _path="$(command -v chattr 2>&1)" && [[ -f /usr/bin/git ]]; then
             rc=0; chattr -i /usr/bin/git || rc=$?
             if [ $rc -ne 0 ]; then
                 echo "chattr -i /usr/bin/git: no-op or failed (rc=$rc)" >&2
@@ -246,7 +246,7 @@ install_guard_binary() {
             return 1
         fi
 
-        if command -v chattr >/dev/null; then
+        if _path="$(command -v chattr 2>&1)"; then
             chattr +i /usr/bin/git || log_warn "Could not set immutable on /usr/bin/git"
             chattr +i /usr/bin/git.original || log_warn "Could not set immutable on /usr/bin/git.original"
         else
@@ -328,7 +328,7 @@ EOF
             log_error "deployment-class must be host-exec (got: ${_cls:-missing})"
             structural_errors=1
         fi
-        if command -v getcap >/dev/null; then
+        if _path="$(command -v getcap 2>&1)"; then
             local _gc
             _gc="$(_guard_capture_line getcap /usr/bin/git)"
             if guard_git_has_required_file_caps; then
@@ -377,8 +377,8 @@ EOF
             fi
         fi
     elif [[ "$install_mode" == "root-only" ]]; then
-        if git --version >/dev/null 2>&1; then
-            log_info "git --version: $(git --version 2>&1)"
+        if _git_ver="$(git --version 2>&1)"; then
+            log_info "git --version: $_git_ver"
         else
             log_error "git --version failed"
             structural_errors=1

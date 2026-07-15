@@ -14,8 +14,6 @@ ExecStart={{ cloudflared_bin }} tunnel --config {{ tunnel_config }} run
 {% endif %}
 Restart=always
 RestartSec=10
-StandardOutput=journal
-StandardError=journal
 SyslogIdentifier=wiki-ci-tunnel
 
 [Install]

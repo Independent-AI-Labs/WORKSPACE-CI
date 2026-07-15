@@ -11,8 +11,6 @@ EnvironmentFile=-{{ letsencrypt_project_root }}/.env
 {% endif %}
 Environment=PATH={{ letsencrypt_project_root }}/.local/bin:{{ letsencrypt_project_root }}/{{ ".boot-macos" if ansible_system == "Darwin" else ".boot-linux" }}/bin:{{ ansible_env.HOME }}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ExecStart={{ ansible_playbook_bin }} {{ letsencrypt_playbook_path }} --tags renew
-StandardOutput=journal
-StandardError=journal
 SyslogIdentifier={{ letsencrypt_unit_name }}
 
 [Install]

@@ -42,6 +42,12 @@ fi
 
 _log() { printf '[bootstrap-homebrew] %s\n' "$*" >&2; }
 
+_xcode_clt_installed() {
+    local _rc=0
+    xcode-select -p 2>&1 || _rc=$?
+    [[ $_rc -eq 0 ]]
+}
+
 # ---------------------------------------------------------------------------
 # Detect Homebrew (Apple Silicon: /opt/homebrew; Intel: /usr/local)
 # ---------------------------------------------------------------------------
@@ -63,14 +69,14 @@ if [[ -z "$BREW" ]]; then
     # -----------------------------------------------------------------------
     # Check for Xcode Command Line Tools (Homebrew prerequisite)
     # -----------------------------------------------------------------------
-    if ! xcode-select -p >/dev/null 2>&1; then
+    if ! _xcode_clt_installed; then
         _log "Xcode Command Line Tools not found; installing..."
         if ! xcode-select --install; then
             _log "xcode-select --install returned non-zero (may still be in progress)"
         fi
         _log "Waiting for Xcode CLT installation to complete..."
         _clt_wait=0
-        while ! xcode-select -p >/dev/null 2>&1; do
+        while ! _xcode_clt_installed; do
             ((_clt_wait++))
             if [[ $_clt_wait -gt 120 ]]; then
                 _log "Xcode CLT installation timed out after 120s."
@@ -140,8 +146,9 @@ ESSENTIAL_PACKAGES=("bash" "coreutils" "gnu-sed" "findutils" "pkg-config")
 
 _needs_brew_install=()
 for pkg in "${ESSENTIAL_PACKAGES[@]}"; do
-    if "$BREW" list --versions "$pkg" >/dev/null 2>&1; then
-        _pkg_info="$("$BREW" list --versions "$pkg")"
+    _brew_list_rc=0
+    _pkg_info="$("$BREW" list --versions "$pkg" 2>&1)" || _brew_list_rc=$?
+    if [[ $_brew_list_rc -eq 0 ]]; then
         _log "$pkg already installed: ${_pkg_info%%$'\n'*}"
     else
         _needs_brew_install+=("$pkg")

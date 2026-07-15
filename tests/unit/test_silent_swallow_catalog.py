@@ -231,11 +231,13 @@ PASSING_CASES: list[SwallowCase] = [
         _SHOULD_PASS,
         None,
     ),
-    # Pattern 6 fixed: curl without -f or 2>/dev/null; HTTP code surfaced
+    # Pattern 6 fixed: loud curl with body to temp file; HTTP code surfaced
     SwallowCase(
         "cat6_safe_curl_http_code",
         "tests/integration/test_stack_up.sh",
-        ['curl -s -o /dev/null -w "%{http_code}" "$url"'],
+        [
+            '_tmp=$(mktemp); code=$(curl -S -o "$_tmp" -w "%{http_code}" "$url" 2>&1); rm -f "$_tmp"',
+        ],
         _SHOULD_PASS,
         None,
     ),

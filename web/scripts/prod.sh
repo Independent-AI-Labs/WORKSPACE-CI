@@ -2,6 +2,7 @@
 # Production wiki lifecycle (Podman Compose). Invoked by web/Makefile prod-* targets.
 # Runs as the current user; sudo is used only for sysctl when overriding to :80/:443.
 set -euo pipefail
+# pipefail: podman build | tee must surface podman rc, not tee rc
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WEB_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -13,11 +14,13 @@ COMPOSE_CMD="${COMPOSE_CMD:-podman-compose}"
 PODMAN="${PODMAN:-podman}"
 PROD_HTTP_PORT="${PROD_HTTP_PORT:-8080}"
 PROD_HTTPS_PORT="${PROD_HTTPS_PORT:-8443}"
+BUILD_LOG="${BUILD_LOG:-/tmp/wiki-prod-build.log}"
 
 resolve_cmd() {
   local var="$1" name="$2"
-  if [ "${!var}" = "${name}" ] && command -v "${name}" >/dev/null 2>&1; then
-    printf -v "${var}" '%s' "$(command -v "${name}")"
+  local path=""
+  if path="$(command -v "${name}" 2>&1)"; then
+    printf -v "${var}" '%s' "${path}"
     export "${var}"
   fi
 }
@@ -27,8 +30,10 @@ resolve_cmd COMPOSE_CMD podman-compose
 
 require_cmd() {
   local cmd="$1" var="$2"
-  if ! command -v "${cmd}" >/dev/null 2>&1; then
+  local path=""
+  if ! path="$(command -v "${cmd}" 2>&1)"; then
     echo "ERROR: ${cmd} not on PATH. Set ${var}= or fix PATH." >&2
+    echo "${path}" >&2
     exit 1
   fi
 }
@@ -61,15 +66,16 @@ ensure_privileged_ports() {
 }
 
 ensure_prod_image() {
-  if "${PODMAN}" image exists "${PROD_IMAGE}" >/dev/null 2>&1; then
+  if "${PODMAN}" image exists "${PROD_IMAGE}"; then
     return 0
   fi
-  # Accept older image tags from previous builds.
-  if "${PODMAN}" image exists "localhost/workspace-ci-wiki:prod" >/dev/null 2>&1; then
+  if "${PODMAN}" image exists "localhost/workspace-ci-wiki:prod"; then
+    echo "[prod-start] tagging localhost/workspace-ci-wiki:prod -> ${PROD_IMAGE}" >&2
     "${PODMAN}" tag "localhost/workspace-ci-wiki:prod" "${PROD_IMAGE}"
     return 0
   fi
-  if "${PODMAN}" image exists "workspace-ci-wiki:prod" >/dev/null 2>&1; then
+  if "${PODMAN}" image exists "workspace-ci-wiki:prod"; then
+    echo "[prod-start] tagging workspace-ci-wiki:prod -> ${PROD_IMAGE}" >&2
     "${PODMAN}" tag "workspace-ci-wiki:prod" "${PROD_IMAGE}"
     return 0
   fi
@@ -97,7 +103,16 @@ cmd_build() {
   echo "[prod-build] Staging umbrella repo into ${PROJECTS_ROOT}/WORKSPACE-VM"
   node "${WEB_DIR}/scripts/stage-umbrella-repo.mjs"
   echo "[prod-build] Building ${PROD_IMAGE} from ${PROJECTS_ROOT}"
-  "${PODMAN}" build -f "${WEB_DIR}/Containerfile" -t "${PROD_IMAGE}" "${PROJECTS_ROOT}"
+  echo "[prod-build] Logging to ${BUILD_LOG}"
+  "${PODMAN}" build --progress=plain \
+    -f "${WEB_DIR}/Containerfile" \
+    -t "${PROD_IMAGE}" \
+    "${PROJECTS_ROOT}" 2>&1 | tee "${BUILD_LOG}"
+  if [[ "${PIPESTATUS[0]}" -ne 0 ]]; then
+    echo "ERROR: podman build failed (rc=${PIPESTATUS[0]}); see ${BUILD_LOG}" >&2
+    exit 1
+  fi
+  echo "[prod-build] OK tagged ${PROD_IMAGE}"
 }
 
 cmd_start() {
@@ -132,15 +147,30 @@ cmd_status() {
     echo "  WARNING: podman ps failed" >&2
   fi
   local http_code="000" https_code="000"
-  if ! http_code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:${PROD_HTTP_PORT}/")"; then
+  local body_tmp curl_err
+  body_tmp="$(mktemp)"
+  curl_err="$(mktemp)"
+  if ! http_code="$(
+    curl -o "${body_tmp}" -w '%{http_code}' --max-time 5 \
+      "http://127.0.0.1:${PROD_HTTP_PORT}/" 2>"${curl_err}"
+  )"; then
     echo "  WARNING: HTTP probe failed" >&2
+    [[ -s "${curl_err}" ]] && cat "${curl_err}" >&2
     http_code="error"
   fi
+  rm -f "${body_tmp}" "${curl_err}"
   echo "HTTP  :${PROD_HTTP_PORT} -> ${http_code} (expect 301)"
-  if ! https_code="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "https://127.0.0.1:${PROD_HTTPS_PORT}/")"; then
+  body_tmp="$(mktemp)"
+  curl_err="$(mktemp)"
+  if ! https_code="$(
+    curl -sk -o "${body_tmp}" -w '%{http_code}' --max-time 10 \
+      "https://127.0.0.1:${PROD_HTTPS_PORT}/" 2>"${curl_err}"
+  )"; then
     echo "  WARNING: HTTPS probe failed" >&2
+    [[ -s "${curl_err}" ]] && cat "${curl_err}" >&2
     https_code="error"
   fi
+  rm -f "${body_tmp}" "${curl_err}"
   echo "HTTPS :${PROD_HTTPS_PORT} -> ${https_code} (expect 200)"
 }
 

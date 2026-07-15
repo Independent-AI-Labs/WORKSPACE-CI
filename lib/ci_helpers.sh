@@ -33,6 +33,14 @@ ci_relative_path() {
     echo "$_result"
 }
 
+# ci_has_cmd <name>
+#   Returns 0 when <name> is on PATH (no stdout/stderr discard).
+ci_has_cmd() {
+    local _cmd="$1" _path=""
+    _path="$(command -v "${_cmd}" 2>&1)" || return 1
+    return 0
+}
+
 # ci_uv_bin: resolve uv from boot dir or PATH.
 ci_uv_bin() {
     local _root="${CI_PROJECT_ROOT:-}"
@@ -41,8 +49,8 @@ ci_uv_bin() {
         local _boot_uv="${_root}/$(ci_boot_name)/bin/uv"
         [[ -x "$_boot_uv" ]] && _uv="$_boot_uv"
     fi
-    if [[ -z "$_uv" ]] && command -v uv >/dev/null 2>&1; then
-        _uv="$(command -v uv)"
+    if [[ -z "$_uv" ]] && _uv_path="$(command -v uv 2>&1)"; then
+        _uv="$_uv_path"
     fi
     if [[ -z "$_uv" ]]; then
         echo "ERROR: uv not found; run: make install-boot-tools" >&2

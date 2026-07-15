@@ -144,9 +144,9 @@ first_line() { local _out="$1"; echo "${_out%%$'\n'*}"; }
 SYSTEM_PATHS="/usr/bin /usr/sbin /usr/local/bin /usr/local/sbin /snap/bin /opt/homebrew/bin /opt/homebrew/sbin"
 
 find_binary() {
-    local cmd="$1"
-    if command -v "$cmd" >/dev/null 2>&1; then
-        command -v "$cmd"
+    local cmd="$1" _path=""
+    if _path="$(command -v "$cmd" 2>&1)"; then
+        echo "$_path"
         return 0
     fi
     local dir
@@ -187,13 +187,24 @@ platform_applies() {
 
 # apt_pkg_installed <pkg>
 apt_pkg_installed() {
-    dpkg -s "$1" >/dev/null 2>&1
+    local _rc=0
+    dpkg -s "$1" 2>&1 || _rc=$?
+    [[ $_rc -eq 0 ]]
 }
 
 # brew_pkg_installed <pkg>
 brew_pkg_installed() {
     [[ -z "$BREW" ]] && return 1
-    "$BREW" list --versions "$1" >/dev/null 2>&1
+    local _rc=0
+    "$BREW" list --versions "$1" 2>&1 || _rc=$?
+    [[ $_rc -eq 0 ]]
+}
+
+# apt_pkg_available <pkg>
+apt_pkg_available() {
+    local _rc=0
+    apt-cache show "$1" 2>&1 || _rc=$?
+    [[ $_rc -eq 0 ]]
 }
 
 # ---------------------------------------------------------------------------
@@ -340,9 +351,14 @@ check_c_compiler() {
 check_network_tools() {
     local desc="$1" component="$2"
     local label="$desc"; [[ -n "$component" ]] && label="$desc ${_DIM}($component)${_NC}"
-    if find_binary curl >/dev/null 2>&1 || find_binary wget >/dev/null 2>&1; then
-        find_binary curl >/dev/null 2>&1 && log_ok "$label: curl available"
-        find_binary wget >/dev/null 2>&1 && log_ok "$label: wget available"
+    local _curl="" _wget=""
+    if _curl="$(find_binary curl)"; then
+        log_ok "$label: curl available"
+    fi
+    if _wget="$(find_binary wget)"; then
+        log_ok "$label: wget available"
+    fi
+    if [[ -n "$_curl" || -n "$_wget" ]]; then
         present_count=$((present_count + 1))
         return 0
     fi
@@ -397,12 +413,12 @@ check_playwright_libs() {
         IFS='|' read -ra alts <<< "$e"
         local installed=false v
         for v in "${alts[@]}"; do
-            if dpkg -s "$v" >/dev/null 2>&1; then installed=true; break; fi
+            if apt_pkg_installed "$v"; then installed=true; break; fi
         done
         if [[ "$installed" == "true" ]]; then continue; fi
         local avail=""
         for v in "${alts[@]}"; do
-            if apt-cache show "$v" >/dev/null 2>&1; then avail="$v"; break; fi
+            if apt_pkg_available "$v"; then avail="$v"; break; fi
         done
         if [[ -n "$avail" ]]; then
             log_miss "Playwright lib: ${alts[0]} ${_DIM}(needs: $avail)${_NC}"
@@ -459,7 +475,7 @@ probe_apt() {
     [[ ${#missing_apt_pkgs[@]} -eq 0 ]] && return 0
     local unavailable=() pkg
     for pkg in "${missing_apt_pkgs[@]}"; do
-        if ! apt-cache show "$pkg" >/dev/null 2>&1; then
+        if ! apt_pkg_available "$pkg"; then
             local already=false e
             for e in "${unavailable[@]:-}"; do [[ "$e" == "$pkg" ]] && already=true && break; done
             [[ "$already" == "false" ]] && unavailable+=("$pkg")
@@ -506,7 +522,7 @@ do_apt_install() {
     probe_apt
     local installable=() pkg
     for pkg in "${missing_apt_pkgs[@]}"; do
-        if apt-cache show "$pkg" >/dev/null 2>&1; then
+        if apt_pkg_available "$pkg"; then
             local already=false e
             for e in "${installable[@]:-}"; do [[ "$e" == "$pkg" ]] && already=true && break; done
             [[ "$already" == "false" ]] && installable+=("$pkg")

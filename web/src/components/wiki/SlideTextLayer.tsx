@@ -3,14 +3,12 @@
 import clsx from 'clsx'
 import type { LandingSlide } from '@/lib/landing-posts'
 import type { PretextTypography } from '@/lib/landing-pretext'
-import { measureSlideTextHeight } from '@/lib/landing-pretext'
 
 interface SlideTextLayerProps {
   slide: LandingSlide
   active: boolean
   leaving: boolean
   transitionMs: number
-  contentWidth: number
   subtitleType: PretextTypography
   bodyType: PretextTypography
   reducedMotion: boolean
@@ -25,7 +23,6 @@ export function SlideTextLayer({
   active,
   leaving,
   transitionMs,
-  contentWidth,
   subtitleType,
   bodyType,
   reducedMotion,
@@ -34,20 +31,8 @@ export function SlideTextLayer({
   downloadLabel,
   sourceLabel,
 }: SlideTextLayerProps) {
-  const measuredHeight =
-    contentWidth > 0
-      ? measureSlideTextHeight(
-          slide.subtitle,
-          slide.content,
-          contentWidth,
-          subtitleType,
-          bodyType,
-        )
-      : null
-
   const layerStyle = {
     transitionDuration: `${transitionMs}ms`,
-    minHeight: measuredHeight ? `${measuredHeight}px` : undefined,
   }
 
   return (

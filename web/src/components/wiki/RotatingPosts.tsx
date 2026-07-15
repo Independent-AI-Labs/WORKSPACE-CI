@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import clsx from 'clsx'
 import type { LandingPost, LandingSettings, LandingUi } from '@/lib/landing-posts'
 import {
@@ -24,6 +25,15 @@ interface RotatingPostsProps {
   ui: LandingUi
 }
 
+type SlidePosition = { postIndex: number; slideIndex: number }
+
+/** One frame so incoming post layers paint at opacity 0 before crossfade. */
+const CROSS_POST_COMMIT_DELAY_MS = 32
+
+function sameSlidePosition(a: SlidePosition, b: SlidePosition): boolean {
+  return a.postIndex === b.postIndex && a.slideIndex === b.slideIndex
+}
+
 function formatSlideTabLabel(template: string, index: number, total: number): string {
   return template.replace('{n}', String(index + 1)).replace('{total}', String(total))
 }
@@ -37,9 +47,8 @@ function postTabLabel(post: LandingPost): string {
 }
 
 export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
-  const [postIndex, setPostIndex] = useState(0)
-  const [slideIndex, setSlideIndex] = useState(0)
-  const [leavingSlideIndex, setLeavingSlideIndex] = useState<number | null>(null)
+  const [activeSlide, setActiveSlide] = useState<SlidePosition>({ postIndex: 0, slideIndex: 0 })
+  const [leavingSlide, setLeavingSlide] = useState<SlidePosition | null>(null)
   const [reducedMotion, setReducedMotion] = useState(false)
   const [timerEpoch, setTimerEpoch] = useState(0)
   const [contentWidth, setContentWidth] = useState(0)
@@ -47,11 +56,18 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
   const [bodyType, setBodyType] = useState<PretextTypography | null>(null)
   const [panBySlide, setPanBySlide] = useState<Record<string, SlidePan>>({})
   const [prefadingSlideIndex, setPrefadingSlideIndex] = useState<number | null>(null)
+  const [incomingPreview, setIncomingPreview] = useState<SlidePosition | null>(null)
   const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prefadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const transitionDeferRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const activeSlideRef = useRef(activeSlide)
   const contentRef = useRef<HTMLDivElement>(null)
   const probeRef = useRef<HTMLDivElement>(null)
 
+  activeSlideRef.current = activeSlide
+
+  const postIndex = activeSlide.postIndex
+  const slideIndex = activeSlide.slideIndex
   const post = posts[postIndex]
   const slide = post?.slides[slideIndex]
   const slideCount = post?.slides.length ?? 0
@@ -65,55 +81,85 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
     setTimerEpoch((e) => e + 1)
   }, [])
 
-  const transitionToSlide = useCallback(
-    (nextIndex: number) => {
-      if (!post || nextIndex === slideIndex) return
+  const scheduleLeaveClear = useCallback(() => {
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current)
+    }
+    leaveTimerRef.current = setTimeout(() => {
+      setLeavingSlide(null)
+      setIncomingPreview(null)
+      setPrefadingSlideIndex(null)
+      leaveTimerRef.current = null
+    }, settings.transition_ms)
+  }, [settings.transition_ms])
+
+  const beginTransition = useCallback(
+    (incoming: SlidePosition) => {
+      const outgoing = activeSlideRef.current
+      if (sameSlidePosition(outgoing, incoming)) return
+
+      const targetPost = posts[incoming.postIndex]
+      if (!targetPost) return
+
+      if (transitionDeferRef.current !== null) {
+        clearTimeout(transitionDeferRef.current)
+        transitionDeferRef.current = null
+      }
       if (leaveTimerRef.current) {
         clearTimeout(leaveTimerRef.current)
+        leaveTimerRef.current = null
       }
       if (prefadeTimerRef.current) {
         clearTimeout(prefadeTimerRef.current)
         prefadeTimerRef.current = null
       }
-      const outgoing = slideIndex
+      setPrefadingSlideIndex(null)
+
       setPanBySlide((prev) =>
         assignPanAxisForSlide(
           prev,
-          post.id,
-          nextIndex,
-          initialPanBySlide[panSlideKey(post.id, nextIndex)],
+          targetPost.id,
+          incoming.slideIndex,
+          initialPanBySlide[panSlideKey(targetPost.id, incoming.slideIndex)],
         ),
       )
-      setLeavingSlideIndex(outgoing)
-      setSlideIndex(nextIndex)
-      leaveTimerRef.current = setTimeout(() => {
-        setLeavingSlideIndex(null)
-        setPrefadingSlideIndex(null)
-        leaveTimerRef.current = null
-      }, settings.transition_ms)
+
+      const crossPost = outgoing.postIndex !== incoming.postIndex
+
+      const commit = () => {
+        setLeavingSlide(outgoing)
+        setActiveSlide(incoming)
+        setIncomingPreview(null)
+        transitionDeferRef.current = null
+        scheduleLeaveClear()
+      }
+
+      if (crossPost && !reducedMotion) {
+        flushSync(() => {
+          setLeavingSlide(null)
+          setIncomingPreview(incoming)
+        })
+        transitionDeferRef.current = setTimeout(commit, CROSS_POST_COMMIT_DELAY_MS)
+      } else {
+        setIncomingPreview(null)
+        commit()
+      }
     },
-    [initialPanBySlide, post, slideIndex, settings.transition_ms],
+    [initialPanBySlide, posts, reducedMotion, scheduleLeaveClear],
   )
 
-  const goToPost = useCallback(
-    (index: number) => {
-      if (index === postIndex) return
-      const targetPost = posts[index]
-      if (!targetPost) return
-      if (leaveTimerRef.current) {
-        clearTimeout(leaveTimerRef.current)
-        leaveTimerRef.current = null
-      }
-      setPrefadingSlideIndex(null)
-      setLeavingSlideIndex(null)
-      setPanBySlide((prev) =>
-        assignPanAxisForSlide(prev, targetPost.id, 0, initialPanBySlide[panSlideKey(targetPost.id, 0)]),
-      )
-      setPostIndex(index)
-      setSlideIndex(0)
-      resetTimer()
+  const transitionToSlide = useCallback(
+    (nextIndex: number) => {
+      beginTransition({ postIndex: activeSlide.postIndex, slideIndex: nextIndex })
     },
-    [initialPanBySlide, postIndex, posts, resetTimer],
+    [activeSlide.postIndex, beginTransition],
+  )
+
+  const transitionToPost = useCallback(
+    (index: number, nextSlideIndex = 0) => {
+      beginTransition({ postIndex: index, slideIndex: nextSlideIndex })
+    },
+    [beginTransition],
   )
 
   const goNext = useCallback(() => {
@@ -123,11 +169,11 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
       return
     }
     if (posts.length > 1) {
-      goToPost((postIndex + 1) % posts.length)
+      transitionToPost((postIndex + 1) % posts.length, 0)
       return
     }
     transitionToSlide(0)
-  }, [goToPost, post, postIndex, posts.length, slideIndex, transitionToSlide])
+  }, [post, postIndex, posts.length, slideIndex, transitionToPost, transitionToSlide])
 
   const goPrev = useCallback(() => {
     if (!post) return
@@ -139,36 +185,11 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
       const prevPostIndex = (postIndex - 1 + posts.length) % posts.length
       const prevPost = posts[prevPostIndex]
       if (!prevPost) return
-      const lastSlideIndex = prevPost.slides.length - 1
-      if (leaveTimerRef.current) {
-        clearTimeout(leaveTimerRef.current)
-        leaveTimerRef.current = null
-      }
-      setPrefadingSlideIndex(null)
-      setLeavingSlideIndex(null)
-      setPanBySlide((prev) =>
-        assignPanAxisForSlide(
-          prev,
-          prevPost.id,
-          lastSlideIndex,
-          initialPanBySlide[panSlideKey(prevPost.id, lastSlideIndex)],
-        ),
-      )
-      setPostIndex(prevPostIndex)
-      setSlideIndex(lastSlideIndex)
-      resetTimer()
+      transitionToPost(prevPostIndex, prevPost.slides.length - 1)
       return
     }
     transitionToSlide(post.slides.length - 1)
-  }, [
-    initialPanBySlide,
-    post,
-    postIndex,
-    posts,
-    resetTimer,
-    slideIndex,
-    transitionToSlide,
-  ])
+  }, [post, postIndex, posts, slideIndex, transitionToPost, transitionToSlide])
 
   const goToSlide = useCallback(
     (index: number) => {
@@ -188,8 +209,19 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
     resetTimer()
   }, [goPrev, resetTimer])
 
+  const handlePostTab = useCallback(
+    (index: number) => {
+      transitionToPost(index, 0)
+      resetTimer()
+    },
+    [resetTimer, transitionToPost],
+  )
+
   useEffect(() => {
     return () => {
+      if (transitionDeferRef.current !== null) {
+        clearTimeout(transitionDeferRef.current)
+      }
       if (leaveTimerRef.current) {
         clearTimeout(leaveTimerRef.current)
       }
@@ -261,6 +293,21 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
     return () => window.clearInterval(id)
   }, [goNext, reducedMotion, posts.length, settings.slide_interval_ms, timerEpoch])
 
+  const crossPostLeaving =
+    leavingSlide !== null && leavingSlide.postIndex !== activeSlide.postIndex
+      ? leavingSlide
+      : null
+
+  const renderedPostIndices = useMemo(() => {
+    const indices = new Set<number>([activeSlide.postIndex])
+    if (incomingPreview !== null) {
+      indices.add(incomingPreview.postIndex)
+    } else if (crossPostLeaving !== null) {
+      indices.add(crossPostLeaving.postIndex)
+    }
+    return [...indices]
+  }, [activeSlide.postIndex, crossPostLeaving, incomingPreview])
+
   const slideIndicators = useMemo(
     () =>
       post?.slides.map((s, i) => ({
@@ -273,36 +320,32 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
   const subtitleTypography = subtitleType ?? { font: '700 42px Montserrat', lineHeightPx: 52.5 }
   const bodyTypography = bodyType ?? { font: '400 28px Montserrat', lineHeightPx: 45.5 }
 
-  const textStackMinHeight = useMemo(() => {
-    if (!post || contentWidth <= 0) return undefined
-    const indices = new Set<number>([slideIndex])
-    if (leavingSlideIndex !== null) indices.add(leavingSlideIndex)
+  const textStackHeight = useMemo(() => {
+    if (contentWidth <= 0) return undefined
     let maxHeight = 0
-    for (const index of indices) {
-      const s = post.slides[index]
-      if (!s) continue
-      maxHeight = Math.max(
-        maxHeight,
-        measureSlideTextHeight(
-          s.subtitle,
-          s.content,
-          contentWidth,
-          subtitleTypography,
-          bodyTypography,
-        ),
-      )
+    for (const p of posts) {
+      for (const s of p.slides) {
+        const includeLinks = s.type === 'document' || Boolean(s.source_url)
+        maxHeight = Math.max(
+          maxHeight,
+          measureSlideTextHeight(
+            s.subtitle,
+            s.content,
+            contentWidth,
+            subtitleTypography,
+            bodyTypography,
+            includeLinks,
+          ),
+        )
+      }
     }
     return maxHeight > 0 ? `${maxHeight}px` : undefined
-  }, [
-    bodyTypography,
-    contentWidth,
-    leavingSlideIndex,
-    post,
-    slideIndex,
-    subtitleTypography,
-  ])
+  }, [bodyTypography, contentWidth, posts, subtitleTypography])
 
   if (!post || !slide) return null
+
+  const leavingPostTitle =
+    crossPostLeaving !== null ? posts[crossPostLeaving.postIndex]?.title : null
 
   return (
     <section className="landing-stage" aria-live="polite" aria-atomic="true">
@@ -310,25 +353,42 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
         <div
           className={clsx(
             'landing-stage__backdrop',
-            prefadingSlideIndex !== null && leavingSlideIndex === null && 'is-bg-prefading',
-            leavingSlideIndex !== null && 'is-bg-crossfading',
+            prefadingSlideIndex !== null &&
+              leavingSlide === null &&
+              incomingPreview === null &&
+              'is-bg-prefading',
+            (leavingSlide !== null || incomingPreview !== null) && 'is-bg-crossfading',
           )}
           style={{
             ['--landing-fade-ms' as string]: `${settings.transition_ms}ms`,
             ['--landing-prefade-ms' as string]: `${fadeLeadMs}ms`,
           }}
         >
-          {post.slides.map((s, i) => (
-            <LandingSlideLayer
-              key={`${post.id}-${s.src}-${i}`}
-              slide={s}
-              active={i === slideIndex}
-              leaving={i === leavingSlideIndex}
-              transitionMs={settings.transition_ms}
-              panDurationMs={settings.background_pan_duration_ms}
-              pan={resolveSlidePan(panBySlide, initialPanBySlide, post.id, i)}
-            />
-          ))}
+          <div className="landing-stage__media">
+            {renderedPostIndices.map((pi) => {
+              const renderedPost = posts[pi]
+              if (!renderedPost) return null
+              return renderedPost.slides.map((s, i) => {
+                const isLeaving =
+                  leavingSlide !== null &&
+                  leavingSlide.postIndex === pi &&
+                  leavingSlide.slideIndex === i
+                return (
+                  <LandingSlideLayer
+                    key={`${renderedPost.id}-${s.src}-${i}`}
+                    slide={s}
+                    active={
+                      activeSlide.postIndex === pi && activeSlide.slideIndex === i && !isLeaving
+                    }
+                    leaving={isLeaving}
+                    transitionMs={settings.transition_ms}
+                    panDurationMs={settings.background_pan_duration_ms}
+                    pan={resolveSlidePan(panBySlide, initialPanBySlide, renderedPost.id, i)}
+                  />
+                )
+              })
+            })}
+          </div>
           <div className="landing-stage__scrim" />
 
           <button
@@ -368,29 +428,49 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
             <span className="landing-stage__body">Probe</span>
           </div>
 
-          <p className="landing-stage__post-title">{post.title}</p>
+          <div
+            className="landing-stage__title-stack"
+            style={{ ['--landing-fade-ms' as string]: `${settings.transition_ms}ms` }}
+          >
+            {leavingPostTitle && (
+              <p className="landing-stage__post-title is-leaving">{leavingPostTitle}</p>
+            )}
+            <p className="landing-stage__post-title is-active">{post.title}</p>
+          </div>
 
-          <div className="landing-stage__text-stack" style={{ minHeight: textStackMinHeight }}>
-            {post.slides.map((s, i) => {
-              const slideShowDownload = s.type === 'document'
-              const slideShowLinks = slideShowDownload || Boolean(s.source_url)
-              return (
-                <SlideTextLayer
-                  key={`${post.id}-text-${s.src}-${i}`}
-                  slide={s}
-                  active={i === slideIndex}
-                  leaving={i === leavingSlideIndex}
-                  transitionMs={settings.transition_ms}
-                  contentWidth={contentWidth}
-                  subtitleType={subtitleTypography}
-                  bodyType={bodyTypography}
-                  reducedMotion={reducedMotion}
-                  showDownload={slideShowDownload}
-                  showLinks={slideShowLinks}
-                  downloadLabel={s.download_label ?? ui.download_link_label}
-                  sourceLabel={s.source_label ?? ui.source_link_label}
-                />
-              )
+          <div
+            className="landing-stage__text-stack"
+            style={textStackHeight ? { height: textStackHeight } : undefined}
+          >
+            {renderedPostIndices.map((pi) => {
+              const renderedPost = posts[pi]
+              if (!renderedPost) return null
+              return renderedPost.slides.map((s, i) => {
+                const slideShowDownload = s.type === 'document'
+                const slideShowLinks = slideShowDownload || Boolean(s.source_url)
+                const isLeaving =
+                  leavingSlide !== null &&
+                  leavingSlide.postIndex === pi &&
+                  leavingSlide.slideIndex === i
+                return (
+                  <SlideTextLayer
+                    key={`${renderedPost.id}-text-${s.src}-${i}`}
+                    slide={s}
+                    active={
+                      activeSlide.postIndex === pi && activeSlide.slideIndex === i && !isLeaving
+                    }
+                    leaving={isLeaving}
+                    transitionMs={settings.transition_ms}
+                    subtitleType={subtitleTypography}
+                    bodyType={bodyTypography}
+                    reducedMotion={reducedMotion}
+                    showDownload={slideShowDownload}
+                    showLinks={slideShowLinks}
+                    downloadLabel={s.download_label ?? ui.download_link_label}
+                    sourceLabel={s.source_label ?? ui.source_link_label}
+                  />
+                )
+              })
             })}
           </div>
         </div>
@@ -409,7 +489,7 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
             aria-selected={i === postIndex}
             aria-label={formatPostTabLabel(ui.post_tab_aria_label_template, postTabLabel(p))}
             className={clsx('landing-stage__post-tab', i === postIndex && 'is-active')}
-            onClick={() => goToPost(i)}
+            onClick={() => handlePostTab(i)}
           >
             {postTabLabel(p)}
           </button>

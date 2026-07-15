@@ -27,6 +27,18 @@ divert_is_active() {
     dpkg-divert --list /usr/bin/git | grep -q 'git.distrib'
 }
 
+_has_chattr() {
+    local _path=""
+    _path="$(command -v chattr 2>&1)" && return 0
+    return 1
+}
+
+_has_func() {
+    local _func="$1" _out=""
+    _out="$(declare -F "$_func" 2>&1)" && return 0
+    return 1
+}
+
 guard_is_installed() {
     [[ -f /usr/bin/git.original ]] \
         || divert_is_active \
@@ -34,7 +46,7 @@ guard_is_installed() {
 }
 
 _restore_stock_git() {
-    if command -v chattr >/dev/null; then
+    if _has_chattr; then
         test -f /usr/bin/git       && chattr -i /usr/bin/git
         test -f /usr/bin/git.original && chattr -i /usr/bin/git.original
     fi
@@ -64,7 +76,7 @@ _restore_stock_git() {
 }
 
 _cleanup_git_guard_sidecars() {
-    if declare -F guard_scrub_pam_artifacts >/dev/null; then
+    if _has_func guard_scrub_pam_artifacts; then
         guard_scrub_pam_artifacts || {
             local _scrub_rc=$?
             printf 'guard optional scrub failed (rc=%s)\n' "$_scrub_rc" >&2
@@ -72,7 +84,7 @@ _cleanup_git_guard_sidecars() {
     fi
     rm -f /etc/apt/apt.conf.d/99workspace-guard
     rm -f /etc/apt/apt.conf.d/99git-guard
-    if declare -F guard_remove_git_install_artifacts >/dev/null; then
+    if _has_func guard_remove_git_install_artifacts; then
         guard_remove_git_install_artifacts
     fi
     rm -rf /usr/lib/ami-git-guard
@@ -82,13 +94,13 @@ _cleanup_git_guard_sidecars() {
 
 uninstall_guard() {
     local state_dir="/usr/lib/workspace-guard"
-    if declare -F guard_state_dir >/dev/null; then
+    if _has_func guard_state_dir; then
         state_dir="$(guard_state_dir)"
     fi
     log_info "Uninstalling git guard (preserving host provision state under $state_dir)..."
     if ! guard_is_installed; then
         log_info "Git guard not installed; removing git-install artifacts only"
-        if command -v chattr >/dev/null; then
+        if _has_chattr; then
             [[ -f /usr/bin/git ]] && _guard_best_effort chattr -i /usr/bin/git
             [[ -f /usr/bin/git.original ]] && _guard_best_effort chattr -i /usr/bin/git.original
         fi
@@ -108,7 +120,7 @@ uninstall_guard() {
 
 rollback_guard() {
     log_warn "Installation failed: rolling back..."
-    if command -v chattr >/dev/null; then
+    if _has_chattr; then
         if [[ -f /usr/bin/git ]]; then
             rc=0; chattr -i /usr/bin/git || rc=$?
             if [ $rc -ne 0 ]; then
@@ -130,7 +142,7 @@ rollback_guard() {
         fi
     fi
     if [[ -f /usr/bin/git.original ]]; then
-        if command -v chattr >/dev/null; then
+        if _has_chattr; then
             rc=0; chattr -i /usr/bin/git.original || rc=$?
             if [ $rc -ne 0 ]; then
                 echo "chattr -i /usr/bin/git.original: no-op or failed (rc=$rc)" >&2
@@ -149,7 +161,7 @@ rollback_guard() {
         log_info "Restored /usr/bin/git from git.distrib"
     fi
     rm -f /etc/apt/apt.conf.d/99workspace-guard
-    if declare -F guard_remove_git_install_artifacts >/dev/null; then
+    if _has_func guard_remove_git_install_artifacts; then
         guard_remove_git_install_artifacts
     else
         rm -rf /usr/lib/workspace-guard

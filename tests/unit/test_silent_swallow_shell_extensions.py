@@ -67,6 +67,13 @@ BLOCKED_CASES: list[SwallowCase] = [
         "make-recipe-true",
     ),
     SwallowCase(
+        "make_recipe_at_silent",
+        "Makefile",
+        ["%::", '\t@echo "ERROR: unknown target" >&2', "\t@exit 1"],
+        _SHOULD_BLOCK,
+        "make-at-silent",
+    ),
+    SwallowCase(
         "sh_stderr_temp_discard",
         "x.sh",
         ['_groups="$(id -nG "$user" 2>"$_id_err")"'],
@@ -126,7 +133,7 @@ PASSING_CASES: list[SwallowCase] = [
     SwallowCase(
         "make_recipe_exit",
         "Makefile",
-        ["%::", '\t@echo "ERROR: unknown target" >&2', "\t@exit 1"],
+        ["%::", '\techo "ERROR: unknown target" >&2', "\texit 1"],
         _SHOULD_PASS,
         None,
     ),

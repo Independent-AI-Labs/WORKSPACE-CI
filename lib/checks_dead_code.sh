@@ -74,8 +74,8 @@ ci_check_dead_code() {
     fi
 
     local _dc_bin=""
-    if command -v dangle >/dev/null 2>&1; then
-        _dc_bin="$(command -v dangle)"
+    if _dc_bin="$(command -v dangle 2>&1)"; then
+        :
     elif [[ -x "${HOME}/.cargo/bin/dangle" ]]; then
         _dc_bin="${HOME}/.cargo/bin/dangle"
     else

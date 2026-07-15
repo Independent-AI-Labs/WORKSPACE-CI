@@ -102,12 +102,14 @@ fi
 if [[ "$(uname -s)" == "Darwin" ]]; then
     log_info "Bootstrapping Podman on macOS via Homebrew..."
 
-    if ! command -v brew &>/dev/null; then
+    if ! ci_has_cmd brew; then
         log_error "Homebrew is required. Install from https://brew.sh"
         exit 1
     fi
 
-    if ! brew list podman &>/dev/null; then
+    local _brew_list_rc=0
+    brew list podman 2>&1 || _brew_list_rc=$?
+    if [[ $_brew_list_rc -ne 0 ]]; then
         log_info "Installing podman via Homebrew..."
         brew install podman
     else
@@ -201,27 +203,30 @@ log_info "Checking system dependencies for Podman rootless mode"
 MISSING_SYS_DEPS=()
 
 # Check for uidmap (newuidmap/newgidmap)
-if ! command -v newuidmap &> /dev/null; then
+_newuidmap_path=""
+if _newuidmap_path="$(command -v newuidmap 2>&1)"; then
+    log_info "✓ newuidmap found at $_newuidmap_path"
+else
     log_warn "newuidmap not found - required for Podman rootless mode"
     MISSING_SYS_DEPS+=("uidmap")
-else
-    log_info "✓ newuidmap found at $(command -v newuidmap)"
 fi
 
 # Check for slirp4netns (rootless networking)
-if ! command -v slirp4netns &> /dev/null; then
+_slirp_path=""
+if _slirp_path="$(command -v slirp4netns 2>&1)"; then
+    log_info "✓ slirp4netns found at $_slirp_path"
+else
     log_warn "slirp4netns not found - required for Podman rootless networking"
     MISSING_SYS_DEPS+=("slirp4netns")
-else
-    log_info "✓ slirp4netns found at $(command -v slirp4netns)"
 fi
 
 # Check for iptables (required by netavark)
-if ! command -v iptables &> /dev/null; then
+_iptables_path=""
+if _iptables_path="$(command -v iptables 2>&1)"; then
+    log_info "✓ iptables found at $_iptables_path"
+else
     log_warn "iptables not found - required for Podman networking (netavark)"
     MISSING_SYS_DEPS+=("iptables")
-else
-    log_info "✓ iptables found at $(command -v iptables)"
 fi
 
 # Report missing system dependencies
@@ -269,9 +274,9 @@ PODMAN_URL="https://github.com/mgoltzsche/podman-static/releases/download/v${POD
 PODMAN_TARBALL="${PODMAN_DIR}/podman.tar.gz"
 
 log_info "Downloading Podman from ${PODMAN_URL}"
-if command -v curl &> /dev/null; then
+if ci_has_cmd curl; then
     curl -L -o "${PODMAN_TARBALL}" "${PODMAN_URL}"
-elif command -v wget &> /dev/null; then
+elif ci_has_cmd wget; then
     wget -O "${PODMAN_TARBALL}" "${PODMAN_URL}"
 else
     log_error "Neither curl nor wget found. Please install one of them."
@@ -288,9 +293,9 @@ CONMON_BIN="${PODMAN_DIR}/bin/conmon"
 
 log_info "Downloading conmon from ${CONMON_URL}"
 rm -f "${CONMON_BIN}"
-if command -v curl &> /dev/null; then
+if ci_has_cmd curl; then
     curl -L -o "${CONMON_BIN}" "${CONMON_URL}"
-elif command -v wget &> /dev/null; then
+elif ci_has_cmd wget; then
     wget -O "${CONMON_BIN}" "${CONMON_URL}"
 fi
 chmod +x "${CONMON_BIN}"
@@ -301,9 +306,9 @@ NETAVARK_BIN="${PODMAN_DIR}/bin/netavark"
 
 log_info "Downloading netavark from ${NETAVARK_URL}"
 rm -f "${NETAVARK_BIN}"
-if command -v curl &> /dev/null; then
+if ci_has_cmd curl; then
     curl -L "${NETAVARK_URL}" | gunzip > "${NETAVARK_BIN}"
-elif command -v wget &> /dev/null; then
+elif ci_has_cmd wget; then
     wget -O - "${NETAVARK_URL}" | gunzip > "${NETAVARK_BIN}"
 fi
 chmod +x "${NETAVARK_BIN}"
@@ -314,9 +319,9 @@ AARDVARK_BIN="${PODMAN_DIR}/bin/aardvark-dns"
 
 log_info "Downloading aardvark-dns from ${AARDVARK_URL}"
 rm -f "${AARDVARK_BIN}"
-if command -v curl &> /dev/null; then
+if ci_has_cmd curl; then
     curl -L "${AARDVARK_URL}" | gunzip > "${AARDVARK_BIN}"
-elif command -v wget &> /dev/null; then
+elif ci_has_cmd wget; then
     wget -O - "${AARDVARK_URL}" | gunzip > "${AARDVARK_BIN}"
 fi
 chmod +x "${AARDVARK_BIN}"
@@ -431,7 +436,9 @@ fi
 
 # Verify guard is working
 log_info "Verifying safety guard"
-if "${VENV_DIR}/bin/podman" --version >/dev/null 2>&1; then
+_guard_rc=0
+"${VENV_DIR}/bin/podman" --version 2>&1 || _guard_rc=$?
+if [[ $_guard_rc -eq 0 ]]; then
     log_info "✓ Safety guard is operational"
 else
     log_warn "Safety guard verification failed - check podman-guard script"
@@ -439,7 +446,7 @@ fi
 
 # Verify podman-compose with PATH set
 export PATH="${VENV_DIR}/bin:$PATH"
-if command -v podman-compose &> /dev/null; then
+if ci_has_cmd podman-compose; then
     if podman-compose --version; then
         log_info "podman-compose installed successfully: $(podman-compose --version)"
     else

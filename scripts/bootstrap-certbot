@@ -41,9 +41,9 @@ main() {
     fi
 
     if [[ -x "$target_dir/certbot" ]]; then
-        if "$target_dir/certbot" --version > /dev/null 2>&1; then
-            local v
-            v="$("$target_dir/certbot" --version 2>&1)"
+        local v v_rc=0
+        v="$("$target_dir/certbot" --version 2>&1)" || v_rc=$?
+        if [[ "$v_rc" -eq 0 ]]; then
             v="${v%%$'\n'*}"
             _log "certbot already installed: $v"
             return 0

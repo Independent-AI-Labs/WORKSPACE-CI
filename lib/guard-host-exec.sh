@@ -111,7 +111,7 @@ guard_host_provision_fleet_in_sudo() {
     local fleet user _users_file _awk_rc=0
     fleet="$(_guard_capture_line guard_host_provision_fleet_file)" || return 1
     [[ -f "$fleet" ]] || return 1
-    getent group sudo >/dev/null 2>&1 || return 1
+    getent group sudo 2>&1 || return 1
     _users_file="$(mktemp)"
     awk '
         /^[[:space:]]*-[[:space:]]*name:/ {
@@ -279,7 +279,7 @@ guard_install_git_ssh_wrapper() {
         log_warn "Rebuild: make build-guard"
         return 0
     fi
-    if ! command -v setcap >/dev/null; then
+    if ! _setcap_path="$(command -v setcap 2>&1)"; then
         log_error "git-ssh-wrapper requires setcap (libcap2-bin)"
         return 1
     fi
@@ -386,12 +386,12 @@ agent_git_works_runuser() {
 guard_verify_user_run_runuser() {
     local user="$1" cmd="$2" stderr_file="$3"
     local rc=0
-    runuser -u "$user" -- bash -lc "$cmd" 2>"$stderr_file" >/dev/null || rc=$?
+    runuser -u "$user" -- bash -lc "$cmd" 2>"$stderr_file" || rc=$?
     return $rc
 }
 
 install_guard_host_exec() {
-    if ! command -v setcap >/dev/null || ! command -v getcap >/dev/null; then
+    if ! _setcap_path="$(command -v setcap 2>&1)" || ! _getcap_path="$(command -v getcap 2>&1)"; then
         log_error "host-exec requires setcap and getcap (libcap2-bin)"
         return 1
     fi
@@ -404,7 +404,7 @@ install_guard_host_exec() {
     local cap_str
     cap_str="$(guard_workload_file_cap_string)"
 
-    if command -v chattr >/dev/null && [[ -f /usr/bin/git ]]; then
+    if _chattr_path="$(command -v chattr 2>&1)" && [[ -f /usr/bin/git ]]; then
         _guard_best_effort chattr -i /usr/bin/git
     fi
     _guard_best_effort setcap -r /usr/bin/git

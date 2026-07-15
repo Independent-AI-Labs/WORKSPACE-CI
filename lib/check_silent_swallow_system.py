@@ -48,6 +48,10 @@ def is_cron_file(path: str) -> bool:
     return base == "crontab" or base.endswith(".cron") or path.endswith(".crontab")
 
 
+def is_systemd_file(path: str) -> bool:
+    return path.endswith((".service", ".service.j2", ".timer", ".timer.j2"))
+
+
 CRON_LINE = re.compile(r"^\s*(\*|\d|@)")
 CRON_OK = re.compile(r"(>>?\s*(?!/dev/null\b)/\S+|\|\s*systemd-cat\b)")
 CRON_ENV = re.compile(r"^\s*[A-Z_][A-Z0-9_]*\s*=")

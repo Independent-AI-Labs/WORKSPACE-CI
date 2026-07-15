@@ -69,7 +69,7 @@ guard_login_uids() {
 }
 
 guard_git_file_cap_actual() {
-    command -v getcap >/dev/null || return 1
+    _path="$(command -v getcap 2>&1)" || return 1
     local line caps
     line="$(_guard_capture_line getcap /usr/bin/git)"
     [[ -n "$line" ]] || return 1
@@ -111,7 +111,7 @@ guard_file_cap_normalize() {
 
 guard_git_has_required_file_caps() {
     local actual expected norm_actual norm_expected
-    if ! command -v getcap >/dev/null; then
+    if ! _path="$(command -v getcap 2>&1)"; then
         return 1
     fi
     actual="$(guard_git_file_cap_actual)"
@@ -188,7 +188,7 @@ _resolve_git_ssh_bin() {
 
 guard_git_ssh_wrapper_cap_actual() {
     local dest line caps
-    command -v getcap >/dev/null || return 1
+    _path="$(command -v getcap 2>&1)" || return 1
     dest="$(_guard_state_dir)/git-ssh-wrapper"
     [[ -f "$dest" ]] || return 1
     line="$(_guard_capture_line getcap "$dest")"
@@ -200,7 +200,7 @@ guard_git_ssh_wrapper_cap_actual() {
 
 guard_git_ssh_wrapper_has_required_cap() {
     local actual norm_actual norm_expected
-    if ! command -v getcap >/dev/null; then
+    if ! _path="$(command -v getcap 2>&1)"; then
         return 1
     fi
     actual="$(guard_git_ssh_wrapper_cap_actual)"
@@ -229,7 +229,7 @@ guard_host_exec_aux_drift_reasons() {
         fi
     fi
 
-    if [[ -f "$dest" ]] && command -v getcap >/dev/null; then
+    if [[ -f "$dest" ]] && _path="$(command -v getcap 2>&1)"; then
         local _gc
         _gc="$(_guard_capture_line guard_git_ssh_wrapper_cap_actual)"
         if ! guard_git_ssh_wrapper_has_required_cap; then
@@ -354,7 +354,7 @@ guard_install_drift_reasons() {
             reasons+=("dpkg-divert for /usr/bin/git not active")
         fi
 
-        if command -v getcap >/dev/null; then
+        if _path="$(command -v getcap 2>&1)"; then
             local _gc
             _gc="$(_guard_capture_line guard_git_file_cap_actual)"
             if ! guard_git_has_required_file_caps; then
@@ -377,7 +377,7 @@ guard_install_drift_reasons() {
             reasons+=("agent $_verify_user cannot run git via runuser (host-exec file-cap delivery ineffective)")
         fi
 
-        if command -v lsattr >/dev/null; then
+        if _path="$(command -v lsattr 2>&1)"; then
             if [[ -f /usr/bin/git ]]; then
                 local _attrs _arc=0
                 _attrs="$(lsattr /usr/bin/git 2>&1)" || _arc=$?

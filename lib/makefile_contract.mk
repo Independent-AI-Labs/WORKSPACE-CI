@@ -2,7 +2,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # Include at the top of your Makefile:
 #
-#   CI_DIR := $(shell cd "$$(git rev-parse --show-toplevel 2>/dev/null)/path/to/ci" 2>/dev/null && pwd)
+#   CI_DIR := $(shell git rev-parse --show-toplevel && cd .../path/to/ci && pwd)
 #   -include $(CI_DIR)/lib/makefile_contract.mk
 #
 # Required targets: init, install, install-ci, install-hooks, sync, check, lint,
@@ -14,10 +14,10 @@ CONTRACT_TARGETS := init install install-ci install-hooks sync check lint type-c
 
 .PHONY: contract-check
 contract-check: ## Verify Makefile implements all required contract targets
-	@_missing=""; _count=0; _total=0; \
+	_missing=""; _count=0; _total=0; \
 	for t in $(CONTRACT_TARGETS); do \
 		_total=$$((_total + 1)); \
-		if ! $(MAKE) -n $$t > /dev/null 2>&1; then \
+		if ! $(MAKE) -n $$t 2>&1; then \
 			_missing="$$_missing $$t"; \
 		else \
 			_count=$$((_count + 1)); \

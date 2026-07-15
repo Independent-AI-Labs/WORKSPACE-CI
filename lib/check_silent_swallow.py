@@ -28,8 +28,17 @@ from check_silent_swallow_ansible import (
     is_ansible_file,
 )
 from check_silent_swallow_base import AddedLine, parse_diff
-from check_silent_swallow_js import detect_js_multiline, is_js_file
+from check_silent_swallow_container import (
+    detect_container_multiline,
+    is_container_file,
+)
+from check_silent_swallow_js import (
+    detect_js_multiline,
+    detect_js_soft_fail_multiline,
+    is_js_file,
+)
 from check_silent_swallow_python import (
+    detect_python_capture_multiline,
     detect_python_multiline,
     is_python_file,
 )
@@ -41,6 +50,7 @@ from check_silent_swallow_system import (
     CRON_SHEBANG_OR_COMMENT,
     is_cron_file,
     is_shell_file,
+    is_systemd_file,
 )
 
 from ci.paths import resolve_config_path
@@ -53,6 +63,8 @@ _LANGUAGE_CHECKERS: list[tuple[str, object]] = [
     ("shell", is_shell_file),
     ("ansible", is_ansible_file),
     ("cron", is_cron_file),
+    ("container", is_container_file),
+    ("systemd", is_systemd_file),
 ]
 
 
@@ -149,10 +161,13 @@ def _collect_multiline_violations(
 
     detector_map = {
         "detect_python_multiline": detect_python_multiline,
+        "detect_python_capture_multiline": detect_python_capture_multiline,
         "detect_js_multiline": detect_js_multiline,
+        "detect_js_soft_fail_multiline": detect_js_soft_fail_multiline,
         "detect_ansible_tasks": detect_ansible_tasks,
         "detect_registered_output_swallow": detect_registered_output_swallow,
         "detect_shell_multiline": detect_shell_multiline,
+        "detect_container_multiline": detect_container_multiline,
     }
 
     lang_checker = dict(_LANGUAGE_CHECKERS)

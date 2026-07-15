@@ -43,8 +43,9 @@ _find_cloc() {
     for _c in "${_cands[@]}"; do
         [[ -x "$_c" ]] && { echo "$_c"; return 0; }
     done
-    if command -v cloc >/dev/null; then
-        command -v cloc
+    local _cloc_path=""
+    if _cloc_path="$(command -v cloc 2>&1)"; then
+        echo "$_cloc_path"
         return 0
     fi
     return 1

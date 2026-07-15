@@ -308,3 +308,47 @@ def detect_python_multiline(
             if pid is None:
                 continue
             yield header, pid
+
+
+_CAPTURE_OUTPUT_RE = re.compile(r"\bcapture_output\s*=\s*True\b")
+_STDERR_SURFACED_RE = re.compile(
+    r"\b(?:stderr|exc\.stderr|result\.stderr|completed\.stderr)\b"
+    r"|sys\.stderr\.write|print\s*\([^)]*stderr"
+)
+_RAISE_OR_CHECK_RE = re.compile(
+    r"\braise\b|check\s*=\s*True|returncode\s*!=\s*0|CalledProcessError"
+)
+
+
+def _capture_output_unsurfaced(
+    lines: dict[int, AddedLine],
+    lineno: int,
+) -> str | None:
+    header = lines.get(lineno)
+    if header is None or not _CAPTURE_OUTPUT_RE.search(header.text):
+        return None
+    for offset in range(0, 16):
+        body = lines.get(lineno + offset)
+        if body is None:
+            continue
+        if _STDERR_SURFACED_RE.search(body.text) or _RAISE_OR_CHECK_RE.search(
+            body.text
+        ):
+            return None
+    return "py-capture-output-unsurfaced"
+
+
+def detect_python_capture_multiline(
+    added: list[AddedLine],
+) -> Iterator[tuple[AddedLine, str]]:
+    by_file: dict[str, dict[int, AddedLine]] = {}
+    for a in added:
+        if not is_python_file(a.path):
+            continue
+        by_file.setdefault(a.path, {})[a.lineno] = a
+
+    for lines in by_file.values():
+        for lineno in sorted(lines):
+            pid = _capture_output_unsurfaced(lines, lineno)
+            if pid is not None:
+                yield lines[lineno], pid

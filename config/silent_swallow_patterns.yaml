@@ -38,6 +38,10 @@ file_types:
   cron:
     filenames: ['crontab']
     extensions: ['.cron', '.crontab']
+  container:
+    filenames: ['Containerfile', 'Dockerfile']
+  systemd:
+    extensions: ['.service', '.service.j2', '.timer', '.timer.j2']
 
 inline_patterns:
   # ── Shell patterns (13) ─────────────────────────────────────────────
@@ -105,6 +109,31 @@ inline_patterns:
     regex: '^\t@?true\s*(?:#.*)?$'
     language: shell
     description: 'Make recipe that succeeds without doing work; masks missing/wrong targets.'
+
+  - id: sh-stdout-devnull
+    regex: '>\s*/dev/null'
+    language: shell
+    description: 'Redirects stdout to /dev/null, hiding command output from the operator.'
+
+  - id: sh-combined-devnull
+    regex: '&>\s*/dev/null'
+    language: shell
+    description: 'Redirects stdout and stderr to /dev/null in one shot.'
+
+  - id: sh-curl-silent-discard
+    regex: 'curl\b[^\n;]*\s-s\b[^\n;]*-o\s*/dev/null'
+    language: shell
+    description: 'curl -s discards errors and writes the body to /dev/null.'
+
+  - id: sh-podman-build-no-plain
+    regex: '^(?!\s*#)(?!\s*echo\b).*(?:"\$\{PODMAN\}"\s+build\b|\bpodman\s+build\b)(?![^\n]*--progress=plain)'
+    language: shell
+    description: 'podman build without --progress=plain buffers RUN output until the step ends.'
+
+  - id: make-at-silent
+    regex: '^\t@'
+    language: shell
+    description: 'Make @ prefix hides the recipe command from the operator.'
 
   # ── JS/TS patterns (6) ──────────────────────────────────────────────
   - id: js-empty-catch
@@ -188,6 +217,9 @@ inline_patterns:
     language: python
     description: 'strip() or literal hides parse failures by returning a default value.'
 
+  # capture_output=True: enforced by multiline py-capture-output-unsurfaced
+  # (inline regex collided with ruff UP022 and flagged safe stderr surfacing).
+
   # ── Ansible patterns (5) ────────────────────────────────────────────
   - id: ansible-shell-or-true
     regex: '\|\|\s*true\b'
@@ -213,6 +245,12 @@ inline_patterns:
     regex: '^\s*failed_when:\s*false\s*(?:#.*)?$'
     language: ansible
     description: 'failed_when: false makes a task never fail; non-zero exit codes silently become ok.'
+
+  # ── systemd patterns (1) ─────────────────────────────────────────────
+  - id: systemd-journal-only
+    regex: 'StandardOutput\s*=\s*journal'
+    language: systemd
+    description: 'Service logs stdout only to journald; terminal operators see nothing.'
 
 custom_detectors:
   - id: cron-no-log-redirect
@@ -333,3 +371,34 @@ multiline_detectors:
     source_file: lib/check_silent_swallow_shell.py
     language: shell
     description: 'Stderr redirected to a temp path variable without rc capture on the same or next lines.'
+
+  # ── JS/TS soft-fail multiline (2 patterns) ──────────────────────────
+  - id: js-warn-return-softfail
+    detector: detect_js_soft_fail_multiline
+    source_function: _check_warn_and_return
+    source_file: lib/check_silent_swallow_js.py
+    language: js_ts
+    description: 'console.warn followed by return exits 0 without surfacing a hard failure.'
+
+  - id: js-warn-skip-return
+    detector: detect_js_soft_fail_multiline
+    source_function: _check_warn_and_return
+    source_file: lib/check_silent_swallow_js.py
+    language: js_ts
+    description: 'console.warn with "skipping" then return hides a missing dependency.'
+
+  # ── Python capture_output multiline (1 pattern) ─────────────────────
+  - id: py-capture-output-unsurfaced
+    detector: detect_python_capture_multiline
+    source_function: _capture_output_unsurfaced
+    source_file: lib/check_silent_swallow_python.py
+    language: python
+    description: 'subprocess capture_output=True without printing stderr or re-raising within the block.'
+
+  # ── Container multiline (1 pattern) ─────────────────────────────────
+  - id: container-run-chained-no-trace
+    detector: detect_container_multiline
+    source_function: _check_run_chained_no_trace
+    source_file: lib/check_silent_swallow_container.py
+    language: container
+    description: 'Containerfile RUN chains multiple commands without echo or set -x trace markers.'

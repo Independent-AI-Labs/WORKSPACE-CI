@@ -28,12 +28,6 @@
   letter-spacing: 0.01em;
 }
 
-.hero__subtitle strong.hero__subtitle-accent {
-  font-size: 1.14em;
-  font-weight: 700;
-  color: color-mix(in oklab, var(--text) 82%, var(--muted));
-}
-
 @media (max-width: 480px) {
   .hero {
     padding: var(--space-4) var(--space-3);

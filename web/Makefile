@@ -49,33 +49,33 @@ endif
 export PROD_IMAGE COMPOSE_CMD PODMAN ALLOWED_ORIGINS
 .PHONY: help
 help: ## Show this help
-	@echo "workspace-ci Wiki Makefile"
-	@echo ""
-	@echo "Development targets:"
-	@echo "  dev-start    Start dev server (Next.js HMR on 0.0.0.0:$(DEV_PORT))"
-	@echo "  dev          Alias for dev-start"
-	@echo "  dev-stop     Stop dev server"
-	@echo "  dev-restart  Restart dev server (stop + start)"
-	@echo "  dev-status   Show dev server status"
-	@echo "  dev-logs     Tail dev server logs"
-	@echo ""
-	@echo "Code quality:"
-	@echo "  lint         Run eslint"
-	@echo "  type-check   Run tsc --noEmit"
-	@echo "  test         Run vitest"
-	@echo "  check        Run lint + type-check + test"
-	@echo ""
-	@echo "Production (Podman; ports $(PROD_HTTP_PORT)/$(PROD_HTTPS_PORT)):"
-	@echo "  prod-build    Build workspace-ci-wiki:prod image"
-	@echo "  prod-start    Start nginx + Next.js stack"
-	@echo "  prod-stop     Stop production stack"
-	@echo "  prod-restart  Restart production stack"
-	@echo "  prod-status   Show stack status + HTTP probe"
-	@echo "  prod-logs     Tail production logs"
-	@echo ""
-	@echo "Cleanup:"
-	@echo "  clean        Remove .next and node_modules"
-	@echo "  clean-build  Remove .next only"
+	echo "workspace-ci Wiki Makefile"
+	echo ""
+	echo "Development targets:"
+	echo "  dev-start    Start dev server (Next.js HMR on 0.0.0.0:$(DEV_PORT))"
+	echo "  dev          Alias for dev-start"
+	echo "  dev-stop     Stop dev server"
+	echo "  dev-restart  Restart dev server (stop + start)"
+	echo "  dev-status   Show dev server status"
+	echo "  dev-logs     Tail dev server logs"
+	echo ""
+	echo "Code quality:"
+	echo "  lint         Run eslint"
+	echo "  type-check   Run tsc --noEmit"
+	echo "  test         Run vitest"
+	echo "  check        Run lint + type-check + test"
+	echo ""
+	echo "Production (Podman; ports $(PROD_HTTP_PORT)/$(PROD_HTTPS_PORT)):"
+	echo "  prod-build    Build workspace-ci-wiki:prod image"
+	echo "  prod-start    Start nginx + Next.js stack"
+	echo "  prod-stop     Stop production stack"
+	echo "  prod-restart  Restart production stack"
+	echo "  prod-status   Show stack status + HTTP probe"
+	echo "  prod-logs     Tail production logs"
+	echo ""
+	echo "Cleanup:"
+	echo "  clean        Remove .next and node_modules"
+	echo "  clean-build  Remove .next only"
 
 # =============================================================================
 # Development Targets
@@ -83,34 +83,34 @@ help: ## Show this help
 
 .PHONY: dev-start
 dev-start: ## Start dev server (Next.js HMR)
-	@if [ ! -x "$(NODE)" ]; then \
+	if [ ! -x "$(NODE)" ]; then \
 		echo "ERROR: Bootstrapped Node.js not found at $(NODE)"; \
 		exit 1; \
 	fi
-	@mkdir -p $(SYSTEMD_DIR)
-	@if [ ! -f $$HOME/.config/wiki-ci-dev.env ] && [ -f grafana.env.example ]; then \
+	mkdir -p $(SYSTEMD_DIR)
+	if [ ! -f $$HOME/.config/wiki-ci-dev.env ] && [ -f grafana.env.example ]; then \
 		echo "[dev-start] Creating $$HOME/.config/wiki-ci-dev.env from grafana.env.example"; \
 		cp grafana.env.example $$HOME/.config/wiki-ci-dev.env; \
 		echo "[dev-start] Edit it to set GRAFANA_BASE_URL to the reachable Grafana origin."; \
 	fi
-	@echo "[dev-start] Installing systemd user unit -> $(SYSTEMD_DIR)/$(SYSTEMD_UNIT)"
-	@sed \
+	echo "[dev-start] Installing systemd user unit -> $(SYSTEMD_DIR)/$(SYSTEMD_UNIT)"
+	sed \
 		-e 's|__PROJECT_ROOT__|$(PROJECT_ROOT)|g' \
 		-e 's|__NODE_BIN__|$(NODE_ENV_BIN)|g' \
 		-e 's|__NODE__|$(NODE)|g' \
 		-e 's|__DEV_PORT__|$(DEV_PORT)|g' \
 		res/wiki-ci-dev.service.tmpl > $(SYSTEMD_DIR)/$(SYSTEMD_UNIT)
-	@systemctl --user daemon-reload
-	@if systemctl --user is-failed $(SYSTEMD_UNIT) 2>&1; then \
+	systemctl --user daemon-reload
+	if systemctl --user is-failed $(SYSTEMD_UNIT) 2>&1; then \
 		systemctl --user reset-failed $(SYSTEMD_UNIT); \
 	fi
-	@echo "[dev-start] systemctl --user restart $(SYSTEMD_UNIT)"
-	@systemctl --user restart $(SYSTEMD_UNIT)
-	@systemctl --user enable $(SYSTEMD_UNIT)
-	@echo "[dev-start] startup log snapshot (last 30 lines):"
-	@journalctl --user -u $(SYSTEMD_UNIT) -n 30 --no-pager
-	@sleep 3
-	@result=$$(systemctl --user show $(SYSTEMD_UNIT) -p Result --value 2>&1); \
+	echo "[dev-start] systemctl --user restart $(SYSTEMD_UNIT)"
+	systemctl --user restart $(SYSTEMD_UNIT)
+	systemctl --user enable $(SYSTEMD_UNIT)
+	echo "[dev-start] startup log snapshot (last 30 lines):"
+	journalctl --user -u $(SYSTEMD_UNIT) -n 30 --no-pager
+	sleep 3
+	result=$$(systemctl --user show $(SYSTEMD_UNIT) -p Result --value 2>&1); \
 	nrest=$$(systemctl --user show $(SYSTEMD_UNIT) -p NRestarts --value 2>&1); \
 	echo "[dev-start] post-start: Result=$$result NRestarts=$$nrest"; \
 	if [ "$$result" != "success" ] || [ "$$nrest" != "0" ]; then \
@@ -122,11 +122,11 @@ dev-start: ## Start dev server (Next.js HMR)
 		echo "Hint: Result=exec/203 = binary path wrong or not executable; start-limit-hit = crash-looped."; \
 		exit 1; \
 	fi
-	@echo "[dev-start] process alive, waiting for HTTP on port $(DEV_PORT) (max 40s)..."
-	@for i in $$(seq 1 20); do \
+	echo "[dev-start] process alive, waiting for HTTP on port $(DEV_PORT) (max 40s)..."
+	for i in $$(seq 1 20); do \
 		state=$$(systemctl --user is-active $(SYSTEMD_UNIT) 2>&1); \
 		nrest=$$(systemctl --user show $(SYSTEMD_UNIT) -p NRestarts --value 2>&1); \
-		code=$$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 http://127.0.0.1:$(DEV_PORT)/ 2>&1); \
+		_curl_tmp=$$(mktemp); code=$$(curl -S -o "$$_curl_tmp" -w "%{http_code}" --max-time 3 http://127.0.0.1:$(DEV_PORT)/ 2>&1); rm -f "$$_curl_tmp"; \
 		echo "[dev-start] attempt $$i/20: state=$$state http=$$code restarts=$$nrest"; \
 		if [ "$$state" = "failed" ] || [ "$$state" = "inactive" ]; then \
 			echo ""; \
@@ -165,36 +165,36 @@ dev: dev-start ## Alias for dev-start
 
 .PHONY: dev-stop
 dev-stop: ## Stop dev server
-	@echo "[dev-stop] systemctl --user stop $(SYSTEMD_UNIT)"
-	@systemctl --user stop $(SYSTEMD_UNIT) 2>&1; rc=$$?; if [ $$rc -ne 0 ]; then \
+	echo "[dev-stop] systemctl --user stop $(SYSTEMD_UNIT)"
+	systemctl --user stop $(SYSTEMD_UNIT) 2>&1; rc=$$?; if [ $$rc -ne 0 ]; then \
 		echo "[dev-stop] stop returned $$rc (ok if not running)"; \
 	fi
-	@echo "[dev-stop] systemctl --user disable $(SYSTEMD_UNIT)"
-	@systemctl --user disable $(SYSTEMD_UNIT) 2>&1; rc=$$?; if [ $$rc -ne 0 ]; then \
+	echo "[dev-stop] systemctl --user disable $(SYSTEMD_UNIT)"
+	systemctl --user disable $(SYSTEMD_UNIT) 2>&1; rc=$$?; if [ $$rc -ne 0 ]; then \
 		echo "[dev-stop] disable returned $$rc (ok if not enabled)"; \
 	fi
-	@if systemctl --user is-failed $(SYSTEMD_UNIT) 2>&1; then \
+	if systemctl --user is-failed $(SYSTEMD_UNIT) 2>&1; then \
 		systemctl --user reset-failed $(SYSTEMD_UNIT); \
 	fi
-	@rm -f $(SYSTEMD_DIR)/$(SYSTEMD_UNIT)
-	@systemctl --user daemon-reload
-	@echo "[dev-stop] Done. Unit file removed."
+	rm -f $(SYSTEMD_DIR)/$(SYSTEMD_UNIT)
+	systemctl --user daemon-reload
+	echo "[dev-stop] Done. Unit file removed."
 
 .PHONY: dev-restart
 dev-restart: ## Restart dev server (stop + start)
-	@$(MAKE) dev-stop
-	@$(MAKE) dev-start
+	$(MAKE) dev-stop
+	$(MAKE) dev-start
 
 .PHONY: dev-status
 dev-status: ## Show dev server status
-	@svc=$$(systemctl --user is-active $(SYSTEMD_UNIT) 2>&1); echo "Service: $$svc"
-	@code=$$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$(DEV_PORT)/ 2>&1); echo "HTTP:    $$code"
-	@echo "Port:    $(DEV_PORT)"
-	@echo "Logs:    journalctl --user -u $(SYSTEMD_UNIT) -f"
+	svc=$$(systemctl --user is-active $(SYSTEMD_UNIT) 2>&1); echo "Service: $$svc"
+	_curl_tmp=$$(mktemp); code=$$(curl -S -o "$$_curl_tmp" -w '%{http_code}' http://127.0.0.1:$(DEV_PORT)/ 2>&1); rm -f "$$_curl_tmp"; echo "HTTP:    $$code"
+	echo "Port:    $(DEV_PORT)"
+	echo "Logs:    journalctl --user -u $(SYSTEMD_UNIT) -f"
 
 .PHONY: dev-logs
 dev-logs: ## Print dev server logs (last 100 lines)
-	@journalctl --user -u $(SYSTEMD_UNIT) --no-pager -n 100
+	journalctl --user -u $(SYSTEMD_UNIT) --no-pager -n 100
 
 # =============================================================================
 # Production Targets (Podman; default ports 8080/8443, no root)
@@ -202,22 +202,22 @@ dev-logs: ## Print dev server logs (last 100 lines)
 
 .PHONY: prod-check-syntax
 prod-check-syntax: ## Verify prod shell scripts parse under bash -n
-	@bash -n scripts/prod.sh
-	@echo "OK  scripts/prod.sh"
+	bash -n scripts/prod.sh
+	echo "OK  scripts/prod.sh"
 
 .PHONY: prod-build prod-start prod-stop prod-restart prod-status prod-logs
 prod-build: ## Build production wiki image (context: projects root)
-	@./scripts/prod.sh build
+	./scripts/prod.sh build
 prod-start: ## Start production stack (HTTP :$(PROD_HTTP_PORT), HTTPS :$(PROD_HTTPS_PORT))
-	@./scripts/prod.sh start
+	./scripts/prod.sh start
 prod-stop: ## Stop production stack
-	@./scripts/prod.sh stop
+	./scripts/prod.sh stop
 prod-restart: ## Restart production stack
-	@./scripts/prod.sh restart
+	./scripts/prod.sh restart
 prod-status: ## Show production stack status + HTTP probe
-	@./scripts/prod.sh status
+	./scripts/prod.sh status
 prod-logs: ## Tail production stack logs
-	@./scripts/prod.sh logs
+	./scripts/prod.sh logs
 
 # =============================================================================
 # Code Quality
@@ -229,7 +229,7 @@ lint: ## Run eslint
 
 .PHONY: type-check
 type-check: ## Run tsc --noEmit
-	@ln -sfn ../../web/node_modules ../tests/web/node_modules
+	ln -sfn ../../web/node_modules ../tests/web/node_modules
 	npx tsc --noEmit
 
 .PHONY: test
@@ -238,7 +238,7 @@ test: ## Run vitest
 
 .PHONY: check
 check: ## Run lint + type-check + test
-	@$(MAKE) lint && $(MAKE) type-check && $(MAKE) test
+	$(MAKE) lint && $(MAKE) type-check && $(MAKE) test
 
 # =============================================================================
 # Cleanup

@@ -164,7 +164,7 @@ ci_verify_coverage() {
             timeout --signal=TERM --kill-after=10s "${timeout_s}s" $cmd || rc=$?
         fi
 
-        ps -p "$_heartbeat_pid" >/dev/null && kill "$_heartbeat_pid"
+        if ps -p "$_heartbeat_pid"; then kill "$_heartbeat_pid"; fi
         local _elapsed=$((SECONDS - _started))
 
         # `timeout` exits 124 on TERM-kill, 137 on KILL-kill. Loud failure.
@@ -224,7 +224,7 @@ ci_check_coverage_thresholds_no_devolution() {
         return 0
     fi
 
-    if ! git rev-parse --git-dir >/dev/null; then
+    if ! _git_dir="$(git rev-parse --git-dir 2>&1)"; then
         ci_pass "Not a git repo, skipping."
         return 0
     fi

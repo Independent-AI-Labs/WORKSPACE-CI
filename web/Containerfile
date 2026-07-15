@@ -7,8 +7,12 @@
 # -----------------------------------------------------------------------------
 FROM docker.io/library/python:3.13-slim-bookworm AS extract
 
-RUN apt-get update \
+RUN set -eux \
+    && echo "[wiki-extract] apt-get update" \
+    && apt-get update \
+    && echo "[wiki-extract] apt-get install packages" \
     && apt-get install -y --no-install-recommends cloc git curl ca-certificates \
+    && echo "[wiki-extract] apt cleanup" \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace/CI
@@ -27,11 +31,18 @@ ENV CI_PROJECT_ROOT=/workspace/CI
 ENV UV_VERSION=0.11.23
 # code-stats.json is copied from the repo above; the extract stage has no sibling
 # git repos, so regenerate hook/script/swallow data only.
-RUN bash scripts/bootstrap-uv \
+RUN set -eux \
+    && echo "[wiki-extract] bootstrap uv" \
+    && bash scripts/bootstrap-uv \
+    && echo "[wiki-extract] uv sync" \
     && PATH="/workspace/CI/.boot-linux/bin:$$PATH" uv sync --frozen \
+    && echo "[wiki-extract] extract hook sources" \
     && PATH="/workspace/CI/.boot-linux/bin:$$PATH" uv run python scripts/extract-hook-sources.py \
+    && echo "[wiki-extract] extract script sources" \
     && PATH="/workspace/CI/.boot-linux/bin:$$PATH" uv run python scripts/extract-script-sources.py \
-    && PATH="/workspace/CI/.boot-linux/bin:$$PATH" uv run python scripts/extract-swallow-source.py
+    && echo "[wiki-extract] extract swallow detectors" \
+    && PATH="/workspace/CI/.boot-linux/bin:$$PATH" uv run python scripts/extract-swallow-source.py \
+    && echo "[wiki-extract] done"
 
 # -----------------------------------------------------------------------------
 # Stage 2: build Next.js standalone bundle
@@ -64,10 +75,16 @@ COPY CI/web ./CI/web
 COPY --from=extract /workspace/CI/web/src/data ./CI/web/src/data
 
 WORKDIR /workspace/CI/web
-RUN test -f /workspace/CI/README.md \
+ENV CI_WIKI_PROD_BUILD=1
+RUN set -eux \
+    && echo "[wiki-build] checking inputs" \
+    && test -f /workspace/CI/README.md \
     && test -f /workspace/WORKSPACE-WEB-CONTENT/landing-posts.yaml \
+    && echo "[wiki-build] npm install" \
     && npm install \
-    && npm run build
+    && echo "[wiki-build] npm run build" \
+    && npm run build \
+    && echo "[wiki-build] done"
 
 # -----------------------------------------------------------------------------
 # Stage 3: minimal runtime

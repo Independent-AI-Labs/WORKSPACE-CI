@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-14T19:53:47.379957+00:00",
+  "generated_at": "2026-07-15T11:22:46.659120+00:00",
   "source_version": "",
   "detectors": [
     {
@@ -97,6 +97,24 @@
       "source_file": "lib/check_silent_swallow_shell.py",
       "docstring": null,
       "source": "def _check_stderr_temp_without_rc(lines: list[AddedLine], i: int) -> str | None:\n    text = lines[i].text\n    if not _STDERR_TEMP_RE.search(text):\n        return None\n    if _RC_CAPTURE_RE.search(text):\n        return None\n    if _IF_NEGATED_RE.search(text):\n        return None\n    for j in range(i + 1, min(i + 4, len(lines))):\n        if _RC_ASSIGN_RE.match(lines[j].text):\n            return None\n    return \"sh-stderr-temp-discard\""
+    },
+    {
+      "name": "_check_warn_and_return",
+      "source_file": "lib/check_silent_swallow_js.py",
+      "docstring": null,
+      "source": "def _check_warn_and_return(\n    lines: dict[int, AddedLine],\n    lineno: int,\n) -> str | None:\n    header = lines.get(lineno)\n    if header is None or not _WARN_RE.search(header.text):\n        return None\n    for offset in range(1, 5):\n        body = lines.get(lineno + offset)\n        if body is None:\n            continue\n        if _THROW_RE.search(body.text) or _PROCESS_EXIT_RE.search(body.text):\n            return None\n        if _RETURN_RE.match(body.text):\n            if \"skipping\" in header.text.lower():\n                return \"js-warn-skip-return\"\n            return \"js-warn-return-softfail\"\n        if body.text.strip() and not body.text.strip().startswith(\"//\"):\n            return None\n    return None"
+    },
+    {
+      "name": "_capture_output_unsurfaced",
+      "source_file": "lib/check_silent_swallow_python.py",
+      "docstring": null,
+      "source": "def _capture_output_unsurfaced(\n    lines: dict[int, AddedLine],\n    lineno: int,\n) -> str | None:\n    header = lines.get(lineno)\n    if header is None or not _CAPTURE_OUTPUT_RE.search(header.text):\n        return None\n    for offset in range(0, 16):\n        body = lines.get(lineno + offset)\n        if body is None:\n            continue\n        if _STDERR_SURFACED_RE.search(body.text) or _RAISE_OR_CHECK_RE.search(\n            body.text\n        ):\n            return None\n    return \"py-capture-output-unsurfaced\""
+    },
+    {
+      "name": "_check_run_chained_no_trace",
+      "source_file": "lib/check_silent_swallow_container.py",
+      "docstring": null,
+      "source": "def _check_run_chained_no_trace(text: str) -> str | None:\n    if not _RUN_RE.match(text):\n        return None\n    if text.count(\"&&\") < 2:\n        return None\n    if _TRACE_RE.search(text):\n        return None\n    return \"container-run-chained-no-trace\""
     }
   ]
 }

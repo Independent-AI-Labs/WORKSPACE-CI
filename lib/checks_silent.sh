@@ -31,11 +31,10 @@ ci_check_silent_swallow() {
     diff_tmp="$(mktemp)"
     stderr_tmp="$(mktemp)"
 
-    # Git-repo check: capture stderr to an explicit temp file (no >/dev/null
-    # 2>&1 suppression per AGENTS.md §3.1). On rc!=0 we print the captured
-    # stderr (real signal, no swallow) and skip the check.
-    local _gd_rc=0
-    git rev-parse --git-dir >/dev/null 2>"$stderr_tmp" || _gd_rc=$?
+    # Git-repo check: capture stderr to an explicit temp file. On rc!=0 we print
+    # the captured stderr (real signal, no swallow) and skip the check.
+    local _gd_rc=0 _git_dir=""
+    _git_dir="$(git rev-parse --git-dir 2>"$stderr_tmp")" || _gd_rc=$?
     if [[ $_gd_rc -ne 0 ]]; then
         ci_pass "Silent-swallow: not a git repo, skipping."
         [[ -s "$stderr_tmp" ]] && cat "$stderr_tmp" >&2

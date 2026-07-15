@@ -42,6 +42,12 @@ const posts: LandingPost[] = [
   },
 ]
 
+function flushCrossPostCommit() {
+  act(() => {
+    vi.advanceTimersByTime(32)
+  })
+}
+
 describe('RotatingPosts', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -80,8 +86,46 @@ describe('RotatingPosts', () => {
     expect(screen.getByText('Slide B')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+    flushCrossPostCommit()
     expect(screen.getByText('SECOND POST')).toBeInTheDocument()
     expect(screen.getByText('Doc')).toBeInTheDocument()
+  })
+
+  it('crossfades when advancing to the next post from the last slide', () => {
+    const { container } = render(<RotatingPosts posts={posts} settings={settings} ui={ui} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2 of 2' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+    flushCrossPostCommit()
+
+    const backdrop = container.querySelector('.landing-stage__backdrop')
+    expect(backdrop).toHaveClass('is-bg-crossfading')
+    expect(container.querySelector('.landing-stage__layer.is-leaving')).toBeTruthy()
+    expect(container.querySelectorAll('.landing-stage__layer')).toHaveLength(3)
+  })
+
+  it('crossfades when switching posts via post tabs', () => {
+    const { container } = render(<RotatingPosts posts={posts} settings={settings} ui={ui} />)
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Second' }))
+    flushCrossPostCommit()
+
+    const backdrop = container.querySelector('.landing-stage__backdrop')
+    expect(backdrop).toHaveClass('is-bg-crossfading')
+
+    const leavingLayers = container.querySelectorAll('.landing-stage__layer.is-leaving')
+    expect(leavingLayers.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('keeps the outgoing post layers mounted when switching via post tabs', () => {
+    const { container } = render(<RotatingPosts posts={posts} settings={settings} ui={ui} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2 of 2' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Second' }))
+    flushCrossPostCommit()
+
+    expect(container.querySelector('.landing-stage__layer.is-leaving')).toBeTruthy()
+    expect(container.querySelectorAll('.landing-stage__layer')).toHaveLength(3)
   })
 
   it('advances to the next post on interval after the last slide', () => {
@@ -93,6 +137,7 @@ describe('RotatingPosts', () => {
     act(() => {
       vi.advanceTimersByTime(1000)
     })
+    flushCrossPostCommit()
     expect(screen.getByText('SECOND POST')).toBeInTheDocument()
     expect(screen.getByText('Doc')).toBeInTheDocument()
   })
@@ -101,6 +146,7 @@ describe('RotatingPosts', () => {
     render(<RotatingPosts posts={posts} settings={settings} ui={ui} />)
 
     fireEvent.click(screen.getByRole('tab', { name: 'Second' }))
+    flushCrossPostCommit()
     expect(screen.getByText('SECOND POST')).toBeInTheDocument()
     expect(screen.getByText('Doc')).toBeInTheDocument()
   })

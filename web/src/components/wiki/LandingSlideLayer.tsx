@@ -23,50 +23,31 @@ export function LandingSlideLayer({
     ['--landing-pan-duration' as string]: `${panDurationMs}ms`,
   }
 
-  if (slide.type === 'image') {
-    return (
-      <div
-        className={clsx(
-          'landing-stage__layer',
-          active && 'is-active',
-          leaving && 'is-leaving',
-        )}
-        style={layerStyle}
-        aria-hidden={!active}
-      >
-        <div
-          key={pan.token}
-          className="landing-stage__pan"
-          style={panAxisStyle(pan.axis)}
-        >
-          <Image src={slide.src} alt="" fill className="landing-stage__image" sizes="100vw" unoptimized />
-        </div>
-      </div>
-    )
-  }
+  const layerClass = clsx(
+    'landing-stage__layer',
+    slide.type !== 'image' && 'landing-stage__layer--doc',
+    active && 'is-active',
+    leaving && 'is-leaving',
+  )
+
+  const panClass = clsx(
+    'landing-stage__pan',
+    slide.type !== 'image' && 'landing-stage__pan--doc',
+  )
 
   return (
-    <div
-      className={clsx(
-        'landing-stage__layer',
-        'landing-stage__layer--doc',
-        active && 'is-active',
-        leaving && 'is-leaving',
-      )}
-      style={layerStyle}
-      aria-hidden={!active}
-    >
-      <div
-        key={pan.token}
-        className="landing-stage__pan landing-stage__pan--doc"
-        style={panAxisStyle(pan.axis)}
-      >
-        <iframe
-          src={slide.src}
-          title={slide.subtitle}
-          className="landing-stage__iframe"
-          tabIndex={-1}
-        />
+    <div className={layerClass} style={layerStyle} aria-hidden={!active}>
+      <div key={pan.token} className={panClass} style={panAxisStyle(pan.axis)}>
+        {slide.type === 'image' ? (
+          <Image src={slide.src} alt="" fill className="landing-stage__image" sizes="100vw" unoptimized />
+        ) : (
+          <iframe
+            src={slide.src}
+            title={slide.subtitle}
+            className="landing-stage__iframe"
+            tabIndex={-1}
+          />
+        )}
       </div>
     </div>
   )

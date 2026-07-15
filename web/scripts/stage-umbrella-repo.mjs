@@ -35,8 +35,8 @@ async function stageUmbrellaRepo() {
     const srcAbs = path.resolve(UMBRELLA_ROOT, src)
     const destAbs = path.resolve(STAGE_DIR, dest)
     if (!existsSync(srcAbs)) {
-      console.warn(`[stage-umbrella-repo] skip missing: ${srcAbs}`)
-      continue
+      console.error(`[stage-umbrella-repo] missing required file: ${srcAbs}`)
+      process.exit(1)
     }
     await copyFile(srcAbs, destAbs)
     copied += 1

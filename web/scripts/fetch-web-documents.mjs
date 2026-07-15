@@ -17,6 +17,14 @@ const WEB_DIR = process.cwd()
 const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT
   ?? path.resolve(WEB_DIR, '..', '..')
 
+function abortOrWarn(message) {
+  if (process.env.CI_WIKI_PROD_BUILD === '1') {
+    console.error(message)
+    process.exit(1)
+  }
+  console.warn(message)
+}
+
 const CHROME_CANDIDATES = [
   process.env.CHROME_BIN,
   '/usr/bin/google-chrome',
@@ -51,6 +59,9 @@ function resolveChromeBinary() {
     const result = spawnSync('which', [candidate], { encoding: 'utf8' })
     if (result.status === 0 && result.stdout.trim()) {
       return result.stdout.trim()
+    }
+    if (result.status !== 0 && result.stderr?.trim()) {
+      console.error(`[fetch-web-documents] which ${candidate}: ${result.stderr.trim()}`)
     }
   }
   return null
@@ -150,12 +161,12 @@ async function downloadDocument(postsDir, doc) {
 async function fetchWebDocuments() {
   const contentRoot = resolveContentRoot()
   if (!contentRoot) {
-    console.warn('[fetch-web-documents] WORKSPACE-WEB-CONTENT not found; skipping')
+    abortOrWarn('[fetch-web-documents] WORKSPACE-WEB-CONTENT not found; skipping')
     return
   }
   const docsYaml = path.join(contentRoot, 'documents.yaml')
   if (!existsSync(docsYaml)) {
-    console.warn(`[fetch-web-documents] missing ${docsYaml}; skipping`)
+    abortOrWarn(`[fetch-web-documents] missing ${docsYaml}; skipping`)
     return
   }
   const raw = await fs.readFile(docsYaml, 'utf8')

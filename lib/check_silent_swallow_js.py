@@ -60,6 +60,34 @@ def _check_catch_body(
     return None
 
 
+_WARN_RE = re.compile(r"\bconsole\.warn\s*\(")
+_RETURN_RE = re.compile(r"^\s*return\s*;?\s*(?://.*)?$")
+_THROW_RE = re.compile(r"\bthrow\b")
+_PROCESS_EXIT_RE = re.compile(r"\bprocess\.exit\s*\(")
+
+
+def _check_warn_and_return(
+    lines: dict[int, AddedLine],
+    lineno: int,
+) -> str | None:
+    header = lines.get(lineno)
+    if header is None or not _WARN_RE.search(header.text):
+        return None
+    for offset in range(1, 5):
+        body = lines.get(lineno + offset)
+        if body is None:
+            continue
+        if _THROW_RE.search(body.text) or _PROCESS_EXIT_RE.search(body.text):
+            return None
+        if _RETURN_RE.match(body.text):
+            if "skipping" in header.text.lower():
+                return "js-warn-skip-return"
+            return "js-warn-return-softfail"
+        if body.text.strip() and not body.text.strip().startswith("//"):
+            return None
+    return None
+
+
 def detect_js_multiline(
     added: list[AddedLine],
 ) -> Iterator[tuple[AddedLine, str]]:
@@ -80,3 +108,19 @@ def detect_js_multiline(
             pid = _check_catch_body(lines, lineno, header_indent)
             if pid is not None:
                 yield header, pid
+
+
+def detect_js_soft_fail_multiline(
+    added: list[AddedLine],
+) -> Iterator[tuple[AddedLine, str]]:
+    by_file: dict[str, dict[int, AddedLine]] = {}
+    for a in added:
+        if not is_js_file(a.path):
+            continue
+        by_file.setdefault(a.path, {})[a.lineno] = a
+
+    for lines in by_file.values():
+        for lineno in sorted(lines):
+            pid = _check_warn_and_return(lines, lineno)
+            if pid is not None:
+                yield lines[lineno], pid

@@ -99,14 +99,21 @@ fi
 echo ""
 echo "=== Reloading daemons ==="
 systemctl daemon-reload
-systemctl restart systemd-journald 2>/dev/null || true
-echo "    journald reloaded"
+_journald_rc=0
+_journald_out="$(systemctl restart systemd-journald 2>&1)" || _journald_rc=$?
+if [[ $_journald_rc -ne 0 ]]; then
+    echo "    journald restart failed (rc=$_journald_rc): $_journald_out" >&2
+else
+    echo "    journald reloaded"
+fi
 
-if systemctl is-active --quiet rsyslog 2>/dev/null; then
+_rsyslog_rc=0
+systemctl is-active --quiet rsyslog 2>&1 || _rsyslog_rc=$?
+if [[ $_rsyslog_rc -eq 0 ]]; then
     systemctl restart rsyslog
     echo "    rsyslog restarted"
 else
-    echo "    rsyslog not active - skipped"
+    echo "    rsyslog not active (rc=$_rsyslog_rc) - skipped"
 fi
 
 echo ""

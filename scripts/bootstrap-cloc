@@ -64,7 +64,8 @@ main() {
     fi
 
     # cloc is a Perl script: refuse to install without a working perl.
-    if ! command -v perl >/dev/null 2>&1; then
+    local _perl_path=""
+    if ! _perl_path="$(command -v perl 2>&1)"; then
         _log "perl not found on PATH; cloc is a Perl script and requires it"
         _log "install perl (declared in config/system-deps.yaml) then re-run"
         return 1

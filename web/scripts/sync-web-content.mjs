@@ -15,6 +15,14 @@ const WEB_DIR = process.cwd()
 const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT
   ?? path.resolve(WEB_DIR, '..', '..')
 
+function abortOrWarn(message) {
+  if (process.env.CI_WIKI_PROD_BUILD === '1') {
+    console.error(message)
+    process.exit(1)
+  }
+  console.warn(message)
+}
+
 function resolveContentRoot() {
   if (process.env.WORKSPACE_WEB_CONTENT_ROOT) {
     return path.resolve(process.env.WORKSPACE_WEB_CONTENT_ROOT)
@@ -41,7 +49,7 @@ async function copyDir(src, dest) {
 async function syncWebContent() {
   const contentRoot = resolveContentRoot()
   if (!contentRoot) {
-    console.warn(
+    abortOrWarn(
       '[sync-web-content] WORKSPACE-WEB-CONTENT not found; skipping (set WORKSPACE_WEB_CONTENT_ROOT)',
     )
     return
@@ -49,7 +57,7 @@ async function syncWebContent() {
 
   const yamlSrc = path.join(contentRoot, 'landing-posts.yaml')
   if (!existsSync(yamlSrc)) {
-    console.warn(`[sync-web-content] missing ${yamlSrc}; skipping`)
+    abortOrWarn(`[sync-web-content] missing ${yamlSrc}; skipping`)
     return
   }
 

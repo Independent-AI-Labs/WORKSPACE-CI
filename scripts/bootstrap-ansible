@@ -44,9 +44,9 @@ main() {
 
     # Idempotency: skip if ansible-playbook already works.
     if [[ -x "$target_dir/ansible-playbook" ]]; then
-        if "$target_dir/ansible-playbook" --version > /dev/null 2>&1; then
-            local v
-            v="$("$target_dir/ansible-playbook" --version 2>&1)"
+        local v v_rc=0
+        v="$("$target_dir/ansible-playbook" --version 2>&1)" || v_rc=$?
+        if [[ "$v_rc" -eq 0 ]]; then
             v="${v%%$'\n'*}"
             _log "ansible already installed: $v"
             return 0

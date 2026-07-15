@@ -116,7 +116,7 @@ build_guard_binary() {
     export RUSTUP_HOME="${preset_rustup_home:-$rust_home}"
     export CARGO_HOME="$rust_home"
 
-    if ! command -v cargo >/dev/null; then
+    if ! _path="$(command -v cargo 2>&1)"; then
         log_warn "cargo not on PATH: bootstrapping Rust..."
         bash "${_CI_ROOT}/scripts/bootstrap-rust" || {
             log_error "Rust installation failed"
@@ -129,14 +129,14 @@ build_guard_binary() {
             export RUSTUP_HOME="$rust_home"
             export CARGO_HOME="$rust_home"
         fi
-        if ! command -v cargo >/dev/null; then
+        if ! _path="$(command -v cargo 2>&1)"; then
             log_error "cargo still not found after bootstrap: check $ws_boot_rust/ or $ci_boot_rust/"
             return 1
         fi
         log_info "Rust bootstrapped successfully"
     fi
 
-    if command -v rustup >/dev/null; then
+    if _path="$(command -v rustup 2>&1)"; then
         # rc-capture: rustup show active-toolchain prints the active
         # toolchain name to stdout (we don't need it). On rc!=0 (rustup
         # broken, or no default toolchain configured), surface stderr
@@ -186,7 +186,7 @@ build_guard_binary() {
 
     local guard_bin=""
     local has_rustup=0
-    if command -v rustup >/dev/null; then
+    if _path="$(command -v rustup 2>&1)"; then
         has_rustup=1
     fi
     if [[ "$has_rustup" -eq 1 ]]; then
