@@ -14,8 +14,8 @@ export function HomeLanding() {
     <div className="landing-page">
       <section className="hero landing-hero">
         <h1 className="hero__title">{branding.name}</h1>
-        <p className="hero__subtitle">{config.hero.intro}</p>
-        <p className="hero__subtitle landing-hero__mission">
+        <p className="hero__subtitle">
+          {config.hero.intro}{' '}
           <strong>{config.mission.headline}</strong> {config.mission.summary}
         </p>
       </section>
