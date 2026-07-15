@@ -15,12 +15,12 @@
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border);
   line-height: 1;
-  min-height: calc(var(--space-3) * 2 + var(--space-8) + var(--space-px));
+  min-height: var(--wiki-chrome-header-height);
 }
 
 .wiki-sidebar__logo {
-  width: 3rem;
-  height: 3rem;
+  width: var(--space-8);
+  height: var(--space-8);
   flex-shrink: 0;
 }
 

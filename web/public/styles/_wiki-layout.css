@@ -23,7 +23,7 @@
   top: 0;
   z-index: var(--z-sticky);
   line-height: 1;
-  min-height: calc(var(--space-3) * 2 + var(--space-8) + var(--space-px));
+  min-height: var(--wiki-chrome-header-height);
 }
 
 .wiki-header__left {

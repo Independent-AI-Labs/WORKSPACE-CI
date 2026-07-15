@@ -67,6 +67,9 @@
   --space-20: 5rem;        /* 80px */
   --space-24: 6rem;        /* 96px */
 
+  /* Shared wiki chrome row: breadcrumbs/actions and sidebar branding */
+  --wiki-chrome-header-height: calc(var(--space-3) * 2 + var(--space-8) + var(--space-px));
+
   /* ---- Tier 1: Typography scale (font-size) ----
      Display tiers (lg+) use clamp() for fluid scaling across 320-1280px.
      Body/UI tiers (xs/sm/base) stay fixed rem for stability and WCAG minimum. */
