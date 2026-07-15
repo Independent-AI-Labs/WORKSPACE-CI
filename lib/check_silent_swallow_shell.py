@@ -15,6 +15,7 @@ _ELSE_RE = re.compile(r"^\s*else\b")
 _FI_RE = re.compile(r"^\s*fi\s*$")
 _RC_CAPTURE_RE = re.compile(r"\|\|\s*[_a-zA-Z]*rc=\$\?")
 _RC_ASSIGN_RE = re.compile(r"^\s*(?:local\s+)?[_a-zA-Z]+\w*=\$\?")
+_RC_ASSIGN_INLINE_RE = re.compile(r"(?:local\s+)?[_a-zA-Z]+\w*=\$\?")
 _STDERR_TEMP_RE = re.compile(r'2>\s*"\$_[^"]*"')
 _IF_NEGATED_RE = re.compile(r"^\s*if\s+!")
 
@@ -49,6 +50,8 @@ def _check_stderr_temp_without_rc(lines: list[AddedLine], i: int) -> str | None:
     if not _STDERR_TEMP_RE.search(text):
         return None
     if _RC_CAPTURE_RE.search(text):
+        return None
+    if _RC_ASSIGN_INLINE_RE.search(text):
         return None
     if _IF_NEGATED_RE.search(text):
         return None

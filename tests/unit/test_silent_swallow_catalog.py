@@ -236,7 +236,7 @@ PASSING_CASES: list[SwallowCase] = [
         "cat6_safe_curl_http_code",
         "tests/integration/test_stack_up.sh",
         [
-            '_tmp=$(mktemp); _err=$(mktemp); code=$(curl -sS -o "$_tmp" -w "%{http_code}" "$url" 2>"$_err"); rm -f "$_tmp" "$_err"',
+            '_tmp=$(mktemp); _err=$(mktemp); code=$(curl -sS -o "$_tmp" -w "%{http_code}" "$url" 2>"$_err"); _curl_rc=$?; rm -f "$_tmp" "$_err"',
         ],
         _SHOULD_PASS,
         None,
