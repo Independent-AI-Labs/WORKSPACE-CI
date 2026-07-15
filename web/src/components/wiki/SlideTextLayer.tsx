@@ -46,9 +46,19 @@ export function SlideTextLayer({
       style={layerStyle}
       aria-hidden={!active}
     >
-      <h2 className="landing-stage__subtitle">{slide.subtitle}</h2>
+      <h2
+        className="landing-stage__subtitle"
+        style={{ font: subtitleType.font, lineHeight: `${subtitleType.lineHeightPx}px` }}
+      >
+        {slide.subtitle}
+      </h2>
       <div className="landing-stage__slide-panel">
-        <p className="landing-stage__body">{slide.content}</p>
+        <p
+          className="landing-stage__body"
+          style={{ font: bodyType.font, lineHeight: `${bodyType.lineHeightPx}px` }}
+        >
+          {slide.content}
+        </p>
 
         {showLinks && (
           <div className="landing-stage__links">

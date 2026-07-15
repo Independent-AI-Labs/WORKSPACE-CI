@@ -42,12 +42,6 @@ const posts: LandingPost[] = [
   },
 ]
 
-function flushCrossPostCommit() {
-  act(() => {
-    vi.advanceTimersByTime(32)
-  })
-}
-
 describe('RotatingPosts', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -86,7 +80,6 @@ describe('RotatingPosts', () => {
     expect(screen.getByText('Slide B')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
-    flushCrossPostCommit()
     expect(screen.getByText('SECOND POST')).toBeInTheDocument()
     expect(screen.getByText('Doc')).toBeInTheDocument()
   })
@@ -96,7 +89,6 @@ describe('RotatingPosts', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Page 2 of 2' }))
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
-    flushCrossPostCommit()
 
     const backdrop = container.querySelector('.landing-stage__backdrop')
     expect(backdrop).toHaveClass('is-bg-crossfading')
@@ -108,7 +100,6 @@ describe('RotatingPosts', () => {
     const { container } = render(<RotatingPosts posts={posts} settings={settings} ui={ui} />)
 
     fireEvent.click(screen.getByRole('tab', { name: 'Second' }))
-    flushCrossPostCommit()
 
     const backdrop = container.querySelector('.landing-stage__backdrop')
     expect(backdrop).toHaveClass('is-bg-crossfading')
@@ -122,7 +113,6 @@ describe('RotatingPosts', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Page 2 of 2' }))
     fireEvent.click(screen.getByRole('tab', { name: 'Second' }))
-    flushCrossPostCommit()
 
     expect(container.querySelector('.landing-stage__layer.is-leaving')).toBeTruthy()
     expect(container.querySelectorAll('.landing-stage__layer')).toHaveLength(3)
@@ -137,7 +127,6 @@ describe('RotatingPosts', () => {
     act(() => {
       vi.advanceTimersByTime(1000)
     })
-    flushCrossPostCommit()
     expect(screen.getByText('SECOND POST')).toBeInTheDocument()
     expect(screen.getByText('Doc')).toBeInTheDocument()
   })
@@ -146,7 +135,6 @@ describe('RotatingPosts', () => {
     render(<RotatingPosts posts={posts} settings={settings} ui={ui} />)
 
     fireEvent.click(screen.getByRole('tab', { name: 'Second' }))
-    flushCrossPostCommit()
     expect(screen.getByText('SECOND POST')).toBeInTheDocument()
     expect(screen.getByText('Doc')).toBeInTheDocument()
   })

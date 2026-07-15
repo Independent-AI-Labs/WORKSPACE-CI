@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { flushSync } from 'react-dom'
 import clsx from 'clsx'
 import type { LandingPost, LandingSettings, LandingUi } from '@/lib/landing-posts'
 import {
@@ -26,9 +25,6 @@ interface RotatingPostsProps {
 }
 
 type SlidePosition = { postIndex: number; slideIndex: number }
-
-/** One frame so incoming post layers paint at opacity 0 before crossfade. */
-const CROSS_POST_COMMIT_DELAY_MS = 32
 
 function sameSlidePosition(a: SlidePosition, b: SlidePosition): boolean {
   return a.postIndex === b.postIndex && a.slideIndex === b.slideIndex
@@ -56,15 +52,15 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
   const [bodyType, setBodyType] = useState<PretextTypography | null>(null)
   const [panBySlide, setPanBySlide] = useState<Record<string, SlidePan>>({})
   const [prefadingSlideIndex, setPrefadingSlideIndex] = useState<number | null>(null)
-  const [incomingPreview, setIncomingPreview] = useState<SlidePosition | null>(null)
   const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prefadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const transitionDeferRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const activeSlideRef = useRef(activeSlide)
   const contentRef = useRef<HTMLDivElement>(null)
   const probeRef = useRef<HTMLDivElement>(null)
 
-  activeSlideRef.current = activeSlide
+  useEffect(() => {
+    activeSlideRef.current = activeSlide
+  }, [activeSlide])
 
   const postIndex = activeSlide.postIndex
   const slideIndex = activeSlide.slideIndex
@@ -87,7 +83,6 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
     }
     leaveTimerRef.current = setTimeout(() => {
       setLeavingSlide(null)
-      setIncomingPreview(null)
       setPrefadingSlideIndex(null)
       leaveTimerRef.current = null
     }, settings.transition_ms)
@@ -101,10 +96,6 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
       const targetPost = posts[incoming.postIndex]
       if (!targetPost) return
 
-      if (transitionDeferRef.current !== null) {
-        clearTimeout(transitionDeferRef.current)
-        transitionDeferRef.current = null
-      }
       if (leaveTimerRef.current) {
         clearTimeout(leaveTimerRef.current)
         leaveTimerRef.current = null
@@ -124,28 +115,11 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
         ),
       )
 
-      const crossPost = outgoing.postIndex !== incoming.postIndex
-
-      const commit = () => {
-        setLeavingSlide(outgoing)
-        setActiveSlide(incoming)
-        setIncomingPreview(null)
-        transitionDeferRef.current = null
-        scheduleLeaveClear()
-      }
-
-      if (crossPost && !reducedMotion) {
-        flushSync(() => {
-          setLeavingSlide(null)
-          setIncomingPreview(incoming)
-        })
-        transitionDeferRef.current = setTimeout(commit, CROSS_POST_COMMIT_DELAY_MS)
-      } else {
-        setIncomingPreview(null)
-        commit()
-      }
+      setLeavingSlide(outgoing)
+      setActiveSlide(incoming)
+      scheduleLeaveClear()
     },
-    [initialPanBySlide, posts, reducedMotion, scheduleLeaveClear],
+    [initialPanBySlide, posts, scheduleLeaveClear],
   )
 
   const transitionToSlide = useCallback(
@@ -219,9 +193,6 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
 
   useEffect(() => {
     return () => {
-      if (transitionDeferRef.current !== null) {
-        clearTimeout(transitionDeferRef.current)
-      }
       if (leaveTimerRef.current) {
         clearTimeout(leaveTimerRef.current)
       }
@@ -298,15 +269,8 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
       ? leavingSlide
       : null
 
-  const renderedPostIndices = useMemo(() => {
-    const indices = new Set<number>([activeSlide.postIndex])
-    if (incomingPreview !== null) {
-      indices.add(incomingPreview.postIndex)
-    } else if (crossPostLeaving !== null) {
-      indices.add(crossPostLeaving.postIndex)
-    }
-    return [...indices]
-  }, [activeSlide.postIndex, crossPostLeaving, incomingPreview])
+  // Keep every post mounted so cross-post crossfades have painted start states.
+  const renderedPostIndices = useMemo(() => posts.map((_, i) => i), [posts])
 
   const slideIndicators = useMemo(
     () =>
@@ -353,11 +317,8 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
         <div
           className={clsx(
             'landing-stage__backdrop',
-            prefadingSlideIndex !== null &&
-              leavingSlide === null &&
-              incomingPreview === null &&
-              'is-bg-prefading',
-            (leavingSlide !== null || incomingPreview !== null) && 'is-bg-crossfading',
+            prefadingSlideIndex !== null && leavingSlide === null && 'is-bg-prefading',
+            leavingSlide !== null && 'is-bg-crossfading',
           )}
           style={{
             ['--landing-fade-ms' as string]: `${settings.transition_ms}ms`,
