@@ -53,11 +53,29 @@ _restore_configs() {
     done
 }
 
+_link_lib_files() {
+    local _ci_dir="$1"
+    local f src
+    for f in ci.sh ci_helpers.sh ci_config_paths.sh checks.sh checks_*.sh \
+             check_banned_words.py check_silent_swallow.py \
+             check_silent_swallow_base.py check_silent_swallow_python.py \
+             check_silent_swallow_js.py check_silent_swallow_system.py \
+             check_silent_swallow_ansible.py resolve_config_path.py; do
+        for src in "$LIB_DIR"/$f; do
+            [[ -f "$src" ]] || continue
+            local _dest="$_ci_dir/lib/$(basename "$src")"
+            [[ -e "$_dest" ]] || ln -s "$src" "$_dest"
+        done
+    done
+    [[ -e "$_ci_dir/pyproject.toml" ]] || ln -s "$PROJECT_DIR/pyproject.toml" "$_ci_dir/pyproject.toml"
+}
+
 _setup_tmpdir() {
     if [[ -n "${TEST_TMP:-}" && -d "${TEST_TMP:-}/workspace/projects/CI/lib" ]]; then
         # Reuse existing tmpdir: reset git state and remove test-created
         # regular files (preserving symlinked lib originals).
         local _ci_dir="$TEST_TMP/workspace/projects/CI"
+        _link_lib_files "$_ci_dir"
         _scrub_dir "$_ci_dir/.git"
         # Remove regular files in CI dir (not symlinks). find without -L
         # does not follow symlinks, so symlinked lib files are preserved.
@@ -98,17 +116,7 @@ _setup_tmpdir() {
     # create NEW files in lib/ (e.g. test_portable_shell.sh's evil_test.sh)
     # write regular files into the symlinked directory; the new files are
     # real, the symlinked originals are read-only references.
-    local f
-    for f in ci.sh checks.sh checks_*.sh check_banned_words.py \
-             check_silent_swallow.py check_silent_swallow_base.py \
-             check_silent_swallow_python.py check_silent_swallow_js.py \
-             check_silent_swallow_system.py check_silent_swallow_ansible.py \
-             resolve_config_path.py; do
-        local src
-        for src in "$LIB_DIR"/$f; do
-            [[ -f "$src" ]] && ln -s "$src" "$_ci_dir/lib/$(basename "$src")"
-        done
-    done
+    _link_lib_files "$_ci_dir"
     # Copy config files (not symlinks): tests write fixtures to them.
     _restore_configs "$_ci_dir"
     # Minimal pyproject.toml at workspace root
@@ -173,6 +181,10 @@ _source_lib() {
     if [[ ! -d ".git" ]]; then
         git init -q .
     fi
+    # Unit tests must not inherit CI path env from the host shell (hooks export these).
+    unset CI_CONFIG_DIR CI_PROJECT_ROOT CI_LIB_DIR CI_SCAN_ROOT
+    unset CI_CONFIG_OVERRIDES WORKSPACE_CI_CONFIG_ROOT
+    unset CI_GUARD_CONFIG_OVERRIDES WORKSPACE_GUARD_CONFIG_ROOT
     source lib/checks.sh
 }
 
