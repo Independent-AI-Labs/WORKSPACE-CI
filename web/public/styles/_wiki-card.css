@@ -133,6 +133,13 @@ code.wiki-card__title {
   font-size: var(--text-sm);
   line-height: var(--leading-relaxed);
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.wiki-card__description > p {
+  margin: 0;
 }
 
 .wiki-card__tags {

@@ -47,6 +47,24 @@
   padding: 0;
 }
 
+.prose pre.shiki {
+  margin: var(--space-3) 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.prose pre.shiki code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-family: inherit;
+  font-size: inherit;
+}
+
 /* .prose table + th/td base now provided by .table; margin is unique */
 .prose table {
   margin: var(--space-3) 0;

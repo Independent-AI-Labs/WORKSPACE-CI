@@ -63,10 +63,14 @@ export function WikiCard({ item, children, viewDetails }: WikiCardProps) {
       )}
 
       {item.description && (
-        <p
-          className="wiki-card__description"
-          dangerouslySetInnerHTML={{ __html: renderInlineMd(item.description) }}
-        />
+        <div className="wiki-card__description">
+          {item.description.split('\n\n').map((paragraph, i) => (
+            <p
+              key={i}
+              dangerouslySetInnerHTML={{ __html: renderInlineMd(paragraph) }}
+            />
+          ))}
+        </div>
       )}
 
       {item.tags && item.tags.length > 0 && (

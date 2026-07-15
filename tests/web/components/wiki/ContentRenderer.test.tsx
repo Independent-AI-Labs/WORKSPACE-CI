@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 
 vi.mock('@/lib/highlight', () => ({
-  highlightCode: vi.fn().mockResolvedValue('<pre><code>highlighted</code></pre>'),
+  highlightCode: vi.fn().mockImplementation(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 2))
+    return '<pre class="shiki"><code>highlighted</code></pre>'
+  }),
   escapeHtml: (s: string) =>
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'),
 }))
@@ -142,5 +145,81 @@ describe('ContentRenderer: mermaid handling', () => {
     const { container } = render(await ContentRenderer({ content }))
     expect(container.querySelector('.mermaid-frame')).toBeNull()
     expect(container.querySelector('h1')).not.toBeNull()
+  })
+})
+
+describe('ContentRenderer: code fence handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders exactly one pre per fenced code block', async () => {
+    const content = [
+      '# Demo',
+      '',
+      '```bash',
+      'echo one',
+      '```',
+      '',
+      '```python',
+      'print(2)',
+      '```',
+      '',
+      '```json',
+      '{"three": 3}',
+      '```',
+    ].join('\n')
+    const { container } = render(await ContentRenderer({ content }))
+    const pres = container.querySelectorAll('pre')
+    expect(pres).toHaveLength(3)
+    for (const pre of pres) {
+      expect(pre.closest('p')).toBeNull()
+    }
+  })
+
+  it('does not wrap highlighted pre blocks inside paragraphs', async () => {
+    const content = 'Text before\n\n```bash\necho hi\n```\n\nText after'
+    const { container } = render(await ContentRenderer({ content }))
+    const pre = container.querySelector('pre')
+    expect(pre).not.toBeNull()
+    expect(pre?.closest('p')).toBeNull()
+  })
+
+  it('produces stable identical HTML under concurrent renders', async () => {
+    const content = [
+      '# Stress',
+      '',
+      'Paragraph one.',
+      '',
+      '```bash',
+      'echo alpha',
+      '```',
+      '',
+      'Paragraph two.',
+      '',
+      '```python',
+      'print("beta")',
+      '```',
+      '',
+      '```yaml',
+      'key: gamma',
+      '```',
+    ].join('\n')
+
+    const renders = await Promise.all(
+      Array.from({ length: 24 }, () => ContentRenderer({ content })),
+    )
+    const htmlSnapshots = renders.map((el) => {
+      const { container } = render(el)
+      return container.innerHTML
+    })
+
+    const first = htmlSnapshots[0]
+    for (const html of htmlSnapshots) {
+      expect(html).toBe(first)
+    }
+
+    const { container } = render(renders[0])
+    expect(container.querySelectorAll('pre')).toHaveLength(3)
   })
 })

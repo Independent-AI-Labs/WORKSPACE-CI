@@ -53,6 +53,22 @@ describe('WikiCard', () => {
     expect(screen.getByText('A subtitle')).toBeInTheDocument()
   })
 
+  it('renders description paragraphs separated by blank lines', () => {
+    const { container } = render(
+      <WikiCard
+        item={makeItem({
+          description: 'First paragraph sentence.\n\nSecond paragraph sentence.',
+        })}
+      />,
+    )
+    const description = container.querySelector('.wiki-card__description')
+    expect(description).not.toBeNull()
+    const paragraphs = description?.querySelectorAll('p')
+    expect(paragraphs).toHaveLength(2)
+    expect(paragraphs?.[0]?.textContent).toBe('First paragraph sentence.')
+    expect(paragraphs?.[1]?.textContent).toBe('Second paragraph sentence.')
+  })
+
   it('renders tags with correct badge classes', () => {
     const { container } = render(
       <WikiCard

@@ -110,31 +110,70 @@ export function extractReadmeTitle(markdown: string): string {
   return firstLine.replace(/^#+\s*/, '').trim() || 'Untitled'
 }
 
+function isIntroBoundary(trimmed: string): boolean {
+  if (/^#{2,}\s/.test(trimmed)) return true
+  if (/^[-*_]{3,}$/.test(trimmed)) return true
+  if (trimmed.startsWith('>')) return true
+  if (/^[-*+]\s/.test(trimmed)) return true
+  if (/^\d+\.\s/.test(trimmed)) return true
+  if (trimmed.startsWith('<') || trimmed.startsWith('![')) return true
+  return false
+}
+
+const INTRO_SENTENCE_SPLIT = /(?<=\.)\s+(?=[A-Z])/
+const MAX_INTRO_SENTENCES = 2
+
 export function extractReadmeSummary(markdown: string): string {
   const lines = markdown.split('\n')
   let inCodeBlock = false
-  const summaryParts: string[] = []
+  const paragraphs: string[] = []
+  let currentLines: string[] = []
+
+  const flushParagraph = () => {
+    if (currentLines.length === 0) return
+    paragraphs.push(currentLines.join(' ').trim())
+    currentLines = []
+  }
 
   for (const line of lines) {
     const trimmed = line.trim()
 
     if (trimmed.startsWith('```')) {
       inCodeBlock = !inCodeBlock
+      if (paragraphs.length > 0 || currentLines.length > 0) break
       continue
     }
     if (inCodeBlock) continue
     if (trimmed.startsWith('#')) continue
-    if (trimmed.startsWith('<')) continue
-    if (trimmed.startsWith('![')) continue
-    if (trimmed === '' && summaryParts.length === 0) continue
-    if (trimmed === '') break
+    if (isIntroBoundary(trimmed)) break
+    if (trimmed === '') {
+      flushParagraph()
+      continue
+    }
 
-    summaryParts.push(trimmed)
+    currentLines.push(trimmed)
   }
 
-  const full = summaryParts.join(' ').trim()
-  const sentences = full.split(/(?<=\.)\s+(?=[A-Z])/)
-  return sentences.slice(0, 3).join(' ').trim()
+  flushParagraph()
+
+  let sentenceCount = 0
+  const resultParagraphs: string[] = []
+
+  for (const paragraph of paragraphs) {
+    const sentences = paragraph.split(INTRO_SENTENCE_SPLIT)
+    const taken: string[] = []
+    for (const sentence of sentences) {
+      if (sentenceCount >= MAX_INTRO_SENTENCES) break
+      taken.push(sentence)
+      sentenceCount++
+    }
+    if (taken.length > 0) {
+      resultParagraphs.push(taken.join(' ').trim())
+    }
+    if (sentenceCount >= MAX_INTRO_SENTENCES) break
+  }
+
+  return resultParagraphs.join('\n\n').trim()
 }
 
 export const loadProjectReadme = cache(
