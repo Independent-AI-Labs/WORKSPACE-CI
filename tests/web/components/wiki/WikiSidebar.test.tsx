@@ -60,17 +60,16 @@ describe('WikiSidebar', () => {
     expect(patternsLink).toHaveClass('is-active')
   })
 
-  it('renders Open Source when landing flag is off', () => {
+  it('renders Home and Projects nav items', () => {
     render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
-    expect(screen.getByText('Open Source')).toBeInTheDocument()
-    expect(screen.queryByText('Home')).not.toBeInTheDocument()
-  })
-
-  it('renders Home and Projects when landing flag is on', () => {
-    render(<WikiSidebar stats={mockStats} branding={mockBranding} homeLandingEnabled />)
     expect(screen.getByText('Home')).toBeInTheDocument()
     expect(screen.getByText('Projects')).toBeInTheDocument()
-    expect(screen.queryByText('Open Source')).not.toBeInTheDocument()
+  })
+
+  it('renders clickable brand link to home', () => {
+    render(<WikiSidebar stats={mockStats} branding={mockBranding} />)
+    const brand = screen.getByRole('link', { name: /workspace.*guardrails logo/i })
+    expect(brand).toHaveAttribute('href', '/')
   })
 
   it('renders all nav items', () => {

@@ -12,9 +12,20 @@ describe('isHomeLandingEnabled', () => {
     }
   })
 
-  it('returns false when unset', () => {
+  it('returns true in development when unset', () => {
     delete process.env.WIKI_HOME_LANDING_ENABLED
+    const prev = process.env.NODE_ENV
+    process.env.NODE_ENV = 'development'
+    expect(isHomeLandingEnabled()).toBe(true)
+    process.env.NODE_ENV = prev
+  })
+
+  it('returns false in production when unset', () => {
+    delete process.env.WIKI_HOME_LANDING_ENABLED
+    const prev = process.env.NODE_ENV
+    process.env.NODE_ENV = 'production'
     expect(isHomeLandingEnabled()).toBe(false)
+    process.env.NODE_ENV = prev
   })
 
   it('returns true for true/1/yes', () => {

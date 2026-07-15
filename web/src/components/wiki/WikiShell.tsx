@@ -28,11 +28,11 @@ export function WikiShell({ children, contentClassName }: WikiShellProps) {
         Skip to content
       </a>
       <MobileNavToggle />
-      <WikiSidebar stats={stats} branding={branding} homeLandingEnabled={homeLandingEnabled} />
+      <WikiSidebar stats={stats} branding={branding} />
       <div className="wiki-main">
         <header className="wiki-header" role="banner">
           <div className="wiki-header__left">
-            <WikiBreadcrumbs homeLandingEnabled={homeLandingEnabled} />
+            <WikiBreadcrumbs />
           </div>
           <div className="wiki-header__actions">
             <ThemeToggle />

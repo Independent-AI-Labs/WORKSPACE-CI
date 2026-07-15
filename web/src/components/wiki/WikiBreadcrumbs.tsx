@@ -4,17 +4,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { pageTitle } from '@/lib/utils'
 
-function rootCrumb(homeLandingEnabled: boolean): { label: string; href: string } {
-  if (homeLandingEnabled) return { label: 'Home', href: '/' }
-  return { label: 'Open Source', href: '/' }
-}
-
-function getBreadcrumbs(
-  pathname: string,
-  homeLandingEnabled: boolean,
-): { label: string; href: string }[] {
+function getBreadcrumbs(pathname: string): { label: string; href: string }[] {
   const parts = pathname.split('/').filter(Boolean)
-  const root = rootCrumb(homeLandingEnabled)
+  const root = { label: 'Home', href: '/' }
 
   if (parts.length === 0) {
     return [root]
@@ -24,7 +16,7 @@ function getBreadcrumbs(
   const crumbs: { label: string; href: string }[] = []
   for (const part of parts) {
     href += `/${part}`
-    const title = pageTitle(href, homeLandingEnabled)
+    const title = pageTitle(href)
     const label = title !== href ? title : part
     crumbs.push({ label, href })
   }
@@ -45,13 +37,9 @@ function buildJsonLd(crumbs: { label: string; href: string }[]) {
   }
 }
 
-interface WikiBreadcrumbsProps {
-  homeLandingEnabled?: boolean
-}
-
-export function WikiBreadcrumbs({ homeLandingEnabled = false }: WikiBreadcrumbsProps) {
+export function WikiBreadcrumbs() {
   const pathname = usePathname()
-  const crumbs = getBreadcrumbs(pathname, homeLandingEnabled)
+  const crumbs = getBreadcrumbs(pathname)
 
   return (
     <nav className="wiki-breadcrumbs" aria-label="Breadcrumb">

@@ -18,6 +18,20 @@
   min-height: var(--wiki-chrome-header-height);
 }
 
+.wiki-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  flex: 1;
+  color: inherit;
+  text-decoration: none;
+}
+
+.wiki-sidebar__brand:hover .wiki-sidebar__title {
+  color: var(--link);
+}
+
 .wiki-sidebar__logo {
   width: var(--space-8);
   height: var(--space-8);
@@ -127,7 +141,10 @@
     padding: var(--space-3) var(--space-1);
   }
 
-  [data-sidebar-collapsed='true'] .wiki-sidebar__logo,
+  [data-sidebar-collapsed='true'] .wiki-sidebar__brand {
+    flex: 0;
+  }
+
   [data-sidebar-collapsed='true'] .wiki-sidebar__title {
     display: none !important;
   }

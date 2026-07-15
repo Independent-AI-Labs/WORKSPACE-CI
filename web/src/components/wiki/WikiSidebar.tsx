@@ -16,7 +16,8 @@ interface NavItem {
   divider?: boolean
 }
 
-const BASE_NAV_ITEMS: NavItem[] = [
+const NAV_ITEMS: NavItem[] = [
+  { href: '/', label: 'Home', icon: 'ri-home-line' },
   { href: '/projects', label: 'Projects', icon: 'ri-dna-line' },
   { href: '/hooks', label: 'Git Hooks', icon: 'ri-git-commit-line', count: 'hooks' },
   { href: '/runtime-hooks', label: 'Runtime Hooks', icon: 'ri-pulse-line', count: 'runtimeHooks' },
@@ -31,13 +32,6 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { href: '/integration', label: 'Integration Guide', icon: 'ri-plug-line', divider: true },
 ]
 
-function buildNavItems(homeLandingEnabled: boolean): NavItem[] {
-  if (!homeLandingEnabled) {
-    return [{ href: '/', label: 'Open Source', icon: 'ri-dna-line' }, ...BASE_NAV_ITEMS.slice(1)]
-  }
-  return [{ href: '/', label: 'Home', icon: 'ri-home-line' }, ...BASE_NAV_ITEMS]
-}
-
 function isPathActive(pathname: string, href: string): boolean {
   if (href === '/') return pathname === '/'
   if (href === '/projects') return pathname === '/projects'
@@ -47,11 +41,9 @@ function isPathActive(pathname: string, href: string): boolean {
 interface WikiSidebarProps {
   stats: WikiStats
   branding: Branding
-  homeLandingEnabled?: boolean
 }
 
-export function WikiSidebar({ stats, branding, homeLandingEnabled = false }: WikiSidebarProps) {
-  const navItems = buildNavItems(homeLandingEnabled)
+export function WikiSidebar({ stats, branding }: WikiSidebarProps) {
   const pathname = usePathname()
   const collapsed = useSidebarStore((s) => s.collapsed)
   const mobileOpen = useSidebarStore((s) => s.mobileOpen)
@@ -61,17 +53,25 @@ export function WikiSidebar({ stats, branding, homeLandingEnabled = false }: Wik
   return (
     <nav id="wiki-sidebar" className={clsx('wiki-sidebar', mobileOpen && 'is-open')} role="navigation" aria-label="Wiki navigation">
       <div className="wiki-sidebar__header">
-        <ThemeLogo
-          src={branding.logo_path}
-          srcDark={branding.logo_path_dark}
-          srcLight={branding.logo_path_light}
-          className="wiki-sidebar__logo"
-          alt={`${branding.sidebar_title_thin}${branding.sidebar_title_bold} logo`}
-          colorVar="var(--text)"
-        />
-        <span className="wiki-sidebar__title">
-          <span className="wiki-sidebar__title-thin">{branding.sidebar_title_thin}</span>{branding.sidebar_title_bold}
-        </span>
+        <Link
+          href="/"
+          className="wiki-sidebar__brand"
+          title="Home"
+          onClick={() => setMobileOpen(false)}
+        >
+          <ThemeLogo
+            src={branding.logo_path}
+            srcDark={branding.logo_path_dark}
+            srcLight={branding.logo_path_light}
+            className="wiki-sidebar__logo"
+            alt={`${branding.sidebar_title_thin}${branding.sidebar_title_bold} logo`}
+            colorVar="var(--text)"
+          />
+          <span className="wiki-sidebar__title">
+            <span className="wiki-sidebar__title-thin">{branding.sidebar_title_thin}</span>
+            {branding.sidebar_title_bold}
+          </span>
+        </Link>
         <button
           type="button"
           className="wiki-sidebar__toggle"
@@ -89,7 +89,7 @@ export function WikiSidebar({ stats, branding, homeLandingEnabled = false }: Wik
         </button>
       </div>
       <ul className="wiki-sidebar__nav">
-        {navItems.map((item) => {
+        {NAV_ITEMS.map((item) => {
           const isActive = isPathActive(pathname, item.href)
           const count = item.count ? stats[item.count] : undefined
           return (
