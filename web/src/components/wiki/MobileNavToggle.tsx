@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { useNarrowViewport } from '@/hooks/useNarrowViewport'
 import { useSidebarStore } from '@/stores/sidebar-store'
@@ -12,12 +12,6 @@ export function MobileNavToggle() {
   const mobileOpen = useSidebarStore((s) => s.mobileOpen)
   const setMobileOpen = useSidebarStore((s) => s.setMobileOpen)
   const toggle = useSidebarStore((s) => s.toggle)
-  const [chromeReady, setChromeReady] = useState(false)
-
-  useLayoutEffect(() => {
-    useSidebarStore.getState().hydrate()
-    setChromeReady(true)
-  }, [])
 
   useEffect(() => {
     const sidebar = document.getElementById('wiki-sidebar')
@@ -41,14 +35,12 @@ export function MobileNavToggle() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [mobileOpen, setMobileOpen])
 
-  const isCollapsed = chromeReady && collapsed
-
   return (
     <>
       <button
         type="button"
         className="mobile-nav-toggle"
-        aria-expanded={isNarrow ? mobileOpen : !isCollapsed}
+        aria-expanded={isNarrow ? mobileOpen : !collapsed}
         aria-controls="wiki-sidebar"
         aria-label={isNarrow ? 'Open navigation menu' : 'Expand sidebar'}
         onClick={() => (isNarrow ? setMobileOpen(true) : toggle())}
