@@ -50,15 +50,36 @@ function assignPanAxisForSlide(
   prev: Record<string, SlidePan>,
   postId: string,
   slideIndex: number,
+  seed?: SlidePan,
 ): Record<string, SlidePan> {
   const key = panSlideKey(postId, slideIndex)
   return {
     ...prev,
     [key]: {
       axis: randomPanAxis(),
-      token: (prev[key]?.token ?? 0) + 1,
+      token: (prev[key]?.token ?? seed?.token ?? 0) + 1,
     },
   }
+}
+
+function buildInitialPanMap(posts: LandingPost[]): Record<string, SlidePan> {
+  const map: Record<string, SlidePan> = {}
+  for (const p of posts) {
+    for (let i = 0; i < p.slides.length; i++) {
+      map[panSlideKey(p.id, i)] = { axis: randomPanAxis(), token: 1 }
+    }
+  }
+  return map
+}
+
+function resolveSlidePan(
+  panBySlide: Record<string, SlidePan>,
+  initialPanBySlide: Record<string, SlidePan>,
+  postId: string,
+  slideIndex: number,
+): SlidePan {
+  const key = panSlideKey(postId, slideIndex)
+  return panBySlide[key] ?? initialPanBySlide[key] ?? DEFAULT_PAN
 }
 
 function SlideLayer({
@@ -156,6 +177,8 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
   const slide = post?.slides[slideIndex]
   const slideCount = post?.slides.length ?? 0
 
+  const initialPanBySlide = useMemo(() => buildInitialPanMap(posts), [posts])
+
   const fadeLeadMs = Math.min(900, Math.max(400, Math.floor(settings.transition_ms * 0.65)))
 
   const resetTimer = useCallback(() => {
@@ -174,7 +197,14 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
         prefadeTimerRef.current = null
       }
       const outgoing = slideIndex
-      setPanBySlide((prev) => assignPanAxisForSlide(prev, post.id, nextIndex))
+      setPanBySlide((prev) =>
+        assignPanAxisForSlide(
+          prev,
+          post.id,
+          nextIndex,
+          initialPanBySlide[panSlideKey(post.id, nextIndex)],
+        ),
+      )
       setLeavingSlideIndex(outgoing)
       setSlideIndex(nextIndex)
       leaveTimerRef.current = setTimeout(() => {
@@ -183,7 +213,7 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
         leaveTimerRef.current = null
       }, settings.transition_ms)
     },
-    [post, slideIndex, settings.transition_ms],
+    [initialPanBySlide, post, slideIndex, settings.transition_ms],
   )
 
   const goNext = useCallback(() => {
@@ -209,12 +239,14 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
       }
       setPrefadingSlideIndex(null)
       setLeavingSlideIndex(null)
-      setPanBySlide((prev) => assignPanAxisForSlide(prev, targetPost.id, 0))
+      setPanBySlide((prev) =>
+        assignPanAxisForSlide(prev, targetPost.id, 0, initialPanBySlide[panSlideKey(targetPost.id, 0)]),
+      )
       setPostIndex(index)
       setSlideIndex(0)
       resetTimer()
     },
-    [postIndex, posts, resetTimer],
+    [initialPanBySlide, postIndex, posts, resetTimer],
   )
 
   const goToSlide = useCallback(
@@ -245,12 +277,6 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
       }
     }
   }, [])
-
-  useEffect(() => {
-    if (!post) return
-    const key = panSlideKey(post.id, slideIndex)
-    setPanBySlide((prev) => (prev[key] ? prev : assignPanAxisForSlide(prev, post.id, slideIndex)))
-  }, [post?.id, slideIndex])
 
   useLayoutEffect(() => {
     const content = contentRef.current
@@ -379,7 +405,7 @@ export function RotatingPosts({ posts, settings, ui }: RotatingPostsProps) {
               leaving={i === leavingSlideIndex}
               transitionMs={settings.transition_ms}
               panDurationMs={settings.background_pan_duration_ms}
-              pan={panBySlide[panSlideKey(post.id, i)] ?? DEFAULT_PAN}
+              pan={resolveSlidePan(panBySlide, initialPanBySlide, post.id, i)}
             />
           ))}
           <div className="landing-stage__scrim" />
