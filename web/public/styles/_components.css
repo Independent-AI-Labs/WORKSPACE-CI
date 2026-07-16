@@ -161,8 +161,6 @@
      z-index is handled by the browser. ::backdrop styles
      the dimming layer. */
   .modal-dialog {
-    display: flex;
-    flex-direction: column;
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
@@ -172,6 +170,13 @@
     color: var(--text);
     max-width: 90vw;
     max-height: 90vh;
+  }
+
+  /* Flex only when open: display:flex on a closed <dialog> overrides the
+     UA display:none and leaves every modal visible on the page. */
+  .modal-dialog[open] {
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
   }
 

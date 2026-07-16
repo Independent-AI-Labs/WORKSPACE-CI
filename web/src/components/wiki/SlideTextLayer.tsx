@@ -66,6 +66,11 @@ export function SlideTextLayer({
   const hasExternalSource = Boolean(sourceUrl && !isInternalSourceUrl(sourceUrl))
   const hasResources = showDownload || hasExternalSource
 
+  const linkPrefixClass = clsx(
+    'landing-stage__post-title',
+    layout === 'stacked' && 'landing-stage__post-title--stacked',
+  )
+
   const bodyPanel = (
     <>
       <p
@@ -79,7 +84,7 @@ export function SlideTextLayer({
         <div className="landing-stage__link-groups">
           {hasInternalSource && sourceUrl && (
             <div className="landing-stage__link-group">
-              <p className="landing-stage__link-prefix">{solutionsLinkPrefix}</p>
+              <p className={linkPrefixClass}>{solutionsLinkPrefix}</p>
               <div className="landing-stage__links">
                 <Link href={sourceUrl} className="landing-stage__link landing-stage__link--internal">
                   <i className="ri-arrow-right-s-line" aria-hidden="true" />
@@ -90,7 +95,7 @@ export function SlideTextLayer({
           )}
           {hasResources && (
             <div className="landing-stage__link-group">
-              <p className="landing-stage__link-prefix">{resourcesLinkPrefix}</p>
+              <p className={linkPrefixClass}>{resourcesLinkPrefix}</p>
               <div className="landing-stage__links">
                 {showDownload && (
                   <a href={slide.src} className="landing-stage__link landing-stage__link--download" download>

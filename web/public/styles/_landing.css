@@ -230,7 +230,7 @@
 }
 
 .landing-stage__copy-panel--stacked-head .landing-stage__post-title--stacked {
-  margin: 0;
+  margin: 0 0 var(--space-6);
 }
 
 .landing-stage__copy-panel--stacked-tail {

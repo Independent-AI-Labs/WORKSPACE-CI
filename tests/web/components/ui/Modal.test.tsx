@@ -12,6 +12,7 @@ describe('Modal', () => {
     const dialog = screen.getByText('Hidden content').closest('dialog')
     expect(dialog).not.toBeNull()
     expect(dialog!.open).toBe(false)
+    expect(dialog).not.toHaveAttribute('open')
   })
 
   it('renders children when open', () => {
