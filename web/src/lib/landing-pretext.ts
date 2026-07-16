@@ -7,14 +7,11 @@ export interface PretextTypography {
 
 const SUBTITLE_GAP_PX = 12
 
-/** Horizontal padding on `.landing-stage__copy-panel` (space-6 × 2). */
-export const SLIDE_PANEL_PADDING_X_PX = 48
+/** Link group prefix + one link pill row. */
+export const SLIDE_LINKS_BLOCK_HEIGHT_PX = 76
 
-/** `.landing-stage__links` margin-top (space-4) + one link pill row. */
-export const SLIDE_LINKS_BLOCK_HEIGHT_PX = 52
-
-/** Two link pills (download + source), including wrap on narrow panels. */
-export const SLIDE_LINKS_DOUBLE_BLOCK_HEIGHT_PX = 96
+/** Resources group prefix + two link pills, including wrap on narrow panels. */
+export const SLIDE_LINKS_DOUBLE_BLOCK_HEIGHT_PX = 118
 
 export function typographyFromComputed(style: CSSStyleDeclaration): PretextTypography {
   const weight = style.fontWeight || '400'
@@ -35,6 +32,13 @@ export function typographyFromComputed(style: CSSStyleDeclaration): PretextTypog
   }
 
   return { font, lineHeightPx }
+}
+
+/** Inner width where slide subtitle/body wrap inside `.landing-stage__copy-panel`. */
+export function measureTextColumnWidth(panel: HTMLElement): number {
+  const style = getComputedStyle(panel)
+  const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)
+  return Math.max(0, panel.clientWidth - paddingX)
 }
 
 export function measureTextHeight(
@@ -64,18 +68,13 @@ export function linksBlockHeight(linkCount: number): number {
 export function measureSlideTextHeight(
   subtitle: string,
   body: string,
-  contentWidth: number,
+  textColumnWidth: number,
   subtitleType: PretextTypography,
   bodyType: PretextTypography,
   linkCount = 0,
 ): number {
-  const bodyTextWidth = panelBodyTextWidth(contentWidth)
-  const subtitleHeight = measureTextHeight(subtitle, bodyTextWidth, subtitleType)
-  const bodyHeight = measureTextHeight(body, bodyTextWidth, bodyType)
+  const subtitleHeight = measureTextHeight(subtitle, textColumnWidth, subtitleType)
+  const bodyHeight = measureTextHeight(body, textColumnWidth, bodyType)
   const linksHeight = linksBlockHeight(linkCount)
   return subtitleHeight + SUBTITLE_GAP_PX + bodyHeight + linksHeight
-}
-
-export function panelBodyTextWidth(contentWidth: number): number {
-  return Math.max(0, contentWidth - SLIDE_PANEL_PADDING_X_PX)
 }

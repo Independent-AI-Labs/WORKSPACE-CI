@@ -6,6 +6,7 @@ import {
   isExternalSourceUrl,
   isInternalSourceUrl,
   resolveSubtitleColor,
+  resolveSubtitleIcon,
   type LandingSlide,
 } from '@/lib/landing-slide'
 
@@ -19,6 +20,7 @@ export {
   isInternalSourceUrl,
   isExternalSourceUrl,
   resolveSubtitleColor,
+  resolveSubtitleIcon,
 } from '@/lib/landing-slide'
 
 export interface LandingPost {
@@ -41,6 +43,8 @@ export interface LandingUi {
   missing_content_message: string
   source_link_label: string
   download_link_label: string
+  solutions_link_prefix: string
+  resources_link_prefix: string
   carousel_aria_label: string
   slide_tab_aria_label_template: string
   prev_slide_aria_label: string
@@ -129,6 +133,9 @@ function assertSlide(slide: unknown, postId: string, index: number): LandingSlid
   if (typeof s.download_label === 'string' && s.download_label.trim()) {
     result.download_label = s.download_label.trim()
   }
+  if (typeof s.subtitle_icon === 'string' && s.subtitle_icon.trim()) {
+    result.subtitle_icon = resolveSubtitleIcon(s.subtitle_icon)
+  }
   if (typeof s.subtitle_color === 'string' && s.subtitle_color.trim()) {
     result.subtitle_color = resolveSubtitleColor(s.subtitle_color)
   }
@@ -150,6 +157,8 @@ export function parseLandingPostsConfig(raw: unknown): LandingPostsConfig {
     missing_content_message: requireString(u.missing_content_message, 'ui.missing_content_message'),
     source_link_label: requireString(u.source_link_label, 'ui.source_link_label'),
     download_link_label: requireString(u.download_link_label, 'ui.download_link_label'),
+    solutions_link_prefix: optionalString(u.solutions_link_prefix, 'Browse solutions:'),
+    resources_link_prefix: optionalString(u.resources_link_prefix, 'Resources:'),
     carousel_aria_label: requireString(u.carousel_aria_label, 'ui.carousel_aria_label'),
     slide_tab_aria_label_template: requireString(
       u.slide_tab_aria_label_template,

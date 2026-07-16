@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   parseLandingPostsConfig,
   resolveSubtitleColor,
+  resolveSubtitleIcon,
   isInternalSourceUrl,
   isExternalSourceUrl,
 } from '@/lib/landing-posts'
@@ -12,6 +13,8 @@ const minimal = {
     missing_content_message: 'Missing',
     source_link_label: 'Source',
     download_link_label: 'Download PDF',
+    solutions_link_prefix: 'Browse solutions:',
+    resources_link_prefix: 'Resources:',
     carousel_aria_label: 'Carousel',
     slide_tab_aria_label_template: 'Page {n} of {total}',
     prev_slide_aria_label: 'Previous page',
@@ -50,6 +53,13 @@ describe('parseLandingPostsConfig', () => {
   it('derives text_transition_ms when omitted', () => {
     const config = parseLandingPostsConfig(minimal)
     expect(config.settings.text_transition_ms).toBe(480)
+  })
+
+  it('defaults link section prefixes when omitted', () => {
+    const { solutions_link_prefix: _s, resources_link_prefix: _r, ...ui } = minimal.ui
+    const config = parseLandingPostsConfig({ ...minimal, ui })
+    expect(config.ui.solutions_link_prefix).toBe('Browse solutions:')
+    expect(config.ui.resources_link_prefix).toBe('Resources:')
   })
 
   it('defaults post tab scroll aria labels when omitted', () => {
@@ -101,6 +111,51 @@ describe('parseLandingPostsConfig', () => {
     })
     expect(config.posts[0].slides[0].source_url).toBe('/hooks')
     expect(config.posts[0].slides[0].source_label).toBe('Git Hooks')
+  })
+
+  it('parses optional subtitle_icon remix classes', () => {
+    const config = parseLandingPostsConfig({
+      ...minimal,
+      posts: [
+        {
+          id: 'a',
+          title: 'Post A',
+          slides: [
+            {
+              type: 'image',
+              src: '/landing/a.png',
+              subtitle: 'Sub',
+              subtitle_icon: 'ri-error-warning-line',
+              content: 'Body',
+            },
+          ],
+        },
+      ],
+    })
+    expect(config.posts[0].slides[0].subtitle_icon).toBe('ri-error-warning-line')
+  })
+
+  it('rejects invalid subtitle_icon values', () => {
+    expect(() =>
+      parseLandingPostsConfig({
+        ...minimal,
+        posts: [
+          {
+            id: 'a',
+            title: 'Post A',
+            slides: [
+              {
+                type: 'image',
+                src: '/landing/a.png',
+                subtitle: 'Sub',
+                subtitle_icon: 'fa-warning',
+                content: 'Body',
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/subtitle_icon/)
   })
 
   it('resolves semantic subtitle_color tokens', () => {
@@ -204,6 +259,17 @@ describe('parseLandingPostsConfig', () => {
 
   it('rejects empty posts', () => {
     expect(() => parseLandingPostsConfig({ ...minimal, posts: [] })).toThrow()
+  })
+})
+
+describe('resolveSubtitleIcon', () => {
+  it('accepts remix icon class names', () => {
+    expect(resolveSubtitleIcon('ri-file-text-line')).toBe('ri-file-text-line')
+    expect(resolveSubtitleIcon(' ri-error-warning-line ')).toBe('ri-error-warning-line')
+  })
+
+  it('rejects non-remix icon classes', () => {
+    expect(() => resolveSubtitleIcon('fa-warning')).toThrow(/subtitle_icon/)
   })
 })
 

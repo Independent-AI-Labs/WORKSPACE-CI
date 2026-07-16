@@ -38,32 +38,34 @@ export function WikiSearch({ searchData }: WikiSearchProps) {
         onClose={search.close}
         ariaLabel="Search wiki"
         className="search-modal"
+        toolbar={
+          <div className="search-modal__input">
+            <i className="ri-search-line" aria-hidden="true" />
+            <input
+              type="text"
+              value={search.query}
+              onChange={(e) => search.setQuery(e.target.value)}
+              onKeyDown={search.handleInputKeyDown}
+              aria-label="Search query"
+              role="combobox"
+              aria-expanded={search.isOpen}
+              aria-controls={LISTBOX_ID}
+              aria-activedescendant={activeOptionId}
+              autoComplete="off"
+              autoFocus
+              className="search-modal__field"
+            />
+            <button
+              type="button"
+              className="search-modal__close"
+              onClick={search.close}
+              aria-label="Close search"
+            >
+              <i className="ri-close-line" aria-hidden="true" />
+            </button>
+          </div>
+        }
       >
-        <div className="search-modal__input">
-          <i className="ri-search-line" aria-hidden="true" />
-          <input
-            type="text"
-            value={search.query}
-            onChange={(e) => search.setQuery(e.target.value)}
-            onKeyDown={search.handleInputKeyDown}
-            aria-label="Search query"
-            role="combobox"
-            aria-expanded={search.isOpen}
-            aria-controls={LISTBOX_ID}
-            aria-activedescendant={activeOptionId}
-            autoComplete="off"
-            autoFocus
-            className="search-modal__field"
-          />
-          <button
-            type="button"
-            className="search-modal__close"
-            onClick={search.close}
-            aria-label="Close search"
-          >
-            <i className="ri-close-line" aria-hidden="true" />
-          </button>
-        </div>
         <ul className="search-modal__results" id={LISTBOX_ID} role="listbox">
           {search.results.length === 0 && search.query.trim() && (
             <li className="search-modal__empty">No results found</li>

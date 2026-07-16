@@ -17,6 +17,11 @@ NPM := $(NODE_ENV_BIN)/npm
 export PATH := $(NODE_ENV_BIN):$(BOOT_BIN):$(PATH)
 
 DEV_PORT := 3001
+DEV_START_INITIAL_SLEEP ?= 3
+DEV_START_CURL_TIMEOUT ?= 10
+DEV_START_POLL_INTERVAL ?= 2
+DEV_START_MAX_ATTEMPTS ?= 45
+DEV_SKIP_PREFLIGHT ?= 0
 SYSTEMD_UNIT := wiki-ci-dev.service
 SYSTEMD_DIR := $(HOME)/.config/systemd/user
 PROJECT_ROOT := $(abspath .)
@@ -108,11 +113,17 @@ dev-start: ## Start dev server (Next.js HMR)
 		fi; \
 	fi
 	echo "[dev-start] Installing systemd user unit -> $(SYSTEMD_DIR)/$(SYSTEMD_UNIT)"
+	_skip_env=; \
+	if [ "$(DEV_SKIP_PREFLIGHT)" = "1" ]; then \
+		_skip_env='Environment="WIKI_DEV_SKIP_PREFLIGHT=1"'; \
+		echo "[dev-start] preflight sync skipped (content synced by caller)"; \
+	fi; \
 	sed \
 		-e 's|__PROJECT_ROOT__|$(PROJECT_ROOT)|g' \
 		-e 's|__NODE_BIN__|$(NODE_ENV_BIN)|g' \
 		-e 's|__NODE__|$(NODE)|g' \
 		-e 's|__DEV_PORT__|$(DEV_PORT)|g' \
+		-e "s|__SKIP_PREFLIGHT_ENV__|$$_skip_env|g" \
 		res/wiki-ci-dev.service.tmpl > $(SYSTEMD_DIR)/$(SYSTEMD_UNIT)
 	systemctl --user daemon-reload
 	if systemctl --user is-failed $(SYSTEMD_UNIT) 2>&1; then \
@@ -125,7 +136,7 @@ dev-start: ## Start dev server (Next.js HMR)
 	fi
 	echo "[dev-start] startup log snapshot (last 30 lines):"
 	journalctl --user -u $(SYSTEMD_UNIT) -n 30 --no-pager
-	sleep 3
+	sleep $(DEV_START_INITIAL_SLEEP)
 	result=$$(systemctl --user show $(SYSTEMD_UNIT) -p Result --value 2>&1); \
 	nrest=$$(systemctl --user show $(SYSTEMD_UNIT) -p NRestarts --value 2>&1); \
 	echo "[dev-start] post-start: Result=$$result NRestarts=$$nrest"; \
@@ -138,15 +149,15 @@ dev-start: ## Start dev server (Next.js HMR)
 		echo "Hint: Result=exec/203 = binary path wrong or not executable; start-limit-hit = crash-looped."; \
 		exit 1; \
 	fi
-	echo "[dev-start] process alive, waiting for HTTP on port $(DEV_PORT) (max 120s)..."
-	for i in $$(seq 1 60); do \
+	echo "[dev-start] process alive, waiting for HTTP on port $(DEV_PORT) (curl timeout $(DEV_START_CURL_TIMEOUT)s, max $(DEV_START_MAX_ATTEMPTS) attempts)..."
+	for i in $$(seq 1 $(DEV_START_MAX_ATTEMPTS)); do \
 		state=$$(systemctl --user is-active $(SYSTEMD_UNIT) 2>&1); \
 		nrest=$$(systemctl --user show $(SYSTEMD_UNIT) -p NRestarts --value 2>&1); \
 		_curl_tmp=$$(mktemp); _curl_err=$$(mktemp); \
-		code=$$(curl -sS -o "$$_curl_tmp" -w "%{http_code}" --max-time 3 http://127.0.0.1:$(DEV_PORT)/ 2>"$$_curl_err"); _curl_rc=$$?; \
+		code=$$(curl -sS -o "$$_curl_tmp" -w "%{http_code}" --max-time $(DEV_START_CURL_TIMEOUT) http://127.0.0.1:$(DEV_PORT)/ 2>"$$_curl_err"); _curl_rc=$$?; \
 		if [ $$_curl_rc -ne 0 ]; then echo "[dev-start] curl probe (rc=$$_curl_rc): $$(cat "$$_curl_err")" >&2; fi; \
 		rm -f "$$_curl_tmp" "$$_curl_err"; \
-		echo "[dev-start] attempt $$i/60: state=$$state http=$$code restarts=$$nrest"; \
+		echo "[dev-start] attempt $$i/$(DEV_START_MAX_ATTEMPTS): state=$$state http=$$code restarts=$$nrest"; \
 		if [ "$$state" = "failed" ] || [ "$$state" = "inactive" ]; then \
 			echo ""; \
 			echo "ERROR: $(SYSTEMD_UNIT) is $$state - not retrying further."; \
@@ -170,10 +181,10 @@ dev-start: ## Start dev server (Next.js HMR)
 			echo "[dev-start] Stop:  make dev-stop"; \
 			exit 0; \
 		fi; \
-		sleep 2; \
+		sleep $(DEV_START_POLL_INTERVAL); \
 	done; \
 	echo ""; \
-	echo "ERROR: Dev server did not respond within 120s (process alive but no HTTP)."; \
+	echo "ERROR: Dev server did not respond within probe window (process alive but no HTTP)."; \
 	echo "----- journalctl --user -u $(SYSTEMD_UNIT) -n 80 --no-pager -----"; \
 	journalctl --user -u $(SYSTEMD_UNIT) -n 80 --no-pager; \
 	echo "----- end journal -----"; \
@@ -216,7 +227,7 @@ dev-restart: ## Restart dev server (stop, sync content, wipe .next, start)
 	$(MAKE) dev-sync-content
 	$(MAKE) clean-build
 	echo "[dev-restart] wiped .next (fixes stale @swc/helpers turbopack chunks)"
-	$(MAKE) dev-start
+	$(MAKE) dev-start DEV_SKIP_PREFLIGHT=1 DEV_START_INITIAL_SLEEP=2 DEV_START_CURL_TIMEOUT=15
 
 .PHONY: dev-status
 dev-status: ## Show dev server status

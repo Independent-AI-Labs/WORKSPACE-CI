@@ -2,11 +2,6 @@
   width: min(720px, 90vw);
 }
 
-.makefile-dialog .config-dialog__body {
-  height: 55vh;
-  overflow-y: auto;
-}
-
 /* ---- Makefile target cards ---- */
 
 .makefile-cards {

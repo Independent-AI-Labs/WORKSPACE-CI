@@ -122,6 +122,8 @@ export function LandingStageStacked({
           showLinks={slideShowLinks}
           downloadLabel={slide.download_label ?? ui.download_link_label}
           sourceLabel={slide.source_label ?? ui.source_link_label}
+          solutionsLinkPrefix={ui.solutions_link_prefix}
+          resourcesLinkPrefix={ui.resources_link_prefix}
           layout="stacked"
         />
       </div>

@@ -43,43 +43,43 @@ export function MakefileDialog({
         titleId={titleId}
         ariaLabel={`Makefile targets for ${name}`}
         className="makefile-dialog"
+        toolbar={
+          <div className="config-dialog__tabs">
+            <button
+              type="button"
+              className={`config-dialog__tab${activeTab === 'targets' ? ' is-active' : ''}`}
+              onClick={() => setActiveTab('targets')}
+            >
+              Targets
+            </button>
+            <button
+              type="button"
+              className={`config-dialog__tab${activeTab === 'file' ? ' is-active' : ''}`}
+              onClick={() => setActiveTab('file')}
+            >
+              File
+            </button>
+          </div>
+        }
       >
-        <div className="config-dialog__tabs">
-          <button
-            type="button"
-            className={`config-dialog__tab${activeTab === 'targets' ? ' is-active' : ''}`}
-            onClick={() => setActiveTab('targets')}
-          >
-            Targets
-          </button>
-          <button
-            type="button"
-            className={`config-dialog__tab${activeTab === 'file' ? ' is-active' : ''}`}
-            onClick={() => setActiveTab('file')}
-          >
-            File
-          </button>
-        </div>
-        <div className="config-dialog__body">
-          {activeTab === 'targets' ? (
-            targets.length > 0 ? (
-              <MakefileTargetCards targets={targets} />
-            ) : (
-              <p className="warning">No public targets found in Makefile.</p>
-            )
+        {activeTab === 'targets' ? (
+          targets.length > 0 ? (
+            <MakefileTargetCards targets={targets} />
           ) : (
-            <div className="entry-point-dialog__code-wrapper">
-              <CopyButton text={rawContent} label="Copy Makefile" />
-              <div className="entry-point-dialog__file" style={{ marginBottom: 'var(--space-2)' }}>
-                {sourceFile}
-              </div>
-              <div
-                className="entry-point-dialog__code"
-                dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-              />
+            <p className="warning">No public targets found in Makefile.</p>
+          )
+        ) : (
+          <div className="entry-point-dialog__code-wrapper">
+            <CopyButton text={rawContent} label="Copy Makefile" />
+            <div className="entry-point-dialog__file" style={{ marginBottom: 'var(--space-2)' }}>
+              {sourceFile}
             </div>
-          )}
-        </div>
+            <div
+              className="entry-point-dialog__code"
+              dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+            />
+          </div>
+        )}
       </Modal>
     </>
   )

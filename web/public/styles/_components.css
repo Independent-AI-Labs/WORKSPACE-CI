@@ -161,6 +161,8 @@
      z-index is handled by the browser. ::backdrop styles
      the dimming layer. */
   .modal-dialog {
+    display: flex;
+    flex-direction: column;
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
@@ -170,7 +172,7 @@
     color: var(--text);
     max-width: 90vw;
     max-height: 90vh;
-    overflow: auto;
+    overflow: hidden;
   }
 
   .modal-dialog::backdrop {
@@ -179,10 +181,16 @@
 
   .modal-dialog__header {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: space-between;
     padding: var(--space-3) var(--space-4);
     border-bottom: 1px solid var(--border);
+  }
+
+  .modal-dialog > .config-dialog__tabs,
+  .modal-dialog > .search-modal__input {
+    flex-shrink: 0;
   }
 
   .modal-dialog__title {
@@ -195,7 +203,10 @@
     flex-shrink: 0;
   }
 
-  .modal-dialog__content {
+  .modal-dialog__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
     padding: var(--space-4);
   }
 

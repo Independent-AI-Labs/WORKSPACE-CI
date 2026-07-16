@@ -6,6 +6,7 @@ import type { LandingPost, LandingSettings, LandingUi } from '@/lib/landing-post
 import { normalizeWindowPointer, parallaxOffset } from '@/lib/landing-pan-parallax'
 import {
   measureSlideTextHeight,
+  measureTextColumnWidth,
   typographyFromComputed,
   type PretextTypography,
 } from '@/lib/landing-pretext'
@@ -52,10 +53,10 @@ export function LandingStageCarousel({
     goToSlide,
   } = controller
 
-  const [contentWidth, setContentWidth] = useState(0)
+  const [textColumnWidth, setTextColumnWidth] = useState(0)
   const [subtitleType, setSubtitleType] = useState<PretextTypography | null>(null)
   const [bodyType, setBodyType] = useState<PretextTypography | null>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
+  const copyPanelRef = useRef<HTMLDivElement>(null)
   const probeRef = useRef<HTMLDivElement>(null)
   const viewportRef = useRef<HTMLDivElement>(null)
 
@@ -67,12 +68,12 @@ export function LandingStageCarousel({
   }, [])
 
   useLayoutEffect(() => {
-    const content = contentRef.current
+    const copyPanel = copyPanelRef.current
     const probe = probeRef.current
-    if (!content || !probe) return
+    if (!copyPanel || !probe) return
 
     const sync = () => {
-      setContentWidth(content.clientWidth)
+      setTextColumnWidth(measureTextColumnWidth(copyPanel))
       const subtitleEl = probe.querySelector('.landing-stage__subtitle')
       const bodyEl = probe.querySelector('.landing-stage__body')
       if (subtitleEl instanceof HTMLElement && bodyEl instanceof HTMLElement) {
@@ -84,7 +85,7 @@ export function LandingStageCarousel({
     sync()
     if (typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(sync)
-    observer.observe(content)
+    observer.observe(copyPanel)
     return () => observer.disconnect()
   }, [])
 
@@ -134,7 +135,7 @@ export function LandingStageCarousel({
   const bodyTypography = bodyType ?? { font: '400 22px Montserrat', lineHeightPx: 36 }
 
   const textStackHeight = useMemo(() => {
-    if (contentWidth <= 0) return undefined
+    if (textColumnWidth <= 0) return undefined
     let maxHeight = 0
     for (const p of posts) {
       for (const s of p.slides) {
@@ -144,7 +145,7 @@ export function LandingStageCarousel({
           measureSlideTextHeight(
             s.subtitle,
             s.content,
-            contentWidth,
+            textColumnWidth,
             subtitleTypography,
             bodyTypography,
             linkCount,
@@ -153,7 +154,7 @@ export function LandingStageCarousel({
       }
     }
     return maxHeight > 0 ? `${maxHeight}px` : undefined
-  }, [bodyTypography, contentWidth, posts, subtitleTypography])
+  }, [bodyTypography, posts, subtitleTypography, textColumnWidth])
 
   if (!post || !slide) return null
 
@@ -216,13 +217,12 @@ export function LandingStageCarousel({
           </div>
           <div className="landing-stage__scrim" />
 
-          <div className="landing-stage__content" ref={contentRef}>
+          <div className="landing-stage__content">
+            <div className="landing-stage__copy-panel" ref={copyPanelRef}>
             <div className="landing-stage__pretext-probe" ref={probeRef} aria-hidden="true">
               <span className="landing-stage__subtitle">Probe</span>
               <span className="landing-stage__body">Probe</span>
             </div>
-
-            <div className="landing-stage__copy-panel">
               <div
                 className="landing-stage__title-stack"
                 style={{ ['--landing-fade-ms' as string]: `${settings.transition_ms}ms` }}
@@ -263,6 +263,8 @@ export function LandingStageCarousel({
                       showLinks={slideShowLinks}
                       downloadLabel={s.download_label ?? ui.download_link_label}
                       sourceLabel={s.source_label ?? ui.source_link_label}
+                      solutionsLinkPrefix={ui.solutions_link_prefix}
+                      resourcesLinkPrefix={ui.resources_link_prefix}
                       transitionDirection={transitionDirection}
                     />
                   )

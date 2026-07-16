@@ -68,4 +68,36 @@ describe('Modal', () => {
     dialog!.dispatchEvent(new Event('cancel'))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it('renders header outside scrollable body', () => {
+    render(
+      <Modal open={true} onClose={() => {}} title="Pinned header">
+        <p>Scrollable content</p>
+      </Modal>,
+    )
+    const header = screen.getByText('Pinned header').closest('header')
+    const body = screen.getByText('Scrollable content').closest('.modal-dialog__body')
+    expect(header).toHaveClass('modal-dialog__header')
+    expect(body).toBeTruthy()
+    expect(header?.parentElement).toBe(body?.parentElement)
+    expect(body?.contains(header!)).toBe(false)
+  })
+
+  it('renders toolbar between header and body', () => {
+    render(
+      <Modal
+        open={true}
+        onClose={() => {}}
+        title="With toolbar"
+        toolbar={<div data-testid="toolbar">Tabs</div>}
+      >
+        <p>Body content</p>
+      </Modal>,
+    )
+    const dialog = screen.getByText('Body content').closest('dialog')!
+    const children = Array.from(dialog.children)
+    expect(children[0].tagName).toBe('HEADER')
+    expect(children[1]).toHaveAttribute('data-testid', 'toolbar')
+    expect(children[2]).toHaveClass('modal-dialog__body')
+  })
 })

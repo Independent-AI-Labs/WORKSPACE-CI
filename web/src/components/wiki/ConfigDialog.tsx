@@ -45,43 +45,43 @@ export function ConfigDialog({
         titleId={titleId}
         ariaLabel={`Configuration details for ${name}`}
         className="config-dialog"
+        toolbar={
+          <div className="config-dialog__tabs">
+            <button
+              type="button"
+              className={`config-dialog__tab${activeTab === 'schema' ? ' is-active' : ''}`}
+              onClick={() => setActiveTab('schema')}
+            >
+              Schema
+            </button>
+            <button
+              type="button"
+              className={`config-dialog__tab${activeTab === 'file' ? ' is-active' : ''}`}
+              onClick={() => setActiveTab('file')}
+            >
+              File
+            </button>
+          </div>
+        }
       >
-        <div className="config-dialog__tabs">
-          <button
-            type="button"
-            className={`config-dialog__tab${activeTab === 'schema' ? ' is-active' : ''}`}
-            onClick={() => setActiveTab('schema')}
-          >
-            Schema
-          </button>
-          <button
-            type="button"
-            className={`config-dialog__tab${activeTab === 'file' ? ' is-active' : ''}`}
-            onClick={() => setActiveTab('file')}
-          >
-            File
-          </button>
-        </div>
-        <div className="config-dialog__body">
-          {activeTab === 'schema' ? (
-            schema ? (
-              <SchemaFieldCards schema={schema} values={values} />
-            ) : (
-              <p className="warning">No schema file found.</p>
-            )
+        {activeTab === 'schema' ? (
+          schema ? (
+            <SchemaFieldCards schema={schema} values={values} />
           ) : (
-            <div className="entry-point-dialog__code-wrapper">
-              <CopyButton text={rawContent} label="Copy YAML" />
-              <div className="entry-point-dialog__file" style={{ marginBottom: 'var(--space-2)' }}>
-                {sourceFile}
-              </div>
-              <div
-                className="entry-point-dialog__code"
-                dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-              />
+            <p className="warning">No schema file found.</p>
+          )
+        ) : (
+          <div className="entry-point-dialog__code-wrapper">
+            <CopyButton text={rawContent} label="Copy YAML" />
+            <div className="entry-point-dialog__file" style={{ marginBottom: 'var(--space-2)' }}>
+              {sourceFile}
             </div>
-          )}
-        </div>
+            <div
+              className="entry-point-dialog__code"
+              dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+            />
+          </div>
+        )}
       </Modal>
     </>
   )

@@ -84,42 +84,41 @@ export function FeedbackWidget({
         title="Share feedback"
         titleId={`feedback-title-${targetId}`}
         ariaLabel="Feedback dialog"
+        className="feedback-dialog"
       >
-        <div className="feedback-dialog__body">
-          <p className="feedback-dialog__vote">
-            {pendingVote === 'up' ? (
-              <>
-                <i className="ri-thumb-up-fill" aria-hidden="true" /> You voted thumbs up
-              </>
-            ) : (
-              <>
-                <i className="ri-thumb-down-fill" aria-hidden="true" /> You voted thumbs down
-              </>
-            )}
-          </p>
-          <textarea
-            className="feedback-dialog__comment"
-            aria-label="Optional: tell us more"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            rows={3}
-          />
-          <div className="feedback-dialog__actions">
-            <button
-              type="button"
-              className="btn btn--sm"
-              onClick={handleCancel}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="btn btn--sm btn--primary"
-              onClick={handleSubmit}
-            >
-              Submit
-            </button>
-          </div>
+        <p className="feedback-dialog__vote">
+          {pendingVote === 'up' ? (
+            <>
+              <i className="ri-thumb-up-fill" aria-hidden="true" /> You voted thumbs up
+            </>
+          ) : (
+            <>
+              <i className="ri-thumb-down-fill" aria-hidden="true" /> You voted thumbs down
+            </>
+          )}
+        </p>
+        <textarea
+          className="feedback-dialog__comment"
+          aria-label="Optional: tell us more"
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          rows={3}
+        />
+        <div className="feedback-dialog__actions">
+          <button
+            type="button"
+            className="btn btn--sm"
+            onClick={handleCancel}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn btn--sm btn--primary"
+            onClick={handleSubmit}
+          >
+            Submit
+          </button>
         </div>
       </Modal>
     </div>

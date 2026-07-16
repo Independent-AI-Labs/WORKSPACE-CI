@@ -10,10 +10,20 @@ interface ModalProps {
   titleId?: string
   ariaLabel?: string
   className?: string
+  toolbar?: ReactNode
   children: ReactNode
 }
 
-export function Modal({ open, onClose, title, titleId, ariaLabel, className, children }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  title,
+  titleId,
+  ariaLabel,
+  className,
+  toolbar,
+  children,
+}: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null)
   const previousFocus = useRef<HTMLElement | null>(null)
 
@@ -68,7 +78,7 @@ export function Modal({ open, onClose, title, titleId, ariaLabel, className, chi
       onClick={handleBackdropClick}
     >
       {title && (
-        <div className="modal-dialog__header">
+        <header className="modal-dialog__header">
           <h2 id={resolvedTitleId} className="modal-dialog__title">
             {title}
           </h2>
@@ -81,9 +91,10 @@ export function Modal({ open, onClose, title, titleId, ariaLabel, className, chi
           >
             <Icon name="ri-close-line" size="sm" />
           </button>
-        </div>
+        </header>
       )}
-      <div className="modal-dialog__content">{children}</div>
+      {toolbar}
+      <div className="modal-dialog__body">{children}</div>
     </dialog>
   )
 }

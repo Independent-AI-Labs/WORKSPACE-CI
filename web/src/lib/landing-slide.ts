@@ -9,11 +9,14 @@ export interface LandingSlide {
   src: string
   subtitle: string
   content: string
+  subtitle_icon?: string
   subtitle_color?: string
   source_url?: LandingSourceUrl
   source_label?: string
   download_label?: string
 }
+
+const REMIX_ICON_PATTERN = /^ri-[a-z0-9-]+$/
 
 const SUBTITLE_COLOR_TOKENS = new Set([
   'accent',
@@ -34,6 +37,16 @@ export function isInternalSourceUrl(url: string): boolean {
 
 export function isExternalSourceUrl(url: string): boolean {
   return url.startsWith('http://') || url.startsWith('https://')
+}
+
+export function resolveSubtitleIcon(value: string): string {
+  const trimmed = value.trim()
+  if (!REMIX_ICON_PATTERN.test(trimmed)) {
+    throw new Error(
+      `landing-posts.yaml: subtitle_icon "${value}" must be a Remix Icon class (e.g. ri-error-warning-line)`,
+    )
+  }
+  return trimmed
 }
 
 export function resolveSubtitleColor(value: string): string {

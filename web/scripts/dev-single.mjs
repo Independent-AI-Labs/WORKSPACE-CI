@@ -103,9 +103,13 @@ async function main() {
 
   await writeLock()
 
-  await import('./sync-logos.mjs')
-  await import('./fetch-web-documents.mjs')
-  await import('./sync-web-content.mjs')
+  if (process.env.WIKI_DEV_SKIP_PREFLIGHT === '1') {
+    console.error('[dev-single] skipping preflight sync (WIKI_DEV_SKIP_PREFLIGHT=1)')
+  } else {
+    await import('./sync-logos.mjs')
+    await import('./fetch-web-documents.mjs')
+    await import('./sync-web-content.mjs')
+  }
 
   const args = ['dev', '-H', HOST, '-p', String(APP_PORT), ...process.argv.slice(2)]
   const startedAt = Date.now()

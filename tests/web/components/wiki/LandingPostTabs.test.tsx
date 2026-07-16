@@ -11,6 +11,8 @@ const ui: LandingUi = {
   missing_content_message: 'Missing',
   source_link_label: 'Official source',
   download_link_label: 'Download PDF',
+  solutions_link_prefix: 'Browse solutions:',
+  resources_link_prefix: 'Resources:',
   carousel_aria_label: 'Rotating posts',
   slide_tab_aria_label_template: 'Page {n} of {total}',
   prev_slide_aria_label: 'Previous page',

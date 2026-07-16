@@ -119,7 +119,7 @@
 
 .landing-stage--stacked .landing-stage__subtitle,
 .landing-stage--stacked .landing-stage__body,
-.landing-stage--stacked .landing-stage__links {
+.landing-stage--stacked .landing-stage__link-groups {
   opacity: 1;
   filter: none;
   transform: none;
@@ -477,7 +477,7 @@
 
 .landing-stage__post-title {
   margin: 0;
-  font-size: calc(var(--text-xs) * 1.5);
+  font-size: var(--text-sm);
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;

@@ -1,9 +1,10 @@
 .landing-stage__copy-panel {
   position: relative;
   isolation: isolate;
-  display: inline-block;
-  width: fit-content;
+  display: block;
+  width: 100%;
   max-width: 100%;
+  box-sizing: border-box;
   padding: var(--space-5) var(--wiki-inset-x);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -30,6 +31,9 @@
 }
 
 .landing-stage__subtitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0 0 var(--space-4);
   font-size: calc(var(--text-2xl) * 1.35);
   font-weight: 700;
@@ -71,20 +75,32 @@
   transform: none;
 }
 
+.landing-stage__subtitle-icon {
+  flex-shrink: 0;
+  font-size: 0.82em;
+  line-height: 1;
+  color: inherit;
+}
+
+.landing-stage__subtitle-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .landing-stage__text-layer.is-reduced-motion.is-active .landing-stage__subtitle,
 .landing-stage__text-layer.is-reduced-motion.is-active .landing-stage__body,
-.landing-stage__text-layer.is-reduced-motion.is-active .landing-stage__links {
+.landing-stage__text-layer.is-reduced-motion.is-active .landing-stage__link-groups {
   opacity: 1;
 }
 
 .landing-stage__text-layer.is-reduced-motion.is-leaving .landing-stage__subtitle,
 .landing-stage__text-layer.is-reduced-motion.is-leaving .landing-stage__body,
-.landing-stage__text-layer.is-reduced-motion.is-leaving .landing-stage__links {
+.landing-stage__text-layer.is-reduced-motion.is-leaving .landing-stage__link-groups {
   opacity: 0;
 }
 
 .landing-stage__body,
-.landing-stage__links {
+.landing-stage__link-groups {
   opacity: 0;
   filter: blur(10px);
   transform: translate3d(
@@ -100,14 +116,14 @@
 }
 
 .landing-stage__text-layer.is-active .landing-stage__body,
-.landing-stage__text-layer.is-active .landing-stage__links {
+.landing-stage__text-layer.is-active .landing-stage__link-groups {
   opacity: 1;
   filter: none;
   transform: none;
 }
 
 .landing-stage__text-layer.is-leaving .landing-stage__body,
-.landing-stage__text-layer.is-leaving .landing-stage__links {
+.landing-stage__text-layer.is-leaving .landing-stage__link-groups {
   opacity: 0;
   filter: blur(8px);
   transform: translate3d(
@@ -118,7 +134,7 @@
 }
 
 .landing-stage__text-layer.is-reduced-motion .landing-stage__body,
-.landing-stage__text-layer.is-reduced-motion .landing-stage__links {
+.landing-stage__text-layer.is-reduced-motion .landing-stage__link-groups {
   filter: none;
   transform: none;
 }
@@ -132,11 +148,34 @@
   text-wrap: pretty;
 }
 
+.landing-stage__link-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.landing-stage__link-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.landing-stage__link-prefix {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-style: italic;
+  font-weight: 500;
+  line-height: var(--leading-snug);
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
 .landing-stage__links {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin-top: var(--space-4);
+  margin: 0;
 }
 
 .landing-stage__link {

@@ -7,7 +7,6 @@
   flex-wrap: wrap;
   gap: 0;
   border-bottom: 1px solid var(--border);
-  margin-bottom: var(--space-3);
 }
 
 .config-dialog__tab {
@@ -29,11 +28,6 @@
 .config-dialog__tab.is-active {
   color: var(--accent);
   border-bottom-color: var(--accent);
-}
-
-.config-dialog__body {
-  height: 50vh;
-  overflow-y: auto;
 }
 
 /* ---- Schema field cards ---- */
