@@ -9,14 +9,32 @@
    ============================================================ */
 
 @layer components {
-    /* ---- .card: panel + 1px border + radius + padding ----
+    /* ---- .card: panel + radius + padding; border/shadow on hover ----
        Base for .wiki-card and any future panel component. */
     .card,
     .wiki-card {
     background: var(--panel);
-    border: 1px solid var(--border);
+    border: 1px solid transparent;
     border-radius: var(--radius-md);
     padding: var(--space-4);
+    position: relative;
+    z-index: 0;
+    transform: scale(1);
+    box-shadow: 0 0 0 transparent;
+    transition:
+      border-color var(--duration-medium) ease,
+      box-shadow var(--duration-medium) ease,
+      transform var(--duration-medium) ease;
+  }
+
+  .card:hover,
+  .card:focus-within,
+  .wiki-card:hover,
+  .wiki-card:focus-within {
+    z-index: 1;
+    border-color: var(--accent);
+    box-shadow: var(--elevation-overlay);
+    transform: scale(1.025);
   }
 
   /* ---- .table: full-width collapsed border grid ----
@@ -115,7 +133,21 @@
     color: var(--muted);
     cursor: pointer;
     font-size: var(--text-sm);
-    transition: all var(--duration-fast);
+    position: relative;
+    z-index: 0;
+    transform: translateY(0) scale(1);
+    transition:
+      background var(--duration-medium) ease,
+      border-color var(--duration-medium) ease,
+      color var(--duration-medium) ease,
+      transform var(--duration-medium) ease;
+  }
+
+  .pill:hover,
+  .filter-pill:hover,
+  .category-nav__pill:hover {
+    z-index: 1;
+    transform: translateY(calc(-1 * var(--space-0-5))) scale(1.04);
   }
 
   /* ---- .kbd: monospace keyboard hint ----

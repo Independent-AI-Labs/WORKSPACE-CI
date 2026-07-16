@@ -8,6 +8,7 @@
   padding: var(--space-5) var(--wiki-inset-x);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  box-shadow: var(--elevation-overlay);
 }
 
 .landing-stage__copy-panel::before {
