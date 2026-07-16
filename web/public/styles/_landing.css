@@ -25,16 +25,22 @@
 .wiki-content--landing {
   max-width: none;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .landing-page {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
   gap: var(--space-3);
 }
 
 .landing-hero {
-  margin: var(--space-8) var(--space-6) 0;
+  flex-shrink: 0;
+  margin: var(--space-8) var(--wiki-inset-x) 0;
 }
 
 .landing-hero.hero {
@@ -50,27 +56,44 @@
 }
 
 .landing-stage__variant--carousel {
-  display: block;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
 }
 
 @media (max-width: 768px) {
   .landing-stage__variant--stacked {
     display: block;
+    flex: 0 1 auto;
   }
 
   .landing-stage__variant--carousel {
     display: none;
+    flex: 0 1 auto;
+  }
+
+  .landing-stage--carousel {
+    flex: 0 1 auto;
   }
 }
 
 .landing-stage {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
   overflow: visible;
+}
+
+.landing-stage--carousel {
+  flex: 1;
+  min-height: 0;
 }
 
 .landing-stage__post-tabs-shell {
   position: relative;
+  flex-shrink: 0;
   background: var(--bg);
 }
 
@@ -84,7 +107,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-6) var(--space-5);
+  padding: var(--space-2) var(--wiki-inset-x) var(--space-5);
   background: var(--bg);
 }
 
@@ -147,7 +170,8 @@
 
 .landing-stage__viewport {
   position: relative;
-  min-height: clamp(26rem, 58vh, 40rem);
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: visible;
   --landing-parallax-max-x: 4;
   --landing-parallax-max-y: 3;
@@ -180,9 +204,10 @@
 }
 .landing-stage--stacked {
   display: flex;
+  flex: 0 1 auto;
   flex-direction: column;
   gap: var(--space-4);
-  padding: 0 var(--space-4) var(--space-6);
+  padding: 0 var(--wiki-inset-x) var(--wiki-section-gap);
   overflow-x: clip;
   overscroll-behavior: contain;
 }
@@ -324,7 +349,7 @@
   }
 
   .landing-hero {
-    margin: var(--space-4) var(--space-3) 0;
+    margin: var(--wiki-inset-x-compact) var(--wiki-inset-x) 0;
   }
 
   .landing-stage__post-tabs-scroll {
@@ -335,7 +360,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 2.5rem;
+    width: var(--wiki-control-lg);
     padding: 0;
     border: none;
     color: var(--muted);
@@ -405,18 +430,18 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 480px) {
   .landing-hero {
-    margin: var(--space-3) var(--space-3) 0;
+    margin: var(--wiki-inset-x-tight) var(--wiki-inset-x) 0;
   }
 
   .landing-stage--carousel .landing-stage__post-tabs {
-    padding: var(--space-2) var(--space-4) var(--space-5);
+    padding: var(--space-2) var(--wiki-inset-x) var(--space-5);
   }
 
   .landing-stage--carousel .landing-stage__content {
     max-width: none;
-    padding: var(--space-8) calc(var(--space-4) + 3rem);
+    padding: var(--space-8) var(--wiki-stage-content-inset-x);
   }
 }
 

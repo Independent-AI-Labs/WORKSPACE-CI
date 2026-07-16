@@ -1,8 +1,8 @@
 .hero {
   border: 1px dashed var(--border);
   border-radius: var(--radius-lg);
-  padding: var(--space-8) var(--space-6);
-  margin-bottom: var(--space-8);
+  padding: var(--space-8) var(--wiki-inset-x);
+  margin-bottom: var(--wiki-section-gap);
 }
 
 .hero__title {
@@ -46,8 +46,8 @@
 
 @media (max-width: 480px) {
   .hero {
-    padding: var(--space-4) var(--space-3);
-    margin-bottom: var(--space-6);
+    padding: var(--wiki-inset-x-compact) var(--wiki-inset-x);
+    margin-bottom: var(--wiki-section-gap-compact);
   }
 
   .hero__title {

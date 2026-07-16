@@ -10,9 +10,9 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
-  width: 2.75rem;
-  height: 2.75rem;
-  padding: var(--space-2);
+  width: var(--wiki-control-sm);
+  height: var(--wiki-control-sm);
+  padding: var(--space-1);
   border-radius: 50%;
   box-sizing: border-box;
   color: var(--muted);

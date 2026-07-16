@@ -5,8 +5,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: var(--wiki-control-lg);
+  height: var(--wiki-control-lg);
   padding: 0;
   border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
   border-radius: var(--radius-full);
@@ -49,8 +49,8 @@
 }
 
 .landing-stage__dot {
-  width: 0.5rem;
-  height: 0.5rem;
+  width: var(--space-2);
+  height: var(--space-2);
   padding: 0;
   border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
   border-radius: var(--radius-full);
@@ -69,7 +69,7 @@
   border-color: var(--text);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .landing-stage__nav--prev {
     left: var(--space-2);
   }
@@ -79,8 +79,8 @@
   }
 
   .landing-stage__nav {
-    width: 2.25rem;
-    height: 2.25rem;
+    width: var(--wiki-control-md);
+    height: var(--wiki-control-md);
   }
 }
 
@@ -422,9 +422,9 @@
   justify-content: center;
   box-sizing: border-box;
   width: 100%;
-  max-width: 63rem;
+  max-width: var(--landing-stage-content-max-width);
   min-height: 100%;
-  padding: var(--space-10) calc(var(--space-6) + 3.5rem);
+  padding: var(--space-10) var(--wiki-stage-content-inset-x);
   pointer-events: none;
 }
 

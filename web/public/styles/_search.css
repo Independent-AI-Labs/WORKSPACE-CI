@@ -74,7 +74,7 @@
 }
 
 .search-modal__empty {
-  padding: var(--space-6);
+  padding: var(--wiki-inset-x);
   text-align: center;
   color: var(--muted);
 }

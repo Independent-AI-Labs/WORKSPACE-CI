@@ -4,7 +4,7 @@
   display: inline-block;
   width: fit-content;
   max-width: 100%;
-  padding: var(--space-5) var(--space-6);
+  padding: var(--space-5) var(--wiki-inset-x);
   border-radius: var(--radius-lg);
   overflow: hidden;
 }
@@ -39,7 +39,7 @@
   opacity: 0;
   filter: blur(10px);
   transform: translate3d(
-    calc(1.5rem * var(--landing-text-direction, 1)),
+    calc(var(--space-6) * var(--landing-text-direction, 1)),
     0,
     0
   );
@@ -60,7 +60,7 @@
   opacity: 0;
   filter: blur(8px);
   transform: translate3d(
-    calc(-1.25rem * var(--landing-text-direction, 1)),
+    calc(-1 * var(--space-5) * var(--landing-text-direction, 1)),
     0,
     0
   );
@@ -88,7 +88,7 @@
   opacity: 0;
   filter: blur(10px);
   transform: translate3d(
-    calc(1.5rem * var(--landing-text-direction, 1)),
+    calc(var(--space-6) * var(--landing-text-direction, 1)),
     0,
     0
   );
@@ -111,7 +111,7 @@
   opacity: 0;
   filter: blur(8px);
   transform: translate3d(
-    calc(-1.25rem * var(--landing-text-direction, 1)),
+    calc(-1 * var(--space-5) * var(--landing-text-direction, 1)),
     0,
     0
   );
@@ -178,18 +178,14 @@
   color: var(--link);
 }
 
-@media (max-width: 640px) {
-  .landing-hero {
-    margin: var(--space-6) var(--space-4) 0;
-  }
-
+@media (max-width: 768px) {
   .landing-stage__post-tabs {
-    padding: var(--space-3) var(--space-4) 0;
+    padding: var(--space-3) var(--wiki-inset-x) 0;
   }
 
   .landing-stage__content {
     max-width: none;
-    padding: var(--space-8) calc(var(--space-4) + 3rem);
+    padding: var(--space-8) var(--wiki-stage-content-inset-x);
   }
 }
 

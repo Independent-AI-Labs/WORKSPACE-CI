@@ -67,11 +67,42 @@
   --space-20: 5rem;        /* 80px */
   --space-24: 6rem;        /* 96px */
 
+  /* ---- Tier 2: Wiki layout contract ----
+     Breakpoints: compact ≤768px, tight ≤480px. Consume tokens; avoid raw rem in feature CSS. */
+  --wiki-inset-x: var(--space-6);
+  --wiki-inset-x-compact: var(--space-4);
+  --wiki-inset-x-tight: var(--space-3);
+  --wiki-section-gap: var(--space-6);
+  --wiki-section-gap-compact: var(--space-4);
+  --wiki-sidebar-width: 16.25rem;
+  --wiki-sidebar-width-collapsed: calc(var(--space-12) + var(--space-2));
+  --wiki-control-sm: var(--space-8);
+  --wiki-control-md: 2.25rem;
+  --wiki-control-lg: 2.5rem;
+  --wiki-nav-item-gap: var(--space-2);
+  --wiki-nav-item-padding-y: var(--space-2);
+  --wiki-nav-item-padding-x: var(--space-4);
+  --wiki-sidebar-nav-row-height: 2.5rem;
+  --wiki-sidebar-section-gap: var(--wiki-nav-item-padding-y);
+  --wiki-body-size: var(--text-sm);
+  --wiki-page-title-size: var(--text-xl);
+  --wiki-brand-logotype-size: 0.95rem;
+  --wiki-brand-logotype-offset: 0.4rem;
+
   /* Shared wiki chrome row: breadcrumbs/actions and sidebar branding */
   --wiki-chrome-header-height: calc(var(--space-3) * 2 + var(--space-8) + var(--space-px));
-  --wiki-chrome-hamburger-width: 2.25rem;
-  --wiki-chrome-leading: calc(var(--space-3) + var(--wiki-chrome-hamburger-width) + var(--space-2));
+  --wiki-chrome-hamburger-width: var(--wiki-control-md);
+  --wiki-chrome-leading: calc(var(--wiki-inset-x-tight) + var(--wiki-chrome-hamburger-width) + var(--space-2));
   --wiki-chrome-brand-inset: var(--space-2);
+  --wiki-chrome-content-offset: calc(
+    var(--wiki-chrome-leading) + var(--wiki-chrome-brand-inset) + var(--space-8) + var(--wiki-nav-item-gap)
+  );
+  --wiki-chrome-content-offset-main: calc(var(--wiki-chrome-content-offset) - var(--wiki-inset-x));
+  --wiki-chrome-content-offset-collapsed: calc(
+    var(--wiki-chrome-content-offset-main) - var(--wiki-sidebar-width-collapsed)
+  );
+  --wiki-stage-content-inset-x: calc(var(--wiki-inset-x) + var(--wiki-control-lg) + var(--space-2));
+  --landing-stage-content-max-width: 68rem;
 
   /* ---- Tier 1: Typography scale (font-size) ----
      Display tiers (lg+) use clamp() for fluid scaling across 320-1280px.
@@ -262,5 +293,19 @@ code, pre {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --wiki-inset-x: var(--wiki-inset-x-compact);
+    --wiki-section-gap: var(--wiki-section-gap-compact);
+    --wiki-chrome-content-offset-main: calc(var(--wiki-chrome-content-offset) - var(--wiki-inset-x-tight));
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --wiki-inset-x: var(--wiki-inset-x-tight);
   }
 }

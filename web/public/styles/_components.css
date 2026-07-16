@@ -81,7 +81,7 @@
     font-size: var(--text-sm);
   }
 
-  /* ---- .icon-btn: 32px circular icon button ----
+  /* ---- .icon-btn: circular icon button ----
      Collapses .theme-toggle, .feedback-btn (previously 2
      verbatim copies). */
   .icon-btn,
@@ -90,8 +90,8 @@
     background: transparent;
     border: 1px solid var(--border);
     border-radius: var(--radius-full);
-    width: 32px;
-    height: 32px;
+    width: var(--wiki-control-sm);
+    height: var(--wiki-control-sm);
     display: flex;
     align-items: center;
     justify-content: center;
