@@ -270,8 +270,8 @@ wiki-dev: wiki-dev-start ## Alias for wiki-dev-start
 	:
 wiki-dev-stop: ## Stop wiki dev server
 	$(MAKE) -C web dev-stop
-wiki-dev-restart: ## Restart wiki dev server (stop + start; fast, no cloc)
-	echo "[wiki-dev-restart] stop + start (skip extract-wiki-data; use wiki-dev-restart-refresh for cloc)"
+wiki-dev-restart: ## Restart wiki dev server (stop + sync content + start; fast, no cloc)
+	echo "[wiki-dev-restart] stop + sync WORKSPACE-WEB-CONTENT + start (use wiki-dev-restart-refresh for cloc)"
 	$(MAKE) -C web dev-restart
 wiki-dev-restart-refresh: ## Restart wiki dev server after regenerating wiki JSON (cloc may take minutes)
 	echo "[wiki-dev-restart-refresh] phase 1/2: extract-wiki-data (code-stats/cloc may take several minutes)"

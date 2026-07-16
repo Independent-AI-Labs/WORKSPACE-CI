@@ -206,9 +206,14 @@ dev-stop: ## Stop dev server
 	systemctl --user daemon-reload
 	echo "[dev-stop] Done. Unit file removed."
 
+.PHONY: dev-sync-content
+dev-sync-content: ## Mirror WORKSPACE-WEB-CONTENT into content/ and public/landing/
+	$(NODE) scripts/sync-web-content.mjs
+
 .PHONY: dev-restart
-dev-restart: ## Restart dev server (stop, wipe .next turbopack cache, start)
+dev-restart: ## Restart dev server (stop, sync content, wipe .next, start)
 	$(MAKE) dev-stop
+	$(MAKE) dev-sync-content
 	$(MAKE) clean-build
 	echo "[dev-restart] wiped .next (fixes stale @swc/helpers turbopack chunks)"
 	$(MAKE) dev-start

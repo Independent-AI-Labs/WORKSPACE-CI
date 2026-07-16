@@ -175,17 +175,18 @@ export function parseLandingPostsConfig(raw: unknown): LandingPostsConfig {
     ),
   }
 
-  const heroRaw = data.hero
-  if (!heroRaw || typeof heroRaw !== 'object') {
-    throw new Error('landing-posts.yaml: hero is required')
-  }
-  const h = heroRaw as Record<string, unknown>
-
   const mission = data.mission
   if (!mission || typeof mission !== 'object') {
     throw new Error('landing-posts.yaml: mission is required')
   }
   const m = mission as Record<string, unknown>
+  const missionSummary = requireString(m.summary, 'mission.summary')
+
+  const heroRaw = data.hero
+  const heroIntro =
+    heroRaw && typeof heroRaw === 'object'
+      ? requireString((heroRaw as Record<string, unknown>).intro, 'hero.intro')
+      : missionSummary
 
   const settingsRaw = data.settings
   if (!settingsRaw || typeof settingsRaw !== 'object') {
@@ -236,7 +237,7 @@ export function parseLandingPostsConfig(raw: unknown): LandingPostsConfig {
     version: typeof data.version === 'number' ? data.version : 1,
     ui,
     hero: {
-      intro: requireString(h.intro, 'hero.intro'),
+      intro: heroIntro,
     },
     mission: {
       headline: requireString(m.headline, 'mission.headline'),

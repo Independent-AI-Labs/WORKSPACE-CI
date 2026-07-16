@@ -197,8 +197,9 @@ describe('parseLandingPostsConfig', () => {
     expect(() => parseLandingPostsConfig({ ...minimal, ui: undefined })).toThrow()
   })
 
-  it('requires hero block', () => {
-    expect(() => parseLandingPostsConfig({ ...minimal, hero: undefined })).toThrow()
+  it('defaults hero intro from mission summary when hero is omitted', () => {
+    const config = parseLandingPostsConfig({ ...minimal, hero: undefined })
+    expect(config.hero.intro).toBe('Summary')
   })
 
   it('rejects empty posts', () => {
