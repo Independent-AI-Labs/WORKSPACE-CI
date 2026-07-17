@@ -4,32 +4,33 @@ import type { HookTier } from '@/types/hooks'
 import clsx from 'clsx'
 
 interface TierFilterProps {
+  tiers: HookTier[]
   activeTiers: Set<HookTier>
   toggleTier: (tier: HookTier) => void
   tierCounts: Record<string, number>
 }
 
-const TIERS: { id: HookTier; label: string }[] = [
-  { id: 'strict', label: 'Strict' },
-  { id: 'poc', label: 'POC (safety)' },
-]
+const TIER_LABELS: Record<HookTier, string> = {
+  strict: 'Strict',
+  poc: 'POC (safety)',
+}
 
-export function TierFilter({ activeTiers, toggleTier, tierCounts }: TierFilterProps) {
+export function TierFilter({ tiers, activeTiers, toggleTier, tierCounts }: TierFilterProps) {
   return (
     <div className="tier-filter">
-      {TIERS.map((tier) => (
+      {tiers.map((tier) => (
         <button
-          key={tier.id}
+          key={tier}
           className={clsx(
             'filter-pill',
-            activeTiers.has(tier.id) && 'is-active',
+            activeTiers.has(tier) && 'is-active',
           )}
-          onClick={() => toggleTier(tier.id)}
-          aria-pressed={activeTiers.has(tier.id)}
+          onClick={() => toggleTier(tier)}
+          aria-pressed={activeTiers.has(tier)}
         >
-          {tier.label}
+          {TIER_LABELS[tier]}
           <span className="filter-pill__count">
-            {tierCounts[tier.id] ?? 0}
+            {tierCounts[tier] ?? 0}
           </span>
         </button>
       ))}

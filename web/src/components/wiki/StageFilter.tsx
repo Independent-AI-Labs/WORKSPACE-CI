@@ -4,33 +4,29 @@ import type { HookStage } from '@/types/hooks'
 import clsx from 'clsx'
 
 interface StageFilterProps {
+  stages: HookStage[]
+  stageLabels: Record<string, string>
   activeStages: Set<HookStage>
   toggleStage: (stage: HookStage) => void
   stageCounts: Record<string, number>
 }
 
-const STAGES: { id: HookStage; label: string }[] = [
-  { id: 'pre-commit', label: 'Pre-commit' },
-  { id: 'commit-msg', label: 'Commit-msg' },
-  { id: 'pre-push', label: 'Pre-push' },
-]
-
-export function StageFilter({ activeStages, toggleStage, stageCounts }: StageFilterProps) {
+export function StageFilter({ stages, stageLabels, activeStages, toggleStage, stageCounts }: StageFilterProps) {
   return (
     <div className="stage-filter">
-      {STAGES.map((stage) => (
+      {stages.map((stage) => (
         <button
-          key={stage.id}
+          key={stage}
           className={clsx(
             'filter-pill',
-            activeStages.has(stage.id) && 'is-active',
+            activeStages.has(stage) && 'is-active',
           )}
-          onClick={() => toggleStage(stage.id)}
-          aria-pressed={activeStages.has(stage.id)}
+          onClick={() => toggleStage(stage)}
+          aria-pressed={activeStages.has(stage)}
         >
-          {stage.label}
+          {stageLabels[stage] ?? stage}
           <span className="filter-pill__count">
-            {stageCounts[stage.id] ?? 0}
+            {stageCounts[stage] ?? 0}
           </span>
         </button>
       ))}

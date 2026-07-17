@@ -18,6 +18,7 @@ export function PlaygroundShell({ patterns, languages }: { patterns: ClassifiedP
     setMatches,
     language,
     setLanguage,
+    categories,
     activeCategories,
     toggleCategory,
     editorRef,
@@ -28,6 +29,7 @@ export function PlaygroundShell({ patterns, languages }: { patterns: ClassifiedP
       <div className="playground-toolbar">
         <LanguageSelector value={language} onChange={setLanguage} languages={languages} />
         <PatternCategoryFilter
+          categories={categories}
           active={activeCategories}
           onToggle={toggleCategory}
         />

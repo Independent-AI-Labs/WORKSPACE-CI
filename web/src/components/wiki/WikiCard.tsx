@@ -76,7 +76,7 @@ export function WikiCard({ item, children, viewDetails }: WikiCardProps) {
       {item.tags && item.tags.length > 0 && (
         <div className="wiki-card__tags">
           {item.tags.map((tag, i) => (
-            <span key={i} className={clsx('wiki-card__tag', TAG_BADGE[tag.variant])} style={tag.style}>
+            <span key={i} className={clsx('wiki-card__tag', TAG_BADGE[tag.variant], tag.className)}>
               {tag.label}
             </span>
           ))}

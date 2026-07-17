@@ -1,9 +1,7 @@
-import type { CSSProperties } from 'react'
-
 export interface CardTag {
   label: string
   variant: 'accent' | 'muted' | 'warn' | 'ok'
-  style?: CSSProperties
+  className?: string
 }
 
 export interface CardMeta {

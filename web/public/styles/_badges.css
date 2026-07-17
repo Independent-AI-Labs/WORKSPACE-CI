@@ -1,0 +1,13 @@
+/* Badge color modifiers (base provided by .badge in _components.css) */
+.badge--green { background: var(--ok); color: var(--bg); }
+.badge--blue { background: var(--accent); color: var(--bg); }
+.badge--orange { background: var(--warn); color: var(--bg); }
+.badge--teal { background: var(--teal); color: var(--bg); }
+.badge--purple { background: var(--purple); color: var(--bg); }
+.badge--gray { background: var(--muted); color: var(--bg); }
+
+/* Language-share tags: accent intensity steps */
+.badge--lang-1 { background: color-mix(in oklab, var(--muted), var(--accent) 15%); color: var(--bg); }
+.badge--lang-2 { background: color-mix(in oklab, var(--muted), var(--accent) 40%); color: var(--bg); }
+.badge--lang-3 { background: color-mix(in oklab, var(--muted), var(--accent) 65%); color: var(--bg); }
+.badge--lang-4 { background: var(--accent); color: var(--bg); }

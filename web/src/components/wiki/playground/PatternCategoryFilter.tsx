@@ -1,21 +1,22 @@
 'use client'
 
-import { PATTERN_CATEGORIES } from '@/types/patterns'
 import type { PatternCategory } from '@/types/patterns'
 import clsx from 'clsx'
 
 interface PatternCategoryFilterProps {
+  categories: { id: PatternCategory; label: string }[]
   active: Set<PatternCategory>
   onToggle: (category: PatternCategory) => void
 }
 
 export function PatternCategoryFilter({
+  categories,
   active,
   onToggle,
 }: PatternCategoryFilterProps) {
   return (
     <div className="pattern-category-filter">
-      {PATTERN_CATEGORIES.map((cat) => (
+      {categories.map((cat) => (
         <button
           key={cat.id}
           className={clsx(

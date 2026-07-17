@@ -8,6 +8,8 @@ import { hookRunsInTier } from '@/types/hooks'
 
 interface UseHookFilterReturn {
   filtered: HookRecord[]
+  stages: HookStage[]
+  tiers: HookTier[]
   activeStages: Set<HookStage>
   activeTiers: Set<HookTier>
   toggleStage: (stage: HookStage) => void
@@ -16,17 +18,32 @@ interface UseHookFilterReturn {
   tierCounts: Record<string, number>
 }
 
-const ALL_STAGES: HookStage[] = ['pre-commit', 'commit-msg', 'pre-push']
-const ALL_TIERS: HookTier[] = ['strict', 'poc']
+const STAGE_ORDER: HookStage[] = ['pre-commit', 'commit-msg', 'pre-push']
+const TIER_ORDER: HookTier[] = ['strict', 'poc']
 
 export function useHookFilter(
   hooks: HookRecord[],
 ): UseHookFilterReturn {
+  const stages = useMemo(() => {
+    const present = new Set(hooks.map((h) => h.stage))
+    return STAGE_ORDER.filter((s) => present.has(s))
+  }, [hooks])
+
+  const tiers = useMemo(() => {
+    const present = new Set<HookTier>()
+    for (const h of hooks) {
+      for (const tier of TIER_ORDER) {
+        if (hookRunsInTier(h, tier)) present.add(tier)
+      }
+    }
+    return TIER_ORDER.filter((t) => present.has(t))
+  }, [hooks])
+
   const [activeStages, setActiveStages] = useState<Set<HookStage>>(
-    new Set(ALL_STAGES),
+    () => new Set(stages),
   )
   const [activeTiers, setActiveTiers] = useState<Set<HookTier>>(
-    new Set(['strict', 'poc']),
+    () => new Set(tiers),
   )
 
   const toggleStage = useCallback((stage: HookStage) => {
@@ -55,19 +72,19 @@ export function useHookFilter(
 
   const stageCounts = useMemo(() => {
     const counts: Record<string, number> = {}
-    for (const stage of ALL_STAGES) {
+    for (const stage of stages) {
       counts[stage] = hooks.filter((h) => h.stage === stage).length
     }
     return counts
-  }, [hooks])
+  }, [hooks, stages])
 
   const tierCounts = useMemo(() => {
     const counts: Record<string, number> = {}
-    for (const tier of ALL_TIERS) {
+    for (const tier of tiers) {
       counts[tier] = hooks.filter((h) => hookRunsInTier(h, tier)).length
     }
     return counts
-  }, [hooks])
+  }, [hooks, tiers])
 
   const filtered = useMemo(
     () =>
@@ -81,6 +98,8 @@ export function useHookFilter(
 
   return {
     filtered,
+    stages,
+    tiers,
     activeStages,
     activeTiers,
     toggleStage,

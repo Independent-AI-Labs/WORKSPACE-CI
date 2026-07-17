@@ -118,11 +118,9 @@
   }
 
   /* ---- .pill: rounded filter chip ----
-     Collapses .filter-pill, .category-nav__pill (previously 2
-     near-verbatim copies). */
+     Collapses .filter-pill (previously near-verbatim copies). */
   .pill,
-  .filter-pill,
-  .category-nav__pill {
+  .filter-pill {
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
@@ -144,8 +142,7 @@
   }
 
   .pill:hover,
-  .filter-pill:hover,
-  .category-nav__pill:hover {
+  .filter-pill:hover {
     z-index: 1;
     transform: translateY(calc(-1 * var(--space-0-5))) scale(1.04);
   }

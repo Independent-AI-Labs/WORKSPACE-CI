@@ -4,7 +4,7 @@ import type { ClassifiedPattern } from '@/types/patterns'
 import type { FeedbackCounts } from '@/types/feedback'
 import type { WikiLabelsConfig } from '@/types/wiki-labels'
 import { WikiCard } from '@/components/wiki/WikiCard'
-import { CategoryNav } from '@/components/wiki/CategoryNav'
+import { PillFilter } from '@/components/wiki/PillFilter'
 import { FeedbackWidget } from '@/components/wiki/FeedbackWidget'
 import { EntryPointDialog } from '@/components/wiki/EntryPointDialog'
 import { usePatternFilter } from '@/hooks/usePatternFilter'
@@ -25,24 +25,27 @@ export function PatternList({
 }: PatternListProps) {
   const {
     filtered,
+    categories,
     activeCategories,
     toggleCategory,
     selectAll,
     deselectAll,
     visibleCount,
     totalCount,
+    categoryCounts,
   } = usePatternFilter(patterns)
 
   const items = patternAdapter(filtered, labels)
 
   return (
     <div className="pattern-list">
-      <CategoryNav
-        patterns={patterns}
+      <PillFilter
+        categories={categories}
         activeCategories={activeCategories}
         toggleCategory={toggleCategory}
         selectAll={selectAll}
         deselectAll={deselectAll}
+        categoryCounts={categoryCounts}
       />
       <p className="list-section__count">
         {visibleCount} of {totalCount} patterns

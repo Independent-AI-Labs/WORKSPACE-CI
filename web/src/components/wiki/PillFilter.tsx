@@ -37,14 +37,14 @@ export function PillFilter({
           <button
             key={cat.id}
             className={clsx(
-              'category-nav__pill',
+              'filter-pill',
               activeCategories.has(cat.id) && 'is-active',
             )}
             onClick={() => toggleCategory(cat.id)}
             aria-pressed={activeCategories.has(cat.id)}
           >
             {cat.label}
-            <span className="category-nav__pill-count">
+            <span className="filter-pill__count">
               {categoryCounts[cat.id] ?? 0}
             </span>
           </button>

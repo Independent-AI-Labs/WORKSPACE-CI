@@ -120,8 +120,8 @@ describe('projectAdapter', () => {
     }
     const [item] = projectAdapter([project], langPercents)
     expect(item.tags).toEqual([
-      { label: 'Python 80%', variant: 'accent', style: { backgroundColor: 'color-mix(in oklab, var(--muted), var(--accent) 100%)' } },
-      { label: 'Bourne Shell 20%', variant: 'accent', style: { backgroundColor: 'color-mix(in oklab, var(--muted), var(--accent) 25%)' } },
+      { label: 'Python 80%', variant: 'accent', className: 'badge--lang-4' },
+      { label: 'Bourne Shell 20%', variant: 'accent', className: 'badge--lang-2' },
     ])
   })
 
@@ -135,9 +135,9 @@ describe('projectAdapter', () => {
     }
     const [item] = projectAdapter([project], langPercents)
     expect(item.tags).toEqual([
-      { label: 'Python 80.5%', variant: 'accent', style: { backgroundColor: 'color-mix(in oklab, var(--muted), var(--accent) 100%)' } },
-      { label: 'Shell 15.3%', variant: 'accent', style: { backgroundColor: 'color-mix(in oklab, var(--muted), var(--accent) 19%)' } },
-      { label: 'Markdown 4.2%', variant: 'accent', style: { backgroundColor: 'color-mix(in oklab, var(--muted), var(--accent) 5%)' } },
+      { label: 'Python 80.5%', variant: 'accent', className: 'badge--lang-4' },
+      { label: 'Shell 15.3%', variant: 'accent', className: 'badge--lang-1' },
+      { label: 'Markdown 4.2%', variant: 'accent', className: 'badge--lang-1' },
     ])
   })
 
@@ -172,13 +172,9 @@ describe('configAdapter', () => {
     expect(item.monoTitle).toBe(true)
     expect(item.href).toBeUndefined()
     expect(item.icon).toBe('ri-settings-3-line')
-    expect(item.meta).toEqual([{ label: 'Fields', value: '5' }])
-    expect(item.category).toBe('Content Rules')
-  })
-
-  it('omits meta when fieldCount is undefined', () => {
-    const [item] = configAdapter([{ ...config, fieldCount: undefined }], labels)
     expect(item.meta).toBeUndefined()
+    expect(item.category).toBe('Content Rules')
+    expect(item.tags).toEqual([{ label: 'Content Rules', variant: 'accent' }])
   })
 })
 
@@ -198,8 +194,9 @@ describe('guardConfigAdapter', () => {
     expect(item.monoTitle).toBe(true)
     expect(item.href).toBeUndefined()
     expect(item.icon).toBe('ri-shield-keyhole-line')
-    expect(item.meta).toEqual([{ label: 'Fields', value: '3' }])
+    expect(item.meta).toBeUndefined()
     expect(item.category).toBe('Filesystem')
+    expect(item.tags).toEqual([{ label: 'Filesystem', variant: 'accent' }])
   })
 })
 

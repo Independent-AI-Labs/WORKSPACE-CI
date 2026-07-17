@@ -54,8 +54,7 @@
   .search-modal__close,
   .collapsible-section__header,
   .pill,
-  .filter-pill,
-  .category-nav__pill {
+  .filter-pill {
     position: relative;
   }
 
@@ -69,8 +68,7 @@
   .search-modal__close::after,
   .collapsible-section__header::after,
   .pill::after,
-  .filter-pill::after,
-  .category-nav__pill::after {
+  .filter-pill::after {
     content: '';
     position: absolute;
     inset: -8px;

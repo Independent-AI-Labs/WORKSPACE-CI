@@ -27,7 +27,8 @@ img {
 @import '../../public/styles/_toggle.css';
 @import '../../public/styles/_collapsible-section.css';
 @import '../../public/styles/_error-boundary.css';
-@import '../../public/styles/_project-card.css';
+@import '../../public/styles/_project-detail.css';
+@import '../../public/styles/_badges.css';
 @import '../../public/styles/_wiki-card.css';
 @import '../../public/styles/_entry-point-dialog.css';
 @import '../../public/styles/_config-dialog.css';

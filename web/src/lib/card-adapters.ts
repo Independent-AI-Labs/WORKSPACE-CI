@@ -34,13 +34,12 @@ export function projectAdapter(
     const maxPercent = langPercents.length > 0 ? langPercents[0].percent : 0
     const tags: CardItem['tags'] = langPercents.map((lp) => {
       const factor = maxPercent > 0 ? lp.percent / maxPercent : 0
-      const mixPct = Math.round(factor * 100)
+      const tier =
+        factor >= 0.75 ? 4 : factor >= 0.5 ? 3 : factor >= 0.25 ? 2 : 1
       return {
         label: `${lp.language} ${lp.percent}%`,
         variant: 'accent' as const,
-        style: {
-          backgroundColor: `color-mix(in oklab, var(--muted), var(--accent) ${mixPct}%)`,
-        },
+        className: `badge--lang-${tier}`,
       }
     })
 
@@ -62,36 +61,36 @@ export function configAdapter(
   configs: ConfigEntry[],
   labels: WikiLabelsConfig,
 ): CardItem[] {
-  return configs.map((c) => ({
-    id: c.name,
-    title: c.name,
-    description: c.description ?? '',
-    icon: 'ri-settings-3-line',
-    monoTitle: true,
-    category: labels.config_categories[c.name] ?? 'Other',
-    meta:
-      c.fieldCount !== undefined
-        ? [{ label: 'Fields', value: String(c.fieldCount) }]
-        : undefined,
-  }))
+  return configs.map((c) => {
+    const category = labels.config_categories[c.name] ?? 'Other'
+    return {
+      id: c.name,
+      title: c.name,
+      description: c.description ?? '',
+      icon: 'ri-settings-3-line',
+      monoTitle: true,
+      category,
+      tags: [{ label: category, variant: 'accent' as const }],
+    }
+  })
 }
 
 export function guardConfigAdapter(
   entries: GuardConfigEntry[],
   labels: WikiLabelsConfig,
 ): CardItem[] {
-  return entries.map((e) => ({
-    id: e.name,
-    title: e.name,
-    description: e.description ?? '',
-    icon: 'ri-shield-keyhole-line',
-    monoTitle: true,
-    category: labels.guard_categories[e.name] ?? 'Other',
-    meta:
-      e.fieldCount !== undefined
-        ? [{ label: 'Fields', value: String(e.fieldCount) }]
-        : undefined,
-  }))
+  return entries.map((e) => {
+    const category = labels.guard_categories[e.name] ?? 'Other'
+    return {
+      id: e.name,
+      title: e.name,
+      description: e.description ?? '',
+      icon: 'ri-shield-keyhole-line',
+      monoTitle: true,
+      category,
+      tags: [{ label: category, variant: 'accent' as const }],
+    }
+  })
 }
 
 export function patternAdapter(

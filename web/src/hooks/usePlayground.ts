@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useMemo } from 'react'
 import type { ClassifiedPattern, PatternCategory } from '@/types/patterns'
 import type { PatternMatch } from '@/types/wiki'
-import { PATTERN_CATEGORIES } from '@/types/patterns'
+import { getCategoryLabel } from '@/types/patterns'
 import { useAnalyticsStore } from '@/stores/analytics-store'
 
 interface EditorApi {
@@ -15,6 +15,7 @@ interface UsePlaygroundReturn {
   setMatches: (matches: PatternMatch[]) => void
   language: string
   setLanguage: (lang: string) => void
+  categories: { id: PatternCategory; label: string }[]
   activeCategories: Set<PatternCategory>
   toggleCategory: (category: PatternCategory) => void
   editorRef: React.MutableRefObject<EditorApi | null>
@@ -28,9 +29,18 @@ export function usePlayground(
   const [matches, setMatches] = useState<PatternMatch[]>([])
   const [language, setLanguage] = useState(initialLanguage)
   const [isDirty, setIsDirty] = useState(false)
+
+  const categories = useMemo(() => {
+    const seen = new Set<PatternCategory>()
+    for (const p of patterns) seen.add(p.category)
+    return Array.from(seen)
+      .sort()
+      .map((id) => ({ id, label: getCategoryLabel(id) }))
+  }, [patterns])
+
   const [activeCategories, setActiveCategories] = useState<
     Set<PatternCategory>
-  >(new Set(PATTERN_CATEGORIES.map((c) => c.id)))
+  >(() => new Set(categories.map((c) => c.id)))
 
   const editorRef = useRef<EditorApi | null>(null)
   const track = useAnalyticsStore((s) => s.track)
@@ -73,6 +83,7 @@ export function usePlayground(
     setMatches,
     language,
     setLanguage: handleSetLanguage,
+    categories,
     activeCategories,
     toggleCategory,
     editorRef,

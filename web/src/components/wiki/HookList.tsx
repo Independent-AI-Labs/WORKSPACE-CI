@@ -31,6 +31,8 @@ export function HookList({
 }: HookListProps) {
   const {
     filtered,
+    stages,
+    tiers,
     activeStages,
     activeTiers,
     toggleStage,
@@ -45,11 +47,14 @@ export function HookList({
     <div className="hook-list">
       <div className="hook-list__filters">
         <StageFilter
+          stages={stages}
+          stageLabels={labels.hook_stages}
           activeStages={activeStages}
           toggleStage={toggleStage}
           stageCounts={stageCounts}
         />
         <TierFilter
+          tiers={tiers}
           activeTiers={activeTiers}
           toggleTier={toggleTier}
           tierCounts={tierCounts}

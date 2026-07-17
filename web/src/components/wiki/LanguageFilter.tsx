@@ -35,7 +35,7 @@ export function LanguageFilter({
           <button
             key={lang}
             className={clsx(
-              'category-nav__pill',
+              'filter-pill',
               activeLanguages.has(lang) && 'is-active',
             )}
             onClick={() => toggleLanguage(lang)}

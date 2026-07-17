@@ -15,7 +15,7 @@ const IMAGE = { width: 1000, height: 1000 }
 
 describe('gesture-canvas', () => {
   it('exposes a top-quarter viewport anchor', () => {
-    expect(GESTURE_CANVAS_ZOOM_ORIGIN).toBe('50% 25%')
+    expect(GESTURE_CANVAS_ZOOM_ORIGIN).toBe('50% 30%')
   })
 
   it('measures touch distance', () => {
@@ -55,7 +55,7 @@ describe('gesture-canvas', () => {
     )
     expect(layout).not.toBeNull()
     expect(layout!.offsetX + layout!.drawWidth * 0.5).toBeCloseTo(200, 5)
-    expect(layout!.offsetY).toBeCloseTo(125, 5)
+    expect(layout!.offsetY).toBeCloseTo(50, 5)
   })
 
   it('shifts the draw rect when panning', () => {
@@ -91,8 +91,8 @@ describe('gesture-canvas', () => {
     expect(zoomed!.drawWidth).toBeCloseTo(base!.drawWidth * 2, 5)
     expect(zoomed!.drawHeight).toBeCloseTo(base!.drawHeight * 2, 5)
     expect(zoomed!.offsetX + zoomed!.drawWidth * 0.5).toBeCloseTo(200, 5)
-    expect(zoomed!.offsetY).toBeCloseTo(125, 5)
-    expect(base!.offsetY).toBeCloseTo(125, 5)
+    expect(zoomed!.offsetY).toBeCloseTo(-50, 5)
+    expect(base!.offsetY).toBeCloseTo(50, 5)
   })
 
   it('keeps the pinch focal point stable when zooming', () => {
