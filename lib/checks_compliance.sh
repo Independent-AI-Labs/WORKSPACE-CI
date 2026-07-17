@@ -116,7 +116,7 @@ ci_compliance_score() {
 
     if [[ ! -f "$_precommit" ]]; then
         _cs_fail "R1" "block-sensitive-files not wired" \
-            "Create .pre-commit-config.yaml first (see CI/docs/HOOKS.md)"
+            "Create .pre-commit-config.yaml first (see CI/docs/runbooks/RUNBOOK-HOOKS.md)"
         _cs_fail "R2" "check-banned-words not wired" \
             "Create .pre-commit-config.yaml first"
         _cs_fail "R3" "Commit message checks not wired" \

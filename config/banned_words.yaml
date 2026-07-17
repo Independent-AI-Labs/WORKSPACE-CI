@@ -9,7 +9,7 @@
 #   1. universal_exceptions (below): apply to ALL projects (e.g. tests/)
 #   2. Per-project banned_words_exceptions.yaml in each project's config/ dir
 #
-# See HOOKS.md for details on the exception mechanism.
+# See docs/runbooks/RUNBOOK-HOOKS.md for details on the exception mechanism.
 
 version: "4.0.0"
 

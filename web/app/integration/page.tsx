@@ -7,7 +7,7 @@ import { join } from 'path'
 export const revalidate = 3600
 
 export default async function IntegrationPage() {
-  const filePath = join(getDocsRoot(), 'HOOKS.md')
+  const filePath = join(getDocsRoot(), 'runbooks', 'RUNBOOK-HOOKS.md')
   let content: string
   try {
     content = await readFile(filePath, 'utf8')
