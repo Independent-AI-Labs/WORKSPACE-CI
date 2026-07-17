@@ -16,12 +16,35 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: color-mix(in oklab, var(--bg) 36%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--bg) 30%, transparent) 0%,
+    color-mix(in oklab, var(--bg) 42%, transparent) 50%,
+    color-mix(in oklab, var(--bg) 30%, transparent) 100%
+  );
+  background-size: 220% 220%;
+  animation: landing-copy-panel-drift 14s ease-in-out infinite alternate;
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   transform: translateZ(0);
   opacity: 1;
   z-index: -1;
+}
+
+@keyframes landing-copy-panel-drift {
+  from {
+    background-position: 0% 0%;
+  }
+
+  to {
+    background-position: 100% 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-stage__copy-panel::before {
+    animation: none;
+  }
 }
 
 .landing-stage__slide-panel {
