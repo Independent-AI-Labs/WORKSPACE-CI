@@ -1,15 +1,15 @@
 /** Horizontal center of the image used as the zoom pivot. */
 export const GESTURE_CANVAS_IMAGE_ORIGIN_X = 0.5
-/** Top edge of the image used as the zoom pivot. */
-export const GESTURE_CANVAS_IMAGE_ORIGIN_Y = 0
+/** Top quarter of the image used as the zoom pivot. */
+export const GESTURE_CANVAS_IMAGE_ORIGIN_Y = 0.25
 
 /** Viewport X where the image pivot is pinned on screen. */
 export const GESTURE_CANVAS_VIEWPORT_ANCHOR_X = 0.5
-/** Viewport Y where the image top is pinned on screen (top quarter of the card). */
-export const GESTURE_CANVAS_VIEWPORT_ANCHOR_Y = 0.25
+/** Viewport Y where the image pivot is pinned on screen (30% down the card). */
+export const GESTURE_CANVAS_VIEWPORT_ANCHOR_Y = 0.3
 
-export const GESTURE_CANVAS_ZOOM_ORIGIN = '50% 25%'
-export const GESTURE_CANVAS_BASE_ZOOM = 1
+export const GESTURE_CANVAS_ZOOM_ORIGIN = '50% 30%'
+export const GESTURE_CANVAS_BASE_ZOOM = 1.5
 export const GESTURE_CANVAS_MIN_SCALE = 0.5
 export const GESTURE_CANVAS_MAX_SCALE = 4
 

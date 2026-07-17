@@ -37,6 +37,7 @@ img {
 @import '../../public/styles/_standards.css';
 @import '../../public/styles/_hero.css';
 @import '../../public/styles/_landing.css';
+@import '../../public/styles/_landing-hero.css';
 @import '../../public/styles/_landing-stage-text.css';
 @import '../../public/styles/_landing-stage-chrome.css';
 @import '../../public/styles/_gateway-dashboard.css';

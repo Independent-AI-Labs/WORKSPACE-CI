@@ -1,0 +1,84 @@
+.landing-hero {
+  flex-shrink: 0;
+  margin: var(--space-8) var(--wiki-inset-x) 0;
+}
+
+.landing-hero.hero {
+  margin-bottom: 0;
+}
+
+.landing-hero .hero__title {
+  font-weight: 200;
+}
+
+@media (max-width: 1279px) {
+  .landing-hero .hero__title {
+    font-size: calc(var(--text-4xl) * 0.75);
+  }
+
+  .landing-hero .hero__subtitle {
+    font-size: calc(var(--text-base) * 0.75);
+  }
+}
+
+@media (max-width: 768px) {
+  .landing-hero {
+    margin: var(--wiki-inset-x-compact) var(--wiki-inset-x) 0;
+  }
+
+  .landing-hero .hero__title {
+    font-size: var(--text-2xl);
+  }
+
+  .landing-hero .hero__subtitle {
+    font-size: var(--text-sm);
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-hero {
+    margin: var(--wiki-inset-x-tight) var(--wiki-inset-x) 0;
+  }
+}
+
+@media (max-width: 2559px) and (max-height: 1439px) {
+  .landing-hero {
+    margin: var(--space-6) var(--wiki-inset-x) 0;
+    padding: var(--space-3) var(--space-4);
+    transition:
+      margin 300ms ease,
+      padding 300ms ease;
+    cursor: pointer;
+  }
+
+  .landing-hero .hero__title {
+    opacity: 0;
+    max-height: 0;
+    margin: 0;
+    overflow: hidden;
+    transition:
+      opacity 300ms ease,
+      max-height 300ms ease,
+      margin 300ms ease;
+  }
+
+  .landing-hero:hover,
+  .landing-hero:focus-within {
+    margin: var(--space-8) var(--wiki-inset-x) 0;
+    padding: var(--space-8) var(--wiki-inset-x);
+  }
+
+  .landing-hero:hover .hero__title,
+  .landing-hero:focus-within .hero__title {
+    opacity: 1;
+    max-height: 4rem;
+    margin: 0 0 var(--space-2) 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero,
+  .landing-hero .hero__title {
+    transition: none;
+  }
+}

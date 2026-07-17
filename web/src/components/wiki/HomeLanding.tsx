@@ -13,7 +13,12 @@ export function HomeLanding() {
   return (
     <div className="landing-page">
       <section className="hero landing-hero">
-        <h1 className="hero__title">{config.mission.headline}</h1>
+        <h1
+          className="hero__title"
+          dangerouslySetInnerHTML={{
+            __html: renderLandingMarkdown(config.mission.headline),
+          }}
+        />
         <p
           className="hero__subtitle"
           dangerouslySetInnerHTML={{
@@ -22,11 +27,7 @@ export function HomeLanding() {
         />
       </section>
 
-      <RotatingPosts
-        posts={config.posts}
-        settings={config.settings}
-        ui={config.ui}
-      />
+      <RotatingPosts posts={config.posts} settings={config.settings} ui={config.ui} />
     </div>
   )
 }
