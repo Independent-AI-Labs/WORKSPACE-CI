@@ -1,5 +1,6 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
 import { GatewayTabs } from '@/components/wiki/GatewayTabs'
+import { HeroBanner } from '@/components/wiki/HeroBanner'
 import { ServiceUnavailable } from '@/components/wiki/ServiceUnavailable'
 import { getBrandingForRequest } from '@/lib/branding'
 import {
@@ -18,10 +19,7 @@ export default async function LLMGatewayPage() {
 
   return (
     <WikiShell>
-      <section className="hero">
-        <h1 className="hero__title">LLM Gateway</h1>
-        <p className="hero__subtitle">{branding.grafana_subtitle}</p>
-      </section>
+      <HeroBanner title="LLM Gateway" subtitle={branding.grafana_subtitle} dynamic />
 
       <div className="gateway-dashboard">
         {grafanaHealthy ? (

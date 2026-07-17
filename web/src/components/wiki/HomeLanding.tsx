@@ -1,31 +1,17 @@
-import { marked } from 'marked'
 import { RotatingPosts } from '@/components/wiki/RotatingPosts'
+import { HeroBanner } from '@/components/wiki/HeroBanner'
 import { getLandingPostsConfig } from '@/lib/landing-posts'
-import { sanitizeHtml } from '@/lib/sanitize'
-
-function renderLandingMarkdown(text: string): string {
-  return sanitizeHtml(marked.parseInline(text, { gfm: true }) as string)
-}
 
 export function HomeLanding() {
   const config = getLandingPostsConfig()
 
   return (
     <div className="landing-page">
-      <section className="hero landing-hero">
-        <h1
-          className="hero__title"
-          dangerouslySetInnerHTML={{
-            __html: renderLandingMarkdown(config.mission.headline),
-          }}
-        />
-        <p
-          className="hero__subtitle"
-          dangerouslySetInnerHTML={{
-            __html: renderLandingMarkdown(config.mission.summary),
-          }}
-        />
-      </section>
+      <HeroBanner
+        title={config.mission.headline}
+        subtitle={config.mission.summary}
+        dynamic
+      />
 
       <RotatingPosts posts={config.posts} settings={config.settings} ui={config.ui} />
     </div>
