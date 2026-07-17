@@ -106,6 +106,12 @@ export function appendGrafanaEmbedParams(src: string, theme: string): string {
   const u = new URL(src)
   u.searchParams.set('theme', theme)
   u.searchParams.set('kiosk', 'true')
+  if (!u.searchParams.has('from')) {
+    u.searchParams.set('from', 'now-30d')
+  }
+  if (!u.searchParams.has('to')) {
+    u.searchParams.set('to', 'now')
+  }
   return u.toString()
 }
 

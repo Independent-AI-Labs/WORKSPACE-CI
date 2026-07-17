@@ -121,6 +121,17 @@ describe('appendGrafanaEmbedParams', () => {
     expect(u.searchParams.get('theme')).toBe('dark')
     expect(u.searchParams.getAll('kiosk')).toEqual(['true'])
     expect(u.searchParams.get('orgId')).toBe('1')
+    expect(u.searchParams.get('from')).toBe('now-30d')
+    expect(u.searchParams.get('to')).toBe('now')
+  })
+
+  it('preserves existing time range params', () => {
+    const src =
+      'https://workspaceguardrails.com/grafana/d/x/y?orgId=1&from=now-7d&to=now-1h'
+    const out = appendGrafanaEmbedParams(src, 'dark')
+    const u = new URL(out)
+    expect(u.searchParams.get('from')).toBe('now-7d')
+    expect(u.searchParams.get('to')).toBe('now-1h')
   })
 })
 
