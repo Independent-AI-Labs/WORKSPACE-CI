@@ -18,7 +18,7 @@
 **Cross-references:**
 
 - [REQ-BOOT-LAYOUT](../requirements/REQ-BOOT-LAYOUT.md): companion requirements (FR-/NFR-level acceptance criteria)
-- [HOOKS.md](../HOOKS.md): hook generation contract
+- [RUNBOOK-HOOKS](../runbooks/RUNBOOK-HOOKS.md): hook generation contract
 - [`lib/ci.sh`](../../lib/ci.sh): platform detection, boot path resolver, workspace root resolution, `ci_sha256()`
 - [`scripts/generate-hooks`](../../scripts/generate-hooks): hook generator (PATH-prepend + relative path)
 - [`scripts/bootstrap-homebrew`](../../scripts/bootstrap-homebrew): macOS Homebrew + GNU tools installer

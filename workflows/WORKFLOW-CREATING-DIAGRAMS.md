@@ -213,7 +213,7 @@ as requirements for other repos.*
 
 Further reading in that repo:
 [`docs/architecture/README.md`](../../WORKSPACE-GATEWAY/docs/architecture/README.md),
-[`docs/DASHBOARD-REQUIREMENTS.md`](../../WORKSPACE-GATEWAY/docs/DASHBOARD-REQUIREMENTS.md).
+[`docs/requirements/REQ-DASHBOARD.md`](../../WORKSPACE-GATEWAY/docs/requirements/REQ-DASHBOARD.md).
 
 ### Anti-patterns from past Gateway README edits
 

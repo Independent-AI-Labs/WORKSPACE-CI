@@ -1,21 +1,23 @@
 # SPEC-SCAFFOLD-CI: Consumer-Project CI Bootstrapper (Profile-Driven Generator)
 
 **Date:** 2026-07-04
-**Status:** DRAFT (specification; implementation pending)
+**Status:** Active
 **Type:** Specification
 **Requirements:** [REQ-SCAFFOLD-CI](../requirements/REQ-SCAFFOLD-CI.md)
 
-> **Implementation status:** Not started. This document is the design
-> contract. All files referenced in §2 ("New Files") exist as proposals
-> only; none are committed yet. The companion requirements document
-> `REQ-SCAFFOLD-CI.md` defines acceptance criteria at the FR/NFR level.
+> **Implementation status:** Implemented. The generator exists at
+> [`scripts/scaffold-ci`](../../scripts/scaffold-ci) with library support
+> in `lib/scaffold_lib.sh` and `lib/scaffold_analyze.sh`, and test
+> coverage under `tests/unit/test_scaffold_ci*.sh`. The companion
+> requirements document `REQ-SCAFFOLD-CI.md` defines acceptance criteria
+> at the FR/NFR level.
 
 ---
 
 **Cross-references:**
 
 - [REQ-SCAFFOLD-CI](../requirements/REQ-SCAFFOLD-CI.md): companion requirements (FR-/NFR-level acceptance criteria)
-- [HOOKS.md](../HOOKS.md): native hook generation contract (the downstream consumer of `.pre-commit-config.yaml`)
+- [RUNBOOK-HOOKS](../runbooks/RUNBOOK-HOOKS.md): native hook generation contract (the downstream consumer of `.pre-commit-config.yaml`)
 - [SPEC-BOOT-LAYOUT](SPEC-BOOT-LAYOUT.md): hierarchical `.boot-linux/` walk-up; the generated `Makefile` MUST honour this contract
 - [`config/required_hooks.yaml`](../../config/required_hooks.yaml): the master hook registry; the source of truth for hook IDs, kinds, and applicability (read-only by the generator)
 - [`scripts/generate-hooks`](../../scripts/generate-hooks): native hook generator; `scaffold-ci` produces its input file, `generate-hooks` consumes it
@@ -1175,7 +1177,7 @@ does not check individual entries.
 - [ ] Add reference entries in `CI/README.md`'s documentation table.
 - [ ] Author `docs/requirements/REQ-SCAFFOLD-CI.md` companion
   requirements document.
-- [ ] Add an example in `docs/HOOKS.md` showing the full
+- [ ] Add an example in `docs/runbooks/RUNBOOK-HOOKS.md` showing the full
   "copy-template → trim → scaffold → install-hooks" lifecycle.
 
 ---

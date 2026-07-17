@@ -1,28 +1,14 @@
 # SPEC-WIKI: Interactive Wiki Web UI for workspace-ci: Specification
 
 **Date:** 2026-06-09
-**Status:** DRAFT
+**Status:** Active
 **Type:** Specification
 **Requirements:** [REQ-WIKI](../requirements/REQ-WIKI.md)
 
-> **Implementation status:**
->
-> | Component | Status |
-> |-----------|--------|
-> | `web/` directory | Not created |
-> | Next.js 16 app scaffold | Not built |
-> | Content extraction pipeline | Not built |
-> | `scripts/extract-docs` | Not built |
-> | Wiki shell layout | Not built |
-> | Pattern library | Not built |
-> | Hook reference | Not built |
-> | Configuration reference | Not built |
-> | Pattern playground | Not built |
-> | Search | Not built |
-> | Analytics store | Not built |
-> | Feedback widget | Not built |
-> | Theme system | Not built |
-> | Test suites | Not built |
+> **Implementation status:** the `web/` Next.js application exists
+> (routes under `web/app/`, components under `web/src/components/`,
+> styles under `web/public/styles/`). Responsive-layout behavior is
+> specified in [SPEC-WIKI-RESPONSIVE](SPEC-WIKI-RESPONSIVE.md).
 
 ---
 
@@ -161,7 +147,7 @@ interpreted as described in RFC 2119.
 | `/` (Home) | `README.md` | analytics store stats |
 | `/patterns` | `config/banned_words.yaml` | `config/banned_words_exceptions.yaml` |
 | `/patterns/[category]` | `config/banned_words.yaml` (filtered) | `web/content/patterns/` |
-| `/hooks` | `config/required_hooks.yaml` | `docs/HOOKS.md` |
+| `/hooks` | `config/required_hooks.yaml` | `docs/runbooks/RUNBOOK-HOOKS.md` |
 | `/hooks/[id]` | `config/required_hooks.yaml` (filtered) | `api-docs.json` / `shell-docs.json` |
 | `/config` | directory listing of `config/*.yaml` | `config/*.schema.yaml` (field docs) |
 | `/config/[name]` | single `config/<name>.yaml` | `config/<name>.schema.yaml` + `web/content/config/<name>.md` |
@@ -172,7 +158,7 @@ interpreted as described in RFC 2119.
 | `/playground` | `config/banned_words.yaml` |: |
 | `/tiers` | `config/required_hooks.yaml` (tier matrix) | `web/content/tiers.md` |
 | `/tooling` | `scripts/manifest.yaml` (canonical script manifest) | `web/content/tooling/` |
-| `/integration` | `docs/HOOKS.md` | `web/content/integration.md` |
+| `/integration` | `docs/runbooks/RUNBOOK-HOOKS.md` | `web/content/integration.md` |
 
 ### 4.4 Hook Record Shape
 

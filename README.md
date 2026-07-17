@@ -68,7 +68,7 @@ make check-push
 ```
 
 For monorepo setups with shared config, see
-[`docs/HOOKS.md`](docs/HOOKS.md) and
+[`docs/runbooks/RUNBOOK-HOOKS.md`](docs/runbooks/RUNBOOK-HOOKS.md) and
 [`docs/requirements/REQ-BOOT-LAYOUT.md`](docs/requirements/REQ-BOOT-LAYOUT.md):
 covers the Makefile contract, platform-aware `$(BOOT_NAME)` boot directories,
 `ci_resolve_boot_path` walk-up, `moon.yml::project.inherited_boot_dirs`, and
@@ -269,13 +269,15 @@ make check-guard
 | Doc | What's in it |
 |-----|-------------|
 | [`workflows/README.md`](workflows/README.md) | Agent/contributor workflows: website copy, architecture diagrams |
-| [`docs/HOOKS.md`](docs/HOOKS.md) | Hook generation, configuration, migration from pre-commit |
-| [`docs/PORTABILITY.md`](docs/PORTABILITY.md) | Shell portability contract: process-substitution ban, temp-file capture helpers |
-| [`docs/SPEC-CI-SHARED-CONFIGS.md`](docs/SPEC-CI-SHARED-CONFIGS.md) | Monorepo shared config contract and inheritance |
+| [`docs/README.md`](docs/README.md) | Documentation hub (requirements, specifications, runbooks, audits) |
+| [`docs/runbooks/RUNBOOK-HOOKS.md`](docs/runbooks/RUNBOOK-HOOKS.md) | Hook generation, configuration, migration from pre-commit |
+| [`docs/requirements/REQ-PORTABILITY.md`](docs/requirements/REQ-PORTABILITY.md) | Shell portability contract: process-substitution ban, temp-file capture helpers |
+| [`docs/specifications/SPEC-PORTABILITY.md`](docs/specifications/SPEC-PORTABILITY.md) | Portability implementation: capture helper API, enforcement |
 | [`docs/requirements/REQ-BOOT-LAYOUT.md`](docs/requirements/REQ-BOOT-LAYOUT.md) | Platform-aware boot directory layout (`.boot-linux/`/`.boot-macos/`) and `.venv/` toolchain requirements |
 | [`docs/specifications/SPEC-BOOT-LAYOUT.md`](docs/specifications/SPEC-BOOT-LAYOUT.md) | Boot layout implementation: walk-up PATH resolution, config schema, compliance check |
 | [`docs/requirements/REQ-WIKI.md`](docs/requirements/REQ-WIKI.md) | Interactive wiki UI requirements |
 | [`docs/specifications/SPEC-WIKI.md`](docs/specifications/SPEC-WIKI.md) | Wiki implementation specification |
+| [`docs/requirements/REQ-WIKI-RESPONSIVE.md`](docs/requirements/REQ-WIKI-RESPONSIVE.md) | Wiki responsive layout requirements |
 | [`docs/specifications/SPEC-WIKI-RESPONSIVE.md`](docs/specifications/SPEC-WIKI-RESPONSIVE.md) | Wiki responsive layout specification |
 | [`docs/requirements/REQ-SCAFFOLD-CI.md`](docs/requirements/REQ-SCAFFOLD-CI.md) | scaffold-ci feature requirements (FR/NFR/TR acceptance criteria) |
 | [`docs/specifications/SPEC-SCAFFOLD-CI.md`](docs/specifications/SPEC-SCAFFOLD-CI.md) | scaffold-ci implementation: 5-phase validation, generation pipeline, awk parser |

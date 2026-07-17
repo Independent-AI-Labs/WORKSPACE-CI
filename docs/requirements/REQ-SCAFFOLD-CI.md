@@ -1,21 +1,25 @@
 # REQ-SCAFFOLD-CI: Profile-Driven CI Bootstrapper for Consumer Projects
 
 **Date:** 2026-07-04
-**Status:** DRAFT (requirements; implementation pending)
+**Status:** Active
 **Type:** Requirements
 **Specification:** [SPEC-SCAFFOLD-CI](../specifications/SPEC-SCAFFOLD-CI.md)
 
-> **Implementation status:** Not started. This document defines the
-> functional requirements and acceptance criteria for the
-> `scaffold-ci` feature. The companion specification
-> (`SPEC-SCAFFOLD-CI.md`) defines the implementation contract.
+> **Implementation status:** Implemented. `scaffold-ci` exists at
+> [`scripts/scaffold-ci`](../../scripts/scaffold-ci) with library support
+> in [`lib/scaffold_lib.sh`](../../lib/scaffold_lib.sh) and
+> [`lib/scaffold_analyze.sh`](../../lib/scaffold_analyze.sh), and test
+> coverage under `tests/unit/test_scaffold_ci*.sh`. This document defines
+> the functional requirements and acceptance criteria; the companion
+> specification (`SPEC-SCAFFOLD-CI.md`) defines the implementation
+> contract.
 
 ---
 
 **Cross-references:**
 
 - [SPEC-SCAFFOLD-CI](../specifications/SPEC-SCAFFOLD-CI.md): companion specification (implementation detail)
-- [HOOKS.md](../HOOKS.md): hook generation, native bash hook contract
+- [RUNBOOK-HOOKS](../runbooks/RUNBOOK-HOOKS.md): hook generation, native bash hook contract
 - [REQ-BOOT-LAYOUT](REQ-BOOT-LAYOUT.md): hierarchical `.boot-linux/` walk-up -- the generated `Makefile` MUST honour this contract
 - [SPEC-BOOT-LAYOUT](../specifications/SPEC-BOOT-LAYOUT.md): boot layout implementation -- informs generated `Makefile`'s `install-hooks` and `preflight` targets
 - [`config/required_hooks.yaml`](../../config/required_hooks.yaml): master hook registry (read-only by the generator)
@@ -58,7 +62,7 @@ filesystem offset.
 
 **This document DOES NOT:**
 
-- Own `generate-hooks` semantics (see HOOKS.md).
+- Own `generate-hooks` semantics (see [RUNBOOK-HOOKS](../runbooks/RUNBOOK-HOOKS.md)).
 - Own the `makefile_contract.mk` target list (that file owns it; the
   generator complies with it).
 - Own the `required_hooks.yaml` schema (that file's own schema file

@@ -1,20 +1,22 @@
 # REQ-WIKI: Interactive Wiki Web UI for workspace-ci
 
 **Date:** 2026-06-09
-**Status:** DRAFT
+**Status:** Active
 **Type:** Requirements
 **Specification:** [SPEC-WIKI](../specifications/SPEC-WIKI.md)
 
-> **Implementation status:** Requirements gathering. No code. The `web/` directory does not
-> exist yet. This document defines the full feature set and acceptance criteria for an
-> interactive, wiki-like web UI that documents every feature of workspace-ci.
+> The `web/` Next.js application exists and implements the wiki feature
+> set described here. This document defines the feature set and
+> acceptance criteria for the interactive, wiki-like web UI that
+> documents every feature of workspace-ci. Responsive-layout behavior is
+> owned by [REQ-WIKI-RESPONSIVE](REQ-WIKI-RESPONSIVE.md).
 
 ---
 
 **Cross-references:**
 
 - [SPEC-WIKI](../specifications/SPEC-WIKI.md): companion specification (implementation detail)
-- [HOOKS.md](../HOOKS.md): hook generation and integration guide
+- [RUNBOOK-HOOKS](../runbooks/RUNBOOK-HOOKS.md): hook generation and integration guide
 - [`config/required_hooks.yaml`](../../config/required_hooks.yaml): canonical hook definitions
 - [`config/banned_words.yaml`](../../config/banned_words.yaml): all banned content patterns
 - [`config/sensitive_files.yaml`](../../config/sensitive_files.yaml): sensitive file rules

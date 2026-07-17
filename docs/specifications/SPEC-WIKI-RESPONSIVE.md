@@ -1,7 +1,21 @@
-# Responsive Overhaul Spec: `web/`
+# SPEC-WIKI-RESPONSIVE: Wiki Responsive Layout Implementation
 
-Status: DRAFT v1
-Date: 2026-07-06
+**Date:** 2026-07-06
+**Status:** Active
+**Type:** Specification
+**Requirements:** [REQ-WIKI-RESPONSIVE](../requirements/REQ-WIKI-RESPONSIVE.md)
+
+> Responsive overhaul of `web/`: a phased patch over the existing
+> desktop-first CSS. Implementation state per phase is tracked in
+> [REQ-WIKI-RESPONSIVE](../requirements/REQ-WIKI-RESPONSIVE.md) §8.
+
+---
+
+**Cross-references:**
+- [REQ-WIKI-RESPONSIVE](../requirements/REQ-WIKI-RESPONSIVE.md): companion requirements
+- [SPEC-WIKI](SPEC-WIKI.md): parent wiki specification
+
+---
 
 ## 1. Problem Statement
 

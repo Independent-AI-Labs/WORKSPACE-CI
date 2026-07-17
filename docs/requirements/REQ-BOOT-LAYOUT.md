@@ -19,7 +19,7 @@
 **Cross-references:**
 
 - [SPEC-BOOT-LAYOUT](../specifications/SPEC-BOOT-LAYOUT.md): companion specification (implementation detail)
-- [HOOKS.md](../HOOKS.md): hook generation, `generate-hooks`, PATH-prepend contract
+- [RUNBOOK-HOOKS](../runbooks/RUNBOOK-HOOKS.md): hook generation, `generate-hooks`, PATH-prepend contract
 - [`config/banned_words.yaml`](../../config/banned_words.yaml): `\bpython3?\b` ban (use `uv run python` for hermetic invocation, never bare `python`)
 - [`config/required_hooks.yaml`](../../config/required_hooks.yaml): canonical hook definitions
 - [`lib/ci.sh`](../../lib/ci.sh): workspace root resolution, platform detection, boot path resolver, output helpers
