@@ -8,6 +8,9 @@ Config directory resolution uses ``CI_CONFIG_DIR`` (or wiki alias
 from __future__ import annotations
 
 import os
+import stat
+import subprocess
+import sys
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -266,3 +269,71 @@ def find_web_data_dir() -> Path:
 def clear_config_override_cache() -> None:
     """Clear cached override manifests (for tests)."""
     _load_override_manifest.cache_clear()
+
+
+def _has_immutable_flag(path: Path) -> bool:
+    try:
+        if sys.platform == "darwin":
+            out = subprocess.run(
+                ["stat", "-f", "%Sf", str(path)],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            return "uchg" in out.stdout
+        out = subprocess.run(
+            ["lsattr", "-d", str(path)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        print(f"ci: cannot read file flags for {path}: {exc}", file=sys.stderr)
+        return False
+    return "i" in out.stdout.split()[0]
+
+
+def exemption_file_state(path: Path | str) -> str:
+    """Return the provenance state of an exemption/config file.
+
+    One of: ``ok``, ``missing``, ``symlink``, ``not-regular``,
+    ``not-root-owned``, ``not-immutable``. Anything other than ``ok``
+    means the file must NOT be honored (fail-closed).
+    """
+    p = Path(path)
+    try:
+        st = os.lstat(p)
+    except FileNotFoundError:
+        return "missing"
+    if stat.S_ISLNK(st.st_mode):
+        return "symlink"
+    if not stat.S_ISREG(st.st_mode):
+        return "not-regular"
+    if st.st_uid != 0:
+        return "not-root-owned"
+    if not _has_immutable_flag(p):
+        return "not-immutable"
+    return "ok"
+
+
+class ExemptionFileError(RuntimeError):
+    """Exemption/config file failed provenance validation."""
+
+    def __init__(self, path: Path | str, description: str, state: str) -> None:
+        super().__init__(
+            f"{description} not compliant: {path} (state: {state}); run lock-exemptions"
+        )
+
+
+def validate_exemption_file(
+    path: Path | str, description: str = "exemption file"
+) -> None:
+    """Fail-closed provenance validation for exemption/config files.
+
+    Raises ExemptionFileError unless the file exists, is a regular
+    non-symlink file owned by uid 0, and carries the immutable flag.
+    """
+    state = exemption_file_state(path)
+    if state == "ok":
+        return
+    raise ExemptionFileError(path, description, state)

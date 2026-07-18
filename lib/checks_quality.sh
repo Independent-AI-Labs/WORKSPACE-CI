@@ -16,7 +16,8 @@ ci_check_quality_exceptions_present() {
     local _path="$project_dir/quality_exceptions.yaml"
 
     if [[ -f "$_path" ]]; then
-        return 0
+        ci_validate_exemption_file "$_path" "quality_exceptions.yaml"
+        return
     fi
 
     ci_fail "quality_exceptions.yaml missing at $project_dir"

@@ -1,0 +1,37 @@
+# Canonical manifest of per-project exemption/config files consumed by CI
+# checks. Every consumer of these files validates provenance before honoring
+# them (owner uid 0, immutable bit, regular non-symlink file) and fails
+# closed otherwise. `make lock-exemptions` (sudo) creates and root-locks
+# any non-compliant entries.
+#
+# Fields:
+#   path:           repo-relative location in the consumer project
+#   default_source: CI-relative file copied when scaffolding (optional)
+#   default_content: inline default used when no default_source (optional)
+version: 1
+files:
+  - path: config/silent_swallow_exceptions.yaml
+    default_content: |
+      exceptions: []
+  - path: config/banned_words_exceptions.yaml
+    default_content: |
+      exceptions: []
+  - path: config/sensitive_files_exceptions.yaml
+    default_content: |
+      safe_exceptions:
+        - .markdown_docs_exceptions.yaml
+  - path: quality_exceptions.yaml
+    default_source: templates/quality_exceptions.template.yaml
+  - path: .markdown_docs_exceptions.yaml
+    default_content: |
+      exceptions: []
+  - path: config/coverage_thresholds.yaml
+    default_source: config/coverage_thresholds.yaml
+  - path: config/file_length_limits.yaml
+    default_source: config/file_length_limits.yaml
+  - path: config/dead_code.yaml
+    default_source: config/dead_code.yaml
+  - path: config/dependency_excludes.yaml
+    default_source: config/dependency_excludes.yaml
+  - path: config/duplicate_dependency_excludes.yaml
+    default_source: config/duplicate_dependency_excludes.yaml

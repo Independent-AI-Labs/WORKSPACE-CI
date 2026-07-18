@@ -118,6 +118,6 @@ def detect_shell_multiline(
         for check in checks:
             pid = check(added_lines, i)
             if pid is not None:
-                violations.append((added_lines[i], pid))
+                violations.append((_line, pid))
                 break
     return violations

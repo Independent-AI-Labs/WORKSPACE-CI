@@ -32,6 +32,7 @@ _load_sensitive_config() {
     if [[ -n "$repo_root" ]]; then
         local per_repo="${repo_root}/config/sensitive_files_exceptions.yaml"
         if [[ -f "$per_repo" ]]; then
+            ci_validate_exemption_file "$per_repo" "sensitive_files_exceptions.yaml" || return 1
             local _extra=()
             ci_capture_lines _extra -- ci_read_yaml_list "$per_repo" "safe_exceptions"
             _SAFE_EXCEPTIONS+=("${_extra[@]}")
@@ -125,6 +126,9 @@ ci_block_sensitive_files() {
 ci_check_file_length() {
     local config
     config="$(ci_config_path file_length_limits "./config/file_length_limits.yaml")" || return 1
+    if [[ -f "$config" ]]; then
+        ci_validate_exemption_file "$config" "file_length_limits.yaml" || return 1
+    fi
     local max_lines=512
     local exts=(.py .sh .js .ts .tsx .rs .css .lua)
     local errors=0

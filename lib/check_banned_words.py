@@ -26,7 +26,7 @@ from typing import Any
 
 import yaml
 
-from ci.paths import resolve_config_path
+from ci.paths import resolve_config_path, validate_exemption_file
 
 _NULL_STDIN = subprocess.DEVNULL
 
@@ -38,9 +38,15 @@ def _scan_root() -> Path | None:
 
 
 def _merge_exceptions(exc_map: dict[str, list[str]], exc_path: Path) -> None:
-    """Load a banned_words_exceptions.yaml file and merge into exc_map."""
+    """Load a banned_words_exceptions.yaml file and merge into exc_map.
+
+    Provenance is validated fail-closed (root-owned + immutable) before
+    the file is honored; a missing file is skipped only when nothing
+    exists at the path.
+    """
     if not exc_path.is_file():
         return
+    validate_exemption_file(exc_path, "banned_words_exceptions.yaml")
     with open(exc_path) as f:
         exc_data: Any = yaml.safe_load(f) or {}
     for exc in exc_data.get("exceptions") or []:

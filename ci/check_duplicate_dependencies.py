@@ -25,7 +25,7 @@ from typing import Any, NamedTuple
 import tomllib
 import yaml
 
-from ci.paths import resolve_config_path
+from ci.paths import resolve_config_path, validate_exemption_file
 
 BUILTIN_EXCLUDES: frozenset[str] = frozenset(
     {
@@ -93,6 +93,7 @@ def _load_excludes() -> set[str]:
     excludes_path = resolve_config_path("duplicate_dependency_excludes", required=False)
     if not excludes_path.exists():
         return set()
+    validate_exemption_file(excludes_path, "duplicate_dependency_excludes.yaml")
     try:
         with open(excludes_path) as f:
             data = yaml.safe_load(f) or {}

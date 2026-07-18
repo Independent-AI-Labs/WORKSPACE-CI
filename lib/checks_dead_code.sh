@@ -72,6 +72,7 @@ ci_check_dead_code() {
         ci_warn "dead_code.yaml not found; skipping dead-code check"
         return 0
     fi
+    ci_validate_exemption_file "$_dc_cfg" "dead_code.yaml" || return 1
 
     local _dc_bin=""
     if _dc_bin="$(command -v dangle 2>&1)"; then

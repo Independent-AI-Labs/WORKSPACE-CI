@@ -482,6 +482,13 @@ _scl_copy_config "$_CONFIG_DIR/markdown_docs.yaml"       "$_consumer/config/mark
 
 _scl_gen_qe
 
+# ── Create any missing exemption files (manifest-driven, never overwrites) ──
+if [[ $_dry_run -eq 0 ]]; then
+    if ! ci_uv_run -m ci.exemption_files ensure "$_consumer"; then
+        ci_warn "exemption-file ensure failed; run manually: ci_uv_run -m ci.exemption_files ensure $_consumer"
+    fi
+fi
+
 # ── Summary ────────────────────────────────────────────────────────────────
 echo ""
 if [[ ${#_generated[@]} -gt 0 ]]; then

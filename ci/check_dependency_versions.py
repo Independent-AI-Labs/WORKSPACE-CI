@@ -27,7 +27,7 @@ from ci.models import (
     ParsedDependency,
     PathCheckResult,
 )
-from ci.paths import resolve_config_path
+from ci.paths import resolve_config_path, validate_exemption_file
 
 _QUERY_RESULTS: dict[str, int] = {"failures": 0, "successes": 0}
 
@@ -50,6 +50,7 @@ def load_config_excludes(key: str = "excludes") -> set[str]:
     config_path = resolve_config_path("dependency_excludes", required=False)
 
     if config_path.is_file():
+        validate_exemption_file(config_path, "dependency_excludes.yaml")
         try:
             with open(config_path) as f:
                 data = yaml.safe_load(f)

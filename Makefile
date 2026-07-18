@@ -457,6 +457,10 @@ extract-wiki-data: extract-code-stats extract-hook-sources extract-script-source
 scaffold-ci: ## Generate CI integration files for a consumer project
 	bash scripts/scaffold-ci $(ARGS)
 
+.PHONY: lock-exemptions
+lock-exemptions: ## (sudo) Create + root-lock all manifest exemption files in a consumer repo
+	scripts/lock-exemptions "$(or $(CONSUMER),$(PWD))"
+
 # System hardening (requires sudo)
 # =============================================================================
 # System Hardening

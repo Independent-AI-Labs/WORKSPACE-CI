@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# lock-exemptions [consumer_dir]
+#
+# (sudo) Create any missing manifest exemption files in a consumer repo,
+# then root-lock every file in config/exemption_files.yaml:
+# chown root:root, chmod 0644, chattr +i (uchg on macOS).
+# Checklist-style: reports compliant files, fixes only non-compliant ones.
+set -euo pipefail
+
+_CI_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=../lib/ci.sh
+if ! source "$_CI_ROOT/lib/ci.sh"; then
+    echo "ERROR: failed to source $_CI_ROOT/lib/ci.sh" >&2
+    exit 1
+fi
+
+if [[ "$(id -u)" != "0" ]]; then
+    ci_fail "lock-exemptions must run as root: sudo make -C projects/CI lock-exemptions"
+    exit 1
+fi
+
+_consumer="${1:-}"
+if [[ -z "$_consumer" ]]; then
+    ci_fail "usage: lock-exemptions <consumer_dir>"
+    exit 1
+fi
+_consumer="$(cd "$_consumer" && pwd)"
+
+ci_info "Locking exemption files in $_consumer"
+
+# 1. Create missing files as the invoking user (keeps repo files agent-owned
+#    until the lock step below claims them).
+if [[ -n "${SUDO_USER:-}" && "$SUDO_USER" != "root" ]]; then
+    sudo -u "$SUDO_USER" "$_CI_ROOT/$CI_BOOT_NAME/bin/uv" run --no-sync --project "$_CI_ROOT" python -m ci.exemption_files ensure "$_consumer"
+else
+    ci_uv_run -m ci.exemption_files ensure "$_consumer"
+fi
+
+# 2. Lock every non-compliant manifest file.
+_report="$(ci_uv_run -m ci.exemption_files report "$_consumer")"
+_fixed=0
+_compliant=0
+while IFS= read -r _line; do
+    [[ -z "$_line" ]] && continue
+    _state="${_line%%:*}"
+    _path="${_line#*: }"
+    if [[ "$_state" == "ok" ]]; then
+        echo "  [compliant] $_path"
+        _compliant=$((_compliant + 1))
+        continue
+    fi
+    _attrs="$(lsattr -d "$_path")"
+    if [[ "${_attrs%% *}" == *i* ]]; then
+        chattr -i "$_path"
+    fi
+    chown root:root "$_path"
+    chmod 0644 "$_path"
+    if [[ "$(ci_platform_name)" == "darwin" ]]; then
+        chflags uchg "$_path"
+    else
+        chattr +i "$_path"
+    fi
+    echo "  [locked]     $_path (was: $_state)"
+    _fixed=$((_fixed + 1))
+done <<< "$_report"
+
+if [[ $_fixed -eq 0 ]]; then
+    ci_pass "lock-exemptions: $_compliant file(s) compliant, nothing to do"
+else
+    ci_pass "lock-exemptions: locked $_fixed file(s), $_compliant already compliant"
+fi

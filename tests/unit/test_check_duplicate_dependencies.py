@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from ci.check_duplicate_dependencies import (
     _MIN_DUPLICATE_ENTRIES,
     BUILTIN_EXCLUDES,
@@ -15,6 +17,14 @@ from ci.check_duplicate_dependencies import (
     find_workspace_root,
     main,
 )
+
+
+@pytest.fixture(autouse=True)
+def _skip_exemption_validation():
+    with patch(
+        "ci.check_duplicate_dependencies.validate_exemption_file", lambda *a, **k: None
+    ):
+        yield
 
 
 class TestParseDepName:

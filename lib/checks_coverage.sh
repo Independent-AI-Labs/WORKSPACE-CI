@@ -23,6 +23,8 @@ ci_verify_coverage() {
         return 1
     fi
 
+    ci_validate_exemption_file "$config" "coverage_thresholds.yaml" || return 1
+
     # Parse suites (each has: path, min_coverage, source_path, runner)
     local suites=()
     ci_capture_lines suites -- awk '/^[a-z][a-z_]*:/ { sub(/:.*/, ""); print }' "$config"

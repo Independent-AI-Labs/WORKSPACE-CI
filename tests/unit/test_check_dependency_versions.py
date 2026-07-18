@@ -4,6 +4,8 @@ import urllib.error
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from ci.check_dependency_versions import (
     BUILTIN_EXCLUDES,
     check_and_collect,
@@ -13,6 +15,14 @@ from ci.check_dependency_versions import (
     upgrade_pyproject,
 )
 from ci.models import LooseDependency, OutdatedDependency
+
+
+@pytest.fixture(autouse=True)
+def _skip_exemption_validation():
+    with patch(
+        "ci.check_dependency_versions.validate_exemption_file", lambda *a, **k: None
+    ):
+        yield
 
 
 class TestConstants:

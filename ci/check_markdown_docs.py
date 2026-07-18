@@ -41,7 +41,7 @@ from ci._md_checkers import (
 )
 from ci._md_http_client import HttpClient
 from ci._md_refs import ParsedDoc, parse_doc
-from ci.paths import resolve_config_path
+from ci.paths import resolve_config_path, validate_exemption_file
 
 
 class MarkdownDocsConfig(BaseModel):
@@ -108,6 +108,7 @@ def _load_repo_override(repo_root: Path) -> MarkdownDocsConfig:
     cfg_file = repo_root / ".markdown_docs_exceptions.yaml"
     if not cfg_file.is_file():
         return MarkdownDocsConfig()
+    validate_exemption_file(cfg_file, ".markdown_docs_exceptions.yaml")
     try:
         loaded = yaml.safe_load(cfg_file.read_text(encoding="utf-8"))
     except yaml.YAMLError:

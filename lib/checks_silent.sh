@@ -86,8 +86,13 @@ ci_check_silent_swallow() {
     # Format mirrors banned_words_exceptions.yaml:
     #   exceptions:
     #     - paths: ['public/vendor/', 'other/path']
+    # Provenance is validated fail-closed (root-owned + immutable).
     local -a _exc_paths=()
     local _exc_cfg="config/silent_swallow_exceptions.yaml"
+    if ! ci_validate_exemption_file "$_exc_cfg" "silent_swallow_exceptions.yaml"; then
+        rm -f "$files_tmp" "$combined_tmp" "$diff_tmp"
+        return 1
+    fi
     if [[ -f "$_exc_cfg" ]]; then
         local _exc_tmp
         _exc_tmp="$(mktemp)"

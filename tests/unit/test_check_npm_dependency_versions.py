@@ -5,6 +5,8 @@ import urllib.error
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from ci.check_dependency_versions import (
     check_npm_and_collect,
     get_latest_npm_version,
@@ -13,6 +15,14 @@ from ci.check_dependency_versions import (
     upgrade_package_json,
 )
 from ci.models import LooseDependency, OutdatedDependency
+
+
+@pytest.fixture(autouse=True)
+def _skip_exemption_validation():
+    with patch(
+        "ci.check_dependency_versions.validate_exemption_file", lambda *a, **k: None
+    ):
+        yield
 
 
 class TestGetLatestNpmVersion:

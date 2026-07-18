@@ -27,6 +27,7 @@ universal_exceptions:
       - 'config/banned_words\.schema\.yaml$'
       - 'config/silent_swallow_patterns\.yaml$'
       - 'config/silent_swallow_patterns\.schema\.yaml$'
+      - 'config/exemption_files\.yaml$'
       - 'config/standards\.yaml$'
       - 'config/standards\.schema\.yaml$'
       - 'config/wiki_labels\.yaml$'
