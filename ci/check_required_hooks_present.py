@@ -324,13 +324,23 @@ def _check_hooks_rendered(
     if not hooks_dir.is_dir():
         return [f".git/hooks not found at {hooks_dir}"]
     rendered = _read_rendered_hooks(hooks_dir)
+    issues = [
+        f"built-in block '{marker}' missing from .git/hooks/{stage}"
+        for stage, content in rendered.items()
+        for marker in (
+            "CI-BUILTIN-EXEMPTION-COMPLIANCE",
+            "quality_exceptions.yaml preflight",
+        )
+        if marker not in content
+    ]
     languages = _detect_languages(project_dir)
-    return [
+    issues += [
         f"hook '{hook.id}' (stage={hook.stage}) not present in .git/hooks/{hook.stage}"
         for hook in manifest.hooks
         if _hook_applies(hook, tier, languages)
         and _hook_marker(hook.id) not in rendered.get(hook.stage, "")
     ]
+    return issues
 
 
 def _emit(level: str, msg: str) -> None:

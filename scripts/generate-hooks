@@ -146,6 +146,37 @@ EOF
         w '    exit 1'
         w 'fi'
 
+    # Exemption-file compliance: ALWAYS enforced, all tiers, every stage.
+    # Hard-fails if any file listed in the CI canonical manifest
+    # (config/exemption_files.yaml) is missing, not root-owned, or not
+    # immutable. The marker comment lets check-required-hooks-present
+    # verify this built-in block survived rendering.
+        w ''
+        w '# === exemption-file compliance (mandatory) ==='
+        w '# CI-BUILTIN-EXEMPTION-COMPLIANCE'
+        w '_exemptions_lib="$_ROOT/'"${_ci_rel}"'/lib/ci_exemptions.sh"'
+        w '_exemptions_manifest="$_ROOT/'"${_ci_rel}"'/config/exemption_files.yaml"'
+        w 'if [[ ! -f "$_exemptions_lib" || ! -f "$_exemptions_manifest" ]]; then'
+        w '    ci_fail "CI exemption infrastructure missing (lib/ci_exemptions.sh or config/exemption_files.yaml)"'
+        w '    exit 1'
+        w 'fi'
+        w 'if ! source "$_exemptions_lib"; then'
+        w '    ci_fail "failed to source $_exemptions_lib"'
+        w '    exit 1'
+        w 'fi'
+        w '_exemption_fail=0'
+        w 'for _rel in $(sed -n "s/^  - path: //p" "$_exemptions_manifest"); do'
+        w '    _exemption_state="$(ci_exemption_file_state "$_ROOT/$_rel")"'
+        w '    if [[ "$_exemption_state" != "ok" ]]; then'
+        w '        ci_fail "exemption file not compliant: $_rel (state: $_exemption_state)"'
+        w '        _exemption_fail=1'
+        w '    fi'
+        w 'done'
+        w 'if [[ "$_exemption_fail" -eq 1 ]]; then'
+        w "    echo \"  Fix: run 'sudo make -C \${_ROOT}/${_ci_rel} lock-exemptions CONSUMER=\$_ROOT'\""
+        w '    exit 1'
+        w 'fi'
+
     # Compliance-report preamble (pre-commit only, non-blocking).
     # Always runs the compliance audit at the top of every commit
     # so the developer sees the current tier/violations before the hook
