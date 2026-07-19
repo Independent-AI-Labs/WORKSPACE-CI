@@ -171,8 +171,14 @@ build_guard_binary() {
         # root install to consume. Agent dev loops use CARGO_TARGET_DIR
         # target/agent (WORKSPACE-GUARD Makefile check/lint/test).
         if [[ -d "$_guard_dir/target" ]]; then
-            chown -R root:root "$_guard_dir/target" || {
+            chown root:root "$_guard_dir/target" || {
                 log_error "chown target/ -> root failed"
+                return 1
+            }
+            # target/agent is the agent dev-loop CARGO_TARGET_DIR; it must
+            # stay agent-owned. Root only claims the release tree.
+            find "$_guard_dir/target" -mindepth 1 -maxdepth 1 ! -name agent                 -exec chown -R root:root {} + || {
+                log_error "chown release target tree -> root failed"
                 return 1
             }
         fi
@@ -234,8 +240,12 @@ build_guard_binary() {
         return 1
     fi
     if [[ $EUID -eq 0 ]]; then
-        chown -R root:root "$_guard_dir/target" || {
+        chown root:root "$_guard_dir/target" || {
             log_error "post-build chown target/ -> root failed"
+            return 1
+        }
+        find "$_guard_dir/target" -mindepth 1 -maxdepth 1 ! -name agent             -exec chown -R root:root {} + || {
+            log_error "post-build chown release target tree -> root failed"
             return 1
         }
     fi
