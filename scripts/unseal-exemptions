@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# unseal-exemptions [consumer_dir]
+#
+# (sudo) Remove the immutable flag from every manifest exemption file in a
+# consumer repo so it can be edited (files stay root-owned). Re-lock with
+# lock-exemptions after editing. Checklist-style: skips already-unsealed
+# files.
+set -euo pipefail
+
+_CI_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=../lib/ci.sh
+if ! source "$_CI_ROOT/lib/ci.sh"; then
+    echo "ERROR: failed to source $_CI_ROOT/lib/ci.sh" >&2
+    exit 1
+fi
+
+if [[ "$(id -u)" != "0" ]]; then
+    ci_fail "unseal-exemptions must run as root: sudo make -C projects/CI unseal-exemptions"
+    exit 1
+fi
+
+_consumer="${1:-}"
+if [[ -z "$_consumer" ]]; then
+    ci_fail "usage: unseal-exemptions <consumer_dir>"
+    exit 1
+fi
+_consumer="$(cd "$_consumer" && pwd)"
+
+ci_info "Unsealing exemption files in $_consumer"
+
+_report="$(ci_uv_run -m ci.exemption_files report "$_consumer")"
+_unsealed=0
+_skipped=0
+while IFS= read -r _line; do
+    [[ -z "$_line" ]] && continue
+    _state="${_line%%:*}"
+    _path="${_line#*: }"
+    if [[ "$_state" == "missing" ]]; then
+        echo "  [missing]  $_path"
+        _skipped=$((_skipped + 1))
+        continue
+    fi
+    if [[ "$(ci_platform_name)" == "darwin" ]]; then
+        if [[ "$(stat -f '%Sf' "$_path")" == *uchg* ]]; then
+            chflags nouchg "$_path"
+            echo "  [unsealed] $_path"
+            _unsealed=$((_unsealed + 1))
+        else
+            echo "  [already]  $_path"
+            _skipped=$((_skipped + 1))
+        fi
+        continue
+    fi
+    _attrs="$(lsattr -d "$_path")"
+    if [[ "${_attrs%% *}" == *i* ]]; then
+        chattr -i "$_path"
+        echo "  [unsealed] $_path"
+        _unsealed=$((_unsealed + 1))
+    else
+        echo "  [already]  $_path"
+        _skipped=$((_skipped + 1))
+    fi
+done <<< "$_report"
+
+if [[ $_unsealed -eq 0 ]]; then
+    ci_pass "unseal-exemptions: nothing sealed, nothing to do"
+else
+    ci_pass "unseal-exemptions: unsealed $_unsealed file(s); re-lock with lock-exemptions after editing"
+fi

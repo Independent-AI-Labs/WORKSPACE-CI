@@ -68,11 +68,19 @@ def _make_repo_with_hooks(
 ) -> Path:
     repo = parent / name
     (repo / ".git" / "hooks").mkdir(parents=True)
-    pre_commit = "#!/usr/bin/env bash\n"
+    pre_commit = (
+        "#!/usr/bin/env bash\n"
+        "# CI-BUILTIN-EXEMPTION-COMPLIANCE\n"
+        "# quality_exceptions.yaml preflight\n"
+    )
     for m in pre_commit_markers or []:
         pre_commit += f"# === Hook: {m} ===\n"
     (repo / ".git" / "hooks" / "pre-commit").write_text(pre_commit)
-    pre_push = "#!/usr/bin/env bash\n"
+    pre_push = (
+        "#!/usr/bin/env bash\n"
+        "# CI-BUILTIN-EXEMPTION-COMPLIANCE\n"
+        "# quality_exceptions.yaml preflight\n"
+    )
     for m in pre_push_markers or []:
         pre_push += f"# === Hook: {m} ===\n"
     (repo / ".git" / "hooks" / "pre-push").write_text(pre_push)
@@ -363,10 +371,16 @@ def _setup_strict_repo_with_full_contract(workspace: Path, name: str) -> Path:
     )
     (project / ".git" / "hooks").mkdir(parents=True)
     (project / ".git" / "hooks" / "pre-commit").write_text(
-        "#!/usr/bin/env bash\n# === Hook: ci-lint ===\n# === Hook: ci-type-check ===\n",
+        "#!/usr/bin/env bash\n"
+        "# CI-BUILTIN-EXEMPTION-COMPLIANCE\n"
+        "# quality_exceptions.yaml preflight\n"
+        "# === Hook: ci-lint ===\n"
+        "# === Hook: ci-type-check ===\n",
     )
     (project / ".git" / "hooks" / "pre-push").write_text(
-        "#!/usr/bin/env bash\n",
+        "#!/usr/bin/env bash\n"
+        "# CI-BUILTIN-EXEMPTION-COMPLIANCE\n"
+        "# quality_exceptions.yaml preflight\n",
     )
     return project
 

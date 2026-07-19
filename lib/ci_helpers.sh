@@ -59,7 +59,8 @@ ci_uv_bin() {
     echo "$_uv"
 }
 
-# ci_uv_run [args...]: hermetic `uv run python` from CI_PROJECT_ROOT.
+# ci_uv_run [args...]: hermetic `uv run python` against CI_PROJECT_ROOT,
+# preserving the caller's cwd (relative path args belong to the caller).
 ci_uv_run() {
     local _uv _root="${CI_PROJECT_ROOT:-}"
     _uv="$(ci_uv_bin)" || return 1
@@ -67,5 +68,5 @@ ci_uv_run() {
         ci_fail "ci_uv_run: CI_PROJECT_ROOT/pyproject.toml not found"
         return 1
     fi
-    ( cd "$_root" && "$_uv" run python "$@" )
+    "$_uv" run --project "$_root" --no-sync python "$@"
 }

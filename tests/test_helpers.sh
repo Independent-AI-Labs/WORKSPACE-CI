@@ -56,7 +56,7 @@ _restore_configs() {
 _link_lib_files() {
     local _ci_dir="$1"
     local f src
-    for f in ci.sh ci_helpers.sh ci_config_paths.sh checks.sh checks_*.sh \
+    for f in ci.sh ci_helpers.sh ci_config_paths.sh ci_exemptions.sh checks.sh checks_*.sh \
              check_banned_words.py check_silent_swallow.py \
              check_silent_swallow_base.py check_silent_swallow_python.py \
              check_silent_swallow_js.py check_silent_swallow_system.py \
@@ -189,6 +189,37 @@ _source_lib() {
     unset CI_CONFIG_OVERRIDES WORKSPACE_CI_CONFIG_ROOT
     unset CI_GUARD_CONFIG_OVERRIDES WORKSPACE_GUARD_CONFIG_ROOT
     source lib/checks.sh
+    _stub_exemption_provenance
+}
+
+# _stub_exemption_provenance: neutralize the root-owned + immutable
+# provenance gate for tests. Tmp-workspace config files are symlinks/copies
+# owned by the test user, so they can never satisfy it. Mirrors the
+# monkeypatch fixtures used by the python unit tests. No shell test asserts
+# provenance behavior. Must be re-applied after every `source lib/checks.sh`.
+_stub_exemption_provenance() {
+    ci_validate_exemption_file() { return 0; }
+
+    # Same stub for python checker subprocesses: auto-imported sitecustomize
+    # patches ci.paths.validate_exemption_file when ci is importable.
+    local _site="$TEST_TMP/testsite"
+    if [[ ! -f "$_site/sitecustomize.py" ]]; then
+        mkdir -p "$_site"
+        cat > "$_site/sitecustomize.py" <<'EOF'
+try:
+    import ci.paths as _ci_paths
+except ImportError:
+    _ci_paths = None
+
+if _ci_paths is not None:
+
+    def _validate_exemption_file_noop(path, description="exemption file"):
+        return None
+
+    _ci_paths.validate_exemption_file = _validate_exemption_file_noop
+EOF
+    fi
+    export PYTHONPATH="$_site${PYTHONPATH:+:$PYTHONPATH}"
 }
 
 # _make_mock_dangle <bindir> <fixture_file> [exit_code] [stderr_msg]

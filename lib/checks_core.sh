@@ -72,8 +72,8 @@ ci_check_banned_words() {
         ci_fail "Banned-words: helper not found at $script_path"
         return 1
     fi
-    # ci_uv_run cds to CI_PROJECT_ROOT; preserve the consuming repo for
-    # git ls-files and per-project exceptions via CI_SCAN_ROOT.
+    # ci_uv_run preserves the caller cwd; still pin the consuming repo
+    # explicitly for git ls-files and per-project exceptions via CI_SCAN_ROOT.
     local _scan_root="${CI_SCAN_ROOT:-$PWD}"
     CI_SCAN_ROOT="$_scan_root" \
     CI_CONFIG_DIR="$CI_CONFIG_DIR" \

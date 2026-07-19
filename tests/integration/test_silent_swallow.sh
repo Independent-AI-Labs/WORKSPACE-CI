@@ -26,6 +26,7 @@ _setup_silent_repo() {
         git commit -q -m "init" --allow-empty
     fi
     source lib/checks.sh
+    _stub_exemption_provenance
 }
 
 # ---------------------------------------------------------------------------

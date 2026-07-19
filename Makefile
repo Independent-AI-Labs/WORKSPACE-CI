@@ -461,6 +461,10 @@ scaffold-ci: ## Generate CI integration files for a consumer project
 lock-exemptions: ## (sudo) Create + root-lock all manifest exemption files in a consumer repo
 	scripts/lock-exemptions "$(or $(CONSUMER),$(PWD))"
 
+.PHONY: unseal-exemptions
+unseal-exemptions: ## (sudo) Remove immutable flag (unseal) on manifest exemption files in a consumer repo (re-lock after editing)
+	scripts/unseal-exemptions "$(or $(CONSUMER),$(PWD))"
+
 # System hardening (requires sudo)
 # =============================================================================
 # System Hardening
