@@ -465,6 +465,14 @@ lock-exemptions: ## (sudo) Create + root-lock all manifest exemption files in a 
 unseal-exemptions: ## (sudo) Remove immutable flag (unseal) on manifest exemption files in a consumer repo (re-lock after editing)
 	scripts/unseal-exemptions "$(or $(CONSUMER),$(PWD))"
 
+.PHONY: lock-hooks
+lock-hooks: ## (sudo) Root-lock generated native git hooks in a consumer repo
+	scripts/lock-hooks "$(or $(CONSUMER),$(PWD))"
+
+.PHONY: unseal-hooks
+unseal-hooks: ## (sudo) Remove immutable flag (unseal) on generated hooks so generate-hooks can rewrite them (re-lock afterwards)
+	scripts/unseal-hooks "$(or $(CONSUMER),$(PWD))"
+
 # System hardening (requires sudo)
 # =============================================================================
 # System Hardening

@@ -345,6 +345,29 @@ and re-run."
         cat "$_tmp"
         rm -f "$_tmp"
     else
+        # Hooks may be root-locked by lock-hooks: refuse with the unseal
+        # flow instead of dying on the EPERM from mv.
+        if [[ -f "$_output_dir/$_stage" ]]; then
+            _hook_immutable=0
+            if [[ "$(ci_platform_name)" == "darwin" ]]; then
+                if [[ "$(stat -f '%Sf' "$_output_dir/$_stage")" == *uchg* ]]; then
+                    _hook_immutable=1
+                fi
+            elif _la_path="$(command -v lsattr)"; then
+                # Fail closed: a root-owned hook the agent cannot even
+                # probe is not rewriteable either, so route to unseal.
+                if ! _attrs="$(lsattr -d "$_output_dir/$_stage" 2>&1)"; then
+                    _hook_immutable=1
+                elif [[ "${_attrs%% *}" == *i* ]]; then
+                    _hook_immutable=1
+                fi
+            fi
+            if [[ $_hook_immutable -eq 1 ]]; then
+                rm -f "$_tmp"
+                ci_fail "hook $_stage is root-locked. Regenerate via: sudo make -C projects/CI unseal-hooks CONSUMER=<repo> && make install-hooks && sudo make -C projects/CI lock-hooks CONSUMER=<repo>"
+                exit 1
+            fi
+        fi
         mv "$_tmp" "$_output_dir/$_stage"
         chmod +x "$_output_dir/$_stage"
         ci_pass "Generated $_output_dir/$_stage"
