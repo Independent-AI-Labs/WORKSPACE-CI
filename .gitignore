@@ -19,6 +19,9 @@ cloudflare/*.ini
 node_modules/
 tests/web/node_modules
 web/res/*
+!web/res/LOGO.png
+!web/res/LOGO_DARK_THEME.png
+!web/res/LOGO_LIGHT_THEME.png
 !web/res/wiki-ci-dev.service.tmpl
 !web/res/nginx/
 !web/res/nginx/**
