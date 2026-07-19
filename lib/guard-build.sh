@@ -50,13 +50,9 @@ _guard_assert_target_ownership() {
     fi
     rm -f "$_stat_err"
     if [[ "$owner" == "root" ]]; then
-        if [[ "${GUARD_FIX_TARGET_OWNERSHIP:-}" == "1" ]]; then
-            _guard_rehome_target_tree "$user"
-            return 0
-        fi
-        log_error "WORKSPACE-GUARD/target is root-owned; agent rebuild will fail."
-        log_error "Fix: chown -R $user:$user $_guard_dir/target"
-        log_error "Or: GUARD_FIX_TARGET_OWNERSHIP=1 make build-guard"
+        log_error "WORKSPACE-GUARD/target is root-owned by design (item 17: root-gated release builds)."
+        log_error "Run release builds as root: sudo --preserve-env=HOME,SSH_AUTH_SOCK make build-guard"
+        log_error "Agent dev loops use CARGO_TARGET_DIR=target/agent (make check/lint/test)."
         return 1
     fi
 }
@@ -260,15 +256,9 @@ build_guard_binary() {
     log_info "Wrote build-mode marker: ${GUARD_BIN}.mode ($GUARD_BUILD_MODE)"
 
     # When invoked under sudo (operator: `sudo --preserve-env=HOME,SSH_AUTH_SOCK
-    # make build-guard`), cargo writes target/ as root. The guard's file-cap
-    # grant reaches only /usr/bin/git -- cargo gets NO cap elevation -- so
-    # leaving target/ root-owned would block the agent (uid 1000) from later
-    # incremental rebuilds. Re-home the entire target tree to the original
-    # user so cargo's fingerprint cache and incremental artifacts stay
-    # usable across uid boundaries. No-op when the script runs as the agent
-    # directly (SUDO_USER unset / EUID!=0).
-    if [[ $EUID -eq 0 ]]; then
-        _guard_rehome_target_tree "$(_guard_repo_owner)"
-    fi
+    # make build-guard`), cargo writes target/ as root -- and it STAYS
+    # root-owned by design (root-gated release builds, item 17). Agent
+    # dev loops use CARGO_TARGET_DIR=target/agent and never touch the
+    # root-owned release target tree, so there is nothing to re-home.
     return 0
 }
