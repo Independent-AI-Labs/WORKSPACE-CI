@@ -524,3 +524,6 @@ check-guard: ## REMOVED: use check-guard-host-exec
 
 check-guard-host-exec: ## Check host-exec git-guard installation (read-only, runs as agent)
 	bash scripts/bootstrap-workspace-guard check-host-exec
+
+deploy-ci: ## Promote WORKSPACE-CI to locked projects/CI (operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make deploy-ci)
+	bash scripts/deploy-ci
