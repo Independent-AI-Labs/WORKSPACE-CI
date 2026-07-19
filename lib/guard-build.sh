@@ -170,7 +170,16 @@ build_guard_binary() {
 
     cd "$_guard_dir"
     if [[ $EUID -eq 0 ]]; then
-        _guard_rehome_target_tree "$(_guard_repo_owner)"
+        # Item 17: the release tree is root-built and root-owned so an
+        # agent cannot stage a trojaned artifact in target/ for a later
+        # root install to consume. Agent dev loops use CARGO_TARGET_DIR
+        # target/agent (WORKSPACE-GUARD Makefile check/lint/test).
+        if [[ -d "$_guard_dir/target" ]]; then
+            chown -R root:root "$_guard_dir/target" || {
+                log_error "chown target/ -> root failed"
+                return 1
+            }
+        fi
     else
         _guard_assert_target_ownership "$(_guard_repo_owner)" || return 1
     fi
@@ -227,6 +236,12 @@ build_guard_binary() {
     if [[ ! -s "$guard_bin" ]]; then
         log_error "Build produced empty binary"
         return 1
+    fi
+    if [[ $EUID -eq 0 ]]; then
+        chown -R root:root "$_guard_dir/target" || {
+            log_error "post-build chown target/ -> root failed"
+            return 1
+        }
     fi
     log_info "Build successful: $(file "$guard_bin" | cut -d: -f2)"
     local git_ssh_bin="${guard_bin/workspace-guard/workspace-git-ssh}"
