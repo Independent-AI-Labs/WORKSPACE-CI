@@ -96,5 +96,44 @@ log_info "locked $_count tracked files to root:root"
 chown -R root:root "$_DEPLOY_DIR/.git"
 log_info "locked .git to root:root"
 
+# 6. Enforce executable bits from the git index. chown preserves modes,
+#    but a file that ever lost +x locally would deploy a hook git
+#    silently skips; the index mode (100755) is the source of truth.
+_exec_fixed=0
+while IFS= read -r -d '' _entry; do
+    _mode="${_entry%% *}"
+    _f="${_entry#*$'\t'}"
+    [[ "$_mode" == "100755" && -f "$_DEPLOY_DIR/$_f" && ! -x "$_DEPLOY_DIR/$_f" ]] || continue
+    chmod 0755 "$_DEPLOY_DIR/$_f"
+    _exec_fixed=$((_exec_fixed + 1))
+done < <(git -C "$_DEPLOY_DIR" ls-files -s -z)
+[[ "$_exec_fixed" -gt 0 ]] && log_warn "restored exec bit on $_exec_fixed file(s) from index modes"
+
+# 7. Final integrity gate: the deployment must verify clean before any
+#    consumer commit/push is allowed against it (guard ci_integrity).
+_verify_fail=0
+while IFS= read -r -d '' _entry; do
+    _mode="${_entry%% *}"
+    _f="${_entry#*$'\t'}"
+    _p="$_DEPLOY_DIR/$_f"
+    [[ -e "$_p" || -L "$_p" ]] || { log_error "verify: tracked file missing: $_f"; _verify_fail=1; continue; }
+    [[ -L "$_p" ]] && continue
+    _owner="$(stat -c '%u' "$_p")"
+    [[ "$_owner" == "0" ]] || { log_error "verify: not root-owned: $_f (uid $_owner)"; _verify_fail=1; }
+    if [[ "$_mode" == "100755" && ! -x "$_p" ]]; then
+        log_error "verify: index 100755 but not executable: $_f"
+        _verify_fail=1
+    fi
+done < <(git -C "$_DEPLOY_DIR" ls-files -s -z)
+[[ "$(stat -c '%u' "$_DEPLOY_DIR/.git")" == "0" ]] || { log_error "verify: .git not root-owned"; _verify_fail=1; }
+_head="$(git -C "$_DEPLOY_DIR" rev-parse HEAD)"
+_origin="$(git -C "$_DEPLOY_DIR" rev-parse refs/remotes/origin/"$_BRANCH")"
+[[ "$_head" == "$_origin" ]] || { log_error "verify: HEAD != origin/$_BRANCH"; _verify_fail=1; }
+if [[ "$_verify_fail" -ne 0 ]]; then
+    log_error "deployment failed integrity verification; NOT declaring success"
+    exit 1
+fi
+log_info "integrity verification passed"
+
 log_info "deploy-ci complete: $_DEPLOY_DIR @ $_deployed (root-locked)"
 log_warn "reminder: hook runtime trees (.venv, node_modules) stay agent-owned; run install targets from WORKSPACE-CI as usual"
