@@ -16,29 +16,30 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
+    "types": [
+      "react",
+      "react-dom"
+    ],
+    "typeRoots": [
+      "../../web/node_modules/@types"
     ],
     "paths": {
       "@/*": [
-        "./src/*"
+        "../../web/src/*"
       ],
       "vitest": [
-        "./node_modules/vitest/dist/index.d.ts"
+        "../../web/node_modules/vitest/dist/index.d.ts"
+      ],
+      "@testing-library/react": [
+        "../../web/node_modules/@testing-library/react/types/index.d.ts"
+      ],
+      "@testing-library/jest-dom": [
+        "../../web/node_modules/@testing-library/jest-dom/types/vitest.d.ts"
       ]
     }
   },
   "include": [
-    "next-env.d.ts",
     "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules"
+    "**/*.tsx"
   ]
 }

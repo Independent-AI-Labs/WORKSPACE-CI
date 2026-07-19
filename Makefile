@@ -437,6 +437,7 @@ extract-code-stats: ## Generate web/src/data/code-stats.json for wiki Project Ca
 	uv run python scripts/extract-code-stats.py
 
 .PHONY: extract-hook-sources extract-script-sources extract-swallow-source extract-wiki-data
+export CI_WEB_DATA_DIR ?= $(HOME)/data/workspace-ci/wiki/data
 _WIKI_EXTRACT_ENV = CI_CONFIG_DIR=config
 
 extract-hook-sources: ## Generate web/src/data/hook-sources.json for wiki Hook EntryPointDialog

@@ -17,6 +17,8 @@ services:
       GRAFANA_BASE_URL: ${GRAFANA_BASE_URL:-}
       WIKI_HOME_LANDING_ENABLED: ${WIKI_HOME_LANDING_ENABLED:-true}
       WORKSPACE_WEB_CONTENT_ROOT: /workspace/WORKSPACE-WEB-CONTENT
+      CI_WEB_DATA_DIR: ${CI_WEB_DATA_DIR:-/workspace/CI/web/src/data}
+      WIKI_FEEDBACK_DIR: ${WIKI_FEEDBACK_DIR:-/workspace/CI/web/data/feedback}
     expose:
       - "3000"
     volumes:

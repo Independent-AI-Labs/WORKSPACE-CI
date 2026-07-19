@@ -14,7 +14,7 @@
     "start": "next start",
     "lint": "eslint .",
     "format": "prettier --check .",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit && tsc --noEmit -p ../tests/web/tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

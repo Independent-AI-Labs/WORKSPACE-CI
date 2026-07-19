@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { getWebDataRoot } from '@/lib/config-paths'
 import type { SwallowDetectorData } from '@/types/patterns'
 import type { CodeStatsData } from '@/types/code-stats'
 import type { EntryPointSourceData } from '@/types/entry-point'
@@ -16,24 +17,24 @@ function loadJson<T>(filePath: string): T | null {
 
 export function loadSwallowDetectors(): SwallowDetectorData | null {
   return loadJson<SwallowDetectorData>(
-    join(process.cwd(), 'src', 'data', 'swallow-detectors.json'),
+    join(getWebDataRoot(), 'swallow-detectors.json'),
   )
 }
 
 export function loadCodeStats(): CodeStatsData | null {
   return loadJson<CodeStatsData>(
-    join(process.cwd(), 'src', 'data', 'code-stats.json'),
+    join(getWebDataRoot(), 'code-stats.json'),
   )
 }
 
 export function loadHookSources(): EntryPointSourceData | null {
   return loadJson<EntryPointSourceData>(
-    join(process.cwd(), 'src', 'data', 'hook-sources.json'),
+    join(getWebDataRoot(), 'hook-sources.json'),
   )
 }
 
 export function loadScriptSources(): EntryPointSourceData | null {
   return loadJson<EntryPointSourceData>(
-    join(process.cwd(), 'src', 'data', 'script-sources.json'),
+    join(getWebDataRoot(), 'script-sources.json'),
   )
 }

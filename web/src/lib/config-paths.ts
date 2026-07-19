@@ -25,6 +25,22 @@ export function getGuardConfigRoot(): string {
   return resolve(cwd(), '..', '..', 'WORKSPACE-GUARD', 'config')
 }
 
+export function getWebDataRoot(): string {
+  const env = process.env.CI_WEB_DATA_DIR
+  if (env) return resolve(env)
+  const home = process.env.HOME
+  if (home) return resolve(home, 'data', 'workspace-ci', 'wiki', 'data')
+  return resolve(cwd(), 'src', 'data')
+}
+
+export function getFeedbackDir(): string {
+  const env = process.env.WIKI_FEEDBACK_DIR
+  if (env) return resolve(env)
+  const home = process.env.HOME
+  if (home) return resolve(home, 'data', 'workspace-ci', 'wiki', 'feedback')
+  return resolve(cwd(), 'data', 'feedback')
+}
+
 function parseOverrideManifest(manifestPath: string): Record<string, string> {
   const raw = load(readFileSync(manifestPath, 'utf8')) as Record<string, unknown>
   const entries =

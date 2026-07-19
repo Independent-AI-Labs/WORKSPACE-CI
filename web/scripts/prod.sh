@@ -105,7 +105,11 @@ cmd_build() {
   node "${WEB_DIR}/scripts/stage-umbrella-repo.mjs"
   echo "[prod-build] Building ${PROD_IMAGE} from ${PROJECTS_ROOT}"
   echo "[prod-build] Logging to ${BUILD_LOG}"
+  local ci_context_dir
+  ci_context_dir="$(basename "$(dirname "${WEB_DIR}")")"
+  echo "[prod-build] Build-context repo dir: ${ci_context_dir}"
   "${PODMAN}" build --progress=plain \
+    --build-arg "CI_CONTEXT_DIR=${ci_context_dir}" \
     -f "${WEB_DIR}/Containerfile" \
     -t "${PROD_IMAGE}" \
     "${PROJECTS_ROOT}" 2>&1 | tee "${BUILD_LOG}"

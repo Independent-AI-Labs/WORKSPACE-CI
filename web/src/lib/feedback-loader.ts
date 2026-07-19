@@ -1,9 +1,10 @@
 import { readFileSync, existsSync, readdirSync, mkdirSync } from 'fs'
 import { writeFile } from 'fs/promises'
 import { join } from 'path'
+import { getFeedbackDir } from '@/lib/config-paths'
 import type { FeedbackData, FeedbackCounts, FeedbackSubmission } from '@/types/feedback'
 
-const FEEDBACK_DIR = join(process.cwd(), 'data', 'feedback')
+const FEEDBACK_DIR = getFeedbackDir()
 const MAX_ENTRIES = 1000
 const MAX_COMMENT_LENGTH = 500
 const MAX_SESSION_ID_LENGTH = 128

@@ -1,11 +1,17 @@
 # workspace-ci Wiki production image.
 # Build context: workspace projects root (parent of CI/).
 #   podman build -f CI/web/Containerfile -t workspace-ci-wiki:prod <projects-root>
+# CI_CONTEXT_DIR names the repo checkout inside the build context (CI or
+# WORKSPACE-CI); in-image paths stay /workspace/CI regardless.
+
+ARG CI_CONTEXT_DIR=CI
 
 # -----------------------------------------------------------------------------
 # Stage 1: regenerate wiki JSON data from CI sources
 # -----------------------------------------------------------------------------
 FROM docker.io/library/python:3.13-slim-bookworm AS extract
+
+ARG CI_CONTEXT_DIR
 
 RUN set -eux \
     && echo "[wiki-extract] apt-get update" \
@@ -17,13 +23,13 @@ RUN set -eux \
 
 WORKDIR /workspace/CI
 
-COPY CI/pyproject.toml CI/uv.lock ./
-COPY CI/ci ./ci
-COPY CI/lib ./lib
-COPY CI/scripts ./scripts
-COPY CI/config ./config
-COPY CI/Makefile ./
-COPY CI/web/src/data ./web/src/data
+COPY ${CI_CONTEXT_DIR}/pyproject.toml CI/uv.lock ./
+COPY ${CI_CONTEXT_DIR}/ci ./ci
+COPY ${CI_CONTEXT_DIR}/lib ./lib
+COPY ${CI_CONTEXT_DIR}/scripts ./scripts
+COPY ${CI_CONTEXT_DIR}/config ./config
+COPY ${CI_CONTEXT_DIR}/Makefile ./
+COPY ${CI_CONTEXT_DIR}/web/src/data ./web/src/data
 
 ENV CI_WEB_DATA_DIR=/workspace/CI/web/src/data
 ENV CI_CONFIG_DIR=/workspace/CI/config
@@ -48,6 +54,8 @@ RUN set -eux \
 # Stage 2: build Next.js standalone bundle
 # -----------------------------------------------------------------------------
 FROM docker.io/library/node:24-bookworm AS build
+
+ARG CI_CONTEXT_DIR
 
 ENV NODE_OPTIONS=--max-old-space-size=4096
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -74,12 +82,12 @@ COPY WORKSPACE-GATEWAY/README.md WORKSPACE-GATEWAY/Makefile ./WORKSPACE-GATEWAY/
 COPY WORKSPACE-GATEWAY/res ./WORKSPACE-GATEWAY/res
 COPY WORKSPACE-GATEWAY/.git/config ./WORKSPACE-GATEWAY/.git/config
 COPY WORKSPACE-WEB-CONTENT/ ./WORKSPACE-WEB-CONTENT/
-COPY CI/README.md CI/Makefile ./CI/
-COPY CI/res ./CI/res
-COPY CI/config ./CI/config
-COPY CI/docs ./CI/docs
-COPY CI/scripts ./CI/scripts
-COPY CI/web ./CI/web
+COPY ${CI_CONTEXT_DIR}/README.md CI/Makefile ./CI/
+COPY ${CI_CONTEXT_DIR}/res ./CI/res
+COPY ${CI_CONTEXT_DIR}/config ./CI/config
+COPY ${CI_CONTEXT_DIR}/docs ./CI/docs
+COPY ${CI_CONTEXT_DIR}/scripts ./CI/scripts
+COPY ${CI_CONTEXT_DIR}/web ./CI/web
 COPY --from=extract /workspace/CI/web/src/data ./CI/web/src/data
 
 WORKDIR /workspace/CI/web
@@ -100,12 +108,16 @@ RUN set -eux \
 # -----------------------------------------------------------------------------
 FROM docker.io/library/node:24-bookworm-slim AS run
 
+ARG CI_CONTEXT_DIR
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV WORKSPACE_PROJECTS_ROOT=/workspace
 ENV WORKSPACE_WEB_CONTENT_ROOT=/workspace/WORKSPACE-WEB-CONTENT
+ENV CI_WEB_DATA_DIR=/workspace/CI/web/src/data
+ENV WIKI_FEEDBACK_DIR=/workspace/CI/web/data/feedback
 
 WORKDIR /workspace
 
@@ -120,11 +132,11 @@ COPY WORKSPACE-GATEWAY/README.md WORKSPACE-GATEWAY/Makefile ./WORKSPACE-GATEWAY/
 COPY WORKSPACE-GATEWAY/res ./WORKSPACE-GATEWAY/res
 COPY WORKSPACE-GATEWAY/.git/config ./WORKSPACE-GATEWAY/.git/config
 COPY WORKSPACE-WEB-CONTENT/ ./WORKSPACE-WEB-CONTENT/
-COPY CI/README.md CI/Makefile ./CI/
-COPY CI/res ./CI/res
-COPY CI/config ./CI/config
-COPY CI/docs ./CI/docs
-COPY CI/scripts ./CI/scripts
+COPY ${CI_CONTEXT_DIR}/README.md CI/Makefile ./CI/
+COPY ${CI_CONTEXT_DIR}/res ./CI/res
+COPY ${CI_CONTEXT_DIR}/config ./CI/config
+COPY ${CI_CONTEXT_DIR}/docs ./CI/docs
+COPY ${CI_CONTEXT_DIR}/scripts ./CI/scripts
 
 WORKDIR /workspace/CI/web
 
