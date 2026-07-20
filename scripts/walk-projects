@@ -38,9 +38,20 @@ if [[ -z "$_workspace_root" || ! -d "$_workspace_root/projects" ]]; then
 fi
 
 # Find every .git directory under projects/, emit the parent path
-# relative to the workspace root. Includes nested repos at any depth.
+# relative to the workspace root. Includes nested repos at any depth,
+# except repos whose tier resolves to vendored (third-party mirrors the
+# workspace does not manage).
+_self_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if ! source "$_self_dir/../lib/checks_quality.sh"; then
+    echo "walk-projects: failed to source $_self_dir/../lib/checks_quality.sh" >&2
+    exit 1
+fi
+_registry="$_workspace_root/ci/config/project_enforcement.yaml"
+
 cd "$_workspace_root"
 find projects -type d -name .git | while IFS= read -r _gitdir; do
     _repo="$(dirname "$_gitdir")"
+    _tier="$(ci_resolve_tier "$_repo" "$_registry")"
+    [[ "$_tier" == "vendored" ]] && continue
     echo "$_repo"
 done
