@@ -101,6 +101,23 @@ if [[ -n "$(git_as_owner -C "$_WORK_REPO" status --porcelain)" ]]; then
     exit 1
 fi
 
+# 2b. Provenance gate for the code deploy-ci executes as root (audit C1):
+# the lock/unseal helpers and everything they pull in (lib/, ci/ package,
+# uv-locked venv) live in the agent-writable work repo. Require the
+# runtime paths to be identical to the pushed origin ref, and re-sync the
+# venv from the hash-pinned lockfile as the owner so `uv run --no-sync`
+# under root resolves exactly the locked, hash-verified dependencies.
+if ! git_as_owner -C "$_WORK_REPO" diff --quiet "origin/$_BRANCH" HEAD -- \
+        scripts lib ci pyproject.toml uv.lock; then
+    log_error "runtime paths (scripts, lib, ci, pyproject.toml, uv.lock) differ from origin/$_BRANCH"
+    log_error "pull the work repo to origin/$_BRANCH before deploying"
+    exit 1
+fi
+log_info "syncing work repo venv to uv.lock (hash-verified) as $_REPO_OWNER"
+runuser -u "$_REPO_OWNER" -- env HOME="$_OWNER_HOME" \
+    PATH="$_BOOT_BIN:/usr/local/bin:/usr/bin:/bin" \
+    uv sync --locked --all-extras --project "$_WORK_REPO" --quiet
+
 # 3. Fast-forward the deployment clone to the origin ref the work repo
 #    just fetched. Local transport: root never authenticates to SSH
 #    (see identity model above); ff-only semantics regardless.
