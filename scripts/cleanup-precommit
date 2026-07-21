@@ -33,7 +33,7 @@ fi
 # ambient system binaries. uv resolves the project venv itself when run
 # from the project root.
 _uv="$(ci_uv_bin)" || exit 1
-if (cd "$CI_PROJECT_ROOT" && "$_uv" pip uninstall pre-commit); then
+if (cd "$CI_PROJECT_ROOT" && env -u VIRTUAL_ENV "$_uv" pip uninstall pre-commit); then
     ci_pass "Uninstalled pre-commit (uv, project venv)"
 else
     ci_info "pre-commit not installed in project venv (or no venv yet)"
