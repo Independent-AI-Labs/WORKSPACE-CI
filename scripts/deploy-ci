@@ -114,7 +114,9 @@ _deployed="$(git_as_root -C "$_DEPLOY_DIR" rev-parse HEAD)"
 log_info "deployed commit: $_deployed"
 
 # 4. Lock every git-tracked file to root. Untracked runtime trees are
-#    deliberately skipped (see header).
+#    deliberately skipped (see header). Sealed exemption files are +i
+#    immutable, so unseal first and reseal after verification.
+bash "$_WORK_REPO/scripts/unseal-exemptions" "$_DEPLOY_DIR"
 _count=0
 _ls_tmp="$(mktemp)" || { log_error "mktemp failed"; exit 1; }
 git_as_root -C "$_DEPLOY_DIR" ls-files -z > "$_ls_tmp"
@@ -172,6 +174,7 @@ if [[ "$_verify_fail" -ne 0 ]]; then
     exit 1
 fi
 log_info "integrity verification passed"
+bash "$_WORK_REPO/scripts/lock-exemptions" "$_DEPLOY_DIR"
 
 log_info "deploy-ci complete: $_DEPLOY_DIR @ $_deployed (root-locked)"
 log_warn "reminder: hook runtime trees (.venv, node_modules) stay agent-owned; run install targets from WORKSPACE-CI as usual"

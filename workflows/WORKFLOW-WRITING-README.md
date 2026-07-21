@@ -105,7 +105,7 @@ the README opening states **what the project does** and **why it is useful**;
 for wiki cards.>
 
 <Paragraph 2: default install commands + pointer to sections below + spec path.
-Match [WORKSPACE-VM](../../WORKSPACE-VM/README.md) second-paragraph shape.>
+Match [WORKSPACE-VM](../../../README.md) second-paragraph shape.>
 ```
 
 Federated sub-projects (GUARD, GATEWAY): intro names **this repo only**. Parent
@@ -544,7 +544,7 @@ requirements for other repos.*
 
 Verify against:
 
-- [WORKSPACE-VM/README.md](../../WORKSPACE-VM/README.md) (framework placement)
+- [WORKSPACE-VM/README.md](../../../README.md) (framework placement)
 - `docs/specifications/SPEC-GIT-GUARD-DEPLOYMENT.md` (install classes)
 - `config/guard-host-profiles.yaml` (host binding; do not paste hostnames into README)
 - `Makefile` / `projects/CI/scripts/bootstrap-workspace-guard` (real install targets)
