@@ -138,6 +138,9 @@ chown root:root "$_DEPLOY_DIR"
 log_info "locked $_count tracked files to root:root"
 
 # 5. Root-own the .git tree so the agent cannot retarget refs/config.
+#    Generated hooks are +i (lock-hooks), so unseal first and re-lock
+#    after verification.
+bash "$_WORK_REPO/scripts/unseal-hooks" "$_DEPLOY_DIR"
 chown -R root:root "$_DEPLOY_DIR/.git"
 log_info "locked .git to root:root"
 
@@ -183,6 +186,7 @@ if [[ "$_verify_fail" -ne 0 ]]; then
 fi
 log_info "integrity verification passed"
 bash "$_WORK_REPO/scripts/lock-exemptions" "$_DEPLOY_DIR"
+bash "$_WORK_REPO/scripts/lock-hooks" "$_DEPLOY_DIR"
 
 log_info "deploy-ci complete: $_DEPLOY_DIR @ $_deployed (root-locked)"
 log_warn "reminder: hook runtime trees (.venv, node_modules) stay agent-owned; run install targets from WORKSPACE-CI as usual"
