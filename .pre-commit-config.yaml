@@ -174,3 +174,11 @@ repos:
         stages: [pre-push]
         pass_filenames: false
         always_run: true
+
+      - id: osv-scan
+        name: Dependency Vulnerability Scan (osv-scanner, fail-open offline)
+        entry: "bash -c 'source lib/checks.sh && ci_scan_vulnerabilities'"
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true

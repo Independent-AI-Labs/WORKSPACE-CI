@@ -479,6 +479,11 @@ _scl_copy_config "$_CONFIG_DIR/dead_code.yaml"           "$_consumer/config/dead
 _scl_copy_config "$_CONFIG_DIR/dependency_excludes.yaml" "$_consumer/config/dependency_excludes.yaml"  ""                "$_force_cfg_or_all" "$_make_backup"
 _scl_copy_config "$_CONFIG_DIR/duplicate_dependency_excludes.yaml" "$_consumer/config/duplicate_dependency_excludes.yaml" "" "$_force_cfg_or_all" "$_make_backup"
 _scl_copy_config "$_CONFIG_DIR/markdown_docs.yaml"       "$_consumer/config/markdown_docs.yaml"       ""                "$_force_cfg_or_all" "$_make_backup"
+# osv-scanner.toml is consumer-owned suppression config at repo root
+# (REQ-CVE-SCAN FR-4/FR-5): strict tier only, customized files are kept.
+if [[ "$_pf_tier" == "strict" ]]; then
+    _scl_copy_config "$_CI_ROOT/templates/osv-scanner.toml" "$_consumer/osv-scanner.toml" "" "$_force_cfg_or_all" "$_make_backup"
+fi
 
 _scl_gen_qe
 

@@ -128,7 +128,7 @@ install-ci: preflight install-deps ## CI install: deps + bootstrap binaries, no 
 	:
 
 .PHONY: install-deps
-install-deps: install-boot-tools install-python-deps install-gitleaks install-cloc install-moon install-ansible install-node install-web-deps ## Install boot tools + python .venv deps + gitleaks + cloc + moon + ansible + node + web deps
+install-deps: install-boot-tools install-python-deps install-gitleaks install-osv-scanner install-cloc install-moon install-ansible install-node install-web-deps ## Install boot tools + python .venv deps + gitleaks + osv-scanner + cloc + moon + ansible + node + web deps
 
 .PHONY: install-boot-tools
 install-boot-tools: ## Bootstrap uv + rust toolchain into $(BOOT_NAME)/bin/ (idempotent)
@@ -142,6 +142,10 @@ install-python-deps: install-boot-tools ## uv sync the Python deps (project-leve
 .PHONY: install-gitleaks
 install-gitleaks: ## Bootstrap the gitleaks binary used by the secret-content scanner
 	bash scripts/bootstrap-gitleaks
+
+.PHONY: install-osv-scanner
+install-osv-scanner: ## Bootstrap the osv-scanner binary used by the dependency vulnerability scanner
+	bash scripts/bootstrap-osv-scanner
 
 .PHONY: install-cloc
 install-cloc: ## Bootstrap the cloc binary (single-file Perl) used by code-stats

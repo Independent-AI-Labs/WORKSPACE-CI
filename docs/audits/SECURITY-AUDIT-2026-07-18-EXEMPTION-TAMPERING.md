@@ -184,4 +184,4 @@ Independent three-lens audit of deploy-ci, lock scripts, guard, and Makefile/reg
 
 C4 → C2 → C3 → C1 → C5 → C6 → H1 → H2 → rest.
 
-Status 2026-07-21: C1 (`d2000e5`), C2+C3 (`fe2ba7d`), C4 (`678f662`+`3823cea`), C5 (`8f29432`), C6 (`5181001`) all FIXED. Next: H1 (deploy-ci trap + immutable-bit verify), H2 (ci_integrity content check), H5 (non-root install-hooks-recursive hard-fail).
+Status 2026-07-21: C1 (`d2000e5`), C2+C3 (`fe2ba7d`), C4 (`678f662`+`3823cea`), C5 (`8f29432`), C6 (`5181001`), H1 (`1906fdd`), H2 (WORKSPACE-GUARD `b4bafee`), H5 (WORKSPACE-VM `07a2c91`) all FIXED. Next: H3, H4, then M1 (flock), M2 (cap-allowlist drift), M3, M4, M5, L1 to L4.

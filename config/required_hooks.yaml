@@ -221,6 +221,19 @@ hooks:
     safety: false
     applicable_to: [any]
 
+  - id: osv-scan
+    kind: shell
+    entry: ci_scan_vulnerabilities
+    stage: pre-push
+    pass_filenames: false
+    always_run: true
+    # Advisory during rollout (REQ-CVE-SCAN FR-3.3): exemptable via
+    # quality_exceptions.yaml while the fleet stabilizes. Strict tier only:
+    # network-bound, not part of the POC safety subset. Fail-open offline.
+    mandatory: false
+    safety: false
+    applicable_to: [any]
+
   - id: check-dependency-versions
     kind: python_module
     entry: ci.check_dependency_versions

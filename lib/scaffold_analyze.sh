@@ -102,6 +102,7 @@ _scl_render_config_list() {
         "config/dependency_excludes.yaml|dependency_excludes.yaml|"
         "config/duplicate_dependency_excludes.yaml|duplicate_dependency_excludes.yaml|"
         "config/markdown_docs.yaml|markdown_docs.yaml|"
+        "osv-scanner.toml|tpl:osv-scanner.toml|"
     )
     local _spec _rel _base _pp _src _rendered
     for _spec in "${_cfg_specs[@]}"; do
@@ -109,7 +110,11 @@ _scl_render_config_list() {
         _base="${_spec#*|}"
         _base="${_base%%|*}"
         _pp="${_spec##*|}"
-        _src="$_CONFIG_DIR/$_base"
+        if [[ "$_base" == tpl:* ]]; then
+            _src="$_CI_ROOT/templates/${_base#tpl:}"
+        else
+            _src="$_CONFIG_DIR/$_base"
+        fi
         _rendered="$(_scl_render_config "$_src" "$_pp" "$_consumer_dir")"
         _out_paths+=("$_rel")
         _out_states+=("$(_scl_state "$_rendered" "$_consumer_dir/$_rel")")
@@ -379,6 +384,7 @@ _scl_diff_mode() {
         "config/dependency_excludes.yaml|dependency_excludes.yaml|"
         "config/duplicate_dependency_excludes.yaml|duplicate_dependency_excludes.yaml|"
         "config/markdown_docs.yaml|markdown_docs.yaml|"
+        "osv-scanner.toml|tpl:osv-scanner.toml|"
     )
     local _spec _rel _base _pp _src _rendered _state _dst
     for _spec in "${_cfg_specs[@]}"; do
@@ -386,7 +392,11 @@ _scl_diff_mode() {
         _base="${_spec#*|}"
         _base="${_base%%|*}"
         _pp="${_spec##*|}"
-        _src="$_CONFIG_DIR/$_base"
+        if [[ "$_base" == tpl:* ]]; then
+            _src="$_CI_ROOT/templates/${_base#tpl:}"
+        else
+            _src="$_CONFIG_DIR/$_base"
+        fi
         _rendered="$(_scl_render_config "$_src" "$_pp" "$_consumer")"
         _dst="$_consumer/$_rel"
         _state="$(_scl_state "$_rendered" "$_dst")"

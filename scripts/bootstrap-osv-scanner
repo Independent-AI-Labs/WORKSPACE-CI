@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# bootstrap-osv-scanner: fetch the osv-scanner binary and place it on PATH.
+#
+# workspace-ci depends on `osv-scanner` for the pre-push dependency
+# vulnerability gate (ci_scan_vulnerabilities, hook id `osv-scan`).
+# This script is idempotent: if the pinned version is already installed
+# at the target path, it exits 0 without redownloading.
+#
+# Install location (boot contract, SPEC-BOOT-LAYOUT):
+#   $CI_PROJECT_ROOT/$CI_BOOT_NAME/bin/osv-scanner
+# where $CI_BOOT_NAME is platform-aware (.boot-linux on Linux, .boot-macos
+# on macOS), set at source-time by lib/ci.sh.
+#
+# Version pin: OSV_SCANNER_VERSION below is the single source of truth
+# (REQ-CVE-SCAN NFR-4.2). Supply-chain pinning: SHA256 verification is
+# MANDATORY and always on, against the osv-scanner_SHA256SUMS sidecar
+# published on the same GitHub release as the binary.
+#
+# Sibling repos reach this binary via the boot-path resolver
+# (lib/ci.sh::ci_resolve_boot_path) which reads
+# moon.yml::project.inherited_boot_dirs.
+
+set -euo pipefail
+
+OSV_SCANNER_VERSION="2.4.0"
+
+_ci_lib="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
+# shellcheck source=lib/ci.sh
+if ! source "$_ci_lib/ci.sh"; then
+    echo "ERROR: failed to source $_ci_lib/ci.sh" >&2
+    exit 2
+fi
+if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
+    echo "ERROR: CI_PROJECT_ROOT not set after sourcing ci.sh" >&2
+    exit 2
+fi
+
+_log() { printf '[bootstrap-osv-scanner] %s\n' "$*" >&2; }
+
+main() {
+    local target_dir target
+    target_dir="${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/bin"
+    target="${target_dir}/osv-scanner"
+
+    if ! mkdir -p "$target_dir"; then
+        _log "mkdir failed for $target_dir"
+        return 1
+    fi
+
+    if [[ -x "$target" ]]; then
+        local v_out v_err v_rc=0
+        v_out="$(mktemp)"
+        v_err="$(mktemp)"
+        "$target" --version >"$v_out" 2>"$v_err" || v_rc=$?
+        if [[ "$v_rc" -eq 0 ]]; then
+            local cur
+            cur="$(head -1 "$v_out")"
+            rm -f "$v_out" "$v_err"
+            if [[ "$cur" == *"$OSV_SCANNER_VERSION"* ]]; then
+                _log "osv-scanner ${OSV_SCANNER_VERSION} already at $target"
+                return 0
+            fi
+            _log "found existing osv-scanner ($cur), upgrading to ${OSV_SCANNER_VERSION}"
+        else
+            local err_msg
+            err_msg="$(head -1 "$v_err")"
+            rm -f "$v_out" "$v_err"
+            _log "existing binary at $target did not respond to '--version' (rc=$v_rc): $err_msg"
+            _log "re-downloading fresh copy"
+        fi
+    fi
+
+    local goos goarch
+    case "$(uname -s)" in
+        Linux)  goos="linux" ;;
+        Darwin) goos="darwin" ;;
+        *) _log "unsupported platform: $(uname -s)"; return 1 ;;
+    esac
+    case "$(uname -m)" in
+        x86_64|amd64)  goarch="amd64" ;;
+        aarch64|arm64) goarch="arm64" ;;
+        *) _log "unsupported arch: $(uname -m)"; return 1 ;;
+    esac
+
+    local asset url
+    asset="osv-scanner_${goos}_${goarch}"
+    url="https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/${asset}"
+
+    local tmp
+    tmp="$(mktemp -d)"
+    # Use ${tmp:-} so the trap is safe under `set -u` once `tmp` (a local)
+    # goes out of scope after main() returns.
+    # shellcheck disable=SC2064
+    trap "rm -rf \"\${tmp:-$tmp}\"" EXIT
+
+    _log "fetching ${url}"
+    if ! curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/osv-scanner" "$url"; then
+        _log "curl failed for $url"
+        return 1
+    fi
+
+    # Mandatory SHA256 verification: fetch the osv-scanner_SHA256SUMS
+    # sidecar from the same GitHub release as the binary, extract the
+    # line for our asset, and compare against ci_sha256 of the download.
+    local sums_url="https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_SHA256SUMS"
+    _log "fetching checksum sidecar: ${sums_url}"
+    local sha_rc=0
+    curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/SHA256SUMS" "$sums_url" || sha_rc=$?
+    if [[ "$sha_rc" -ne 0 ]]; then
+        _log "failed to fetch checksums sidecar (rc=$sha_rc): $sums_url"
+        _log "cannot verify binary integrity without sidecar; refusing to install"
+        return 1
+    fi
+
+    local expected_sha
+    expected_sha="$(awk -v a="$asset" '$2 == a {print $1}' "${tmp}/SHA256SUMS")"
+    if [[ -z "$expected_sha" ]]; then
+        _log "no checksum entry for $asset in sidecar; refusing to install"
+        return 1
+    fi
+
+    local actual_sha
+    actual_sha="$(ci_sha256 "${tmp}/osv-scanner")"
+    if [[ "$actual_sha" != "$expected_sha" ]]; then
+        _log "checksum mismatch: expected $expected_sha, got $actual_sha"
+        return 1
+    fi
+    _log "checksum OK ($expected_sha)"
+
+    _log "installing osv-scanner to ${target}"
+    if ! install -m 0755 "${tmp}/osv-scanner" "$target"; then
+        _log "install (copy) failed to $target"
+        return 1
+    fi
+
+    local v_out2 v_rc2=0
+    v_out2="$(mktemp)"
+    "$target" --version >"$v_out2" 2>&1 || v_rc2=$?
+    if [[ "$v_rc2" -ne 0 ]]; then
+        _log "post-install verification failed: '$target --version' returned rc=$v_rc2"
+        rm -f "$v_out2"
+        return 1
+    fi
+    _log "installed: $(head -1 "$v_out2") => $target"
+    rm -f "$v_out2"
+}
+
+main "$@"
