@@ -143,3 +143,43 @@ No sudo, no capability abuse, no privilege escalation was used — plain Unix se
 2. `deploy-ci` sync source: upstream clone vs push from WORKSPACE-CI working repo (recommended: clone upstream, then fetch+checkout WORKSPACE-CI's branch).
 3. Should the guard binary itself `chattr +i` matched exemption files (it has the caps), or keep immutability solely in `lock-exemptions` (recommended: keep in `lock-exemptions`; guard only chowns, preserving current behavior split).
 4. Disposition of the unmanaged nested `projects/WORKSPACE-VM` clone.
+
+## 7. Post-implementation gap audit (2026-07-21)
+
+Independent three-lens audit of deploy-ci, lock scripts, guard, and Makefile/registry after all phases closed. Numbering: C = critical, H = high, M = medium, L = low.
+
+### Critical
+
+- **C1. deploy-ci executes agent-writable code as root every deploy** — `scripts/deploy-ci:127,143,188-189` runs `bash "$_WORK_REPO/scripts/unseal-exemptions"`, `lock-exemptions`, `unseal-hooks`, `lock-hooks` directly from the agent-writable work repo, plus `lib/ci.sh` and the `ci.exemption_files` Python module via `ci_uv_run` as root. The promotion path runs code from the very repo it gates. Fix: stage hash-verified copies (`origin/main`) into a root-owned dir and exec from there.
+- **C2. Root-locking covers files, not directories** — `deploy-ci:131-137` chowns tracked files only; `scripts/`, `lib/`, `ci/`, `config/` dirs stay agent-owned, so the agent can rename-swap any "locked" file between deploys. Fix: chown root:root every tracked parent dir (`git ls-files -z | xargs -0 dirname | sort -u`), chmod 0755. **FIXED 2026-07-21.**
+- **C3. Tracked symlinks are a blind spot** — `deploy-ci:132,170` skips symlinks in both chown and verify; a committed symlink `lib/ci.sh -> /home/agent/evil.sh` deploys untouched and is sourced by every consumer hook. `lock-hooks`/`lock-exemptions` also follow symlinks as root (`chown`/`chattr +i` on a retargeted path = system DoS, e.g. immutable `/etc/passwd`). Fix: reject mode-120000 entries at deploy; `-L` guard + `chown -h` in lock scripts. **FIXED 2026-07-21 (deploy-ci reject; lock-script -L guards pending).**
+- **C4. Agent-writable live tier registry = tamper vector reborn** — `ci/config/project_enforcement.yaml` is `agent:agent 0664`; `walk-projects:49`, `checks_compliance.sh:392`, `checks_quality.sh:156` read it. Agent marks a repo `vendored` → hooks never installed there. Guard binary unaffected (reads root-owned `workspace/config` copy, `exec.rs:377-396`). Fix: root-own + `chattr +i`, unify the two diverged registries (workspace/config missing himalaya/matrix entries). **FIX IN PROGRESS 2026-07-21.**
+- **C5. Ambient CAP_DAC_OVERRIDE leaks into hook-executed agent code** — guard `exec.rs:47-55` loans DAC override to `git.original`; inheritable caps (`main.rs:270-276`) survive into the contract bash, so pytest/eslint/node on agent code can rewrite root-owned `.git/hooks`, `projects/CI`, exemptions. Fix: drop ambient+inheritable caps (`capsh --drop`) in hook/contract preamble before running repo code.
+- **C6. Workspace-root marker agent-deletable → all gates silently off** — `exec.rs:288-292` returns Ok when markers missing; marker `workspace/scripts/utils/git-guard` is agent-owned. Delete it → no wsroot → contract AND ci_integrity pass. Fix: fail closed when path looks workspace-like but markers incomplete; root-own the marker.
+
+### High
+
+- **H1. No failure atomicity in deploy-ci** — no `trap`; failure between unseal and reseal leaves exemptions/hooks unsealed, and verify checks ownership/mode/HEAD but not the immutable bit, so it passes while unsealed. Fix: `trap ... ERR INT TERM` reseal + immutable-bit in verify loop.
+- **H2. ci_integrity checks ownership, never content** — `ci_integrity.rs:198-230`: no `diff-index`/blob-hash check, untracked files invisible, upstream ref comparison trusts locally-rewriteable `refs/remotes/origin/main` (unrestricted `git fetch` with loaned DAC override into root-owned `.git`).
+- **H3. git-ssh-wrapper stages the raw private key agent-owned** — `git_ssh.rs:71-83` writes the root key into `$XDG_RUNTIME_DIR/workspace-guard/` owned by agent; agent reads it once, then plain ssh anywhere, no host/repo allowlist. Fix: root-owned ssh-agent socket, or argv allowlist in wrapper.
+- **H4. Gates are workspace-local; same keys work from /tmp** — clone a consumer to /tmp: no hooks, no contract, push unrestricted. Fix: server-side pre-receive hooks on the git host.
+- **H5. install-hooks-recursive degrades silently as non-root** — `Makefile:368-370` prints info and exits 0 with hooks unlocked; `make install` hits this path. New repos cloned later never get hooks (nothing re-runs after `ensure-repos`, no timer). Fix: fail non-zero; re-run recursive install post-clone.
+
+### Medium
+
+- **M1. TOCTOU** — minutes-long unseal→chown→verify→reseal window, no `flock`; install-hooks-recursive can interleave with deploy-ci on the same hooks. Fix: shared `flock /run/lock/ci-deploy` in all five scripts.
+- **M2. cap-allowlist drift** — `/usr/bin/true cap_dac_override` survived install-lock; allowlist scans only `/usr/bin`, missing `/usr/lib/snapd/snap-confine` (sys_admin/ptrace) and `gst-ptp-helper` (net_admin). Fix: extend scan to `/usr/lib*`, re-run install-lock.
+- **M3. Owner resolution inconsistencies** — `deploy-ci:55`/`lock-exemptions:35` trust `stat %U` of a mutable dir; `unseal-hooks:66` trusts `SUDO_UID`. Spoofable, divergent models. Fix: pin expected owner in config, cross-check.
+- **M4. chattr aborts mid-op on unsupported fs** — no upfront probe; with `set -e` and no trap (H1) the script dies leaving a half-unsealed tree.
+- **M5. ci_resolve_tier flush bug** — `checks_quality.sh:96-103` final-entry flush updates tier but not path → ordering-dependent misresolution.
+
+### Low
+
+- **L1.** deploy-ci validates work repo is not ahead of origin, but never behind, and never checks HEAD is on `$_BRANCH`.
+- **L2.** `lock-hooks:42` captures `2>&1` into `$_owner`; exemption report parsing splits on `": "` (filename collision).
+- **L3.** `>/dev/null` ban is commit-time only; runtime suppression unenforced (audit-only control).
+- **L4.** `git fetch` refspecs unrestricted (feeds H2).
+
+### Fix order
+
+C4 → C2 → C3 → C1 → C5 → C6 → H1 → H2 → rest.

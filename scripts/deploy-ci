@@ -121,6 +121,16 @@ fi
 _deployed="$(git_as_root -C "$_DEPLOY_DIR" rev-parse HEAD)"
 log_info "deployed commit: $_deployed"
 
+# 3b. Reject tracked symlinks: they bypass both root-locking and the
+#     verify loop, and a symlinked lib/ci.sh would deploy agent code
+#     sourced by every consumer hook (audit C3).
+_symlinks="$(git_as_root -C "$_DEPLOY_DIR" ls-files -s | awk '$1 == "120000" {print $4}')"
+if [[ -n "$_symlinks" ]]; then
+    log_error "tracked symlinks are forbidden in the deployment:"
+    printf '  %s\n' $_symlinks >&2
+    exit 1
+fi
+
 # 4. Lock every git-tracked file to root. Untracked runtime trees are
 #    deliberately skipped (see header). Sealed exemption files are +i
 #    immutable, so unseal first and reseal after verification.
@@ -136,6 +146,20 @@ done < "$_ls_tmp"
 rm -f "$_ls_tmp"
 chown root:root "$_DEPLOY_DIR"
 log_info "locked $_count tracked files to root:root"
+
+# 4b. Lock every directory containing tracked files. Without this the
+#     dirs stay agent-owned and the agent can rename-swap any "locked"
+#     file between deploys (audit C2).
+_dir_count=0
+_dirs_tmp="$(mktemp)" || { log_error "mktemp failed"; exit 1; }
+git_as_root -C "$_DEPLOY_DIR" ls-files -z | xargs -0 dirname -z | sort -zu | \
+    awk 'BEGIN{RS="\0";ORS="\0"} {p=$0; while (p != "." && p != "") {print p; if (p !~ /\//) break; sub("/[^/]*$", "", p)} print "."}' | sort -zu > "$_dirs_tmp"
+while IFS= read -r -d '' _d; do
+    chown root:root "$_DEPLOY_DIR/$_d"
+    chmod 0755 "$_DEPLOY_DIR/$_d"
+    _dir_count=$((_dir_count + 1))
+done < "$_dirs_tmp"
+log_info "locked $_dir_count tracked parent directories to root:root"
 
 # 5. Root-own the .git tree so the agent cannot retarget refs/config.
 #    Generated hooks are +i (lock-hooks), so unseal first and re-lock
@@ -176,6 +200,10 @@ while IFS= read -r -d '' _entry; do
     fi
 done < "$_lss_tmp"
 rm -f "$_lss_tmp"
+while IFS= read -r -d '' _d; do
+    [[ "$(stat -c '%u' "$_DEPLOY_DIR/$_d")" == "0" ]] || { log_error "verify: dir not root-owned: $_d"; _verify_fail=1; }
+done < "$_dirs_tmp"
+rm -f "$_dirs_tmp"
 [[ "$(stat -c '%u' "$_DEPLOY_DIR/.git")" == "0" ]] || { log_error "verify: .git not root-owned"; _verify_fail=1; }
 _head="$(git_as_root -C "$_DEPLOY_DIR" rev-parse HEAD)"
 _origin="$(git_as_root -C "$_DEPLOY_DIR" rev-parse refs/remotes/origin/"$_BRANCH")"
