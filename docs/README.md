@@ -23,6 +23,7 @@ as not implemented.
 | [`requirements/REQ-WIKI.md`](requirements/REQ-WIKI.md) | Interactive wiki web UI (`web/`) |
 | [`requirements/REQ-WIKI-RESPONSIVE.md`](requirements/REQ-WIKI-RESPONSIVE.md) | Wiki responsive layout (breakpoints, touch targets, fluid type) |
 | [`requirements/REQ-PORTABILITY.md`](requirements/REQ-PORTABILITY.md) | Shell portability contract: process-substitution ban, capture helpers |
+| [`requirements/REQ-CVE-SCAN.md`](requirements/REQ-CVE-SCAN.md) | Dependency vulnerability scanning via OSV-Scanner (live OSV.dev CVE DB) |
 
 ### specifications/  -  implementation specs (SPEC-*)
 
@@ -33,6 +34,7 @@ as not implemented.
 | [`specifications/SPEC-WIKI.md`](specifications/SPEC-WIKI.md) | Wiki implementation specification |
 | [`specifications/SPEC-WIKI-RESPONSIVE.md`](specifications/SPEC-WIKI-RESPONSIVE.md) | Wiki responsive overhaul phases and file-level changes |
 | [`specifications/SPEC-PORTABILITY.md`](specifications/SPEC-PORTABILITY.md) | Capture helper API, detection patterns, enforcement mechanism |
+| [`specifications/SPEC-CVE-SCAN.md`](specifications/SPEC-CVE-SCAN.md) | OSV-Scanner bootstrap, `ci_scan_vulnerabilities` wrapper, `osv-scan` pre-push hook |
 
 ### runbooks/  -  operations
 
