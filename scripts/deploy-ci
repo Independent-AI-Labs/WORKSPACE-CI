@@ -148,10 +148,25 @@ if [[ -n "$_symlinks" ]]; then
     exit 1
 fi
 
+# H1: failure atomicity. From the first unseal until the final reseal,
+# any premature exit (error, Ctrl-C, TERM) must attempt to reseal
+# exemptions and hooks so the deployment is never left unlocked.
+_RESEAL_ARMED=0
+_reseal_on_exit() {
+    _rc=$?
+    if [[ "$_RESEAL_ARMED" == "1" ]]; then
+        log_warn "deploy exiting early (rc=$_rc); resealing exemptions and hooks"
+        bash "$_WORK_REPO/scripts/lock-exemptions" "$_DEPLOY_DIR" || log_error "reseal: lock-exemptions failed"
+        bash "$_WORK_REPO/scripts/lock-hooks" "$_DEPLOY_DIR" || log_error "reseal: lock-hooks failed"
+    fi
+}
+trap _reseal_on_exit EXIT
+
 # 4. Lock every git-tracked file to root. Untracked runtime trees are
 #    deliberately skipped (see header). Sealed exemption files are +i
 #    immutable, so unseal first and reseal after verification.
 bash "$_WORK_REPO/scripts/unseal-exemptions" "$_DEPLOY_DIR"
+_RESEAL_ARMED=1
 _count=0
 _ls_tmp="$(mktemp)" || { log_error "mktemp failed"; exit 1; }
 git_as_root -C "$_DEPLOY_DIR" ls-files -z > "$_ls_tmp"
@@ -232,6 +247,21 @@ fi
 log_info "integrity verification passed"
 bash "$_WORK_REPO/scripts/lock-exemptions" "$_DEPLOY_DIR"
 bash "$_WORK_REPO/scripts/lock-hooks" "$_DEPLOY_DIR"
+
+# H1: post-reseal gate: hooks and exemption files must be +i immutable.
+#     Verify checks ownership/mode/HEAD only, so without this a failed
+#     chattr could pass unnoticed.
+_imm_fail=0
+for _h in pre-commit commit-msg pre-push; do
+    _hp="$_DEPLOY_DIR/.git/hooks/$_h"
+    [[ -f "$_hp" ]] || continue
+    case "$(lsattr "$_hp" | cut -d' ' -f1)" in
+        *i*) ;;
+        *) log_error "post-lock: hook not immutable: $_h"; _imm_fail=1 ;;
+    esac
+done
+[[ "$_imm_fail" == "0" ]] || { log_error "post-lock immutability check failed"; exit 1; }
+_RESEAL_ARMED=0
 
 log_info "deploy-ci complete: $_DEPLOY_DIR @ $_deployed (root-locked)"
 log_warn "reminder: hook runtime trees (.venv, node_modules) stay agent-owned; run install targets from WORKSPACE-CI as usual"
