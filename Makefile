@@ -168,9 +168,9 @@ install-web-deps: install-node ## npm install web/ dependencies (Next.js wiki)
 	cd web && PATH="$(BOOT_BIN):$$PATH" npm install
 
 .PHONY: install-hooks
-install-hooks: ## (Re)generate native git hooks
+install-hooks: ## (Re)generate native git hooks (auto unseal/re-lock when root-sealed)
 	if [ -f scripts/cleanup-precommit ]; then bash scripts/cleanup-precommit; else echo "[INFO] cleanup-precommit not found, continuing" >&2; fi
-	bash scripts/generate-hooks
+	bash scripts/reinstall-hooks
 
 .PHONY: sync
 sync: ## Sync .venv deps + reinstall hooks

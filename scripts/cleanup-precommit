@@ -29,9 +29,15 @@ if [[ -f ".git/hooks/pre-commit.legacy" ]]; then
     ci_pass "Removed .git/hooks/pre-commit.legacy"
 fi
 
-# Uninstall pre-commit package
-pip uninstall -y pre-commit && ci_pass "Uninstalled pre-commit (pip)"
-uv pip uninstall pre-commit && ci_pass "Uninstalled pre-commit (uv)"
+# Uninstall pre-commit package via hermetic boot-dir uv only; never
+# ambient system binaries. uv resolves the project venv itself when run
+# from the project root.
+_uv="$(ci_uv_bin)" || exit 1
+if (cd "$CI_PROJECT_ROOT" && "$_uv" pip uninstall pre-commit); then
+    ci_pass "Uninstalled pre-commit (uv, project venv)"
+else
+    ci_info "pre-commit not installed in project venv (or no venv yet)"
+fi
 
 # Optionally remove config
 if [[ $_remove_config -eq 1 ]]; then

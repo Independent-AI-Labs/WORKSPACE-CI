@@ -48,7 +48,15 @@ make install-hooks
 ```
 
 `make install-hooks` runs [`scripts/cleanup-precommit`](../../scripts/cleanup-precommit)
-first (if present), then `scripts/generate-hooks`.
+first (if present), then [`scripts/reinstall-hooks`](../../scripts/reinstall-hooks).
+
+`reinstall-hooks` handles the root-sealed (immutable) case automatically:
+if the generated hooks are root-locked, it runs
+`unseal-hooks` (sudo) -> `generate-hooks` (as the invoking user, never
+root) -> `lock-hooks` (sudo), re-locking even when generation fails.
+sudo may prompt interactively when no cached credentials exist. The
+manual cycle (`sudo make unseal-hooks && make install-hooks && sudo
+make lock-hooks`) remains available for debugging.
 
 This reads `.pre-commit-config.yaml` and writes one file per configured
 stage: `.git/hooks/pre-commit`, `.git/hooks/commit-msg`,
