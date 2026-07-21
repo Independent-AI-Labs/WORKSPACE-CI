@@ -28,10 +28,13 @@ _consumer="$(cd "$_consumer" && pwd)"
 
 ci_info "Locking exemption files in $_consumer"
 
-# 1. Create missing files as the invoking user (keeps repo files agent-owned
-#    until the lock step below claims them).
-if [[ -n "${SUDO_USER:-}" && "$SUDO_USER" != "root" ]]; then
-    sudo -u "$SUDO_USER" "$_CI_ROOT/$CI_BOOT_NAME/bin/uv" run --no-sync --project "$_CI_ROOT" python -m ci.exemption_files ensure "$_consumer"
+# 1. Create missing files as the consumer repo's owner (keeps repo files
+#    owner-owned until the lock step below claims them). Do NOT trust
+#    SUDO_USER: operators run via a separate admin account whose home cannot
+#    traverse the agent's /home.
+_owner="$(stat -c '%U' "$_consumer")"
+if [[ "$_owner" != "root" ]]; then
+    runuser -u "$_owner" -- "$_CI_ROOT/$CI_BOOT_NAME/bin/uv" run --no-sync --project "$_CI_ROOT" python -m ci.exemption_files ensure "$_consumer"
 else
     ci_uv_run -m ci.exemption_files ensure "$_consumer"
 fi
