@@ -116,6 +116,20 @@ ${_ci_best_bash}
 # Re-generate: ${_ci_rel}/scripts/generate-hooks
 set -euo pipefail
 
+# Capability scrub (audit C5): the workspace guard loans ambient and
+# inheritable capabilities (CAP_DAC_OVERRIDE et al.) to git so it can
+# write root-owned .git trees. Without this scrub those caps propagate
+# into everything this hook spawns (pytest, node, repo scripts), letting
+# agent code rewrite root-owned hooks, projects/CI, and exemption files.
+# Re-exec once with inheritable and ambient caps cleared; git commands
+# run later re-acquire their own loan from the guard wrapper per call.
+if [[ -z "\${_CI_CAPS_SCRUBBED:-}" ]]; then
+    if _setpriv="\$(command -v setpriv)"; then
+        export _CI_CAPS_SCRUBBED=1
+        exec setpriv --inh-caps=-all --ambient-caps=-all bash "\$0" "\$@"
+    fi
+fi
+
 _ROOT="\$(git rev-parse --show-toplevel)"
 cd "\$_ROOT"
 if ! source "\${_ROOT}/${_ci_rel}/lib/ci.sh"; then
