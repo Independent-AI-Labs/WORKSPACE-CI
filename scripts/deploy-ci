@@ -34,6 +34,14 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
+# Root shells do not inherit the agent PATH; the CI helper scripts
+# (unseal-exemptions/lock-exemptions) need uv from the workspace boot dir.
+_WORKSPACE_ROOT="$(cd "$_PROJECTS_ROOT/.." && pwd)"
+_BOOT_BIN="$_WORKSPACE_ROOT/.boot-linux/bin"
+if [[ -x "$_BOOT_BIN/uv" ]]; then
+    export PATH="$_BOOT_BIN:$PATH"
+fi
+
 # Git identity model: SSH transport runs ONLY as the work-repo owner
 # (via runuser). The guard injects that user's provisioned deploy key
 # (agent_identity.rs -> git-ssh-wrapper); root's git has no credential
