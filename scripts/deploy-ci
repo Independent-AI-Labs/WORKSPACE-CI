@@ -113,7 +113,9 @@ fi
 #    match origin exactly. Also verify HEAD sits on $_BRANCH and is not
 #    BEHIND origin (L1): ahead-only validation let a stale worktree
 #    redeploy an old revision over a newer deployment.
-_cur_branch="$(git_as_owner -C "$_WORK_REPO" symbolic-ref --short HEAD 2>&1)"
+# rev-parse --abbrev-ref replaces symbolic-ref --short: the binary guard
+# blocks the symbolic-ref subcommand outright.
+_cur_branch="$(git_as_owner -C "$_WORK_REPO" rev-parse --abbrev-ref HEAD 2>&1)"
 if [[ "$_cur_branch" != "$_BRANCH" ]]; then
     log_error "WORKSPACE-CI HEAD is on '$_cur_branch', expected '$_BRANCH'"
     exit 1
