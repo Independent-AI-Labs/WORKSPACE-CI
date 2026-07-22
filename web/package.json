@@ -68,6 +68,7 @@
   },
   "overrides": {
     "brace-expansion@1": "1.1.16",
-    "postcss": "8.5.22"
+    "postcss": "8.5.22",
+    "sharp": "0.35.3"
   }
 }
