@@ -110,12 +110,25 @@ if [[ ! -d "$_DEPLOY_DIR/.git" ]]; then
 fi
 
 # 2. Verify the working repo has no unpushed commits: deployment must
-#    match origin exactly.
+#    match origin exactly. Also verify HEAD sits on $_BRANCH and is not
+#    BEHIND origin (L1): ahead-only validation let a stale worktree
+#    redeploy an old revision over a newer deployment.
+_cur_branch="$(git_as_owner -C "$_WORK_REPO" symbolic-ref --short HEAD 2>&1)"
+if [[ "$_cur_branch" != "$_BRANCH" ]]; then
+    log_error "WORKSPACE-CI HEAD is on '$_cur_branch', expected '$_BRANCH'"
+    exit 1
+fi
 git_as_owner -C "$_WORK_REPO" fetch origin "$_BRANCH" --quiet
 _ahead="$(git_as_owner -C "$_WORK_REPO" rev-list --count "origin/$_BRANCH..HEAD")"
 if [[ "$_ahead" != "0" ]]; then
     log_error "WORKSPACE-CI has $_ahead unpushed commit(s); push first:"
     log_error "  git -C $_WORK_REPO push"
+    exit 1
+fi
+_behind="$(git_as_owner -C "$_WORK_REPO" rev-list --count "HEAD..origin/$_BRANCH")"
+if [[ "$_behind" != "0" ]]; then
+    log_error "WORKSPACE-CI is $_behind commit(s) behind origin/$_BRANCH; pull first:"
+    log_error "  git -C $_WORK_REPO pull --ff-only"
     exit 1
 fi
 if [[ -n "$(git_as_owner -C "$_WORK_REPO" status --porcelain)" ]]; then
