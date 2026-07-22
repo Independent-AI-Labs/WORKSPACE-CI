@@ -76,7 +76,14 @@ def main(argv: list[str] | None = None) -> int:
             print(f"created: {path}")
         return 0
     for path, state in lock_report(args.project_root):
-        print(f"{state}: {path}")
+        # TAB-delimited: a path containing ": " no longer collides with
+        # the "state: path" split (L2). Paths with TAB or newline would
+        # still break the line protocol, so reject them loudly instead.
+        raw = str(path)
+        if "\t" in raw or "\n" in raw:
+            msg = f"exemption path contains TAB/newline: {raw!r}"
+            raise ValueError(msg)
+        print(f"{state}\t{path}")
     return 0
 
 

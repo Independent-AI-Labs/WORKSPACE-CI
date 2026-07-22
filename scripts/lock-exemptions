@@ -48,10 +48,8 @@ fi
 _report="$(ci_uv_run -m ci.exemption_files report "$_consumer")"
 _fixed=0
 _compliant=0
-while IFS= read -r _line; do
-    [[ -z "$_line" ]] && continue
-    _state="${_line%%:*}"
-    _path="${_line#*: }"
+while IFS=$'\t' read -r _state _path; do
+    [[ -z "$_state" ]] && continue
     if [[ "$_state" == "ok" ]]; then
         echo "  [compliant] $_path"
         _compliant=$((_compliant + 1))

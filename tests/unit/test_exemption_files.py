@@ -117,7 +117,14 @@ def test_main_report_prints_states(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     _patch_manifest(monkeypatch, MANIFEST_ENTRIES[:1])
     assert main(["report", str(tmp_path)]) == 0
     out = capsys.readouterr().out
-    assert f"missing: {tmp_path / 'alpha_exceptions.yaml'}" in out
+    assert f"missing\t{tmp_path / 'alpha_exceptions.yaml'}" in out
+
+
+def test_main_report_rejects_unsafe_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    evil = tmp_path / "evil\tname.yaml"
+    _patch_manifest(monkeypatch, [{"path": str(evil), "description": "evil"}])
+    with pytest.raises(ValueError, match="TAB/newline"):
+        main(["report", str(tmp_path)])
 
 
 def test_main_requires_subcommand() -> None:
