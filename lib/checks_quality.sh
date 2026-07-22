@@ -97,6 +97,7 @@ ci_resolve_tier() {
         local _ep="${_cur_path%/}"
         if [[ "$_rel" == "$_ep" || "$_rel" == "$_ep"/* ]]; then
             if [[ ${#_ep} -gt ${#_best_path} ]]; then
+                _best_path="$_ep"
                 _best_tier="$_cur_tier"
             fi
         fi
