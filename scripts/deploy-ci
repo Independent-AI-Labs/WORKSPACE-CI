@@ -34,6 +34,17 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
+# M1: serialize with unseal-hooks/lock-hooks/unseal-exemptions/lock-exemptions
+# (which take the same lock via ci_acquire_deploy_lock). fd 9 stays open for
+# the lifetime of this process, so the lock releases automatically on exit.
+_DEPLOY_LOCK_DIR="${CI_DEPLOY_LOCK_DIR:-/run/lock}"
+if [[ ! -d "$_DEPLOY_LOCK_DIR" ]]; then
+    mkdir -p "$_DEPLOY_LOCK_DIR"
+fi
+exec 9>"$_DEPLOY_LOCK_DIR/ci-deploy.lock"
+flock 9
+log_info "Holding deploy lock $_DEPLOY_LOCK_DIR/ci-deploy.lock"
+
 # Root shells do not inherit the agent PATH; the CI helper scripts
 # (unseal-exemptions/lock-exemptions) need uv from the workspace boot dir.
 _WORKSPACE_ROOT="$(cd "$_PROJECTS_ROOT/.." && pwd)"

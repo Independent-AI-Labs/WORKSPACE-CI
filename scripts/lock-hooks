@@ -19,6 +19,8 @@ if [[ "$(id -u)" != "0" ]]; then
     exit 1
 fi
 
+ci_acquire_deploy_lock
+
 _consumer="${1:-}"
 if [[ -z "$_consumer" ]]; then
     ci_fail "usage: lock-hooks <consumer_dir>"
