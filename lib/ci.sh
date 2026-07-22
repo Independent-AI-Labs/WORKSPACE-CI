@@ -4,12 +4,14 @@
 # Usage: source /path/to/ci.sh
 
 _CI_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=lib/ci_owner.sh
-if ! source "$_CI_LIB_DIR/ci_owner.sh"; then
-    echo "ERROR: failed to source $_CI_LIB_DIR/ci_owner.sh" >&2
-    return 1 || exit 1
-fi
-
+for _ci_sub in ci_owner ci_seal; do
+    # shellcheck source=lib/ci_owner.sh
+    if ! source "$_CI_LIB_DIR/$_ci_sub.sh"; then
+        echo "ERROR: failed to source $_CI_LIB_DIR/$_ci_sub.sh" >&2
+        return 1 || exit 1
+    fi
+done
+unset _ci_sub
 
 # ---------------------------------------------------------------------------
 # Platform detection
@@ -137,7 +139,6 @@ ci_acquire_deploy_lock() {
     fi
     ci_info "Holding deploy lock $lock_file"
 }
-
 
 # ---------------------------------------------------------------------------
 # Source-time boot directory variables (set once when ci.sh is sourced).

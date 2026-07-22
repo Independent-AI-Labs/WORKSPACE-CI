@@ -28,6 +28,8 @@ if [[ -z "$_consumer" ]]; then
 fi
 _consumer="$(cd "$_consumer" && pwd)"
 
+ci_probe_chattr_support "$_consumer"
+
 ci_info "Unsealing exemption files in $_consumer"
 
 _report="$(ci_uv_run -m ci.exemption_files report "$_consumer")"

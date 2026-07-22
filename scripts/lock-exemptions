@@ -28,6 +28,8 @@ if [[ -z "$_consumer" ]]; then
 fi
 _consumer="$(cd "$_consumer" && pwd)"
 
+ci_probe_chattr_support "$_consumer"
+
 ci_info "Locking exemption files in $_consumer"
 
 # 1. Create missing files as the consumer repo's owner (keeps repo files
