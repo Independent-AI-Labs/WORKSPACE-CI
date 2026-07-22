@@ -33,8 +33,9 @@ ci_info "Locking exemption files in $_consumer"
 # 1. Create missing files as the consumer repo's owner (keeps repo files
 #    owner-owned until the lock step below claims them). Do NOT trust
 #    SUDO_USER: operators run via a separate admin account whose home cannot
-#    traverse the agent's /home.
-_owner="$(stat -c '%U' "$_consumer")"
+#    traverse the agent's /home. The owner is the pinned expected owner
+#    (M3), cross-checked against the consumer dir.
+_owner="$(ci_resolve_expected_owner "$_CI_ROOT" "$_consumer")"
 if [[ "$_owner" != "root" ]]; then
     runuser -u "$_owner" -- "$_CI_ROOT/$CI_BOOT_NAME/bin/uv" run --no-sync --project "$_CI_ROOT" python -m ci.exemption_files ensure "$_consumer"
 else

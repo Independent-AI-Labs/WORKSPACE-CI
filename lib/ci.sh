@@ -3,6 +3,13 @@
 # Consumers set their own shell flags; this file must stay passive.
 # Usage: source /path/to/ci.sh
 
+_CI_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/ci_owner.sh
+if ! source "$_CI_LIB_DIR/ci_owner.sh"; then
+    echo "ERROR: failed to source $_CI_LIB_DIR/ci_owner.sh" >&2
+    return 1 || exit 1
+fi
+
 
 # ---------------------------------------------------------------------------
 # Platform detection

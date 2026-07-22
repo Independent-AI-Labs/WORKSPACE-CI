@@ -62,11 +62,22 @@ fi
 # keeps server-side provenance (the ref arrived from origin over SSH
 # moments earlier in the same run, as the owner).
 # Owner is resolved from the worktree dir, not .git: the guard's
-# post-op lock root-owns .git even in the agent's working repo.
+# post-op lock root-owns .git even in the agent's working repo. The
+# stat result alone is spoofable in principle (M3), so it is
+# cross-checked against the pinned expected owner in the deployed
+# (root-owned) CI repo; CI_EXPECTED_OWNER overrides the pin.
 _REPO_OWNER="$(stat -c %U "$_WORK_REPO")"
 _OWNER_HOME="$(getent passwd "$_REPO_OWNER" | cut -d: -f6)"
 if [[ -z "$_REPO_OWNER" || -z "$_OWNER_HOME" || "$_REPO_OWNER" == "root" ]]; then
     log_error "cannot resolve non-root owner of $_WORK_REPO"
+    exit 1
+fi
+_EXPECTED_OWNER="${CI_EXPECTED_OWNER:-}"
+if [[ -z "$_EXPECTED_OWNER" && -f "$_DEPLOY_DIR/config/workspace-owner" ]]; then
+    _EXPECTED_OWNER="$(tr -d '[:space:]' < "$_DEPLOY_DIR/config/workspace-owner")"
+fi
+if [[ -n "$_EXPECTED_OWNER" && "$_REPO_OWNER" != "$_EXPECTED_OWNER" ]]; then
+    log_error "owner mismatch: $_WORK_REPO owned by '$_REPO_OWNER', expected '$_EXPECTED_OWNER'"
     exit 1
 fi
 log_info "git transport identity: $_REPO_OWNER (home $_OWNER_HOME)"
