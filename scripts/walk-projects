@@ -51,6 +51,10 @@ _registry="$_workspace_root/ci/config/project_enforcement.yaml"
 cd "$_workspace_root"
 find projects -type d -name .git | while IFS= read -r _gitdir; do
     _repo="$(dirname "$_gitdir")"
+    # Skip the deployed CI mirror (deploy-ci: _DEPLOY_DIR=projects/CI): it
+    # is root-owned by design and its hook/exemption lifecycle is owned by
+    # deploy-ci, not by the *-recursive consumer targets.
+    [[ "$_repo" == "projects/CI" ]] && continue
     _tier="$(ci_resolve_tier "$_repo" "$_registry")"
     [[ "$_tier" == "vendored" ]] && continue
     echo "$_repo"

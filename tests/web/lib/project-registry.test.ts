@@ -16,7 +16,7 @@ const siblingCfg = {
   slug: 'workspace-ci',
   displayName: 'WORKSPACE-CI',
   language: 'Python',
-  repoName: 'CI',
+  repoName: 'WORKSPACE-CI',
   icon: 'ri-terminal-box-line',
 }
 
@@ -38,7 +38,7 @@ describe('resolveRepoDir', () => {
 
   it('resolves sibling repos by repoName', () => {
     const projectsRoot = '/workspace/projects'
-    expect(resolveRepoDir(siblingCfg, projectsRoot)).toBe(join(projectsRoot, 'CI'))
+    expect(resolveRepoDir(siblingCfg, projectsRoot)).toBe(join(projectsRoot, 'WORKSPACE-CI'))
   })
 })
 

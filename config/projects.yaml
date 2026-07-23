@@ -9,7 +9,7 @@ projects:
   - slug: workspace-ci
     displayName: WORKSPACE-CI
     language: Python
-    repoName: CI
+    repoName: WORKSPACE-CI
     icon: ri-terminal-box-line
     logoPath: /logos/workspace-ci.png
   - slug: workspace-gateway
