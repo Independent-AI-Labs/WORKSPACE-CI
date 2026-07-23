@@ -88,6 +88,9 @@ COPY ${CI_CONTEXT_DIR}/config ./CI/config
 COPY ${CI_CONTEXT_DIR}/docs ./CI/docs
 COPY ${CI_CONTEXT_DIR}/scripts ./CI/scripts
 COPY ${CI_CONTEXT_DIR}/web ./CI/web
+COPY ${CI_CONTEXT_DIR}/README.md WORKSPACE-CI/Makefile ./WORKSPACE-CI/
+COPY ${CI_CONTEXT_DIR}/res ./WORKSPACE-CI/res
+COPY ${CI_CONTEXT_DIR}/.git/config ./WORKSPACE-CI/.git/config
 COPY --from=extract /workspace/CI/web/src/data ./CI/web/src/data
 
 WORKDIR /workspace/CI/web
@@ -137,6 +140,9 @@ COPY ${CI_CONTEXT_DIR}/res ./CI/res
 COPY ${CI_CONTEXT_DIR}/config ./CI/config
 COPY ${CI_CONTEXT_DIR}/docs ./CI/docs
 COPY ${CI_CONTEXT_DIR}/scripts ./CI/scripts
+COPY ${CI_CONTEXT_DIR}/README.md WORKSPACE-CI/Makefile ./WORKSPACE-CI/
+COPY ${CI_CONTEXT_DIR}/res ./WORKSPACE-CI/res
+COPY ${CI_CONTEXT_DIR}/.git/config ./WORKSPACE-CI/.git/config
 
 WORKDIR /workspace/CI/web
 
