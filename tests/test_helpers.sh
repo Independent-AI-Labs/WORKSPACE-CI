@@ -44,10 +44,6 @@ _restore_configs() {
         local bn; bn="$(basename "$f")"
         case "$bn" in
             banned_words.yaml|coverage_thresholds.yaml|file_length_limits.yaml)
-                # Remove first: the guard root-locks coverage/file-length
-                # configs after sandbox git commits, and cp onto a locked
-                # file fails (directory stays agent-writable, so rm works).
-                rm -f "$_ci_dir/config/$bn" 2>/dev/null || true
                 cp "$f" "$_ci_dir/config/$bn"
                 ;;
             *)
@@ -84,10 +80,9 @@ _setup_tmpdir() {
         _scrub_dir "$_ci_dir/.git"
         # Remove regular files in CI dir (not symlinks). find without -L
         # does not follow symlinks, so symlinked lib files are preserved.
-        # Guard-locked (root-owned) leftovers cannot be deleted; tolerate.
-        find "$_ci_dir" -type f -delete 2>/dev/null || true
+        find "$_ci_dir" -type f -delete 2>/dev/null
         # Remove config symlinks so _restore_configs can re-create them
-        find "$_ci_dir/config" -maxdepth 1 -type l -delete 2>/dev/null || true
+        find "$_ci_dir/config" -maxdepth 1 -type l -delete 2>/dev/null
         _restore_configs "$_ci_dir"
         # Remove extra project dirs created by compliance tests
         local _d

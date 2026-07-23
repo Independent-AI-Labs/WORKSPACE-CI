@@ -124,10 +124,7 @@ integration:
 YAML
     git add "$cfg"
     git commit -q -m "initial config"
-    # Now lower the integration threshold and stage. The guard root-locks
-    # coverage_thresholds.yaml on commit and blocks git rm, so rename the
-    # locked file away (directory is agent-writable) before rewriting.
-    mv -f "$cfg" "$cfg.prev"
+    # Now lower the integration threshold and stage
     cat > "$cfg" <<'YAML'
 unit:
   path: tests/unit
@@ -159,9 +156,7 @@ integration:
 YAML
     git add "$cfg"
     git commit -q -m "initial config"
-    # Raise integration threshold above the committed value (5 -> 10).
-    # See lowered-blocked test: committed cfg is root-locked by the guard.
-    mv -f "$cfg" "$cfg.prev"
+    # Raise integration threshold above the committed value (5 -> 10)
     cat > "$cfg" <<'YAML'
 unit:
   path: tests/unit
@@ -191,9 +186,7 @@ integration:
 YAML
     git add "$cfg"
     git commit -q -m "initial config"
-    # Change path but keep threshold low: path-change exception should apply.
-    # See lowered-blocked test: committed cfg is root-locked by the guard.
-    mv -f "$cfg" "$cfg.prev"
+    # Change path but keep threshold low: path-change exception should apply
     cat > "$cfg" <<'YAML'
 unit:
   path: tests/new_unit
