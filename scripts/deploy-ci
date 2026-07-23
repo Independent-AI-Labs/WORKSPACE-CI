@@ -43,6 +43,7 @@ if [[ ! -d "$_DEPLOY_LOCK_DIR" ]]; then
 fi
 exec 9>"$_DEPLOY_LOCK_DIR/ci-deploy.lock"
 flock 9
+export CI_DEPLOY_LOCK_HELD=1
 log_info "Holding deploy lock $_DEPLOY_LOCK_DIR/ci-deploy.lock"
 
 # Root shells do not inherit the agent PATH; the CI helper scripts

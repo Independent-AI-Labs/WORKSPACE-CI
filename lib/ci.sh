@@ -4,7 +4,7 @@
 # Usage: source /path/to/ci.sh
 
 _CI_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-for _ci_sub in ci_owner ci_seal; do
+for _ci_sub in ci_owner ci_seal ci_deploy_lock; do
     # shellcheck source=lib/ci_owner.sh
     if ! source "$_CI_LIB_DIR/$_ci_sub.sh"; then
         echo "ERROR: failed to source $_CI_LIB_DIR/$_ci_sub.sh" >&2
@@ -110,34 +110,6 @@ ci_error() {
     echo -e "  Pattern: ${_YELLOW}${pattern}${_NC}"
     echo -e "  Reason:  ${_CYAN}${reason}${_NC}"
     [[ -n "$content" ]] && echo "  > ${content:0:80}"
-}
-
-# ---------------------------------------------------------------------------
-# Deploy lock (M1, SECURITY-AUDIT-2026-07-18-EXEMPTION-TAMPERING)
-# ---------------------------------------------------------------------------
-# Serialize unseal/reseal/deploy operations: without a shared lock, a
-# concurrent install-hooks-recursive can interleave with deploy-ci and
-# operate on a half-unsealed tree. fd 9 stays open for the lifetime of the
-# calling shell, so the lock releases automatically on exit.
-ci_acquire_deploy_lock() {
-    local lock_dir lock_file
-    lock_dir="${CI_DEPLOY_LOCK_DIR:-/run/lock}"
-    lock_file="$lock_dir/ci-deploy.lock"
-    if [[ ! -d "$lock_dir" ]]; then
-        if ! mkdir -p "$lock_dir"; then
-            ci_fail "cannot create lock dir $lock_dir"
-            return 1
-        fi
-    fi
-    if ! exec 9>"$lock_file"; then
-        ci_fail "cannot open deploy lock $lock_file"
-        return 1
-    fi
-    if ! flock 9; then
-        ci_fail "cannot acquire deploy lock $lock_file (held by another process)"
-        return 1
-    fi
-    ci_info "Holding deploy lock $lock_file"
 }
 
 # ---------------------------------------------------------------------------
