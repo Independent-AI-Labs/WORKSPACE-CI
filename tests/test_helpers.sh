@@ -56,7 +56,7 @@ _restore_configs() {
 _link_lib_files() {
     local _ci_dir="$1"
     local f src
-    for f in ci.sh ci_owner.sh ci_seal.sh ci_helpers.sh ci_config_paths.sh ci_exemptions.sh checks.sh checks_*.sh \
+    for f in ci.sh ci_owner.sh ci_seal.sh ci_deploy_lock.sh ci_helpers.sh ci_config_paths.sh ci_exemptions.sh checks.sh checks_*.sh \
              check_banned_words.py check_silent_swallow.py \
              check_silent_swallow_base.py check_silent_swallow_python.py \
              check_silent_swallow_js.py check_silent_swallow_system.py \
