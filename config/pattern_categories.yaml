@@ -2,7 +2,7 @@
 #
 # Single source of truth for pattern category IDs and human-readable
 # labels. Read by the CI checker (for grouped violation reporting) and
-# by the wiki UI (for the /patterns category navigation and labels).
+# by the wiki UI (for the /anti-patterns category navigation and labels).
 #
 # The web app's PatternCategory TypeScript union is kept in sync with
 # the ids listed here. If a new category is added, update both this

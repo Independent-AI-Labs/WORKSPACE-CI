@@ -23,10 +23,10 @@ pages:
       - open source
       - readme
   - id: page-patterns
-    title: Code Anti-Patterns
+    title: Anti-Patterns
     section: Pages
     content: Banned words and patterns reference
-    href: /patterns
+    href: /anti-patterns
     keywords:
       - patterns
       - banned
@@ -56,14 +56,15 @@ pages:
     keywords:
       - guard
       - config
-  - id: page-runtime-hooks
-    title: Runtime Hooks
+  - id: page-enforced-policies
+    title: Enforced Policies
     section: Pages
-    content: Runtime hooks for AI agent execution monitoring
-    href: /runtime-hooks
+    content: Runtime policy enforcement for AI agent execution monitoring
+    href: /enforced-policies
     keywords:
       - runtime
-      - hooks
+      - policies
+      - enforcement
       - monitoring
       - audit
   - id: page-llm-gateway

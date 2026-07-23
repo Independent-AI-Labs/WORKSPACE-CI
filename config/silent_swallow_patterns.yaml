@@ -5,7 +5,7 @@
 #
 # This file is loaded at check time by the Python checker AND at request
 # time by the wiki UI (web/src/lib/yaml-loader.ts) for display on the
-# /patterns page under the "Error Swallowing" category.
+# /anti-patterns page under the "Error Swallowing" category.
 #
 # Pattern types:
 #   inline_patterns:     pure regex applied via re.search() per line
