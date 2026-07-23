@@ -11,7 +11,7 @@ const ALLOWED_TAGS = [
   'div', 'span',
 ]
 
-const ALLOWED_ATTR = ['href', 'title', 'alt', 'src', 'class', 'id', 'rel', 'target', 'style']
+const ALLOWED_ATTR = ['href', 'title', 'alt', 'src', 'class', 'id', 'rel', 'target', 'style', 'width', 'height']
 
 export function sanitizeHtml(dirty: string): string {
   return createDOMPurify.sanitize(dirty, {

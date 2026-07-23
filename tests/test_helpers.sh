@@ -44,6 +44,10 @@ _restore_configs() {
         local bn; bn="$(basename "$f")"
         case "$bn" in
             banned_words.yaml|coverage_thresholds.yaml|file_length_limits.yaml)
+                # Remove first: the guard root-locks coverage/file-length
+                # configs after sandbox git commits, and cp onto a locked
+                # file fails (directory stays agent-writable, so rm works).
+                rm -f "$_ci_dir/config/$bn" 2>/dev/null || true
                 cp "$f" "$_ci_dir/config/$bn"
                 ;;
             *)
@@ -72,22 +76,23 @@ _link_lib_files() {
 }
 
 _setup_tmpdir() {
-    if [[ -n "${TEST_TMP:-}" && -d "${TEST_TMP:-}/workspace/projects/CI/lib" ]]; then
+    if [[ -n "${TEST_TMP:-}" && -d "${TEST_TMP:-}/workspace/projects/WORKSPACE-CI/lib" ]]; then
         # Reuse existing tmpdir: reset git state and remove test-created
         # regular files (preserving symlinked lib originals).
-        local _ci_dir="$TEST_TMP/workspace/projects/CI"
+        local _ci_dir="$TEST_TMP/workspace/projects/WORKSPACE-CI"
         _link_lib_files "$_ci_dir"
         _scrub_dir "$_ci_dir/.git"
         # Remove regular files in CI dir (not symlinks). find without -L
         # does not follow symlinks, so symlinked lib files are preserved.
-        find "$_ci_dir" -type f -delete 2>/dev/null
+        # Guard-locked (root-owned) leftovers cannot be deleted; tolerate.
+        find "$_ci_dir" -type f -delete 2>/dev/null || true
         # Remove config symlinks so _restore_configs can re-create them
-        find "$_ci_dir/config" -maxdepth 1 -type l -delete 2>/dev/null
+        find "$_ci_dir/config" -maxdepth 1 -type l -delete 2>/dev/null || true
         _restore_configs "$_ci_dir"
         # Remove extra project dirs created by compliance tests
         local _d
         for _d in "$TEST_TMP/workspace/projects"/*; do
-            [[ -d "$_d" && "$(basename "$_d")" != "CI" ]] && _scrub_dir "$_d"
+            [[ -d "$_d" && "$(basename "$_d")" != "WORKSPACE-CI" ]] && _scrub_dir "$_d"
         done
         # Remove extra dirs/files at workspace root (e.g. repos from
         # test_blocked_patterns)
@@ -110,7 +115,7 @@ _setup_tmpdir() {
         return
     fi
     TEST_TMP="$(mktemp -d)"
-    local _ci_dir="$TEST_TMP/workspace/projects/CI"
+    local _ci_dir="$TEST_TMP/workspace/projects/WORKSPACE-CI"
     # Create a minimal workspace structure so ci.sh doesn't bail
     mkdir -p "$_ci_dir/lib" "$_ci_dir/config"
     # Symlink library files instead of copying: eliminates ~25 file copies
@@ -179,7 +184,7 @@ _run_test() {
 
 # Helper: source checks.sh from the fake workspace
 _source_lib() {
-    cd "$TEST_TMP/workspace/projects/CI"
+    cd "$TEST_TMP/workspace/projects/WORKSPACE-CI"
     # Re-initialize git so ci_file_list works
     if [[ ! -d ".git" ]]; then
         git init -q .

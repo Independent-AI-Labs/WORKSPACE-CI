@@ -8,7 +8,7 @@ echo ""
 echo "=== ci.sh core tests ==="
 
 test_ci_read_yaml_flat() {
-    cat > "$TEST_TMP/workspace/projects/CI/config/test.yaml" <<'EOF'
+    cat > "$TEST_TMP/workspace/projects/WORKSPACE-CI/config/test.yaml" <<'EOF'
 max_lines: 512
 extensions:
   - .py
@@ -16,13 +16,13 @@ extensions:
 EOF
     _source_lib
     local val
-    val="$(ci_read_yaml "$TEST_TMP/workspace/projects/CI/config/test.yaml" "max_lines")"
+    val="$(ci_read_yaml "$TEST_TMP/workspace/projects/WORKSPACE-CI/config/test.yaml" "max_lines")"
     _assert_eq "512" "$val" "flat key"
 }
 _run_test "ci_read_yaml flat key" test_ci_read_yaml_flat
 
 test_ci_read_yaml_dotpath() {
-    cat > "$TEST_TMP/workspace/projects/CI/config/test.yaml" <<'EOF'
+    cat > "$TEST_TMP/workspace/projects/WORKSPACE-CI/config/test.yaml" <<'EOF'
 unit:
   min_coverage: 90
   path: "tests/unit"
@@ -32,15 +32,15 @@ integration:
 EOF
     _source_lib
     local val1 val2
-    val1="$(ci_read_yaml "$TEST_TMP/workspace/projects/CI/config/test.yaml" "unit.min_coverage")"
-    val2="$(ci_read_yaml "$TEST_TMP/workspace/projects/CI/config/test.yaml" "integration.path")"
+    val1="$(ci_read_yaml "$TEST_TMP/workspace/projects/WORKSPACE-CI/config/test.yaml" "unit.min_coverage")"
+    val2="$(ci_read_yaml "$TEST_TMP/workspace/projects/WORKSPACE-CI/config/test.yaml" "integration.path")"
     _assert_eq "90" "$val1" "unit.min_coverage"
     _assert_eq "tests/integration" "$val2" "integration.path"
 }
 _run_test "ci_read_yaml dotpath" test_ci_read_yaml_dotpath
 
 test_ci_read_yaml_list() {
-    cat > "$TEST_TMP/workspace/projects/CI/config/test.yaml" <<'EOF'
+    cat > "$TEST_TMP/workspace/projects/WORKSPACE-CI/config/test.yaml" <<'EOF'
 extensions:
   - .py
   - .rs
@@ -49,7 +49,7 @@ other: 42
 EOF
     _source_lib
     local items
-    items="$(ci_read_yaml_list "$TEST_TMP/workspace/projects/CI/config/test.yaml" "extensions")"
+    items="$(ci_read_yaml_list "$TEST_TMP/workspace/projects/WORKSPACE-CI/config/test.yaml" "extensions")"
     local count
     count="$(echo "$items" | wc -l)"
     _assert_eq "3" "$count" "list count"

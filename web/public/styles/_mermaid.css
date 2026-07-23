@@ -78,6 +78,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  min-width: 0;
   min-height: 160px;
   cursor: default;
   tab-size: 0;
@@ -99,7 +100,6 @@
   max-width: 100%;
   height: auto;
   margin-inline: auto;
-  flex-shrink: 0;
 }
 
 /* Error state when mermaid fails to render: surface the source. */
@@ -159,7 +159,6 @@
   max-height: 100%;
   height: auto;
   margin: auto;
-  flex-shrink: 0;
 }
 
 body.is-mermaid-fullscreen {
@@ -190,5 +189,15 @@ body.is-mermaid-dragging * {
 @media (max-width: 768px) {
   .mermaid-toolbar {
     flex-wrap: wrap;
+  }
+
+  .mermaid-viewport,
+  .prose pre.mermaid-viewport {
+    padding: 0;
+  }
+
+  .mermaid-viewport > svg {
+    width: 100%;
+    height: auto;
   }
 }

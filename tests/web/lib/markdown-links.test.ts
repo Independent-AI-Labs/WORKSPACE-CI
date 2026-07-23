@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   slugifyHeading,
   rewriteRelativeHref,
+  rewriteRelativeImageSrc,
   buildReadmeMarked,
 } from '@/lib/markdown-links'
 
@@ -85,8 +86,57 @@ describe('rewriteRelativeHref', () => {
   })
 })
 
-describe('buildReadmeMarked', () => {
+describe('rewriteRelativeImageSrc', () => {
   const ctx = { repoUrl: 'https://github.com/org/repo', branch: 'main' }
+  const localCtx = { ...ctx, projectSlug: 'workspace-gateway' }
+
+  it('rewrites a relative image path to a local project asset url when slug is provided', () => {
+    expect(rewriteRelativeImageSrc('res/gateway-screenshot.jpg', localCtx)).toBe(
+      '/api/project-asset?project=workspace-gateway&path=res%2Fgateway-screenshot.jpg',
+    )
+  })
+
+  it('strips a leading ./ prefix', () => {
+    expect(rewriteRelativeImageSrc('./docs/screen.png', localCtx)).toBe(
+      '/api/project-asset?project=workspace-gateway&path=docs%2Fscreen.png',
+    )
+  })
+
+  it('falls back to raw github url when no project slug is provided', () => {
+    expect(rewriteRelativeImageSrc('res/gateway-screenshot.jpg', ctx)).toBe(
+      'https://github.com/org/repo/raw/main/res/gateway-screenshot.jpg',
+    )
+  })
+
+  it('uses a custom branch for raw github fallback', () => {
+    expect(rewriteRelativeImageSrc('docs/screen.png', { ...ctx, branch: 'master' })).toBe(
+      'https://github.com/org/repo/raw/master/docs/screen.png',
+    )
+  })
+
+  it('defaults to main branch for raw github fallback', () => {
+    expect(rewriteRelativeImageSrc('docs/screen.png', { repoUrl: 'https://github.com/org/repo' })).toBe(
+      'https://github.com/org/repo/raw/main/docs/screen.png',
+    )
+  })
+
+  it('leaves absolute urls untouched', () => {
+    expect(rewriteRelativeImageSrc('https://example.com/x.png', localCtx)).toBe(
+      'https://example.com/x.png',
+    )
+  })
+
+  it('leaves protocol-relative urls untouched', () => {
+    expect(rewriteRelativeImageSrc('//example.com/x.png', localCtx)).toBe('//example.com/x.png')
+  })
+
+  it('passes through when no repo url or slug is set', () => {
+    expect(rewriteRelativeImageSrc('res/screen.png', {})).toBe('res/screen.png')
+  })
+})
+
+describe('buildReadmeMarked', () => {
+  const ctx = { repoUrl: 'https://github.com/org/repo', branch: 'main', projectSlug: 'workspace-gateway' }
   const markedInstance = buildReadmeMarked(ctx)
 
   it('emits heading ids', () => {
@@ -129,6 +179,29 @@ describe('buildReadmeMarked', () => {
 
   it('keeps link titles', () => {
     const html = markedInstance.parse('[x](docs/HOOKS.md "title here")\n') as string
+    expect(html).toContain('title="title here"')
+  })
+
+  it('rewrites relative image src to local project asset url', () => {
+    const html = markedInstance.parse('![Gateway routes](res/gateway-screenshot.jpg)\n') as string
+    expect(html).toContain(
+      'src="/api/project-asset?project=workspace-gateway&amp;path=res%2Fgateway-screenshot.jpg"',
+    )
+    expect(html).toContain('alt="Gateway routes"')
+  })
+
+  it('leaves absolute image src untouched', () => {
+    const html = markedInstance.parse('![x](https://example.com/x.png)\n') as string
+    expect(html).toContain('src="https://example.com/x.png"')
+  })
+
+  it('escapes image alt text', () => {
+    const html = markedInstance.parse('![x & y](res/a.png)\n') as string
+    expect(html).toContain('alt="x &amp; y"')
+  })
+
+  it('keeps image titles', () => {
+    const html = markedInstance.parse('![x](res/a.png "title here")\n') as string
     expect(html).toContain('title="title here"')
   })
 })

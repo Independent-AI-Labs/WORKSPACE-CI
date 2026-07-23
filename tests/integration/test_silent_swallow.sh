@@ -17,7 +17,7 @@ echo "=== ci_check_silent_swallow e2e tests ==="
 # leave the caller a clean tree to stage new content into.
 # ---------------------------------------------------------------------------
 _setup_silent_repo() {
-    cd "$TEST_TMP/workspace/projects/CI"
+    cd "$TEST_TMP/workspace/projects/WORKSPACE-CI"
     if [[ ! -d ".git" ]]; then
         git init -q .
         git config user.email "test@example.com"

@@ -65,13 +65,41 @@
   font-size: inherit;
 }
 
-/* .prose table + th/td base now provided by .table; margin is unique */
+/*
+  Tables are wrapped in a scroll container so a wide table never forces the
+  whole page to scroll horizontally. The table itself is fixed-layout so it
+  fills the prose width uniformly; long words (including URLs/code) wrap.
+*/
+.table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .prose table {
   margin: var(--space-3) 0;
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.prose th,
+.prose td {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
 .prose th {
   font-weight: 600;
+}
+
+.prose table pre,
+.prose table code {
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .prose blockquote {
@@ -98,15 +126,12 @@
 
 @media (max-width: 768px) {
   .prose table {
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    white-space: nowrap;
+    width: 100%;
   }
 
   .prose th,
   .prose td {
-    white-space: normal;
-    overflow-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 }

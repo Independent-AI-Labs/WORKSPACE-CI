@@ -1,16 +1,16 @@
-import { marked } from 'marked'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { highlightCode, escapeHtml } from '@/lib/highlight'
-import { buildReadmeMarked, type ReadmeLinkContext } from '@/lib/markdown-links'
+import { buildReadmeMarked, buildProseMarked, type ReadmeLinkContext } from '@/lib/markdown-links'
 import { parseCodeFences, splitMermaidBlocks } from '@/lib/markdown-fences'
 import clsx from 'clsx'
 
 interface ContentRendererProps extends ReadmeLinkContext {
   content: string
   className?: string
+  projectSlug?: string
 }
 
-type Renderer = typeof marked | ReturnType<typeof buildReadmeMarked>
+type Renderer = ReturnType<typeof buildProseMarked> | ReturnType<typeof buildReadmeMarked>
 
 function parseMarkdown(md: string, renderer: Renderer): string {
   if (!md) return ''
@@ -44,11 +44,12 @@ export async function ContentRenderer({
   className,
   repoUrl,
   branch,
+  projectSlug,
 }: ContentRendererProps) {
   const segments = splitMermaidBlocks(content)
   const renderer: Renderer = repoUrl
-    ? buildReadmeMarked({ repoUrl, branch })
-    : marked
+    ? buildReadmeMarked({ repoUrl, branch, projectSlug })
+    : buildProseMarked()
 
   const htmlParts: string[] = []
   let diagramIndex = 0

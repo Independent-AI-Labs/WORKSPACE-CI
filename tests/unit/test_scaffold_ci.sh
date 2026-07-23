@@ -14,27 +14,27 @@ _SCI_REGISTRY="$PROJECT_DIR/config/required_hooks.yaml"
 test_rel_path_sibling() {
     local consumer="$TEST_TMP/workspace/projects/GUARD"
     mkdir -p "$consumer"
-    local ci_root="$TEST_TMP/workspace/projects/CI"
+    local ci_root="$TEST_TMP/workspace/projects/WORKSPACE-CI"
     mkdir -p "$ci_root"
     local rel
     rel="$(realpath --relative-to="$consumer" "$ci_root")"
-    _assert_eq "../CI" "$rel" "sibling path"
+    _assert_eq "../WORKSPACE-CI" "$rel" "sibling path"
 }
-_run_test "rel_path: sibling (../CI)" test_rel_path_sibling
+_run_test "rel_path: sibling (../WORKSPACE-CI)" test_rel_path_sibling
 
 test_rel_path_nested() {
     local consumer="$TEST_TMP/workspace/projects/groups/sub"
     mkdir -p "$consumer"
-    local ci_root="$TEST_TMP/workspace/projects/CI"
+    local ci_root="$TEST_TMP/workspace/projects/WORKSPACE-CI"
     mkdir -p "$ci_root"
     local rel
     rel="$(realpath --relative-to="$consumer" "$ci_root")"
-    _assert_eq "../../CI" "$rel" "nested path"
+    _assert_eq "../../WORKSPACE-CI" "$rel" "nested path"
 }
-_run_test "rel_path: nested (../../CI)" test_rel_path_nested
+_run_test "rel_path: nested (../../WORKSPACE-CI)" test_rel_path_nested
 
 test_rel_path_same_level() {
-    local ci_root="$TEST_TMP/workspace/projects/CI"
+    local ci_root="$TEST_TMP/workspace/projects/WORKSPACE-CI"
     mkdir -p "$ci_root"
     local rel
     rel="$(realpath --relative-to="$ci_root" "$ci_root")"

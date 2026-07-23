@@ -5,7 +5,7 @@
 test_resolve_tool_path_walks_up() {
     _setup_tmpdir
     local _ws="$TEST_TMP/workspace"
-    local _ci="$TEST_TMP/workspace/projects/CI"
+    local _ci="$TEST_TMP/workspace/projects/WORKSPACE-CI"
     local _boot="$TEST_TMP/workspace/.boot-linux/bin"
     mkdir -p "$_boot" "$_ci/nested/deep"
     printf '#!/bin/sh\necho fake-cloudflared\n' > "$_boot/cloudflared"
@@ -43,7 +43,7 @@ test_resolve_cloudflared_honors_env() {
 test_resolve_cloudflared_script_walks_up() {
     _setup_tmpdir
     local _ws="$TEST_TMP/workspace"
-    local _ci="$TEST_TMP/workspace/projects/CI"
+    local _ci="$TEST_TMP/workspace/projects/WORKSPACE-CI"
     local _boot="$TEST_TMP/workspace/.boot-linux/bin"
     mkdir -p "$_boot" "$_ci"
     printf '#!/bin/sh\necho ok\n' > "$_boot/cloudflared"

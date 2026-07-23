@@ -84,6 +84,7 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
   let svg: SVGSVGElement | null = null
   let pan: PanState | null = null
   let fullscreenOverlay: FullscreenOverlay | null = null
+  let resizeObserver: ResizeObserver | null = null
   const cleanups: Array<() => void> = []
 
   const toolbar = buildToolbar()
@@ -98,12 +99,13 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
     target.style.display = 'block'
     target.style.transform = ''
     target.style.transformOrigin = ''
-    target.style.width = 'auto'
+    target.style.removeProperty('width')
+    target.style.removeProperty('height')
     target.style.maxWidth = '100%'
     target.style.height = 'auto'
     target.style.margin = '0 auto'
-    // Mermaid often emits width="100%", which stretches the canvas and pins
-    // the drawing to the top-left. Prefer the viewBox's intrinsic dimensions.
+    // Mermaid often emits width/height="100%", which stretches the canvas and
+    // pins the drawing to the top-left. Prefer the viewBox/CSS dimensions.
     const widthAttr = target.getAttribute('width')
     const heightAttr = target.getAttribute('height')
     if (widthAttr?.includes('%')) target.removeAttribute('width')
@@ -127,6 +129,13 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
     applyViewBox(svg, vb)
     scaleLegendSubgraph(svg)
     syncPannableState()
+
+    if (!resizeObserver && 'ResizeObserver' in window) {
+      resizeObserver = new ResizeObserver(() => {
+        if (svg) fitSvgToContainer(svg)
+      })
+      resizeObserver.observe(frame)
+    }
   }
 
   function setViewBox(next: ViewBox): void {
@@ -342,6 +351,8 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
     pre.removeEventListener('pointercancel', onPointerUp)
     pre.removeEventListener('keydown', onKeyDown)
     document.removeEventListener('keydown', onEscape)
+    resizeObserver?.disconnect()
+    resizeObserver = null
     closeFullscreen()
   })
 

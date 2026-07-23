@@ -49,6 +49,7 @@ export default async function ProjectReadmePage({
           content={project.content}
           repoUrl={project.repoUrl}
           branch={project.branch}
+          projectSlug={slug}
         />
       </div>
     </WikiShell>

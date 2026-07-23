@@ -97,17 +97,17 @@ export function getMermaidThemeConfig(theme: MermaidThemeName): MermaidConfig {
     flowchart: {
       curve: 'basis',
       padding: 16,
-      useMaxWidth: false,
+      useMaxWidth: true,
     },
     sequence: {
-      useMaxWidth: false,
+      useMaxWidth: true,
       actorMargin: 60,
       boxMargin: 12,
       noteMargin: 12,
       messageMargin: 40,
     },
-    gantt: { useMaxWidth: false },
-    journey: { useMaxWidth: false },
+    gantt: { useMaxWidth: true },
+    journey: { useMaxWidth: true },
   }
 }
 

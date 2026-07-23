@@ -148,6 +148,29 @@ describe('mountMermaidDiagram', () => {
     ctrl.destroy()
   })
 
+  it('observes the frame with ResizeObserver and disconnects on destroy', async () => {
+    const disconnect = vi.fn()
+    const observe = vi.fn()
+    class TestResizeObserver {
+      observe = observe
+      disconnect = disconnect
+      unobserve = vi.fn()
+    }
+    Object.defineProperty(window, 'ResizeObserver', {
+      value: TestResizeObserver,
+      writable: true,
+      configurable: true,
+    })
+
+    const frame = makeFrame('graph TD\nA-->B')
+    const ctrl = mountMermaidDiagram(frame)
+    await ctrl.render(fakeRunner())
+    expect(window.ResizeObserver).toBe(TestResizeObserver)
+    expect(observe).toHaveBeenCalledWith(frame)
+    ctrl.destroy()
+    expect(disconnect).toHaveBeenCalled()
+  })
+
   it('zoom-in increases the zoom scale (shrinks the viewBox width)', async () => {
     const frame = makeFrame('graph TD\nA-->B')
     const ctrl = mountMermaidDiagram(frame)

@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom'
+import { vi } from 'vitest'
 
 if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'localStorage', {
@@ -60,5 +61,18 @@ if (typeof window !== 'undefined') {
     HTMLDialogElement.prototype.close = function () {
       this.open = false
     }
+  }
+
+  if (typeof ResizeObserver === 'undefined') {
+    class MockResizeObserver {
+      observe = vi.fn()
+      unobserve = vi.fn()
+      disconnect = vi.fn()
+    }
+    Object.defineProperty(window, 'ResizeObserver', {
+      value: MockResizeObserver,
+      writable: true,
+      configurable: true,
+    })
   }
 }

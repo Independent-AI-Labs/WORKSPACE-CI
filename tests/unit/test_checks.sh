@@ -375,46 +375,46 @@ echo "=== ci_verify_coverage tests ==="
 
 test_verify_coverage_pass() {
     _source_lib
-    mkdir -p "$TEST_TMP/workspace/projects/CI/tests/unit"
-    cat > "$TEST_TMP/workspace/projects/CI/config/coverage_thresholds.yaml" <<EOF
+    mkdir -p "$TEST_TMP/workspace/projects/WORKSPACE-CI/tests/unit"
+    cat > "$TEST_TMP/workspace/projects/WORKSPACE-CI/config/coverage_thresholds.yaml" <<EOF
 unit:
   path: tests/unit
   min_coverage: 80
   source_path: .
   runner: "true"
 EOF
-    cd "$TEST_TMP/workspace/projects/CI"
-    ci_verify_coverage "$TEST_TMP/workspace/projects/CI/config/coverage_thresholds.yaml"
+    cd "$TEST_TMP/workspace/projects/WORKSPACE-CI"
+    ci_verify_coverage "$TEST_TMP/workspace/projects/WORKSPACE-CI/config/coverage_thresholds.yaml"
 }
 _run_test "verify_coverage: passing runner succeeds" test_verify_coverage_pass
 
 test_verify_coverage_fail() {
     _source_lib
-    mkdir -p "$TEST_TMP/workspace/projects/CI/tests/unit"
-    cat > "$TEST_TMP/workspace/projects/CI/config/coverage_thresholds.yaml" <<EOF
+    mkdir -p "$TEST_TMP/workspace/projects/WORKSPACE-CI/tests/unit"
+    cat > "$TEST_TMP/workspace/projects/WORKSPACE-CI/config/coverage_thresholds.yaml" <<EOF
 unit:
   path: tests/unit
   min_coverage: 80
   source_path: .
   runner: "false"
 EOF
-    cd "$TEST_TMP/workspace/projects/CI"
-    ! ci_verify_coverage "$TEST_TMP/workspace/projects/CI/config/coverage_thresholds.yaml"
+    cd "$TEST_TMP/workspace/projects/WORKSPACE-CI"
+    ! ci_verify_coverage "$TEST_TMP/workspace/projects/WORKSPACE-CI/config/coverage_thresholds.yaml"
 }
 _run_test "verify_coverage: failing runner fails" test_verify_coverage_fail
 
 test_verify_coverage_no_config() {
     _source_lib
-    cd "$TEST_TMP/workspace/projects/CI"
+    cd "$TEST_TMP/workspace/projects/WORKSPACE-CI"
     ! ci_verify_coverage "/nonexistent/config.yaml"
 }
 _run_test "verify_coverage: missing config fails" test_verify_coverage_no_config
 
 test_verify_coverage_multi_suite() {
     _source_lib
-    mkdir -p "$TEST_TMP/workspace/projects/CI/tests/unit"
-    mkdir -p "$TEST_TMP/workspace/projects/CI/tests/integration"
-    cat > "$TEST_TMP/workspace/projects/CI/config/coverage_thresholds.yaml" <<EOF
+    mkdir -p "$TEST_TMP/workspace/projects/WORKSPACE-CI/tests/unit"
+    mkdir -p "$TEST_TMP/workspace/projects/WORKSPACE-CI/tests/integration"
+    cat > "$TEST_TMP/workspace/projects/WORKSPACE-CI/config/coverage_thresholds.yaml" <<EOF
 unit:
   path: tests/unit
   min_coverage: 80
@@ -426,7 +426,7 @@ integration:
   source_path: .
   runner: "false"
 EOF
-    cd "$TEST_TMP/workspace/projects/CI"
-    ! ci_verify_coverage "$TEST_TMP/workspace/projects/CI/config/coverage_thresholds.yaml"
+    cd "$TEST_TMP/workspace/projects/WORKSPACE-CI"
+    ! ci_verify_coverage "$TEST_TMP/workspace/projects/WORKSPACE-CI/config/coverage_thresholds.yaml"
 }
 _run_test "verify_coverage: partial suite failure fails overall" test_verify_coverage_multi_suite

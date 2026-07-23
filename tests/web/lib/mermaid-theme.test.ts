@@ -11,20 +11,20 @@ describe('getMermaidThemeConfig', () => {
     expect(getMermaidThemeConfig('dark').theme).toBe('base')
   })
 
-  it('includes flowchart config with basis curve and no maxWidth', () => {
+  it('includes flowchart config with basis curve and responsive maxWidth', () => {
     const config = getMermaidThemeConfig('light')
     expect(config.flowchart).toMatchObject({
       curve: 'basis',
       padding: 16,
-      useMaxWidth: false,
+      useMaxWidth: true,
     })
   })
 
-  it('disables useMaxWidth on sequence, gantt, and journey', () => {
+  it('enables useMaxWidth on sequence, gantt, and journey', () => {
     const config = getMermaidThemeConfig('dark')
-    expect(config.sequence?.useMaxWidth).toBe(false)
-    expect(config.gantt?.useMaxWidth).toBe(false)
-    expect(config.journey?.useMaxWidth).toBe(false)
+    expect(config.sequence?.useMaxWidth).toBe(true)
+    expect(config.gantt?.useMaxWidth).toBe(true)
+    expect(config.journey?.useMaxWidth).toBe(true)
   })
 
   it('sets font family and size in themeVariables', () => {

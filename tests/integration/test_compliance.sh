@@ -4,12 +4,20 @@
 echo ""
 echo "=== ci_compliance_score tests ==="
 
-# Helper: set up a project dir inside the test workspace with git init
+# Helper: set up a project dir inside the test workspace with git init.
+# Pass "hooks" as second arg to pre-install fake CI hooks BEFORE git init:
+# the guard root-locks .git on every git invocation, so hook files cannot
+# be written after init; pre-creating them lets the post-init lock adopt
+# them (root:root 0755) with content intact.
 _setup_project() {
     local name="${1:-testproject}"
+    local with_hooks="${2:-}"
     local pdir="$TEST_TMP/workspace/projects/$name"
     mkdir -p "$pdir"
-    if [[ ! -d "$pdir/.git" ]]; then
+    if [[ "$with_hooks" == "hooks" ]]; then
+        _install_fake_hooks "$pdir"
+    fi
+    if [[ ! -d "$pdir/.git/objects" ]]; then
         git -C "$pdir" init -q
         git -C "$pdir" commit --allow-empty -m "feat: init" -q
     fi
@@ -89,13 +97,10 @@ _run_test "compliance: empty project fails" test_compliance_empty_project
 test_compliance_perfect_project() {
     _source_lib
     local pdir
-    pdir="$(_setup_project perfect)"
+    pdir="$(_setup_project perfect hooks)"
 
     # .pre-commit-config.yaml with all hooks
     _write_full_precommit "$pdir"
-
-    # Native hooks
-    _install_fake_hooks "$pdir"
 
     # Makefile with generate-hooks
     cat > "$pdir/Makefile" <<'MK'

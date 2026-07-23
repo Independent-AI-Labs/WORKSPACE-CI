@@ -117,7 +117,7 @@ test_ci_capture_lines_exit_code() {
 test_check_catches_procsub() {
     _setup_tmpdir
     # Create a fake lib dir with a file containing process substitution
-    local _fake_lib="$TEST_TMP/workspace/projects/CI/lib"
+    local _fake_lib="$TEST_TMP/workspace/projects/WORKSPACE-CI/lib"
     cat > "$_fake_lib/evil_test.sh" <<'SH'
 #!/usr/bin/env bash
 foo() {
@@ -125,7 +125,7 @@ foo() {
 }
 SH
     # Source checks.sh from the fake workspace (provides ci_check_portable_shell)
-    ( cd "$TEST_TMP/workspace/projects/CI" && source lib/checks.sh )
+    ( cd "$TEST_TMP/workspace/projects/WORKSPACE-CI" && source lib/checks.sh )
     # Run the check: it should find the violation in evil_test.sh
     # But ci_check_portable_shell scans the REAL lib dir (via BASH_SOURCE),
     # not the fake one. So test it directly against the fake file instead.
@@ -142,7 +142,7 @@ SH
 # Test 8: ci_check_portable_shell catches standalone <(cmd) argument
 test_check_catches_standalone_procsub() {
     _setup_tmpdir
-    local _fake_lib="$TEST_TMP/workspace/projects/CI/lib"
+    local _fake_lib="$TEST_TMP/workspace/projects/WORKSPACE-CI/lib"
     cat > "$_fake_lib/evil_standalone.sh" <<'SH'
 #!/usr/bin/env bash
 foo() {
