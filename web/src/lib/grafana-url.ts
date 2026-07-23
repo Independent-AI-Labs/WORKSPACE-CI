@@ -75,14 +75,14 @@ export async function resolveGrafanaBaseUrl(): Promise<string> {
     return `${proto}://${primaryHost}/grafana`
   }
 
-  const devPort = process.env.WIKI_DEV_PORT ?? '3001'
+  const devPort = process.env.WIKI_DEV_PORT ?? '4000'
   return `http://127.0.0.1:${devPort}/grafana`
 }
 
 export function resolveGrafanaBaseUrlSync(): string {
   const fromEnv = resolveGrafanaBaseUrlFromEnv()
   if (fromEnv) return normalizeGrafanaPublicBase(fromEnv)
-  const devPort = process.env.WIKI_DEV_PORT ?? '3001'
+  const devPort = process.env.WIKI_DEV_PORT ?? '4000'
   if (process.env.NODE_ENV === 'production') {
     return 'https://127.0.0.1/grafana'
   }

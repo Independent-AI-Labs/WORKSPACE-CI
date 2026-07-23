@@ -11,6 +11,8 @@
   background: var(--code-bg);
   overflow: hidden;
   position: relative;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .mermaid-frame__source {
@@ -96,7 +98,7 @@
 
 .mermaid-viewport > svg {
   display: block;
-  width: auto;
+  width: 100%;
   max-width: 100%;
   height: auto;
   margin-inline: auto;

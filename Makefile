@@ -260,7 +260,7 @@ _test-push-impl:
 	$(PYTEST) tests/integration --cov=ci --cov-report=term-missing --cov-fail-under=5 --tb=short -q
 	$(MAKE) -C web lint type-check test
 
-# Wiki dev server: delegates to web/Makefile; systemd user service on :3001
+# Wiki dev server: delegates to web/Makefile; systemd user service on :4000
 # =============================================================================
 # Wiki Dev Server
 # =============================================================================
@@ -268,7 +268,7 @@ _test-push-impl:
 .PHONY: start wiki-dev-start wiki-dev wiki-dev-stop wiki-dev-restart wiki-dev-restart-refresh wiki-dev-status wiki-dev-logs
 start: wiki-dev-start ## Alias for wiki-dev-start (make start)
 	:
-wiki-dev-start: extract-wiki-data ## Start wiki dev server (Next.js HMR on :3001)
+wiki-dev-start: extract-wiki-data ## Start wiki dev server (Next.js HMR on :4000)
 	$(MAKE) -C web dev-start
 wiki-dev: wiki-dev-start ## Alias for wiki-dev-start
 	:

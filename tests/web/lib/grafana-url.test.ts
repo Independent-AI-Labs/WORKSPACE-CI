@@ -79,7 +79,7 @@ describe('resolveGrafanaBaseUrlSync', () => {
   })
 
   it('defaults to dev wiki /grafana proxy when env unset', () => {
-    expect(resolveGrafanaBaseUrlSync()).toBe('http://127.0.0.1:3001/grafana')
+    expect(resolveGrafanaBaseUrlSync()).toBe('http://127.0.0.1:4000/grafana')
   })
 })
 
@@ -171,7 +171,7 @@ describe('resolveGrafanaHealthUrlForServerProbe', () => {
 
   it('uses loopback gateway health outside production', () => {
     vi.stubEnv('NODE_ENV', 'development')
-    expect(resolveGrafanaHealthUrlForServerProbe('http://127.0.0.1:3001/grafana')).toBe(
+    expect(resolveGrafanaHealthUrlForServerProbe('http://127.0.0.1:4000/grafana')).toBe(
       'http://127.0.0.1:3030/api/health',
     )
   })

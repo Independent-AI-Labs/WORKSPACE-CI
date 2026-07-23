@@ -1,6 +1,12 @@
 @import 'tailwindcss';
 @import 'remixicon/fonts/remixicon.css';
 
+html,
+body {
+  overflow-x: clip;
+  max-width: 100vw;
+}
+
 img {
   max-width: 100%;
   height: auto;

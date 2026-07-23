@@ -47,6 +47,28 @@ const themeScript = `
       document.documentElement.setAttribute('data-sidebar-collapsed', 'true');
       document.documentElement.style.setProperty('--sidebar-width', '56px');
     }
+    window.__findOverflow = function() {
+      var docWidth = document.documentElement.clientWidth;
+      var results = [];
+      var all = document.querySelectorAll('*');
+      for (var i = 0; i < all.length; i++) {
+        var el = all[i];
+        var w = el.scrollWidth;
+        if (w > docWidth + 1) {
+          var r = el.getBoundingClientRect();
+          var selector = el.tagName.toLowerCase();
+          if (el.id) selector += '#' + el.id;
+          if (el.className && typeof el.className === 'string') {
+            selector += '.' + el.className.trim().split(/\\s+/).slice(0, 3).join('.');
+          }
+          results.push({ selector: selector, scrollWidth: w, rectWidth: Math.round(r.width), overflowX: getComputedStyle(el).overflowX });
+          el.style.outline = '3px solid red';
+        }
+      }
+      console.log('Viewport width: ' + docWidth);
+      console.table(results);
+      return results;
+    };
   })();
 `
 

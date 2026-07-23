@@ -13,7 +13,7 @@ process.on('unhandledRejection', (reason) => {
   process.exit(1)
 })
 
-const APP_PORT = Number(process.env.WIKI_DEV_PORT || 3001)
+const APP_PORT = Number(process.env.WIKI_DEV_PORT || 4000)
 const HOST = process.env.WIKI_DEV_HOST || '0.0.0.0'
 const LOCK_DIR = path.resolve(process.cwd(), '.next')
 const LOCK_FILE = path.join(LOCK_DIR, 'dev-server.lock')

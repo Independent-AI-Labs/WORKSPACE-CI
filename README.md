@@ -214,7 +214,7 @@ The interactive documentation wiki lives in [`web/`](web/) (Next.js).
 
 | Target | Purpose |
 |--------|---------|
-| `make start` / `make wiki-dev-start` | Dev server with HMR on `:3001` |
+| `make start` / `make wiki-dev-start` | Dev server with HMR on `:4000` |
 | `make wiki-dev-stop/restart/status/logs` | Dev server lifecycle |
 | `make extract-wiki-data` | Regenerate wiki JSON from CI sources (hooks, scripts, code-stats) |
 | `make wiki-prod-build` | Build production Podman image (`web/Containerfile`) |
@@ -232,7 +232,7 @@ Production deploy (boot-persistent): copy [`.env.example`](.env.example) to `.en
 Grafana lives in WORKSPACE-GATEWAY (`gw-grafana`, loopback `:3030`, `GRAFANA_ROOT_URL` for prod).
 Dev wiki proxies `/grafana/` to `:3030` with auth headers (same pattern as prod nginx); leave
 `GRAFANA_BASE_URL` unset in `~/.config/wiki-ci-dev.env` so iframe URLs stay same-origin on
-`:3001`. Direct `:3030/d/...` embeds redirect to `workspaceguardrails.com` when the gateway
+`:4000`. Direct `:3030/d/...` embeds redirect to `workspaceguardrails.com` when the gateway
 is configured for production. Prod wiki proxies `/grafana/` through nginx to `gw-grafana`. If
 Grafana is down, `/llm-gateway` shows a styled Service Unavailable panel instead of a blank iframe.
 
