@@ -32,7 +32,7 @@ export function buildSearchIndexFromPatterns(
     title: p.pattern,
     section: 'Patterns',
     content: `${p.reason} Category: ${p.categoryLabel}`,
-    href: `/patterns#${i}`,
+    href: `/anti-patterns#${i}`,
     type: 'pattern' as const,
     keywords: [p.category, p.categoryLabel, p.scope],
   }))

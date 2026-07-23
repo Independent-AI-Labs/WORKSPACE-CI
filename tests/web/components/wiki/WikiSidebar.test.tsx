@@ -4,7 +4,7 @@ import { WikiSidebar } from '@/components/wiki/WikiSidebar'
 import type { WikiStats } from '@/lib/search-data'
 import type { Branding } from '@/lib/branding'
 
-const mockUsePathname = vi.fn(() => '/patterns')
+const mockUsePathname = vi.fn(() => '/anti-patterns')
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
@@ -61,7 +61,7 @@ function renderSidebar(homeLandingEnabled = false) {
 describe('WikiSidebar', () => {
   it('renders navigation links', () => {
     renderSidebar()
-    expect(screen.getByText('Code Anti-Patterns')).toBeInTheDocument()
+    expect(screen.getByText('Anti-Patterns')).toBeInTheDocument()
     expect(screen.getByText('Git Hooks')).toBeInTheDocument()
     expect(screen.getByText('Config Files')).toBeInTheDocument()
     expect(screen.getByText('Playground')).toBeInTheDocument()
@@ -69,7 +69,7 @@ describe('WikiSidebar', () => {
 
   it('highlights active route', () => {
     renderSidebar()
-    const patternsLink = screen.getByText('Code Anti-Patterns').closest('a')
+    const patternsLink = screen.getByText('Anti-Patterns').closest('a')
     expect(patternsLink).toHaveClass('is-active')
   })
 
@@ -108,7 +108,7 @@ describe('WikiSidebar', () => {
 
   it('renders all nav items', () => {
     renderSidebar()
-    expect(screen.getByText('Runtime Hooks')).toBeInTheDocument()
+    expect(screen.getByText('Enforced Policies')).toBeInTheDocument()
     expect(screen.getByText('Guard Policies')).toBeInTheDocument()
     expect(screen.getByText('LLM Gateway')).toBeInTheDocument()
     expect(screen.getByText('Static Analysis')).toBeInTheDocument()
@@ -127,7 +127,7 @@ describe('WikiSidebar', () => {
 
   it('renders [0] for Runtime Hooks', () => {
     renderSidebar()
-    const runtimeHooksLink = screen.getByText('Runtime Hooks').closest('a')
+    const runtimeHooksLink = screen.getByText('Enforced Policies').closest('a')
     expect(runtimeHooksLink).toHaveTextContent('[0]')
   })
 

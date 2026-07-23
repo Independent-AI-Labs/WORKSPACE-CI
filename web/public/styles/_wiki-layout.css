@@ -87,7 +87,7 @@
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-md);
   width: var(--wiki-chrome-hamburger-width);
   height: var(--wiki-chrome-hamburger-width);
@@ -104,7 +104,7 @@
 }
 
 .mobile-nav-toggle:hover {
-  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .mobile-nav-backdrop {
@@ -152,6 +152,7 @@
 @media (min-width: 769px) {
   [data-sidebar-collapsed='true'] .mobile-nav-toggle {
     display: flex;
+    left: calc((var(--wiki-sidebar-width-collapsed) - var(--wiki-chrome-hamburger-width)) / 2);
   }
 
   [data-sidebar-collapsed='true'] .wiki-header__brand {

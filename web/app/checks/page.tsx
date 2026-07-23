@@ -6,7 +6,7 @@ export default function ChecksPage() {
       title="Static Analysis"
       description="This page will run CI checks directly in your browser. Upload a source archive or point to a Git repository to get started."
       links={[
-        { href: '/patterns', label: 'Browse Code Anti-Patterns' },
+        { href: '/anti-patterns', label: 'Browse Anti-Patterns' },
         { href: '/config', label: 'View Config Files' },
       ]}
     />

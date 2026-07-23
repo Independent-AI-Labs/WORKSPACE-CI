@@ -5,8 +5,8 @@ export default function PatternCategoryNotFound() {
     <NotFoundShell
       title="Category not found"
       description="The requested pattern category does not exist."
-      backHref="/patterns"
-      backLabel="View all patterns"
+      backHref="/anti-patterns"
+      backLabel="View all anti-patterns"
     />
   )
 }

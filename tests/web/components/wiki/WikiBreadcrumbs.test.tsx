@@ -29,10 +29,10 @@ describe('WikiBreadcrumbs', () => {
   })
 
   it('uses nav labels for nested section routes', () => {
-    mockUsePathname.mockReturnValue('/patterns/banned')
+    mockUsePathname.mockReturnValue('/anti-patterns/banned')
     render(<WikiBreadcrumbs homeLandingEnabled />)
     expect(screen.getByText('Home')).toBeInTheDocument()
-    expect(screen.getByText('Code Anti-Patterns')).toBeInTheDocument()
+    expect(screen.getByText('Anti-Patterns')).toBeInTheDocument()
     expect(screen.getByText('banned')).toBeInTheDocument()
   })
 })
