@@ -106,6 +106,46 @@ More prose below.
     expect(summary).toBe('Intro sentence one. Intro sentence two.')
   })
 
+  it('skips images, badges, and HTML blocks before the intro text', () => {
+    const markdown = `# Title
+
+<p align="center">
+  <img src="banner.png" alt="banner" />
+</p>
+
+[![CI](https://img.shields.io/badge/ci-passing-green.svg)](https://ci.example.com)
+
+![logo](logo.png)
+
+Real intro sentence here. Second intro sentence.
+`
+    const summary = extractReadmeSummary(markdown)
+    expect(summary).toBe('Real intro sentence here. Second intro sentence.')
+  })
+
+  it('strips inline images and HTML tags from intro text', () => {
+    const markdown = `# Title
+
+Intro with ![icon](icon.png) inline image and <sub>subscript</sub> text.
+`
+    const summary = extractReadmeSummary(markdown)
+    expect(summary).toBe('Intro with inline image and subscript text.')
+  })
+
+  it('skips multi-line HTML comments before the intro', () => {
+    const markdown = `# Title
+
+<!--
+  editor note: keep badges above the fold
+  more comment lines
+-->
+
+Actual intro sentence.
+`
+    const summary = extractReadmeSummary(markdown)
+    expect(summary).toBe('Actual intro sentence.')
+  })
+
   it('extracts multiple sentences from the WORKSPACE-VM README intro', () => {
     const readmePath = join(__dirname, '..', '..', '..', '..', '..', 'README.md')
     const summary = extractReadmeSummary(readFileSync(readmePath, 'utf8'))

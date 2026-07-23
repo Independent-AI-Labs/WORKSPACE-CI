@@ -114,8 +114,14 @@ function isIntroBoundary(trimmed: string): boolean {
   if (trimmed.startsWith('>')) return true
   if (/^[-*+]\s/.test(trimmed)) return true
   if (/^\d+\.\s/.test(trimmed)) return true
-  if (trimmed.startsWith('<') || trimmed.startsWith('![')) return true
   return false
+}
+
+const EMBED_TOKEN =
+  /\s*(?:\[!\[[^\]]*\]\([^)]*\)\]\([^)]*\)|!\[[^\]]*\]\([^)]*\)|<!--[\s\S]*?-->|<[^>]+>)/g
+
+function stripEmbeds(text: string): string {
+  return text.replace(EMBED_TOKEN, ' ').replace(/\s{2,}/g, ' ').trim()
 }
 
 const INTRO_SENTENCE_SPLIT = /(?<=\.)\s+(?=[A-Z])/
@@ -127,15 +133,26 @@ export function extractReadmeSummary(markdown: string): string {
   const paragraphs: string[] = []
   let currentLines: string[] = []
 
+  let inHtmlComment = false
+
   const flushParagraph = () => {
     if (currentLines.length === 0) return
-    paragraphs.push(currentLines.join(' ').trim())
+    const text = stripEmbeds(currentLines.join(' '))
+    if (text) paragraphs.push(text)
     currentLines = []
   }
 
   for (const line of lines) {
     const trimmed = line.trim()
 
+    if (inHtmlComment) {
+      if (trimmed.includes('-->')) inHtmlComment = false
+      continue
+    }
+    if (trimmed.startsWith('<!--') && !trimmed.includes('-->')) {
+      inHtmlComment = true
+      continue
+    }
     if (trimmed.startsWith('```')) {
       inCodeBlock = !inCodeBlock
       if (paragraphs.length > 0 || currentLines.length > 0) break
@@ -143,11 +160,12 @@ export function extractReadmeSummary(markdown: string): string {
     }
     if (inCodeBlock) continue
     if (trimmed.startsWith('#')) continue
-    if (isIntroBoundary(trimmed)) break
     if (trimmed === '') {
       flushParagraph()
       continue
     }
+    if (stripEmbeds(trimmed) === '') continue
+    if (isIntroBoundary(trimmed)) break
 
     currentLines.push(trimmed)
   }
