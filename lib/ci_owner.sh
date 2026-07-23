@@ -30,10 +30,15 @@ ci_resolve_expected_owner() {
         ci_fail "expected owner '$pin' has no passwd entry"
         return 1
     fi
-    dir_owner="$(stat -c %U "$dir")"
-    if [[ "$dir_owner" != "$pin" ]]; then
-        ci_fail "owner mismatch: $dir owned by '$dir_owner', expected '$pin'"
-        return 1
+    # Deploy-mirror opt-out: deploy-ci root-owns the deploy tree by design
+    # (audit C2), so callers acting on the mirror set CI_OWNER_DIR_CHECK=skip.
+    # Consumer-repo callers keep the strict dir-owner cross-check.
+    if [[ "${CI_OWNER_DIR_CHECK:-}" != "skip" ]]; then
+        dir_owner="$(stat -c %U "$dir")"
+        if [[ "$dir_owner" != "$pin" ]]; then
+            ci_fail "owner mismatch: $dir owned by '$dir_owner', expected '$pin'"
+            return 1
+        fi
     fi
     printf '%s\n' "$pin"
 }

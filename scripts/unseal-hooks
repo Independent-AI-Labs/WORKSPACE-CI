@@ -67,15 +67,12 @@ done
 
 # Hand the hooks dir and generated hooks to the pinned expected owner
 # (M3) so generate-hooks can rewrite them (lock-hooks re-roots
-# everything). SUDO_UID is spoofable, so it is only a hint: when set it
-# must resolve to the same account as the pin.
+# everything). Operators run via a separate admin account (see
+# lock-exemptions), so SUDO_UID is not consulted: the pin alone decides
+# ownership, and root is required to run this script at all.
 _expected="$(ci_resolve_expected_owner "$_CI_ROOT" "$_consumer")"
 _expected_uid="$(getent passwd "$_expected" | cut -d: -f3)"
 _expected_gid="$(getent passwd "$_expected" | cut -d: -f4)"
-if [[ -n "${SUDO_UID:-}" && "${SUDO_UID:-0}" != "0" && "$SUDO_UID" != "$_expected_uid" ]]; then
-    ci_fail "SUDO_UID ($SUDO_UID) does not match expected owner $_expected (uid $_expected_uid)"
-    exit 1
-fi
 _owner="$_expected_uid:$_expected_gid"
 if [[ "$_owner" != "0:0" ]]; then
     for _stage in pre-commit commit-msg pre-push; do
