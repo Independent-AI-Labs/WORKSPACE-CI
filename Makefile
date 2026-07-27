@@ -145,7 +145,7 @@ install-boot-tools: install-uv ## Bootstrap uv + rust toolchain into $(BOOT_NAME
 
 .PHONY: install-python-deps
 install-python-deps: install-uv ## uv sync the Python deps (project-level .venv)
-	PATH="$(BOOT_BIN):$$PATH" $(UV) sync --extra dev
+	PATH="$(BOOT_BIN):$$PATH" $(UV) sync --locked --extra dev
 
 .PHONY: install-gitleaks
 install-gitleaks: ## Bootstrap the gitleaks binary used by the secret-content scanner
