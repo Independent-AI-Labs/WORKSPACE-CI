@@ -313,7 +313,8 @@ install -d -o "$_REPO_OWNER" -g "$_REPO_OWNER" \
     "$_DEPLOY_DIR/node_modules" \
     "$_DEPLOY_DIR/web/node_modules" \
     "$_DEPLOY_DIR/web-components/node_modules" \
-    "$_DEPLOY_DIR/hitl/web/node_modules"
+    "$_DEPLOY_DIR/hitl/web/node_modules" \
+    "$_DEPLOY_DIR/workspace_ci.egg-info"
 log_info "installing python + web deps as $_REPO_OWNER (agent-owned .venv, node_modules)"
 runuser -u "$_REPO_OWNER" -- env HOME="$_agent_home" \
     make -C "$_DEPLOY_DIR" install-python-deps install-web-deps
