@@ -10,5 +10,10 @@
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "type-check": "npm run type-check --workspaces --if-present"
+  },
+  "overrides": {
+    "brace-expansion@1": "5.0.8",
+    "postcss": "8.5.23",
+    "sharp": "0.35.3"
   }
 }
