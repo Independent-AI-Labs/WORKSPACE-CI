@@ -38,10 +38,10 @@ This SPEC implements the boot-layout contract from REQ-BOOT-LAYOUT. It
 introduces:
 
 1. **Platform detection** -- `ci_platform_name()` in `lib/ci.sh` detects
-   `linux` or `darwin` via `uname -s`. No fallback, no env override.
+   `linux` or `darwin` via `uname -s`. No alternate value, no env override.
 2. **Boot directory resolution** -- `ci_boot_name()` returns
    `.boot-linux` or `.boot-macos`; `ci_boot_dir()` returns
-   `CI_PROJECT_ROOT/$CI_BOOT_NAME`. No fallback, no env override.
+   `CI_PROJECT_ROOT/$CI_BOOT_NAME`. No alternate path, no env override.
 3. **Walk-up PATH resolution** -- `ci_resolve_boot_path()` walks up
    from a start directory, prepending `$CI_BOOT_NAME/bin` and
    `$CI_BOOT_NAME/python-env/bin` at each level. Reads
@@ -122,10 +122,10 @@ hermetic.
 A fresh checkout where `.venv/` doesn't exist yet must not be blocked by
 the layout audit (chicken-and-egg avoidance).
 
-### 2.6 Platform determines directory name -- no fallback
+### 2.6 Platform determines directory name -- no alternates
 
 The boot directory name is `.boot-linux` on Linux, `.boot-macos` on
-macOS. There is NO fallback from one to the other. If the platform's
+macOS. There is NO crossover from one to the other. If the platform's
 boot directory does not exist on disk, that is a FATAL error at the
 point of use -- not at `ci.sh` source-time (the library provides path
 strings; consumers validate existence).
@@ -135,7 +135,7 @@ strings; consumers validate existence).
 No `BOOT_DIR`, `BOOT_LINUX_DIR`, or equivalent environment variable
 override exists. The boot directory is determined by the platform and
 the project root. No legacy compatibility, no mixed-state tolerance, no
-fallback pathways.
+alternate pathways.
 
 ### 2.8 `moon.yml` is the single source of truth
 
@@ -314,7 +314,7 @@ ci_boot_dir() {
 |----------|-------|
 | Input | None (uses `CI_PROJECT_ROOT` set at source-time) |
 | Output | Absolute path to boot directory (to stdout) |
-| Fallback | None. No env override. No platform-to-platform fallback. |
+| Alternate paths | None. No env override. No platform-to-platform crossover. |
 | Bash version | 3.2+ compatible |
 
 The function returns a path string. It does NOT verify the directory
@@ -396,7 +396,7 @@ CI_PROJECT_ROOT + "/" + ci_boot_name()
 - `ci_boot_name()` returns `.boot-linux` or `.boot-macos` based on
   `uname -s`.
 - NO environment variable override.
-- NO fallback to a different platform's directory name.
+- NO crossover to a different platform's directory name.
 - NO FATAL error at source-time if the directory doesn't exist.
 
 ### 6.2 Consumer Validation

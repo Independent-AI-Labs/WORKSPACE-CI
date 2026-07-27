@@ -1,5 +1,5 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
-import { ContentRenderer } from '@/components/wiki/ContentRenderer'
+import { ContentRenderer } from '@workspace-ci/web-components/components/ContentRenderer'
 import { getDocsRoot } from '@/lib/yaml-loader'
 import { readFile } from 'fs/promises'
 import { join } from 'path'

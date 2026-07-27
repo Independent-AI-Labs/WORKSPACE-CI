@@ -25,7 +25,7 @@
 - [`lib/makefile_contract.mk`](../../lib/makefile_contract.mk): the contract the generated `Makefile` MUST satisfy
 - [`templates/quality_exceptions.template.yaml`](../../templates/quality_exceptions.template.yaml): existing template; `scaffold-ci` renders it per-consumer
 - [`templates/project_enforcement.template.yaml`](../../templates/project_enforcement.template.yaml): existing workspace-level tier registry (NOT scaffolded per-consumer)
-- AGENTS.md S5 (shell-first), S6 (precision edits), S13 (no silent fallback), S14 (shell strict mode): absolute constraints on the generator implementation
+- AGENTS.md S5 (shell-first), S6 (precision edits), S13 (no silent degradation), S14 (shell strict mode): absolute constraints on the generator implementation
 
 ---
 
@@ -288,7 +288,7 @@ not a runtime input.
 
 The validator runs in five phases BEFORE any file is written. Failure in
 any phase exits non-zero BEFORE touching disk (per AGENTS.md Rule 13 --
-no silent fallback, partial writes are forbidden).
+no silent degradation, partial writes are forbidden).
 
 ### 4.1 Phase A: Schema Parse
 
@@ -459,7 +459,7 @@ defensiveness, if `realpath` is missing, the script fails fast with:
 ```
 FAILED: realpath(1) not found -- install coreutils >= 8.23.
 ```
-No silent fallback to `readlink -f` heuristic (per Rule 13).
+No silent degradation to `readlink -f` heuristic (per Rule 13).
 
 ### 5.3 Why Not Just Compute from `git rev-parse --show-toplevel`?
 
@@ -1279,7 +1279,7 @@ hold (see REQ-SCAFFOLD-CI.md for full FR/NFR numbering):
   scaffold → `generate-hooks` → inspect `.git/hooks/*`).
 - **NFR-1**: The generator is pure bash + awk (no Python). Sourced
   libraries restricted to `lib/ci.sh`.
-- **NFR-2**: No silent fallback. Every failure prints a diagnostic and
+- **NFR-2**: No silent degradation. Every failure prints a diagnostic and
   exits non-zero. `--force` does not silently overwrite
   `quality_exceptions.yaml` or already-customised `config/` files.
 - **NFR-3**: Shell strict-mode compliant. No `| head`/`| tail` pipes;

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
-import { useNarrowViewport } from '@/hooks/useNarrowViewport'
+import { useNarrowViewport } from '@workspace-ci/web-components/hooks/useNarrowViewport'
 import { useSidebarStore } from '@/stores/sidebar-store'
 
 export function MobileNavToggle() {

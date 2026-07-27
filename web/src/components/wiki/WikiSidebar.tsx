@@ -8,7 +8,7 @@ import type { WikiStats } from '@/lib/search-data'
 import type { Branding } from '@/lib/branding'
 import { useSidebarStore } from '@/stores/sidebar-store'
 import { HOME_NAV_ITEM, WIKI_NAV_ITEMS, type WikiNavItem } from '@/lib/wiki-nav'
-import { ThemeLogo } from './ThemeLogo'
+import { ThemeLogo } from '@workspace-ci/web-components/components/ThemeLogo'
 
 function isPathActive(pathname: string, href: string): boolean {
   if (href === '/') return pathname === '/'

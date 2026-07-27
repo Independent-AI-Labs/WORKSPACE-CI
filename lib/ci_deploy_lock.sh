@@ -6,9 +6,9 @@
 # ---------------------------------------------------------------------------
 # Deploy lock (M1, SECURITY-AUDIT-2026-07-18-EXEMPTION-TAMPERING)
 # ---------------------------------------------------------------------------
-# Serialize unseal/reseal/deploy operations: without a shared lock, a
+# Serialize deploy operations: without a shared lock, a
 # concurrent install-hooks-recursive can interleave with deploy-ci and
-# operate on a half-unsealed tree. fd 9 stays open for the lifetime of the
+# operate on a half-written tree. fd 9 stays open for the lifetime of the
 # calling shell, so the lock releases automatically on exit.
 ci_acquire_deploy_lock() {
     local lock_dir lock_file

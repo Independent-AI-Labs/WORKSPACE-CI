@@ -162,8 +162,8 @@ EOF
 
     # Exemption-file compliance: ALWAYS enforced, all tiers, every stage.
     # Hard-fails if any file listed in the CI canonical manifest
-    # (config/exemption_files.yaml) is missing, not root-owned, or not
-    # immutable. The marker comment lets check-required-hooks-present
+    # (config/exemption_files.yaml) is missing or not root-owned. The
+    # marker comment lets check-required-hooks-present
     # verify this built-in block survived rendering.
         w ''
         w '# === exemption-file compliance (mandatory) ==='
@@ -187,7 +187,7 @@ EOF
         w '    fi'
         w 'done'
         w 'if [[ "$_exemption_fail" -eq 1 ]]; then'
-        w "    echo \"  Fix: run 'sudo make -C \${_ROOT}/${_ci_rel} lock-exemptions CONSUMER=\$_ROOT'\""
+        w "    echo \"  Fix: files must be root-owned regular files; edit via 'sudo workspace-yaml-edit'\""
         w '    exit 1'
         w 'fi'
 
@@ -359,28 +359,13 @@ and re-run."
         cat "$_tmp"
         rm -f "$_tmp"
     else
-        # Hooks may be root-locked by lock-hooks: refuse with the unseal
-        # flow instead of dying on the EPERM from mv.
-        if [[ -f "$_output_dir/$_stage" ]]; then
-            _hook_immutable=0
-            if [[ "$(ci_platform_name)" == "darwin" ]]; then
-                if [[ "$(stat -f '%Sf' "$_output_dir/$_stage")" == *uchg* ]]; then
-                    _hook_immutable=1
-                fi
-            elif _la_path="$(command -v lsattr)"; then
-                # Fail closed: a root-owned hook the agent cannot even
-                # probe is not rewriteable either, so route to unseal.
-                if ! _attrs="$(lsattr -d "$_output_dir/$_stage" 2>&1)"; then
-                    _hook_immutable=1
-                elif [[ "${_attrs%% *}" == *i* ]]; then
-                    _hook_immutable=1
-                fi
-            fi
-            if [[ $_hook_immutable -eq 1 ]]; then
-                rm -f "$_tmp"
-                ci_fail "hook $_stage is root-locked. Regenerate via: sudo make -C projects/CI unseal-hooks CONSUMER=<repo> && make install-hooks && sudo make -C projects/CI lock-hooks CONSUMER=<repo>"
-                exit 1
-            fi
+        # Hooks are root-owned by design: only root ever rewrites them.
+        # Refuse with the root regeneration path instead of dying on the
+        # EPERM from mv.
+        if [[ -f "$_output_dir/$_stage" && ! -w "$_output_dir/$_stage" ]]; then
+            rm -f "$_tmp"
+            ci_fail "hook $_stage is root-owned. Regenerate as root: sudo make -C projects/CI install-hooks CONSUMER=<repo>"
+            exit 1
         fi
         mv "$_tmp" "$_output_dir/$_stage"
         chmod +x "$_output_dir/$_stage"

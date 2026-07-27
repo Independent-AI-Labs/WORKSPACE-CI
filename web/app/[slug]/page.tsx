@@ -1,8 +1,9 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
-import { ContentRenderer } from '@/components/wiki/ContentRenderer'
+import { ContentRenderer } from '@workspace-ci/web-components/components/ContentRenderer'
 import { loadProjectReadme, getProjectSlugs, getProjectBySlug } from '@/lib/project-registry'
+import { resolveWikiProjectAsset } from '@/lib/resolve-project-asset'
 import { notFound } from 'next/navigation'
-import { ThemeLogo } from '@/components/wiki/ThemeLogo'
+import { ThemeLogo } from '@workspace-ci/web-components/components/ThemeLogo'
 import type { Metadata } from 'next'
 
 export async function generateStaticParams() {
@@ -50,6 +51,7 @@ export default async function ProjectReadmePage({
           repoUrl={project.repoUrl}
           branch={project.branch}
           projectSlug={slug}
+          resolveAssetUrl={resolveWikiProjectAsset}
         />
       </div>
     </WikiShell>

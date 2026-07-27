@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { appendGrafanaEmbedParams, checkGrafanaHealthViaApi } from '@/lib/grafana-url'
 import { useThemeStore } from '@/stores/theme-store'
-import { ServiceUnavailable } from './ServiceUnavailable'
+import { ServiceUnavailable } from '@workspace-ci/web-components/components/ServiceUnavailable'
 
 const EMBED_LOAD_TIMEOUT_MS = 10_000
 

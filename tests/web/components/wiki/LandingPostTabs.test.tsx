@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { LandingPostTabs } from '@/components/wiki/LandingPostTabs'
 import type { LandingPost, LandingUi } from '@/lib/landing-posts'
 
-vi.mock('@/hooks/useNarrowViewport', () => ({
+vi.mock('@workspace-ci/web-components/hooks/useNarrowViewport', () => ({
   useNarrowViewport: () => true,
 }))
 

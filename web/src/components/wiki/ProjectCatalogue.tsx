@@ -3,7 +3,7 @@ import { loadAllProjectSummaries, loadProjectMakefile, PROJECTS } from '@/lib/pr
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
 import { loadCodeStats } from '@/lib/docs-loader'
 import { parseMakefile } from '@/lib/makefile-parser'
-import { highlightCode } from '@/lib/highlight'
+import { highlightCode } from '@workspace-ci/web-components/lib/highlight'
 import type { LanguagePercent } from '@/types/code-stats'
 import type { MakefileData } from '@/types/makefile'
 

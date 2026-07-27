@@ -19,8 +19,8 @@
 - [SPEC-WIKI-RESPONSIVE](../specifications/SPEC-WIKI-RESPONSIVE.md): companion specification
 - [REQ-WIKI](REQ-WIKI.md) / [SPEC-WIKI](../specifications/SPEC-WIKI.md): parent wiki feature set
 - [`web/app/layout.tsx`](../../web/app/layout.tsx): viewport export
-- [`web/public/styles/_variables.css`](../../web/public/styles/_variables.css): fluid type scale
-- [`web/public/styles/_a11y.css`](../../web/public/styles/_a11y.css): touch-target expansion
+- [`web-components/src/styles/_variables.css`](../../web-components/src/styles/_variables.css): fluid type scale
+- [`web-components/src/styles/_a11y.css`](../../web-components/src/styles/_a11y.css): touch-target expansion
 
 ---
 
@@ -128,7 +128,7 @@ None.
 | FR-3.2 table scroll | Implemented | web/public/styles/_prose.css, _config-table.css |
 | FR-3.3 flex wrapping | Implemented | _tabs.css, _wiki-layout.css, others per spec phase 2c |
 | FR-3.4 card grid min() | Not implemented | web/public/styles/_wiki-card.css still `minmax(360px, 1fr)` |
-| FR-4.1/FR-4.2 hit-area expansion | Implemented | web/public/styles/_a11y.css (`@media (pointer: coarse)`) |
-| FR-5.2 fluid type scale | Implemented | web/public/styles/_variables.css (clamp tiers) |
+| FR-4.1/FR-4.2 hit-area expansion | Implemented | web-components/src/styles/_a11y.css (`@media (pointer: coarse)`) |
+| FR-5.2 fluid type scale | Implemented | web-components/src/styles/_variables.css (clamp tiers) |
 | Grafana iframe responsive height | Implemented | web/src/components/wiki/GrafanaEmbed.tsx (`clamp(400px, 80vh, 1200px)`) |
 | Bare `<pre>` overflow fix (spec phase 2d) | Not applicable | checks detail route (`app/checks/[id]/`) no longer exists |

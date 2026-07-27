@@ -8,9 +8,10 @@
 # ---------------------------------------------------------------------------
 
 # ci_exemption_file_state <path>
-#   Echoes one of: ok, missing, symlink, not-regular, not-root-owned,
-#   not-immutable. Anything other than "ok" means the file must NOT be
-#   honored by any check.
+#   Echoes one of: ok, missing, symlink, not-regular, not-root-owned.
+#   Anything other than "ok" means the file must NOT be honored by any
+#   check. Root ownership is the complete invariant: exemption files are
+#   root-owned and only ever edited via the root-gated yaml editor.
 ci_exemption_file_state() {
     local _p="$1"
     if [[ -L "$_p" ]]; then echo "symlink"; return 0; fi
@@ -23,31 +24,19 @@ ci_exemption_file_state() {
         _uid="$(stat -c %u "$_p")"
     fi
     if [[ "$_uid" != "0" ]]; then echo "not-root-owned"; return 0; fi
-    local _flags
-    if [[ "$(ci_platform_name)" == "darwin" ]]; then
-        _flags="$(stat -f %Sf "$_p")"
-        if [[ "$_flags" != *uchg* ]]; then echo "not-immutable"; return 0; fi
-    else
-        if ! _flags="$(lsattr -d "$_p")"; then
-            echo "not-immutable"
-            return 0
-        fi
-        local _attr="${_flags%% *}"
-        if [[ "$_attr" != *i* ]]; then echo "not-immutable"; return 0; fi
-    fi
     echo "ok"
 }
 
 # ci_validate_exemption_file <path> [description]
-#   Fail-closed: returns 1 (and prints a failure) unless the file exists,
-#   is a regular non-symlink file owned by uid 0, and is immutable.
+#   Fail-closed: returns 1 (and prints a failure) unless the file exists
+#   and is a regular non-symlink file owned by uid 0.
 ci_validate_exemption_file() {
     local _p="$1" _what="${2:-exemption file}"
     local _state
     _state="$(ci_exemption_file_state "$_p")"
     if [[ "$_state" == "ok" ]]; then return 0; fi
     ci_fail "$_what not compliant: $_p (state: $_state)"
-    echo "  Fix: run 'sudo make -C projects/CI lock-exemptions' from the workspace root" >&2
+    echo "  Fix: chown root:root $_p; edit only via 'sudo workspace-yaml-edit'" >&2
     return 1
 }
 

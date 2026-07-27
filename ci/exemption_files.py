@@ -3,8 +3,8 @@
 The canonical manifest is ``config/exemption_files.yaml``. Every CI check
 that consumes one of these files validates provenance fail-closed (see
 ``ci.paths.validate_exemption_file``); this module creates missing files
-with their defaults (never overwriting) and reports lock state for the
-sudo ``make lock-exemptions`` target.
+with their defaults (never overwriting) and reports provenance state
+(root ownership) per file.
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ def ensure_exemption_files(project_root: Path) -> list[Path]:
     return created
 
 
-def lock_report(project_root: Path) -> list[tuple[Path, str]]:
+def state_report(project_root: Path) -> list[tuple[Path, str]]:
     """Return (path, state) for every manifest entry in project_root."""
     return [
         (project_root / e["path"], exemption_file_state(project_root / e["path"]))
@@ -67,7 +67,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
     p_ensure = sub.add_parser("ensure", help="create missing files with defaults")
     p_ensure.add_argument("project_root", type=Path)
-    p_report = sub.add_parser("report", help="print lock state per file")
+    p_report = sub.add_parser("report", help="print provenance state per file")
     p_report.add_argument("project_root", type=Path)
     args = parser.parse_args(argv)
 
@@ -75,7 +75,7 @@ def main(argv: list[str] | None = None) -> int:
         for path in ensure_exemption_files(args.project_root):
             print(f"created: {path}")
         return 0
-    for path, state in lock_report(args.project_root):
+    for path, state in state_report(args.project_root):
         # TAB-delimited: a path containing ": " no longer collides with
         # the "state: path" split (L2). Paths with TAB or newline would
         # still break the line protocol, so reject them loudly instead.

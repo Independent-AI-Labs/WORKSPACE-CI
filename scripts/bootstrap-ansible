@@ -33,8 +33,10 @@ fi
 _log() { printf '[bootstrap-ansible] %s\n' "$*" >&2; }
 
 main() {
-    local target_dir uv_bin
+    local target_dir tool_dir python_dir uv_bin
     target_dir="${UV_TOOL_BIN_DIR:-${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/bin}"
+    tool_dir="${UV_TOOL_DIR:-${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/uv-tools}"
+    python_dir="${UV_PYTHON_INSTALL_DIR:-${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/python}"
     uv_bin="${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/bin/uv"
 
     if [[ ! -x "$uv_bin" ]]; then
@@ -64,7 +66,12 @@ main() {
     # `ansible` (the meta-package) only provides `ansible-community`.
     # Installing ansible-core as the tool and adding `ansible --with passlib`
     # as extras includes the collections and passlib in the same environment.
-    UV_TOOL_BIN_DIR="$target_dir" "$uv_bin" tool install ansible-core --with ansible --with passlib --force
+    # UV_TOOL_DIR keeps the tool env inside the boot dir so executables stay
+    # runnable for all users when installed with elevation (root-locked bin).
+    # UV_PYTHON_INSTALL_DIR keeps the base interpreter inside the boot dir
+    # too -- otherwise the tool env symlinks to $HOME/.local/share/uv/python.
+    UV_PYTHON_INSTALL_DIR="$python_dir" UV_TOOL_DIR="$tool_dir" UV_TOOL_BIN_DIR="$target_dir" \
+        "$uv_bin" tool install ansible-core --with ansible --with passlib --force
 
     # Post-install verification.
     local v_out v_rc=0

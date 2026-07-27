@@ -9,11 +9,10 @@ const withBundleAnalyzer = bundleAnalyzer({
 })
 
 const nextConfig = {
-  // Pin Turbopack root to CI/web: parent WORKSPACE-VM/package-lock.json was
-  // winning and HMR served stale/wrong-tree bundles.
-  turbopack: {
-    root: webRoot,
-  },
+  // npm workspaces monorepo: deps hoist to the repo-root lockfile/node_modules;
+  // trace standalone output from the workspace root so hoisted deps ship.
+  outputFileTracingRoot: path.resolve(webRoot, '..'),
+  transpilePackages: ['@workspace-ci/web-components'],
   output: 'standalone',
   reactStrictMode: true,
   images: { formats: ['image/avif', 'image/webp'] },

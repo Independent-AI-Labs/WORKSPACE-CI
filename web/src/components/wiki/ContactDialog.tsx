@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Modal } from '@/components/ui/Modal'
-import { Icon } from '@/components/ui/Icon'
+import { Modal } from '@workspace-ci/web-components/components/Modal'
+import { Icon } from '@workspace-ci/web-components/components/Icon'
 import type { Branding } from '@/lib/branding'
 
 interface ContactDialogProps {

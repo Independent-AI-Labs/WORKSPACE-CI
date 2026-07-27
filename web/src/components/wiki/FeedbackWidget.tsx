@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useFeedback } from '@/hooks/useFeedback'
-import { Modal } from '@/components/ui/Modal'
+import { Modal } from '@workspace-ci/web-components/components/Modal'
 import clsx from 'clsx'
 import type { FeedbackEvent } from '@/types/analytics'
 

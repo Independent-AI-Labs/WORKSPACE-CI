@@ -1,42 +1,13 @@
 /* ============================================================
-   Reusable component primitives (P1-12)
-   Base classes live in @layer components so cascade precedence
-   is explicit: layered bases sit below unlayered component
-   modifiers (in the per-feature CSS files), so unique overrides
-   win without specificity wars. Existing BEM class names are
-   included in each selector list so no TSX markup changes are
-   needed: the base applies wherever the consumer class appears.
+   Wiki-domain component bases (P1-12) - the generic primitives
+   (card, badge, pill, modal-dialog, tooltip, copy-button,
+   icon-btn) now ship in @workspace-ci/web-components
+   (styles/_primitives.css); only wiki-domain bases remain here.
+   Bases live in @layer components so unlayered per-feature
+   overrides win without specificity wars.
    ============================================================ */
 
 @layer components {
-    /* ---- .card: panel + radius + padding; border/shadow on hover ----
-       Base for .wiki-card and any future panel component. */
-    .card,
-    .wiki-card {
-    background: var(--panel);
-    border: 1px solid transparent;
-    border-radius: var(--radius-md);
-    padding: var(--space-4);
-    position: relative;
-    z-index: 0;
-    transform: scale(1);
-    box-shadow: 0 0 0 transparent;
-    transition:
-      border-color var(--duration-medium) ease,
-      box-shadow var(--duration-medium) ease,
-      transform var(--duration-medium) ease;
-  }
-
-  .card:hover,
-  .card:focus-within,
-  .wiki-card:hover,
-  .wiki-card:focus-within {
-    z-index: 1;
-    border-color: var(--accent);
-    box-shadow: var(--elevation-overlay);
-    transform: scale(1.025);
-  }
-
   /* ---- .table: full-width collapsed border grid ----
      Collapses .config-field-table,
      .prose table (previously verbatim copies). */
@@ -64,17 +35,9 @@
     background: var(--surface-1);
   }
 
-  /* ---- .badge: compact uppercase label ----
-     Provides the missing base block for .badge--* modifiers
-     and collapses .hook-badge, .pattern-card__badge. */
-    .badge,
-    .badge--green,
-    .badge--blue,
-    .badge--orange,
-    .badge--teal,
-    .badge--purple,
-    .badge--gray,
-    .hook-badge {
+  /* ---- .hook-badge: wiki-domain badge base (generic .badge
+     base lives in the component library) ---- */
+  .hook-badge {
     display: inline-flex;
     align-items: center;
     font-size: var(--text-xs);
@@ -99,11 +62,8 @@
     font-size: var(--text-sm);
   }
 
-  /* ---- .icon-btn: circular icon button ----
-     Collapses .theme-toggle, .feedback-btn (previously 2
-     verbatim copies). */
-  .icon-btn,
-  .theme-toggle,
+  /* ---- .feedback-btn: circular icon button (generic .icon-btn
+     base lives in the component library) ---- */
   .feedback-btn {
     background: transparent;
     border: 1px solid var(--border);
@@ -115,36 +75,6 @@
     justify-content: center;
     cursor: pointer;
     transition: all var(--duration-fast);
-  }
-
-  /* ---- .pill: rounded filter chip ----
-     Collapses .filter-pill (previously near-verbatim copies). */
-  .pill,
-  .filter-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    padding: var(--space-1) var(--space-3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-xl);
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    font-size: var(--text-sm);
-    position: relative;
-    z-index: 0;
-    transform: translateY(0) scale(1);
-    transition:
-      background var(--duration-medium) ease,
-      border-color var(--duration-medium) ease,
-      color var(--duration-medium) ease,
-      transform var(--duration-medium) ease;
-  }
-
-  .pill:hover,
-  .filter-pill:hover {
-    z-index: 1;
-    transform: translateY(calc(-1 * var(--space-0-5))) scale(1.04);
   }
 
   /* ---- .kbd: monospace keyboard hint ----
@@ -163,8 +93,8 @@
   }
 
   /* ---- .overlay + .modal: blocking dialog layers ----
-     Provides the reusable base for the search modal today and
-     the generic <Modal> primitive (P1-17) tomorrow. */
+     Base for the search modal; the generic <Modal> primitive
+     uses .modal-dialog from the component library. */
   .overlay,
   .search-overlay {
     position: fixed;
@@ -185,132 +115,10 @@
     overflow: hidden;
   }
 
-  /* ---- .modal-dialog: native <dialog> modal (P1-17) ----
-     showModal() places the dialog in the top layer, so
-     z-index is handled by the browser. ::backdrop styles
-     the dimming layer. */
-  .modal-dialog {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--elevation-modal);
-    padding: 0;
-    margin: auto;
-    color: var(--text);
-    max-width: 90vw;
-    max-height: 90vh;
-  }
-
-  /* Flex only when open: display:flex on a closed <dialog> overrides the
-     UA display:none and leaves every modal visible on the page. */
-  .modal-dialog[open] {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .modal-dialog::backdrop {
-    background: var(--overlay-backdrop);
-  }
-
-  .modal-dialog__header {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-3) var(--space-4);
-    border-bottom: 1px solid var(--border);
-  }
-
+  /* Child slots of the library's .modal-dialog primitive. */
   .modal-dialog > .config-dialog__tabs,
   .modal-dialog > .search-modal__input {
     flex-shrink: 0;
-  }
-
-  .modal-dialog__title {
-    margin: 0;
-    font-size: var(--text-lg);
-    font-weight: 600;
-  }
-
-  .modal-dialog__close {
-    flex-shrink: 0;
-  }
-
-  .modal-dialog__body {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding: var(--space-4);
-  }
-
-  /* ---- .tooltip-wrapper + .tooltip (P1-16) ----
-     Tooltip is portaled to document.body via createPortal
-     and positioned with position:fixed + JS-computed
-     inline styles. Wrapper has tabIndex=0 so non-interactive
-     children (icons, text) are keyboard-focusable. */
-  .tooltip-wrapper {
-    display: inline-block;
-  }
-
-  .tooltip {
-    position: fixed;
-    visibility: hidden;
-    background: var(--surface-2);
-    color: var(--text);
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-sm);
-    font-size: var(--text-xs);
-    white-space: nowrap;
-    z-index: var(--z-tooltip);
-  }
-
-  .tooltip.is-visible {
-    visibility: visible;
-  }
-
-  .tooltip--html {
-    white-space: pre;
-    width: max-content;
-    max-width: 80vw;
-    font-family: var(--font-mono);
-  }
-
-  /* ---- .copy-button (P1-15) ----
-     State machine: idle → copying → copied/failed → idle.
-     Visual state communicated via text label + color,
-     never color alone. */
-  .copy-button {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    padding: var(--space-1) var(--space-3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: var(--panel);
-    color: var(--text);
-    font-size: var(--text-sm);
-    cursor: pointer;
-    transition: all var(--duration-fast);
-  }
-
-  .copy-button:hover:not(:disabled) {
-    border-color: var(--accent);
-  }
-
-  .copy-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .copy-button.is-copied {
-    border-color: var(--ok);
-    color: var(--ok);
-  }
-
-  .copy-button.is-failed {
-    border-color: var(--error);
-    color: var(--error);
   }
 
   .page-intro {

@@ -26,6 +26,11 @@ web/res/*
 !web/res/nginx/
 !web/res/nginx/**
 web/coverage/
+web-components/coverage/
+hitl/web/coverage/
+hitl/web/.next/
+hitl/backend/target/
+*.tsbuildinfo
 data/feedback/
 web/data/feedback/
 /*.pdf

@@ -3,8 +3,8 @@
 import type { ClassifiedPattern } from '@/types/patterns'
 import type { FeedbackCounts } from '@/types/feedback'
 import type { WikiLabelsConfig } from '@/types/wiki-labels'
-import { WikiCard } from '@/components/wiki/WikiCard'
-import { PillFilter } from '@/components/wiki/PillFilter'
+import { Card } from '@workspace-ci/web-components/components/Card'
+import { PillFilter } from '@workspace-ci/web-components/components/PillFilter'
 import { FeedbackWidget } from '@/components/wiki/FeedbackWidget'
 import { EntryPointDialog } from '@/components/wiki/EntryPointDialog'
 import { usePatternFilter } from '@/hooks/usePatternFilter'
@@ -59,7 +59,7 @@ export function PatternList({
             ? highlightedHtml[p.detectorFunction]
             : undefined
           return (
-            <WikiCard key={`${item.id}-${i}`} item={item}>
+            <Card key={`${item.id}-${i}`} item={item}>
               {p.detectorFunction && p.detectorSource && html && (
                 <EntryPointDialog
                   name={`${p.detectorFunction}()`}
@@ -76,7 +76,7 @@ export function PatternList({
                 upCount={counts.upvotes}
                 downCount={counts.downvotes}
               />
-            </WikiCard>
+            </Card>
           )
         })}
       </div>

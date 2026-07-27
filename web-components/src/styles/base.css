@@ -1,0 +1,19 @@
+/* Full component-library stylesheet: design tokens + all shipped
+   partials. Consumers wanting tokens only should import
+   styles/tokens.css instead. Import Remix Icon CSS app-side
+   (remixicon/fonts/remixicon.css) for icon classes. */
+@import './_variables.css';
+@import './_primitives.css';
+@import './_a11y.css';
+@import './_badges.css';
+@import './_buttons.css';
+@import './_collapsible-section.css';
+@import './_error-boundary.css';
+@import './_filter-pill.css';
+@import './_match-panel.css';
+@import './_tabs.css';
+@import './_theme-logo.css';
+@import './_theme-toggle.css';
+@import './_toggle.css';
+@import './_wiki-card.css';
+@import './_wiki-loading-states.css';

@@ -21,6 +21,7 @@
     "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
+    "@workspace-ci/web-components": "*",
     "@chenglou/pretext": "0.0.8",
     "@codemirror/commands": "6.10.4",
     "@codemirror/lang-javascript": "6.2.5",
@@ -36,7 +37,7 @@
     "js-yaml": "4.3.0",
     "marked": "17.0.6",
     "mermaid": "11.16.0",
-    "next": "16.2.11",
+    "next": "16.2.12",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "sharp": "0.35.3",
@@ -45,7 +46,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "3.3.6",
-    "@next/bundle-analyzer": "16.2.11",
+    "@next/bundle-analyzer": "16.2.12",
     "@tailwindcss/postcss": "4.3.3",
     "@testing-library/jest-dom": "7.0.0",
     "@testing-library/react": "16.3.2",
@@ -57,9 +58,9 @@
     "@vitejs/plugin-react": "6.0.4",
     "@vitest/coverage-v8": "4.1.10",
     "eslint": "9.39.4",
-    "eslint-config-next": "16.2.11",
-    "jsdom": "29.1.1",
-    "postcss": "8.5.22",
+    "eslint-config-next": "16.2.12",
+    "jsdom": "30.0.0",
+    "postcss": "8.5.23",
     "prettier": "3.9.6",
     "remixicon": "4.9.1",
     "tailwindcss": "4.3.3",
@@ -68,7 +69,7 @@
   },
   "overrides": {
     "brace-expansion@1": "1.1.16",
-    "postcss": "8.5.22",
+    "postcss": "8.5.23",
     "sharp": "0.35.3"
   }
 }

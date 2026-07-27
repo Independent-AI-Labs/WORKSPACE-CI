@@ -1,6 +1,6 @@
 import { marked } from 'marked'
 import clsx from 'clsx'
-import { sanitizeHtml } from '@/lib/sanitize'
+import { sanitizeHtml } from '@workspace-ci/web-components/lib/sanitize'
 
 function renderInlineMarkdown(text: string): string {
   return sanitizeHtml(marked.parseInline(text, { gfm: true }) as string)

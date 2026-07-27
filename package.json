@@ -1,0 +1,14 @@
+{
+  "name": "workspace-ci-js",
+  "private": true,
+  "workspaces": [
+    "web",
+    "web-components",
+    "hitl/web"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "type-check": "npm run type-check --workspaces --if-present"
+  }
+}

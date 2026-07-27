@@ -111,11 +111,23 @@ async function main() {
     await import('./sync-web-content.mjs')
   }
 
+  const nextBinCandidates = [
+    path.resolve(process.cwd(), 'node_modules/.bin/next'),
+    path.resolve(process.cwd(), '../node_modules/.bin/next'),
+  ]
+  const nextBin = nextBinCandidates.find((candidate) => fsSync.existsSync(candidate))
+  if (!nextBin) {
+    console.error(
+      `[dev-single] next binary not found in: ${nextBinCandidates.join(', ')}; run 'make install-web-deps'`,
+    )
+    process.exit(1)
+  }
+
   const args = ['dev', '-H', HOST, '-p', String(APP_PORT), ...process.argv.slice(2)]
   const startedAt = Date.now()
   console.error(`[dev-single] starting next dev (pid=${process.pid}) on ${HOST}:${APP_PORT}`)
 
-  const child = spawn('next', args, {
+  const child = spawn(nextBin, args, {
     stdio: 'inherit',
     env: process.env,
   })

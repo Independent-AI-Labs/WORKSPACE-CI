@@ -26,6 +26,9 @@
       "@/*": [
         "./src/*"
       ],
+      "@workspace-ci/web-components/*": [
+        "../web-components/src/*"
+      ],
       "vitest": [
         "./node_modules/vitest/dist/index.d.ts"
       ]

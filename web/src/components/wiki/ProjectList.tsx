@@ -4,10 +4,10 @@ import type { FeedbackCounts } from '@/types/feedback'
 import type { ProjectSummary } from '@/types/projects'
 import type { LanguagePercent } from '@/types/code-stats'
 import type { MakefileData } from '@/types/makefile'
-import { WikiCard } from '@/components/wiki/WikiCard'
+import { Card } from '@workspace-ci/web-components/components/Card'
 import { FeedbackWidget } from '@/components/wiki/FeedbackWidget'
 import { MakefileDialog } from '@/components/wiki/MakefileDialog'
-import { LanguageFilter } from '@/components/wiki/LanguageFilter'
+import { LanguageFilter } from '@workspace-ci/web-components/components/LanguageFilter'
 import { useProjectFilter, type ProjectWithLangs } from '@/hooks/useProjectFilter'
 import { projectAdapter } from '@/lib/card-adapters'
 
@@ -60,7 +60,7 @@ export function ProjectList({
           const counts = feedbackCounts[p.displayName] ?? { upvotes: 0, downvotes: 0 }
           const mkData = makefileData[p.slug]
           return (
-            <WikiCard
+            <Card
                   key={item.id}
                   item={item}
                   viewDetails={
@@ -82,7 +82,7 @@ export function ProjectList({
                     upCount={counts.upvotes}
                     downCount={counts.downvotes}
                   />
-                </WikiCard>
+                </Card>
           )
         })}
       </div>

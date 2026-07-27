@@ -1,12 +1,12 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
 import { ContactDialog } from '@/components/wiki/ContactDialog'
 import { FeedbackWidget } from '@/components/wiki/FeedbackWidget'
-import { CardListSection } from '@/components/wiki/CardListSection'
+import { CardListSection } from '@workspace-ci/web-components/components/CardListSection'
 import { standardAdapter, deriveCategories } from '@/lib/card-adapters'
 import { getStandards, getWikiLabels } from '@/lib/yaml-loader'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
 import { getBranding } from '@/lib/branding'
-import { Icon } from '@/components/ui/Icon'
+import { Icon } from '@workspace-ci/web-components/components/Icon'
 import type { ReactNode } from 'react'
 
 export default async function StandardsPage() {

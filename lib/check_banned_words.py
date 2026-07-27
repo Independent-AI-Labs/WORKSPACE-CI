@@ -40,7 +40,7 @@ def _scan_root() -> Path | None:
 def _merge_exceptions(exc_map: dict[str, list[str]], exc_path: Path) -> None:
     """Load a banned_words_exceptions.yaml file and merge into exc_map.
 
-    Provenance is validated fail-closed (root-owned + immutable) before
+    Provenance is validated fail-closed (root-owned regular file) before
     the file is honored; a missing file is skipped only when nothing
     exists at the path.
     """

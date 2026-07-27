@@ -1,6 +1,6 @@
 import type { ConfigSchema, ConfigField } from '@/types/content'
 import { resolvePath, formatValue, formatValueHtml } from '@/lib/utils'
-import { Tooltip } from '@/components/ui/Tooltip'
+import { Tooltip } from '@workspace-ci/web-components/components/Tooltip'
 
 interface SchemaFieldCardsProps {
   schema: ConfigSchema

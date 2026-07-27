@@ -11,10 +11,12 @@
 #   - The deployment consumes upstream (origin/main) exclusively. Local
 #     commits that were never pushed are NOT deployed: hook-sourced code
 #     must have server-side provenance.
-#   - After sync, every git-tracked file is chowned root:root. Untracked
-#     runtime trees (.venv, .boot-linux, node_modules, .next, .local,
-#     uv caches) stay agent-owned so `uv run` / node / next dev inside
-#     hooks keep working without root.
+#   - After sync, every git-tracked file is chowned root:root. The boot
+#     tool dir (.boot-linux) is installed during deploy (step 8) as root:
+#     root-locked, world readable/executable, since every workspace
+#     consumer resolves tools from it. Other runtime trees (.venv,
+#     node_modules, .next, .local, uv caches) stay agent-owned so
+#     `uv run` / node / next dev inside hooks keep working without root.
 #
 # Operator: sudo make deploy-ci
 set -euo pipefail
@@ -34,9 +36,8 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-# M1: serialize with unseal-hooks/lock-hooks/unseal-exemptions/lock-exemptions
-# (which take the same lock via ci_acquire_deploy_lock). fd 9 stays open for
-# the lifetime of this process, so the lock releases automatically on exit.
+# M1: serialize deploys against each other. fd 9 stays open for the
+# lifetime of this process, so the lock releases automatically on exit.
 _DEPLOY_LOCK_DIR="${CI_DEPLOY_LOCK_DIR:-/run/lock}"
 if [[ ! -d "$_DEPLOY_LOCK_DIR" ]]; then
     mkdir -p "$_DEPLOY_LOCK_DIR"
@@ -50,8 +51,8 @@ log_info "Holding deploy lock $_DEPLOY_LOCK_DIR/ci-deploy.lock"
 # M3 dir-owner cross-check does not apply to the helper calls below.
 export CI_OWNER_DIR_CHECK=skip
 
-# Root shells do not inherit the agent PATH; the CI helper scripts
-# (unseal-exemptions/lock-exemptions) need uv from the workspace boot dir.
+# Root shells do not inherit the agent PATH; helper scripts need uv from
+# the workspace boot dir.
 _WORKSPACE_ROOT="$(cd "$_PROJECTS_ROOT/.." && pwd)"
 _BOOT_BIN="$_WORKSPACE_ROOT/.boot-linux/bin"
 if [[ -x "$_BOOT_BIN/uv" ]]; then
@@ -144,7 +145,7 @@ if [[ -n "$(git_as_owner -C "$_WORK_REPO" status --porcelain)" ]]; then
 fi
 
 # 2b. Provenance gate for the code deploy-ci executes as root (audit C1):
-# the lock/unseal helpers and everything they pull in (lib/, ci/ package,
+# the runtime helpers and everything they pull in (lib/, ci/ package,
 # uv-locked venv) live in the agent-writable work repo. Require the
 # runtime paths to be identical to the pushed origin ref, and re-sync the
 # venv from the hash-pinned lockfile as the owner so `uv run --no-sync`
@@ -190,25 +191,10 @@ if [[ -n "$_symlinks" ]]; then
     exit 1
 fi
 
-# H1: failure atomicity. From the first unseal until the final reseal,
-# any premature exit (error, Ctrl-C, TERM) must attempt to reseal
-# exemptions and hooks so the deployment is never left unlocked.
-_RESEAL_ARMED=0
-_reseal_on_exit() {
-    _rc=$?
-    if [[ "$_RESEAL_ARMED" == "1" ]]; then
-        log_warn "deploy exiting early (rc=$_rc); resealing exemptions and hooks"
-        bash "$_WORK_REPO/scripts/lock-exemptions" "$_DEPLOY_DIR" || log_error "reseal: lock-exemptions failed"
-        bash "$_WORK_REPO/scripts/lock-hooks" "$_DEPLOY_DIR" || log_error "reseal: lock-hooks failed"
-    fi
-}
-trap _reseal_on_exit EXIT
-
 # 4. Lock every git-tracked file to root. Untracked runtime trees are
-#    deliberately skipped (see header). Sealed exemption files are +i
-#    immutable, so unseal first and reseal after verification.
-bash "$_WORK_REPO/scripts/unseal-exemptions" "$_DEPLOY_DIR"
-_RESEAL_ARMED=1
+#    deliberately skipped (see header). No seal/unseal cycle exists:
+#    root-owned files are only ever written by root, so chown alone is
+#    the complete invariant.
 _count=0
 _ls_tmp="$(mktemp)" || { log_error "mktemp failed"; exit 1; }
 git_as_root -C "$_DEPLOY_DIR" ls-files -z > "$_ls_tmp"
@@ -236,9 +222,6 @@ done < "$_dirs_tmp"
 log_info "locked $_dir_count tracked parent directories to root:root"
 
 # 5. Root-own the .git tree so the agent cannot retarget refs/config.
-#    Generated hooks are +i (lock-hooks), so unseal first and re-lock
-#    after verification.
-bash "$_WORK_REPO/scripts/unseal-hooks" "$_DEPLOY_DIR"
 chown -R root:root "$_DEPLOY_DIR/.git"
 log_info "locked .git to root:root"
 
@@ -287,23 +270,33 @@ if [[ "$_verify_fail" -ne 0 ]]; then
     exit 1
 fi
 log_info "integrity verification passed"
-bash "$_WORK_REPO/scripts/lock-exemptions" "$_DEPLOY_DIR"
-bash "$_WORK_REPO/scripts/lock-hooks" "$_DEPLOY_DIR"
 
-# H1: post-reseal gate: hooks and exemption files must be +i immutable.
-#     Verify checks ownership/mode/HEAD only, so without this a failed
-#     chattr could pass unnoticed.
-_imm_fail=0
-for _h in pre-commit commit-msg pre-push; do
-    _hp="$_DEPLOY_DIR/.git/hooks/$_h"
-    [[ -f "$_hp" ]] || continue
-    case "$(lsattr "$_hp" | cut -d' ' -f1)" in
-        *i*) ;;
-        *) log_error "post-lock: hook not immutable: $_h"; _imm_fail=1 ;;
-    esac
-done
-[[ "$_imm_fail" == "0" ]] || { log_error "post-lock immutability check failed"; exit 1; }
-_RESEAL_ARMED=0
+# 8. Full tool install. Every consumer across the workspace resolves
+#    bootstrapped tools from $_DEPLOY_DIR/.boot-<platform>/bin (uv,
+#    ansible-playbook, node, ...). Install as root so the boot dir is
+#    root-locked yet world readable/executable (default umask 022).
+#    All bootstrap-* scripts are idempotent: re-deploys no-op when the
+#    pinned versions are already present.
+log_info "installing boot tools into $_DEPLOY_DIR (root-locked, world read+exec)"
+# Keep uv's cache out of the operator's HOME: deploy preserves HOME for git
+# SSH, so without this root would drop root-owned files into the agent's
+# ~/.cache/uv and break later agent-side uv runs.
+_root_home="$(getent passwd root | cut -d: -f6)"
+UV_CACHE_DIR="${_root_home:-/root}/.cache/uv" \
+    make -C "$_DEPLOY_DIR" install-boot-tools install-pythons install-ansible install-node \
+    install-gitleaks install-osv-scanner install-cloc install-moon
 
-log_info "deploy-ci complete: $_DEPLOY_DIR @ $_deployed (root-locked)"
-log_warn "reminder: hook runtime trees (.venv, node_modules) stay agent-owned; run install targets from WORKSPACE-CI as usual"
+# 9. Runtime trees (.venv, node_modules) stay agent-owned per the header
+#    contract: generated hooks run `uv run` / npm as the agent and need
+#    writability. Install them as the invoking operator, not root.
+if [[ -n "${SUDO_USER:-}" && "$SUDO_USER" != "root" ]]; then
+    _agent_home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+    log_info "installing python + web deps as $SUDO_USER (agent-owned .venv, node_modules)"
+    [[ -n "$_agent_home" ]] || { log_error "no home for $SUDO_USER"; exit 1; }
+    sudo -u "$SUDO_USER" HOME="$_agent_home" \
+        make -C "$_DEPLOY_DIR" install-python-deps install-web-deps
+else
+    log_warn "SUDO_USER unknown; run as agent: make -C $_DEPLOY_DIR install-python-deps install-web-deps"
+fi
+
+log_info "deploy-ci complete: $_DEPLOY_DIR @ $_deployed (root-locked, tools installed)"

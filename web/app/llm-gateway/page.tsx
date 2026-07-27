@@ -1,7 +1,7 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
 import { GatewayTabs } from '@/components/wiki/GatewayTabs'
 import { HeroBanner } from '@/components/wiki/HeroBanner'
-import { ServiceUnavailable } from '@/components/wiki/ServiceUnavailable'
+import { ServiceUnavailable } from '@workspace-ci/web-components/components/ServiceUnavailable'
 import { getBrandingForRequest } from '@/lib/branding'
 import {
   checkGrafanaHealth,

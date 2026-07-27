@@ -86,7 +86,7 @@ ci_check_silent_swallow() {
     # Format mirrors banned_words_exceptions.yaml:
     #   exceptions:
     #     - paths: ['public/vendor/', 'other/path']
-    # Provenance is validated fail-closed (root-owned + immutable).
+    # Provenance is validated fail-closed (root-owned regular file).
     local -a _exc_paths=()
     local _exc_cfg="config/silent_swallow_exceptions.yaml"
     if ! ci_validate_exemption_file "$_exc_cfg" "silent_swallow_exceptions.yaml"; then
@@ -103,16 +103,13 @@ ci_check_silent_swallow() {
         rm -f "$_exc_tmp"
     fi
 
-    local errors=0 file
+    # Stage 1: pure-bash candidate filter (no subprocess per file).
+    local cand_tmp text_tmp
+    cand_tmp="$(mktemp)"
+    text_tmp="$(mktemp)"
+    local file _excluded _pat
     while IFS= read -r file; do
         [[ -z "$file" || ! -f "$file" ]] && continue
-        # Skip binary files (prevents UnicodeDecodeError in Python checker)
-        local _enc
-        _enc="$(file --mime-encoding -b "$file")" || { echo "[silent-swallow] file --mime-encoding failed on $file" >&2; continue; }
-        case "$_enc" in
-            utf-8|us-ascii) ;;
-            *) continue ;;
-        esac
         # Default exemptions: tests may contain deliberate error patterns;
         # compose.yml has pre-existing patterns fixed incrementally.
         case "$file" in
@@ -120,7 +117,7 @@ ci_check_silent_swallow() {
             res/ansible/compose.yml) continue ;;
         esac
         # Per-project exemptions from config/silent_swallow_exceptions.yaml
-        local _excluded=0
+        _excluded=0
         for _pat in "${_exc_paths[@]}"; do
             if [[ "$file" == "$_pat"* ]]; then
                 _excluded=1
@@ -128,44 +125,58 @@ ci_check_silent_swallow() {
             fi
         done
         [[ $_excluded -eq 1 ]] && continue
-        {
-            echo "--- a/$file"
-            echo "+++ b/$file"
-            echo "@@ -0,0 +1,$(wc -l < "$file") @@"
-            sed 's/^/+/' "$file"
-        } > "$diff_tmp"
+        printf '%s\n' "$file" >> "$cand_tmp"
+    done < "$files_tmp"
+    rm -f "$files_tmp"
+
+    # Stage 2: batched binary filter. One `file` process for the whole
+    # candidate list (was: one per file) -- skip non-UTF-8 files to prevent
+    # UnicodeDecodeError in the Python checker.
+    if [[ -s "$cand_tmp" ]]; then
+        if ! file --mime-encoding -b -f "$cand_tmp" > "$text_tmp.enc"; then
+            echo "[silent-swallow] file --mime-encoding batch failed" >&2
+        fi
+        paste "$cand_tmp" "$text_tmp.enc" | \
+            awk -F'\t' '$2=="utf-8"||$2=="us-ascii"{print $1}' > "$text_tmp"
+        rm -f "$text_tmp.enc"
+    fi
+    rm -f "$cand_tmp"
+
+    # Stage 3: ONE combined multi-file diff, ONE Python checker process
+    # (was: one Python spawn per file). parse_diff tracks the current file
+    # via the +++ b/<path> headers, so violation attribution is preserved.
+    # Chunked via xargs to stay under argv limits on large trees.
+    local errors=0
+    if [[ -s "$text_tmp" ]]; then
+        : > "$diff_tmp"
+        xargs -a "$text_tmp" -n 512 awk '
+            FNR==1 {
+                print "--- a/" FILENAME
+                print "+++ b/" FILENAME
+                print "@@ -0,0 +1 @@"
+            }
+            { print "+" $0 }
+        ' >> "$diff_tmp"
+        rm -f "$text_tmp"
 
         # FAIL-CLOSED: ci_run_python_checker returns 0 IFF the Python
         # checker exits 0. Any non-zero exit (violations, crash, timeout,
         # missing config) returns 1. There is no code path where a
         # non-zero child exit is swallowed as a clean pass.
-        #
-        # The prior bug: `if [[ $_py_rc -ne 0 && -s "$violations_tmp" ]]`
-        # gated error-counting on BOTH non-zero exit AND non-empty stdout.
-        # A crash (FileNotFoundError, traceback on stderr, empty stdout)
-        # fell through the AND-gate → errors never incremented →
-        # function returned 0 = PASS. The silent-swallow hook was
-        # silently swallowing its own checker's crash.
-        #
-        # The fix: errors is incremented on ANY non-zero wrapper return.
-        # CI_CHECKER_STDOUT (violations) is collected for display when
-        # non-empty; when empty, the crash is logged as a violation.
         ci_run_python_checker "$script_path" < "$diff_tmp"
         local _chk_rc=$?
         if [[ $_chk_rc -ne 0 ]]; then
             if [[ -s "$CI_CHECKER_STDOUT" ]]; then
-                while IFS= read -r line; do
-                    echo "$file: $line" >> "$combined_tmp"
-                done < "$CI_CHECKER_STDOUT"
+                cat "$CI_CHECKER_STDOUT" >> "$combined_tmp"
             else
-                echo "$file: [CHECKER CRASHED exit=$_chk_rc] -- see stderr above" >> "$combined_tmp"
+                echo "[CHECKER CRASHED exit=$_chk_rc] -- see stderr above" >> "$combined_tmp"
             fi
-            errors=$((errors + 1))
+            errors=1
         fi
         rm -f "$CI_CHECKER_STDOUT"
-    done < "$files_tmp"
-
-    rm -f "$files_tmp"
+    else
+        rm -f "$text_tmp"
+    fi
 
     if [[ $errors -eq 0 ]]; then
         ci_pass "Silent-swallow: no silent-error patterns found."
@@ -174,7 +185,7 @@ ci_check_silent_swallow() {
     fi
 
     echo ""
-    ci_fail "Silent-swallow: $errors file(s) with violations:"
+    ci_fail "Silent-swallow: violations found:"
     echo ""
     cat "$combined_tmp"
     echo ""

@@ -3,7 +3,7 @@ import { HookList } from '@/components/wiki/HookList'
 import { getRequiredHooks, getWikiLabels } from '@/lib/yaml-loader'
 import { loadHookSources } from '@/lib/docs-loader'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
-import { highlightCode } from '@/lib/highlight'
+import { highlightCode } from '@workspace-ci/web-components/lib/highlight'
 import type { HookRecord } from '@/types/hooks'
 
 export default async function HooksPage() {

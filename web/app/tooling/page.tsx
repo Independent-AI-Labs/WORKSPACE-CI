@@ -1,12 +1,12 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
 import { EntryPointDialog } from '@/components/wiki/EntryPointDialog'
 import { FeedbackWidget } from '@/components/wiki/FeedbackWidget'
-import { CardListSection } from '@/components/wiki/CardListSection'
+import { CardListSection } from '@workspace-ci/web-components/components/CardListSection'
 import { scriptAdapter, deriveCategories } from '@/lib/card-adapters'
 import { getScriptManifest } from '@/lib/yaml-loader'
 import { loadScriptSources } from '@/lib/docs-loader'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
-import { highlightCode } from '@/lib/highlight'
+import { highlightCode } from '@workspace-ci/web-components/lib/highlight'
 import type { ReactNode } from 'react'
 
 export default async function ToolingPage() {

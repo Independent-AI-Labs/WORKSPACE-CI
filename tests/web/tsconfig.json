@@ -21,20 +21,24 @@
       "react-dom"
     ],
     "typeRoots": [
+      "../../node_modules/@types",
       "../../web/node_modules/@types"
     ],
     "paths": {
       "@/*": [
         "../../web/src/*"
       ],
+      "@workspace-ci/web-components/*": [
+        "../../web-components/src/*"
+      ],
       "vitest": [
-        "../../web/node_modules/vitest/dist/index.d.ts"
+        "../../node_modules/vitest/dist/index.d.ts"
       ],
       "@testing-library/react": [
-        "../../web/node_modules/@testing-library/react/types/index.d.ts"
+        "../../node_modules/@testing-library/react/types/index.d.ts"
       ],
       "@testing-library/jest-dom": [
-        "../../web/node_modules/@testing-library/jest-dom/types/vitest.d.ts"
+        "../../node_modules/@testing-library/jest-dom/types/vitest.d.ts"
       ]
     }
   },

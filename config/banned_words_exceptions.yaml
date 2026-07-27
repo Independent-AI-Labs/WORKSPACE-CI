@@ -15,8 +15,6 @@ exceptions:
     paths: ['docs/']
   - pattern: 'pattern:\s*"\.\*"'
     paths: ['docs/']
-  - pattern: '\bfallback\b'
-    paths: ['docs/']
   - pattern: '\blegacy\b'
     paths: ['docs/']
   - pattern: '\bmock\b'
@@ -90,10 +88,14 @@ exceptions:
     paths:
       - 'web/src/.*\.(ts|tsx)$'
       - 'web/package\.json$'
-  - pattern: '\bfallback\b'
-    paths: ['web/src/components/ui/ErrorBoundary\.tsx$']
   - pattern: '\bsilent'
     paths:
       - 'web/src/lib/card-adapters\.ts$'
       - 'web/src/lib/search-data\.ts$'
       - 'web/src/lib/yaml-loader\.ts$'
+  - pattern: \bfallback\b
+    paths:
+      - web-components/src/components/ErrorBoundary\.tsx$
+  - pattern: \belevate\b
+    paths:
+      - docs/specifications/SPEC-HITL-GUARD\.md$

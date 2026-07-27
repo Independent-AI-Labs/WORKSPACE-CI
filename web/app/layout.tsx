@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Montserrat, JetBrains_Mono } from 'next/font/google'
+import { ThemeScript } from '@workspace-ci/web-components/theme-script'
 import { StoreHydration } from '@/components/StoreHydration'
 import { getBranding } from '@/lib/branding'
 import '@/styles/globals.css'
@@ -32,16 +33,8 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
-const themeScript = `
+const sidebarScript = `
   (function() {
-    var saved = localStorage.getItem('theme');
-    if (saved === 'light' || saved === 'dark') {
-      document.documentElement.setAttribute('data-theme', saved);
-    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-      document.documentElement.setAttribute('data-theme', 'light');
-    } else {
-      document.documentElement.setAttribute('data-theme', 'light');
-    }
     var sidebarCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
     if (sidebarCollapsed) {
       document.documentElement.setAttribute('data-sidebar-collapsed', 'true');
@@ -80,7 +73,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${montserrat.variable} ${jetbrainsMono.variable}`}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <ThemeScript storageKey="theme" defaultTheme="light" />
+        <script dangerouslySetInnerHTML={{ __html: sidebarScript }} />
       </head>
       <body className="wiki-body">
         <StoreHydration />

@@ -1,11 +1,11 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
 import { ConfigDialog } from '@/components/wiki/ConfigDialog'
 import { FeedbackWidget } from '@/components/wiki/FeedbackWidget'
-import { CardListSection } from '@/components/wiki/CardListSection'
+import { CardListSection } from '@workspace-ci/web-components/components/CardListSection'
 import { configAdapter, deriveCategories } from '@/lib/card-adapters'
 import { getConfigIndex, getConfigSchema, getConfigRawYaml, getConfigValue, getWikiLabels } from '@/lib/yaml-loader'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
-import { highlightCode } from '@/lib/highlight'
+import { highlightCode } from '@workspace-ci/web-components/lib/highlight'
 import type { ConfigSchema } from '@/types/content'
 import type { ReactNode } from 'react'
 

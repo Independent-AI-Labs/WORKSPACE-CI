@@ -4,7 +4,7 @@
 # Usage: source /path/to/ci.sh
 
 _CI_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-for _ci_sub in ci_owner ci_seal ci_deploy_lock; do
+for _ci_sub in ci_owner ci_deploy_lock; do
     # shellcheck source=lib/ci_owner.sh
     if ! source "$_CI_LIB_DIR/$_ci_sub.sh"; then
         echo "ERROR: failed to source $_CI_LIB_DIR/$_ci_sub.sh" >&2

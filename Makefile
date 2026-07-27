@@ -31,6 +31,11 @@ MYPY := uv run mypy
 # (fresh install), PATH is not modified: install-python-deps handles it.
 BOOT_NAME := $(if $(filter Darwin,$(_OS)),.boot-macos,.boot-linux)
 BOOT_BIN := $(CURDIR)/$(BOOT_NAME)/bin
+# User-configurable (env or CLI override); defaults to this repo's boot bin
+ANSIBLE_PLAYBOOK ?= $(BOOT_BIN)/ansible-playbook
+# Containment: uv-managed interpreters live inside the boot dir, never in
+# $HOME/.local/share/uv/python (no unsanctioned HOME/system resources)
+export UV_PYTHON_INSTALL_DIR := $(CURDIR)/$(BOOT_NAME)/python
 
 # Local overrides: copy .env.example -> .env (gitignored). KEY=value makefile syntax.
 -include .env
@@ -128,15 +133,18 @@ install-ci: preflight install-deps ## CI install: deps + bootstrap binaries, no 
 	:
 
 .PHONY: install-deps
-install-deps: install-boot-tools install-python-deps install-gitleaks install-osv-scanner install-cloc install-moon install-ansible install-node install-web-deps ## Install boot tools + python .venv deps + gitleaks + osv-scanner + cloc + moon + ansible + node + web deps
+install-deps: install-boot-tools install-pythons install-python-deps install-gitleaks install-osv-scanner install-cloc install-moon install-ansible install-node install-web-deps ## Install boot tools + python pool + .venv deps + gitleaks + osv-scanner + cloc + moon + ansible + node + web deps
+
+.PHONY: install-uv
+install-uv: ## Bootstrap uv into $(BOOT_NAME)/bin/ (idempotent)
+	bash scripts/bootstrap-uv
 
 .PHONY: install-boot-tools
-install-boot-tools: ## Bootstrap uv + rust toolchain into $(BOOT_NAME)/bin/ (idempotent)
-	bash scripts/bootstrap-uv
+install-boot-tools: install-uv ## Bootstrap uv + rust toolchain into $(BOOT_NAME)/bin/ (idempotent)
 	bash scripts/bootstrap-rust
 
 .PHONY: install-python-deps
-install-python-deps: install-boot-tools ## uv sync the Python deps (project-level .venv)
+install-python-deps: install-uv ## uv sync the Python deps (project-level .venv)
 	PATH="$(BOOT_BIN):$$PATH" $(UV) sync --extra dev
 
 .PHONY: install-gitleaks
@@ -156,19 +164,31 @@ install-moon: ## Bootstrap the moon binary (workspace task runner) into $(BOOT_N
 	bash scripts/bootstrap-moon
 
 .PHONY: install-ansible
-install-ansible: install-boot-tools ## Bootstrap ansible + passlib into $(BOOT_NAME)/bin
+install-ansible: install-uv ## Bootstrap ansible + passlib into $(BOOT_NAME)/bin
 	bash scripts/bootstrap-ansible
+
+.PHONY: install-certbot
+install-certbot: install-uv ## Bootstrap certbot + dns-cloudflare into $(BOOT_NAME)/bin
+	bash scripts/bootstrap-certbot
+
+# Interpreter pool: uv-managed CPython inside the boot dir so venvs/tool
+# envs never symlink into $HOME/.local/share/uv/python. Idempotent.
+PYTHON_POOL_VERSIONS := 3.11 3.12 3.13
+
+.PHONY: install-pythons
+install-pythons: install-uv ## Install the workspace CPython pool into $(BOOT_NAME)/python (idempotent)
+	PATH="$(BOOT_BIN):$$PATH" $(UV) python install --no-bin $(PYTHON_POOL_VERSIONS)
 
 .PHONY: install-node
 install-node: ## Bootstrap Node.js + npm into $(BOOT_NAME)/node-env/ (idempotent)
 	bash scripts/bootstrap-node
 
 .PHONY: install-web-deps
-install-web-deps: install-node ## npm install web/ dependencies (Next.js wiki)
-	cd web && PATH="$(BOOT_BIN):$$PATH" npm install
+install-web-deps: install-node ## npm install JS workspace dependencies (repo root: web/ + web-components/ + hitl/web/)
+	PATH="$(BOOT_BIN):$$PATH" npm install
 
 .PHONY: install-hooks
-install-hooks: ## (Re)generate native git hooks (auto unseal/re-lock when root-sealed)
+install-hooks: ## (Re)generate native git hooks (root-owned hooks: run via sudo)
 	if [ -f scripts/cleanup-precommit ]; then bash scripts/cleanup-precommit; else echo "[INFO] cleanup-precommit not found, continuing" >&2; fi
 	bash scripts/reinstall-hooks
 
@@ -259,6 +279,9 @@ _test-push-impl:
 	$(PYTEST) tests/unit --cov=ci --cov-report=term-missing --cov-fail-under=90 --tb=short -q
 	$(PYTEST) tests/integration --cov=ci --cov-report=term-missing --cov-fail-under=5 --tb=short -q
 	$(MAKE) -C web lint type-check test
+	$(MAKE) -C web-components lint type-check test
+	$(MAKE) -C hitl/web lint type-check test
+	$(MAKE) -C hitl/backend lint type-check test
 
 # Wiki dev server: delegates to web/Makefile; systemd user service on :4000
 # =============================================================================
@@ -315,9 +338,9 @@ wiki-prod-status: ## Show wiki production stack status
 wiki-prod-logs: ## Tail wiki production stack logs
 	$(MAKE) -C web prod-logs
 wiki-prod-deploy: ## Install + enable wiki prod on boot (systemd user + linger)
-	ansible-playbook res/ansible/prod.yml --tags deploy
+	$(ANSIBLE_PLAYBOOK) res/ansible/prod.yml --tags deploy
 wiki-prod-undeploy: ## Disable + remove wiki prod systemd unit
-	ansible-playbook res/ansible/prod.yml --tags undeploy
+	$(ANSIBLE_PLAYBOOK) res/ansible/prod.yml --tags undeploy
 wiki-prod-systemd-logs: ## Tail wiki prod systemd unit logs
 	journalctl --user -u wiki-prod-compose -f
 
@@ -341,7 +364,7 @@ ANSIBLE_TUNNEL_ENV := TUNNEL_CONFIG="$(TUNNEL_CONFIG)" \
 ifneq ($(CLOUDFLARED_BIN),)
 ANSIBLE_TUNNEL_ENV := CLOUDFLARED_BIN="$(CLOUDFLARED_BIN)" $(ANSIBLE_TUNNEL_ENV)
 endif
-ANSIBLE_TUNNEL := $(ANSIBLE_TUNNEL_ENV) ansible-playbook res/ansible/tunnel.yml
+ANSIBLE_TUNNEL := $(ANSIBLE_TUNNEL_ENV) $(ANSIBLE_PLAYBOOK) res/ansible/tunnel.yml
 
 .PHONY: wiki-tunnel-start wiki-tunnel-stop wiki-tunnel-restart wiki-tunnel-status
 .PHONY: wiki-tunnel-deploy wiki-tunnel-undeploy wiki-tunnel-logs wiki-tunnel-route-dns
@@ -379,7 +402,7 @@ ANSIBLE_LETSENCRYPT_EXTRA := \
 	-e 'letsencrypt_reload_cmd=podman exec wiki-ci-nginx nginx -s reload' \
 	-e "letsencrypt_project_root=$(CURDIR)" \
 	-e "letsencrypt_playbook_path=$(CURDIR)/res/ansible/letsencrypt.yml"
-ANSIBLE_LETSENCRYPT := $(ANSIBLE_LETSENCRYPT_ENV) ansible-playbook res/ansible/letsencrypt.yml $(ANSIBLE_LETSENCRYPT_EXTRA)
+ANSIBLE_LETSENCRYPT := $(ANSIBLE_LETSENCRYPT_ENV) $(ANSIBLE_PLAYBOOK) res/ansible/letsencrypt.yml $(ANSIBLE_LETSENCRYPT_EXTRA)
 
 .PHONY: wiki-tls-issue wiki-tls-renew wiki-tls-verify wiki-tls-deploy wiki-tls-undeploy
 wiki-tls-issue: ## Issue Let's Encrypt cert (DNS-01; LETSENCRYPT_STAGING=1 to test)
@@ -462,21 +485,39 @@ extract-wiki-data: extract-code-stats extract-hook-sources extract-script-source
 scaffold-ci: ## Generate CI integration files for a consumer project
 	bash scripts/scaffold-ci $(ARGS)
 
-.PHONY: lock-exemptions
-lock-exemptions: ## (sudo) Create + root-lock all manifest exemption files in a consumer repo
-	scripts/lock-exemptions "$(or $(CONSUMER),$(PWD))"
+# Exemption/policy YAML editing (root-gated yaml editor; files stay
+# root-owned unconditionally; there is no seal/unseal cycle).
+_YAML_EDIT ?= /usr/bin/workspace-yaml-edit
 
-.PHONY: unseal-exemptions
-unseal-exemptions: ## (sudo) Remove immutable flag (unseal) on manifest exemption files in a consumer repo (re-lock after editing)
-	scripts/unseal-exemptions "$(or $(CONSUMER),$(PWD))"
+.PHONY: yaml-add yaml-remove yaml-set yaml-get yaml-list yaml-validate
+yaml-add: ## Append a list entry: make yaml-add FILE=.. KEY=.. FIELDS="pattern=x;paths=[a]" (ROOT)
+	if [ "$$(id -u)" != "0" ]; then \
+		echo "ERROR: yaml-add needs root: sudo make yaml-add" >&2; exit 1; \
+	fi
+	IFS=';' read -ra _ye_fields <<< "$(FIELDS)"; \
+	"$(_YAML_EDIT)" add "$(FILE)" "$(KEY)" "$${_ye_fields[@]}" $(YAML_FLAGS)
 
-.PHONY: lock-hooks
-lock-hooks: ## (sudo) Root-lock generated native git hooks in a consumer repo
-	scripts/lock-hooks "$(or $(CONSUMER),$(PWD))"
+yaml-remove: ## Remove matching entries: make yaml-remove FILE=.. KEY=.. FIELDS="pattern=x" (ROOT)
+	if [ "$$(id -u)" != "0" ]; then \
+		echo "ERROR: yaml-remove needs root: sudo make yaml-remove" >&2; exit 1; \
+	fi
+	IFS=';' read -ra _ye_fields <<< "$(FIELDS)"; \
+	"$(_YAML_EDIT)" remove "$(FILE)" "$(KEY)" "$${_ye_fields[@]}" $(YAML_FLAGS)
 
-.PHONY: unseal-hooks
-unseal-hooks: ## (sudo) Remove immutable flag (unseal) on generated hooks so generate-hooks can rewrite them (re-lock afterwards)
-	scripts/unseal-hooks "$(or $(CONSUMER),$(PWD))"
+yaml-set: ## Set a scalar: make yaml-set FILE=.. KEY=.. VALUE=.. (ROOT)
+	if [ "$$(id -u)" != "0" ]; then \
+		echo "ERROR: yaml-set needs root: sudo make yaml-set" >&2; exit 1; \
+	fi
+	"$(_YAML_EDIT)" set "$(FILE)" "$(KEY)" "$(VALUE)" $(YAML_FLAGS)
+
+yaml-get: ## Print a scalar: make yaml-get FILE=.. KEY=..
+	"$(_YAML_EDIT)" get "$(FILE)" "$(KEY)"
+
+yaml-list: ## Print the file or one list key's block: make yaml-list FILE=.. [KEY=..]
+	"$(_YAML_EDIT)" list "$(FILE)" $(KEY)
+
+yaml-validate: ## Schema-validate a policy file: make yaml-validate FILE=..
+	"$(_YAML_EDIT)" validate "$(FILE)"
 
 # System hardening (requires sudo)
 # =============================================================================

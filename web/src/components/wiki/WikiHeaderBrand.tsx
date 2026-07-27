@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { Branding } from '@/lib/branding'
-import { ThemeLogo } from './ThemeLogo'
+import { ThemeLogo } from '@workspace-ci/web-components/components/ThemeLogo'
 
 interface WikiHeaderBrandProps {
   branding: Branding

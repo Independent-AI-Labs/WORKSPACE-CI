@@ -176,6 +176,15 @@ def _collect_multiline_violations(
 
     lang_checker = dict(_LANGUAGE_CHECKERS)
 
+    # Group added lines per file so detector lookahead windows never cross
+    # a file boundary in a multi-file diff. Previously the hook invoked the
+    # checker once per file; with a combined diff the flat list mixes files,
+    # and a lookahead match in the NEXT file could wrongly suppress a
+    # violation in the current one.
+    by_file: dict[str, list[AddedLine]] = {}
+    for a in added:
+        by_file.setdefault(a.path, []).append(a)
+
     seen: set[str] = set()
     for entry in config.get("multiline_detectors", []):
         det_name = entry["detector"]
@@ -190,12 +199,13 @@ def _collect_multiline_violations(
         lang = entry.get("language", "")
         checker = lang_checker.get(lang)
 
-        for header, pid in det(added):
-            if checker is not None and not checker(header.path):
+        for path, file_lines in by_file.items():
+            if checker is not None and not checker(path):
                 continue
-            violations.append(
-                (header.path, header.lineno, pid, header.text.rstrip())
-            )
+            for header, pid in det(file_lines):
+                violations.append(
+                    (header.path, header.lineno, pid, header.text.rstrip())
+                )
 
     return violations
 

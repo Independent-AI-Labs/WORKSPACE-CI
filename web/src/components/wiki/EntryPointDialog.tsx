@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
-import { Modal } from '@/components/ui/Modal'
-import { CopyButton } from '@/components/ui/CopyButton'
+import { Modal } from '@workspace-ci/web-components/components/Modal'
+import { CopyButton } from '@workspace-ci/web-components/components/CopyButton'
 
 interface EntryPointDialogProps {
   name: string

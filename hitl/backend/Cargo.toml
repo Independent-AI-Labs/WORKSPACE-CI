@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+members = ["crates/hitl-protocol", "crates/hitl-server"]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.75"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hitl-protocol = { path = "crates/hitl-protocol" }
+
+[profile.release]
+lto = true
+codegen-units = 1

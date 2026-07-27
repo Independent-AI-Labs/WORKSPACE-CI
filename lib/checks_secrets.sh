@@ -23,35 +23,40 @@ ci_scan_secrets() {
 
     # Dynamic .gitignore respect: git ls-files gives tracked files,
     # --others --exclude-standard gives untracked non-ignored files.
-    local _ss_stderr_tmp
+    local _ss_stderr_tmp _ss_files_tmp
     _ss_stderr_tmp="$(mktemp)"
-    local _ss_files
-    _ss_files="$({ git ls-files; git ls-files --others --exclude-standard; } 2>"$_ss_stderr_tmp" | sort -u)"
-    local _ss_git_rc=$?
+    _ss_files_tmp="$(mktemp)"
+    local _ss_git_rc=0
+    { git ls-files -z; git ls-files -z --others --exclude-standard; } \
+        2>"$_ss_stderr_tmp" | sort -zu > "$_ss_files_tmp" || _ss_git_rc=$?
     if [[ $_ss_git_rc -ne 0 ]]; then
         ci_fail "git ls-files failed"
         [[ -s "$_ss_stderr_tmp" ]] && cat "$_ss_stderr_tmp" >&2
-        rm -f "$_ss_stderr_tmp"
+        rm -f "$_ss_stderr_tmp" "$_ss_files_tmp"
         return 1
     fi
     rm -f "$_ss_stderr_tmp"
 
-    if [[ -z "$_ss_files" ]]; then
+    if [[ ! -s "$_ss_files_tmp" ]]; then
         ci_pass "gitleaks: no files to scan"
+        rm -f "$_ss_files_tmp"
         return 0
     fi
 
     local _ss_total
-    _ss_total=$(printf '%s\n' "$_ss_files" | grep -c .)
+    _ss_total=$(tr -cd '\0' < "$_ss_files_tmp" | wc -c)
 
     local _ss_rc=0
-    # xargs -P4 parallelizes gitleaks across files for speed.
-    # --log-level=error suppresses gitleaks INF/WRN status on stderr
-    # (redundant with exit code); real errors still surface.
+    # xargs -P4 parallelizes gitleaks across files for speed. Batching
+    # multiple paths per invocation was measured 150x SLOWER (gitleaks
+    # scans multi-path argv concurrently and thrashes), so one path per
+    # process stays. --log-level=error suppresses gitleaks INF/WRN status
+    # on stderr (redundant with exit code); real errors still surface.
     # --verbose sends Finding blocks to stdout for the developer to see.
-    printf '%s\n' "$_ss_files" | \
-        xargs -P4 -I{} "$_ss_gitleaks_bin" dir {} \
-        --no-banner --redact --verbose --log-level=error || _ss_rc=$?
+    xargs -0 -P4 -I{} "$_ss_gitleaks_bin" dir {} \
+        --no-banner --redact --verbose --log-level=error \
+        < "$_ss_files_tmp" || _ss_rc=$?
+    rm -f "$_ss_files_tmp"
 
     if [[ $_ss_rc -ne 0 ]]; then
         if [[ $_ss_rc -eq 124 || $_ss_rc -eq 137 ]]; then

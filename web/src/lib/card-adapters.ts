@@ -1,4 +1,4 @@
-import type { CardItem } from '@/types/card'
+import type { CardItem } from '@workspace-ci/web-components/types/card'
 import type { ProjectSummary } from '@/types/projects'
 import type { ConfigEntry, GuardConfigEntry } from '@/types/content'
 import type { ClassifiedPattern } from '@/types/patterns'

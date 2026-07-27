@@ -1,6 +1,8 @@
 @import 'tailwindcss';
 @import 'remixicon/fonts/remixicon.css';
 
+@source '../../../web-components/src';
+
 html,
 body {
   overflow-x: clip;
@@ -12,34 +14,39 @@ img {
   height: auto;
 }
 
-@import '../../public/styles/_variables.css';
+/* Import order preserves the pre-extraction cascade: library partials
+   sit exactly where they lived before the move. */
+@import '@workspace-ci/web-components/styles/_variables.css';
+@import '@workspace-ci/web-components/styles/_primitives.css';
 @import '../../public/styles/_components.css';
 @import '../../public/styles/_wiki-layout.css';
 @import '../../public/styles/_wiki-sidebar.css';
+@import '@workspace-ci/web-components/styles/_theme-logo.css';
 @import '../../public/styles/_wiki-patterns.css';
 @import '../../public/styles/_wiki-playground.css';
+@import '@workspace-ci/web-components/styles/_match-panel.css';
 @import '../../public/styles/_wiki-feedback.css';
-@import '../../public/styles/_wiki-loading-states.css';
+@import '@workspace-ci/web-components/styles/_wiki-loading-states.css';
 @import '../../public/styles/_prose.css';
-@import '../../public/styles/_buttons.css';
-@import '../../public/styles/_tabs.css';
+@import '@workspace-ci/web-components/styles/_buttons.css';
+@import '@workspace-ci/web-components/styles/_tabs.css';
 @import '../../public/styles/_search.css';
 @import '../../public/styles/_wiki-footer.css';
 @import '../../public/styles/_wiki-breadcrumbs.css';
-@import '../../public/styles/_theme-toggle.css';
-@import '../../public/styles/_filter-pill.css';
+@import '@workspace-ci/web-components/styles/_theme-toggle.css';
+@import '@workspace-ci/web-components/styles/_filter-pill.css';
 @import '../../public/styles/_hook-list.css';
 @import '../../public/styles/_config-table.css';
-@import '../../public/styles/_toggle.css';
-@import '../../public/styles/_collapsible-section.css';
-@import '../../public/styles/_error-boundary.css';
+@import '@workspace-ci/web-components/styles/_toggle.css';
+@import '@workspace-ci/web-components/styles/_collapsible-section.css';
+@import '@workspace-ci/web-components/styles/_error-boundary.css';
 @import '../../public/styles/_project-detail.css';
-@import '../../public/styles/_badges.css';
-@import '../../public/styles/_wiki-card.css';
+@import '@workspace-ci/web-components/styles/_badges.css';
+@import '@workspace-ci/web-components/styles/_wiki-card.css';
 @import '../../public/styles/_entry-point-dialog.css';
 @import '../../public/styles/_config-dialog.css';
 @import '../../public/styles/_makefile-dialog.css';
-@import '../../public/styles/_a11y.css';
+@import '@workspace-ci/web-components/styles/_a11y.css';
 @import '../../public/styles/_mermaid.css';
 @import '../../public/styles/_standards.css';
 @import '../../public/styles/_hero.css';

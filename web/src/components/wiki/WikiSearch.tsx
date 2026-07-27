@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearch } from '@/hooks/useSearch'
-import { Modal } from '@/components/ui/Modal'
+import { Modal } from '@workspace-ci/web-components/components/Modal'
 import type { SearchIndexEntry } from '@/types/wiki'
 import clsx from 'clsx'
 

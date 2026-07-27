@@ -40,16 +40,6 @@
   flex-shrink: 0;
 }
 
-/* Theme-aware full-color logos: show one, hide the other per data-theme.
-   The wrapper element's own width/height (e.g. .wiki-sidebar__logo) controls
-   the rendered size; the imgs fill that box via object-fit:contain. */
-.theme-logo--themed { display: inline-flex; }
-.theme-logo--themed .theme-logo__light,
-.theme-logo--themed .theme-logo__dark { width: 100%; height: 100%; object-fit: contain; display: block; }
-.theme-logo--themed .theme-logo__dark { display: none; }
-[data-theme='dark'] .theme-logo--themed .theme-logo__light { display: none; }
-[data-theme='dark'] .theme-logo--themed .theme-logo__dark { display: block; }
-
 .wiki-sidebar__title {
   font-weight: 700;
   font-size: var(--wiki-brand-logotype-size);

@@ -4,7 +4,7 @@ import type { HookRecord } from '@/types/hooks'
 import type { FeedbackCounts } from '@/types/feedback'
 import type { EntryPointSource } from '@/types/entry-point'
 import type { WikiLabelsConfig } from '@/types/wiki-labels'
-import { WikiCard } from '@/components/wiki/WikiCard'
+import { Card } from '@workspace-ci/web-components/components/Card'
 import { StageFilter } from '@/components/wiki/StageFilter'
 import { TierFilter } from '@/components/wiki/TierFilter'
 import { FeedbackWidget } from '@/components/wiki/FeedbackWidget'
@@ -72,7 +72,7 @@ export function HookList({
           const isShell = hook.kind.startsWith('shell')
           const label = isShell ? `${hook.entry}()` : hook.entry
           return (
-            <WikiCard key={item.id} item={item}>
+            <Card key={item.id} item={item}>
               {src && html && (
                 <EntryPointDialog
                   name={label}
@@ -133,7 +133,7 @@ export function HookList({
                 upCount={counts.upvotes}
                 downCount={counts.downvotes}
               />
-            </WikiCard>
+            </Card>
           )
         })}
       </div>

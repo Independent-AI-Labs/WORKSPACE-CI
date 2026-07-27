@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import os
 import stat
-import subprocess
-import sys
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -271,34 +269,14 @@ def clear_config_override_cache() -> None:
     _load_override_manifest.cache_clear()
 
 
-def _has_immutable_flag(path: Path) -> bool:
-    try:
-        if sys.platform == "darwin":
-            out = subprocess.run(
-                ["stat", "-f", "%Sf", str(path)],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            return "uchg" in out.stdout
-        out = subprocess.run(
-            ["lsattr", "-d", str(path)],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-    except (OSError, subprocess.CalledProcessError) as exc:
-        print(f"ci: cannot read file flags for {path}: {exc}", file=sys.stderr)
-        return False
-    return "i" in out.stdout.split()[0]
-
-
 def exemption_file_state(path: Path | str) -> str:
     """Return the provenance state of an exemption/config file.
 
     One of: ``ok``, ``missing``, ``symlink``, ``not-regular``,
-    ``not-root-owned``, ``not-immutable``. Anything other than ``ok``
-    means the file must NOT be honored (fail-closed).
+    ``not-root-owned``. Anything other than ``ok`` means the file must
+    NOT be honored (fail-closed). Root ownership is the complete
+    invariant: exemption files are root-owned and only ever edited via
+    the root-gated yaml editor.
     """
     p = Path(path)
     try:
@@ -311,8 +289,6 @@ def exemption_file_state(path: Path | str) -> str:
         return "not-regular"
     if st.st_uid != 0:
         return "not-root-owned"
-    if not _has_immutable_flag(p):
-        return "not-immutable"
     return "ok"
 
 
@@ -321,7 +297,9 @@ class ExemptionFileError(RuntimeError):
 
     def __init__(self, path: Path | str, description: str, state: str) -> None:
         super().__init__(
-            f"{description} not compliant: {path} (state: {state}); run lock-exemptions"
+            f"{description} not compliant: {path} (state: {state}); "
+            "file must be root-owned (chown root:root); "
+            "edit only via sudo workspace-yaml-edit"
         )
 
 
@@ -330,8 +308,8 @@ def validate_exemption_file(
 ) -> None:
     """Fail-closed provenance validation for exemption/config files.
 
-    Raises ExemptionFileError unless the file exists, is a regular
-    non-symlink file owned by uid 0, and carries the immutable flag.
+    Raises ExemptionFileError unless the file exists and is a regular
+    non-symlink file owned by uid 0.
     """
     state = exemption_file_state(path)
     if state == "ok":

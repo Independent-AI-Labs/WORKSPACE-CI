@@ -1,5 +1,5 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
-import { ConfigTableLoadingState } from '@/components/loading-states/ConfigTableLoadingState'
+import { ConfigTableLoadingState } from '@workspace-ci/web-components/components/ConfigTableLoadingState'
 
 export default function ConfigLoading() {
   return (

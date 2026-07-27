@@ -113,8 +113,8 @@ Scope describes which files the check scans when triggered. Checks marked
 | Boot layout audit (`.boot-linux/`/`.boot-macos/` + `.venv/` alignment, **advisory**) | pre-commit | layout config |
 | Commit message format (`type: description`, body required) | commit-msg | message body |
 | Agent attribution / `Co-authored-by` pattern blocking | commit-msg | message body |
-| Full test suite + coverage enforcement (Python + shell + web/) | pre-push | whole project |
-| Web/JS quality (eslint, tsc, vitest via `make check-push`) | pre-push | `web/` |
+| Full test suite + coverage enforcement (Python + shell + JS packages) | pre-push | whole project |
+| Web/JS quality (eslint, tsc, vitest via `make check-push`) | pre-push | `web/`, `web-components/`, `hitl/web/` |
 | Co-authored / agent attribution in push range | pre-push | git history |
 | Dead code candidates (`dangle`, 13 languages, **advisory**) | pre-push | git-tracked sources per `dead_code.yaml` `scan_paths` |
 

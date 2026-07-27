@@ -242,13 +242,13 @@ ever writes into a parent's or sibling's boot directory.
 | FR-9.1 | The system SHALL provide a `ci_platform_name()` shell function in `lib/ci.sh` that echoes a lowercase platform identifier. On Linux, it SHALL echo `linux`. On macOS (Darwin), it SHALL echo `darwin`. |
 | FR-9.2 | `ci_platform_name()` SHALL use `uname -s` as the sole detection mechanism. The function SHALL NOT depend on `/etc/os-release`, `sw_vers`, or any platform-specific file. |
 | FR-9.3 | `ci_platform_name()` SHALL be a pure function with no side effects, no file I/O, and no external dependencies beyond `uname`. It SHALL be safe to call from any shell context (subshell, pipeline, trap handler). |
-| FR-9.4 | On any platform other than Linux or Darwin, `ci_platform_name()` SHALL echo `linux`. There is no fallback to a different boot directory name -- the platform determines the name, period. |
+| FR-9.4 | On any platform other than Linux or Darwin, `ci_platform_name()` SHALL echo `linux`. There is no alternate boot directory name -- the platform determines the name, period. |
 
 ### FR-10: Boot Directory Resolution API
 
 | ID | Requirement |
 |----|-------------|
-| FR-10.1 | The system SHALL provide a `ci_boot_dir()` shell function in `lib/ci.sh` that echoes the absolute path to the boot directory. The result SHALL be `CI_PROJECT_ROOT/$CI_BOOT_NAME`. No fallback. No environment variable override. |
+| FR-10.1 | The system SHALL provide a `ci_boot_dir()` shell function in `lib/ci.sh` that echoes the absolute path to the boot directory. The result SHALL be `CI_PROJECT_ROOT/$CI_BOOT_NAME`. No alternate path. No environment variable override. |
 | FR-10.2 | The boot directory name SHALL follow the pattern `.boot-<platform>` where `<platform>` is the output of `ci_platform_name()`. On Linux: `.boot-linux`. On macOS: `.boot-macos`. |
 | FR-10.3 | The system SHALL provide a `ci_boot_name()` shell function that echoes just the directory name (e.g. `.boot-linux` or `.boot-macos`), without the project root prefix. This is used by workspace root detection logic that needs to check for directory existence. |
 | FR-10.4 | When `ci.sh` is sourced, it SHALL resolve `CI_BOOT_DIR` (absolute path) and `CI_BOOT_NAME` (directory name) as variables available to all consumers. These SHALL be computed once at source-time, not on every invocation. |
@@ -305,7 +305,7 @@ ever writes into a parent's or sibling's boot directory.
 | FR-15.2 | `bootstrap-rust` MUST compute the Rust host triple using platform-aware logic: `aarch64-apple-darwin` on macOS ARM64, `x86_64-apple-darwin` on macOS Intel, `<arch>-unknown-linux-gnu` on Linux. The `uname -m` output `arm64` MUST be normalized to `aarch64` for Rust triple compatibility. |
 | FR-15.3 | `bootstrap-rust` MUST export `RUSTUP_HOME` and `CARGO_HOME` BEFORE the idempotency version check, so rustup proxies can resolve their home directory. |
 | FR-15.4 | `bootstrap-gitleaks` MUST select the correct tarball name based on platform: `gitleaks_<version>_darwin_<arch>.tar.gz` on macOS, `gitleaks_<version>_linux_<arch>.tar.gz` on Linux. |
-| FR-15.5 | All bootstrap scripts that verify downloaded artifacts MUST use `ci_sha256()` for portable SHA-256 checksum computation. The function tries `sha256sum`, then `shasum -a 256`, then `python3` as fallback. |
+| FR-15.5 | All bootstrap scripts that verify downloaded artifacts MUST use `ci_sha256()` for portable SHA-256 checksum computation. The function tries `sha256sum`, then `shasum -a 256`, then `python3`, in that order. |
 
 ### FR-16: macOS System Dependencies
 

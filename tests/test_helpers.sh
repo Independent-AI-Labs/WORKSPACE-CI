@@ -56,7 +56,7 @@ _restore_configs() {
 _link_lib_files() {
     local _ci_dir="$1"
     local f src
-    for f in ci.sh ci_owner.sh ci_seal.sh ci_deploy_lock.sh ci_helpers.sh ci_config_paths.sh ci_exemptions.sh checks.sh checks_*.sh \
+    for f in ci.sh ci_owner.sh ci_deploy_lock.sh ci_helpers.sh ci_config_paths.sh ci_exemptions.sh checks.sh checks_*.sh \
              check_banned_words.py check_silent_swallow.py \
              check_silent_swallow_base.py check_silent_swallow_python.py \
              check_silent_swallow_js.py check_silent_swallow_system.py \
@@ -192,7 +192,7 @@ _source_lib() {
     _stub_exemption_provenance
 }
 
-# _stub_exemption_provenance: neutralize the root-owned + immutable
+# _stub_exemption_provenance: neutralize the root-owned
 # provenance gate for tests. Tmp-workspace config files are symlinks/copies
 # owned by the test user, so they can never satisfy it. Mirrors the
 # monkeypatch fixtures used by the python unit tests. No shell test asserts

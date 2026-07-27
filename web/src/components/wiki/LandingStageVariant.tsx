@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useNarrowViewport } from '@/hooks/useNarrowViewport'
+import { useNarrowViewport } from '@workspace-ci/web-components/hooks/useNarrowViewport'
 
 interface LandingStageVariantProps {
   mode: 'stacked' | 'carousel'

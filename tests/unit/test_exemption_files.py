@@ -10,8 +10,8 @@ from ci import exemption_files
 from ci.exemption_files import (
     ensure_exemption_files,
     load_manifest,
-    lock_report,
     main,
+    state_report,
 )
 
 MANIFEST_ENTRIES = [
@@ -85,15 +85,15 @@ def test_ensure_missing_default_content_writes_empty(
     assert (tmp_path / "empty.yaml").read_text(encoding="utf-8") == ""
 
 
-# lock_report
+# state_report
 
 
-def test_lock_report_reports_state_per_entry(
+def test_state_report_reports_state_per_entry(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _patch_manifest(monkeypatch, MANIFEST_ENTRIES)
     (tmp_path / "alpha_exceptions.yaml").write_text("x\n", encoding="utf-8")
-    report = lock_report(tmp_path)
+    report = state_report(tmp_path)
     assert [p for p, _ in report] == [
         tmp_path / "alpha_exceptions.yaml",
         tmp_path / "sub/dir/beta.yaml",

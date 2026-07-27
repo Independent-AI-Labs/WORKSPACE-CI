@@ -2,7 +2,7 @@
 
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
-import { useNarrowViewport } from '@/hooks/useNarrowViewport'
+import { useNarrowViewport } from '@workspace-ci/web-components/hooks/useNarrowViewport'
 import {
   getHorizontalScrollOverflow,
   getHorizontalScrollStep,

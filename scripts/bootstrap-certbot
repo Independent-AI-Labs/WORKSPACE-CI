@@ -22,21 +22,23 @@ fi
 _log() { printf '[bootstrap-certbot] %s\n' "$*" >&2; }
 
 main() {
-    local target_dir tool_dir uv_bin boot_bin
+    local target_dir tool_dir python_dir uv_bin boot_bin
     boot_bin="${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/bin"
-    # .boot-linux/bin may be root-owned on shared VMs; fall back to repo-local .local/bin.
-    if [[ -n "${UV_TOOL_BIN_DIR:-}" ]]; then
-        target_dir="${UV_TOOL_BIN_DIR}"
-    elif [[ -w "${boot_bin}" ]]; then
-        target_dir="${boot_bin}"
-    else
-        target_dir="${CI_PROJECT_ROOT}/.local/bin"
-    fi
-    tool_dir="${UV_TOOL_DIR:-${CI_PROJECT_ROOT}/.local/uv-tools}"
+    # Containment: everything lives inside the boot dir. A root-locked boot
+    # bin is not a reason to escape to .local -- it means the operator must
+    # run this with elevation. Boot dir only, by design.
+    target_dir="${UV_TOOL_BIN_DIR:-${boot_bin}}"
+    tool_dir="${UV_TOOL_DIR:-${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/uv-tools}"
+    python_dir="${UV_PYTHON_INSTALL_DIR:-${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/python}"
     uv_bin="${boot_bin}/uv"
 
     if [[ ! -x "$uv_bin" ]]; then
         _log "ERROR: uv not found at $uv_bin -- run 'make install-boot-tools' first"
+        return 1
+    fi
+
+    if [[ ! -w "$target_dir" ]]; then
+        _log "ERROR: $target_dir not writable -- boot dir is root-locked; run elevated: sudo make install-certbot"
         return 1
     fi
 
@@ -57,7 +59,7 @@ main() {
         return 1
     fi
 
-    UV_TOOL_DIR="$tool_dir" UV_TOOL_BIN_DIR="$target_dir" \
+    UV_PYTHON_INSTALL_DIR="$python_dir" UV_TOOL_DIR="$tool_dir" UV_TOOL_BIN_DIR="$target_dir" \
         "$uv_bin" tool install certbot --with certbot-dns-cloudflare --force
 
     local v_out v_rc=0

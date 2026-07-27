@@ -3,7 +3,7 @@
 import { usePlayground } from '@/hooks/usePlayground'
 import { LanguageSelector } from '@/components/wiki/playground/LanguageSelector'
 import { PatternCategoryFilter } from '@/components/wiki/playground/PatternCategoryFilter'
-import { MatchPanel } from '@/components/wiki/playground/MatchPanel'
+import { MatchPanel } from '@workspace-ci/web-components/components/MatchPanel'
 import { CodeEditor } from '@/components/wiki/playground/CodeEditor'
 import type { ClassifiedPattern } from '@/types/patterns'
 import type { PlaygroundLanguage } from '@/types/wiki-labels'

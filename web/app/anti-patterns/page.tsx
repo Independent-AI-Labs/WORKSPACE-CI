@@ -4,7 +4,7 @@ import { getBannedPatterns, getSwallowPatterns, getWikiLabels } from '@/lib/yaml
 import { loadSwallowDetectors } from '@/lib/docs-loader'
 import { classifyAll, classifySwallowPatterns } from '@/lib/patterns'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
-import { highlightCode } from '@/lib/highlight'
+import { highlightCode } from '@workspace-ci/web-components/lib/highlight'
 
 export default async function PatternsPage() {
   const [config, swallowConfig] = await Promise.all([

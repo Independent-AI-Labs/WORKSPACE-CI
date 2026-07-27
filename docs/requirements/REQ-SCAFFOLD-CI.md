@@ -24,7 +24,7 @@
 - [SPEC-BOOT-LAYOUT](../specifications/SPEC-BOOT-LAYOUT.md): boot layout implementation -- informs generated `Makefile`'s `install-hooks` and `preflight` targets
 - [`config/required_hooks.yaml`](../../config/required_hooks.yaml): master hook registry (read-only by the generator)
 - [`lib/makefile_contract.mk`](../../lib/makefile_contract.mk): the contract the generated `Makefile` MUST satisfy
-- AGENTS.md S5 (shell-first), S13 (no silent fallback), S14 (shell strict mode): absolute constraints on the generator implementation
+- AGENTS.md S5 (shell-first), S13 (no silent degradation), S14 (shell strict mode): absolute constraints on the generator implementation
 
 ---
 
@@ -180,7 +180,7 @@ are independent and rerunnable. `scaffold-ci` does NOT call
 |----|-------------|
 | FR-SC-5.1 | The generator MUST compute `REL_CI = realpath --relative-to="$CONSUMER_DIR" "$CI_ROOT"` exactly once per run. |
 | FR-SC-5.2 | `$CI_ROOT` MUST be resolved from the script's own location (not from `pwd` or user argument): `_CI_ROOT="$(cd "$(dirname "$0")/.." && pwd)"`. |
-| FR-SC-5.3 | If `realpath(1)` is missing from PATH, the generator MUST fail fast with a non-zero exit code. No silent fallback to `readlink -f` heuristics or manual path-construction string manipulation (per AGENTS.md Rule 13). |
+| FR-SC-5.3 | If `realpath(1)` is missing from PATH, the generator MUST fail fast with a non-zero exit code. No silent degradation to `readlink -f` heuristics or manual path-construction string manipulation (per AGENTS.md Rule 13). |
 | FR-SC-5.4 | The generator MUST operate on a non-git consumer directory (realpath is filesystem-pure; no `git rev-parse --show-toplevel` dependency in the path-computation phase). |
 
 ### 2.3 Generated `.pre-commit-config.yaml`
