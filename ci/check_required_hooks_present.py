@@ -324,13 +324,16 @@ def _check_hooks_rendered(
     if not hooks_dir.is_dir():
         return [f".git/hooks not found at {hooks_dir}"]
     rendered = _read_rendered_hooks(hooks_dir)
+    required_markers = [
+        "CI-BUILTIN-EXEMPTION-COMPLIANCE",
+        "quality_exceptions.yaml preflight",
+    ]
+    if (project_dir / "scripts" / "generate-hooks").is_file():
+        required_markers.append("CI-BUILTIN-CATALOG-PROVENANCE")
     issues = [
         f"built-in block '{marker}' missing from .git/hooks/{stage}"
         for stage, content in rendered.items()
-        for marker in (
-            "CI-BUILTIN-EXEMPTION-COMPLIANCE",
-            "quality_exceptions.yaml preflight",
-        )
+        for marker in required_markers
         if marker not in content
     ]
     languages = _detect_languages(project_dir)

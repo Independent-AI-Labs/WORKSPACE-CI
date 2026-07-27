@@ -191,6 +191,30 @@ EOF
         w '    exit 1'
         w 'fi'
 
+    # CI-repo catalog provenance: in the CI work repo itself (detected by
+    # scripts/generate-hooks at the project root), EVERY config/*.yaml is
+    # policy: catalogs and schemas included. Agent-owned catalogs are a
+    # self-gate-weakening hole, so all of them must be root-owned regular
+    # files, edited only via the root-gated yaml editor.
+        w ''
+        w '# === CI catalog provenance (CI repo only, mandatory) ==='
+        w '# CI-BUILTIN-CATALOG-PROVENANCE'
+        w 'if [[ -f "$_ROOT/scripts/generate-hooks" && -d "$_ROOT/config" ]]; then'
+        w '    _catalog_fail=0'
+        w '    for _catalog in "$_ROOT"/config/*.yaml; do'
+        w '        [[ -e "$_catalog" ]] || continue'
+        w '        _catalog_state="$(ci_exemption_file_state "$_catalog")"'
+        w '        if [[ "$_catalog_state" != "ok" ]]; then'
+        w '            ci_fail "CI catalog not compliant: ${_catalog#$_ROOT/} (state: $_catalog_state)"'
+        w '            _catalog_fail=1'
+        w '        fi'
+        w '    done'
+        w '    if [[ "$_catalog_fail" -eq 1 ]]; then'
+        w "        echo \"  Fix: chown root:root config/*.yaml; edit via 'sudo workspace-yaml-edit'\""
+        w '        exit 1'
+        w '    fi'
+        w 'fi'
+
     # Compliance-report preamble (pre-commit only, non-blocking).
     # Always runs the compliance audit at the top of every commit
     # so the developer sees the current tier/violations before the hook

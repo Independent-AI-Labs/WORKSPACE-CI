@@ -192,6 +192,23 @@ install-hooks: ## (Re)generate native git hooks (root-owned hooks: run via sudo)
 	if [ -f scripts/cleanup-precommit ]; then bash scripts/cleanup-precommit; else echo "[INFO] cleanup-precommit not found, continuing" >&2; fi
 	bash scripts/reinstall-hooks
 
+.PHONY: lock-repo
+lock-repo: ## Root-lock config/*.yaml catalogs and regenerate root-owned hooks (root only)
+	bash scripts/lock-repo --config-only $(CURDIR)
+	env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' \
+		bash scripts/reinstall-hooks
+
+.PHONY: runtime-dirs
+runtime-dirs: ## Pre-create agent-owned runtime dirs (.venv, node_modules, egg-info); OWNER=<user> required, root only
+	test -n "$(OWNER)" || { echo "runtime-dirs: OWNER=<user> required" >&2; exit 1; }
+	install -d -o $(OWNER) -g $(OWNER) \
+		$(CURDIR)/.venv \
+		$(CURDIR)/node_modules \
+		$(CURDIR)/web/node_modules \
+		$(CURDIR)/web-components/node_modules \
+		$(CURDIR)/hitl/web/node_modules \
+		$(CURDIR)/workspace_ci.egg-info
+
 .PHONY: sync
 sync: ## Sync .venv deps + reinstall hooks
 	PATH="$(BOOT_BIN):$$PATH" $(UV) sync --extra dev
