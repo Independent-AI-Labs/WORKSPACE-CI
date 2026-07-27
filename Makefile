@@ -184,8 +184,8 @@ install-node: ## Bootstrap Node.js + npm into $(BOOT_NAME)/node-env/ (idempotent
 	bash scripts/bootstrap-node
 
 .PHONY: install-web-deps
-install-web-deps: install-node ## npm install JS workspace dependencies (repo root: web/ + web-components/ + hitl/web/)
-	PATH="$(BOOT_BIN):$$PATH" npm install
+install-web-deps: install-node ## npm ci JS workspace dependencies (repo root: web/ + web-components/ + hitl/web/)
+	PATH="$(BOOT_BIN):$$PATH" npm ci
 
 .PHONY: install-hooks
 install-hooks: ## (Re)generate native git hooks (root-owned hooks: run via sudo)
