@@ -276,8 +276,8 @@ check-push: ## Single-pass pre-push gate running ruff lint, mypy, shell unit tes
 _test-push-impl:
 	./tests/run_tests_unit.sh
 	./tests/run_tests_integration.sh
-	$(PYTEST) tests/unit --cov=ci --cov-report=term-missing --cov-fail-under=90 --tb=short -q
-	$(PYTEST) tests/integration --cov=ci --cov-report=term-missing --cov-fail-under=5 --tb=short -q
+	$(PYTEST) tests/unit --cov=ci --cov-report=term-missing --cov-fail-under=90 --tb=short
+	$(PYTEST) tests/integration --cov=ci --cov-report=term-missing --cov-fail-under=5 --tb=short
 	$(MAKE) -C web lint type-check test
 	$(MAKE) -C web-components lint type-check test
 	$(MAKE) -C hitl/web lint type-check test

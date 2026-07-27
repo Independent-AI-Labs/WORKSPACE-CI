@@ -533,7 +533,7 @@ do_apt_install() {
         return 0
     fi
     log_info "Installing ${#installable[@]} package(s) via apt: ${installable[*]}"
-    if $SUDO apt-get update -qq && $SUDO apt-get install -y "${installable[@]}"; then
+    if $SUDO apt-get update && $SUDO apt-get install -y "${installable[@]}"; then
         echo ""
         log_info "Installed: ${installable[*]}"
     else

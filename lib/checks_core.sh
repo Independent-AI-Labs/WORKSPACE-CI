@@ -35,7 +35,7 @@ _in_ignored_dir() {
 ci_check_unstaged() {
     local untracked
     untracked=$(git ls-files --others --exclude-standard)
-    if ! git diff --quiet || [ -n "$untracked" ]; then
+    if [[ -n "$(git diff --stat)" ]] || [ -n "$untracked" ]; then
         echo ""
         ci_fail "Unstaged or untracked files detected, auto-staging now."
         git diff

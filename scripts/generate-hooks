@@ -318,7 +318,7 @@ and re-run."
         elif [[ $_is_formatter -eq 1 ]]; then
             w '_rc=0'
             w "${h_cmd} || _rc=\$?"
-            w 'if ! git diff --quiet; then'
+            w 'if [[ -n "$(git diff --stat)" ]]; then'
             w '    git add -A'
             w "    ci_fail \"${h_name} modified files. Re-run: git commit\""
             w '    exit 1'

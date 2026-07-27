@@ -164,7 +164,7 @@ fi
 # -- Safety checks before rewrite --
 
 # Dirty worktree?
-if ! git diff --quiet || ! git diff --cached --quiet; then
+if [[ -n "$(git diff --stat)" || -n "$(git diff --cached --stat)" ]]; then
     ci_fail "Working tree has uncommitted changes. Commit or stash first."
     exit 1
 fi

@@ -126,7 +126,7 @@ if [[ "$_cur_branch" != "$_BRANCH" ]]; then
     log_error "WORKSPACE-CI HEAD is on '$_cur_branch', expected '$_BRANCH'"
     exit 1
 fi
-git_as_owner -C "$_WORK_REPO" fetch origin "$_BRANCH" --quiet
+git_as_owner -C "$_WORK_REPO" fetch origin "$_BRANCH"
 _ahead="$(git_as_owner -C "$_WORK_REPO" rev-list --count "origin/$_BRANCH..HEAD")"
 if [[ "$_ahead" != "0" ]]; then
     log_error "WORKSPACE-CI has $_ahead unpushed commit(s); push first:"
@@ -150,8 +150,9 @@ fi
 # runtime paths to be identical to the pushed origin ref, and re-sync the
 # venv from the hash-pinned lockfile as the owner so `uv run --no-sync`
 # under root resolves exactly the locked, hash-verified dependencies.
-if ! git_as_owner -C "$_WORK_REPO" diff --quiet "origin/$_BRANCH" HEAD -- \
-        scripts lib ci pyproject.toml uv.lock; then
+if ! _rt_diff="$(git_as_owner -C "$_WORK_REPO" diff "origin/$_BRANCH" HEAD -- \
+        scripts lib ci pyproject.toml uv.lock)" || [[ -n "$_rt_diff" ]]; then
+    [[ -n "$_rt_diff" ]] && printf '  %s\n' "$_rt_diff" >&2
     log_error "runtime paths (scripts, lib, ci, pyproject.toml, uv.lock) differ from origin/$_BRANCH"
     log_error "pull the work repo to origin/$_BRANCH before deploying"
     exit 1
@@ -159,18 +160,30 @@ fi
 log_info "syncing work repo venv to uv.lock (hash-verified) as $_REPO_OWNER"
 runuser -u "$_REPO_OWNER" -- env HOME="$_OWNER_HOME" \
     PATH="$_BOOT_BIN:/usr/local/bin:/usr/bin:/bin" \
-    uv sync --locked --all-extras --project "$_WORK_REPO" --quiet
+    uv sync --locked --all-extras --project "$_WORK_REPO"
 
 # 3. Fast-forward the deployment clone to the origin ref the work repo
 #    just fetched. Local transport: root never authenticates to SSH
 #    (see identity model above); ff-only semantics regardless.
 log_info "syncing $_DEPLOY_DIR to origin/$_BRANCH (via work repo refs)"
 git_as_root -C "$_DEPLOY_DIR" fetch "$_WORK_REPO" \
-    "+refs/remotes/origin/$_BRANCH:refs/remotes/origin/$_BRANCH" --quiet
-git_as_root -C "$_DEPLOY_DIR" checkout "$_BRANCH" --quiet
-if ! git_as_root -C "$_DEPLOY_DIR" merge --ff-only "origin/$_BRANCH" --quiet; then
-    log_error "$_DEPLOY_DIR cannot fast-forward to origin/$_BRANCH (diverged)"
-    log_error "inspect manually; do not force"
+    "+refs/remotes/origin/$_BRANCH:refs/remotes/origin/$_BRANCH"
+
+if ! _co_out="$(git_as_root -C "$_DEPLOY_DIR" checkout "$_BRANCH" 2>&1)"; then
+    log_error "checkout of $_BRANCH failed in $_DEPLOY_DIR:"
+    printf '  %s\n' "$_co_out" >&2
+    exit 1
+fi
+if ! _ff_out="$(git_as_root -C "$_DEPLOY_DIR" merge --ff-only "origin/$_BRANCH" 2>&1)"; then
+    printf '  %s\n' "$_ff_out" >&2
+    if [[ "$(git_as_root -C "$_DEPLOY_DIR" rev-parse HEAD)" == \
+          "$(git_as_root -C "$_DEPLOY_DIR" merge-base HEAD "origin/$_BRANCH")" ]]; then
+        log_error "$_DEPLOY_DIR fast-forward blocked by local tree state (see git output above)"
+        log_error "clear the reported paths and re-run deploy"
+    else
+        log_error "$_DEPLOY_DIR has diverged from origin/$_BRANCH (HEAD not an ancestor)"
+        log_error "inspect manually; do not force"
+    fi
     exit 1
 fi
 if [[ -n "$(git_as_root -C "$_DEPLOY_DIR" status --porcelain --untracked-files=no)" ]]; then

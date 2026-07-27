@@ -86,9 +86,9 @@ ci_verify_coverage() {
         case "$runner" in
             *pytest*)
                 if [[ "$coverage" == "false" ]]; then
-                    cmd="$runner $path --no-cov --tb=short -q"
+                    cmd="$runner $path --no-cov --tb=short"
                 else
-                    cmd="$runner $path --cov=$source_path --cov-report=term-missing --cov-fail-under=$min_cov --tb=short -q"
+                    cmd="$runner $path --cov=$source_path --cov-report=term-missing --cov-fail-under=$min_cov --tb=short"
                 fi
                 ;;
             *cargo*llvm-cov*)
@@ -231,7 +231,7 @@ ci_check_coverage_thresholds_no_devolution() {
         return 0
     fi
 
-    if git diff --cached --quiet -- "$config"; then
+    if [[ -z "$(git diff --cached --stat -- "$config")" ]]; then
         ci_pass "Coverage thresholds: unchanged, OK."
         return 0
     fi

@@ -70,6 +70,16 @@ inline_patterns:
     language: shell
     description: 'Redirects stderr to /dev/null, hiding error output from the operator.'
 
+  - id: sh-quiet-flag
+    regex: '(?:^|\s)--(?:quiet|silent)(?:\s|$)'
+    language: shell
+    description: 'Long quiet/silent flag suppresses failure context; capture output and print it on failure instead.'
+
+  - id: sh-short-q-noisy
+    regex: '\b(?:apt|apt-get|systemctl|pytest|uv|cloc|cargo|npm|npx|pip|pip3|dpkg)\b[^\n|;]*\s-[a-zA-Z]*q[a-zA-Z]*(?:\s|$)'
+    language: shell
+    description: 'Short -q on a noisy tool hides failure context (grep -q is exempt: it is the canonical exit-status idiom).'
+
   - id: sh-set-plus-e
     regex: '^\s*set\s+\+[eE]\b'
     language: shell

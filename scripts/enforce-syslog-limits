@@ -108,7 +108,7 @@ else
 fi
 
 _rsyslog_rc=0
-systemctl is-active --quiet rsyslog 2>&1 || _rsyslog_rc=$?
+_rsyslog_state="$(systemctl is-active rsyslog 2>&1)" || _rsyslog_rc=$?
 if [[ $_rsyslog_rc -eq 0 ]]; then
     systemctl restart rsyslog
     echo "    rsyslog restarted"
