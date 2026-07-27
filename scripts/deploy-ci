@@ -301,15 +301,21 @@ UV_CACHE_DIR="${_root_home:-/root}/.cache/uv" \
 
 # 9. Runtime trees (.venv, node_modules) stay agent-owned per the header
 #    contract: generated hooks run `uv run` / npm as the agent and need
-#    writability. Install them as the invoking operator, not root.
-if [[ -n "${SUDO_USER:-}" && "$SUDO_USER" != "root" ]]; then
-    _agent_home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
-    log_info "installing python + web deps as $SUDO_USER (agent-owned .venv, node_modules)"
-    [[ -n "$_agent_home" ]] || { log_error "no home for $SUDO_USER"; exit 1; }
-    sudo -u "$SUDO_USER" HOME="$_agent_home" \
-        make -C "$_DEPLOY_DIR" install-python-deps install-web-deps
-else
-    log_warn "SUDO_USER unknown; run as agent: make -C $_DEPLOY_DIR install-python-deps install-web-deps"
-fi
+#    writability. The agent identity is explicit: the owner of the work
+#    repo ($_REPO_OWNER), the only account whose hooks consume this tree.
+#    SUDO_USER is not consulted: this script runs as root directly
+#    (EUID gate at the top).
+_agent_home="$(getent passwd "$_REPO_OWNER" | cut -d: -f6)"
+[[ -n "$_agent_home" ]] || { log_error "no home for $_REPO_OWNER"; exit 1; }
+log_info "pre-creating agent-owned runtime dirs for $_REPO_OWNER"
+install -d -o "$_REPO_OWNER" -g "$_REPO_OWNER" \
+    "$_DEPLOY_DIR/.venv" \
+    "$_DEPLOY_DIR/node_modules" \
+    "$_DEPLOY_DIR/web/node_modules" \
+    "$_DEPLOY_DIR/web-components/node_modules" \
+    "$_DEPLOY_DIR/hitl/web/node_modules"
+log_info "installing python + web deps as $_REPO_OWNER (agent-owned .venv, node_modules)"
+runuser -u "$_REPO_OWNER" -- env HOME="$_agent_home" \
+    make -C "$_DEPLOY_DIR" install-python-deps install-web-deps
 
 log_info "deploy-ci complete: $_DEPLOY_DIR @ $_deployed (root-locked, tools installed)"
