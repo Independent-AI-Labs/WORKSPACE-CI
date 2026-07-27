@@ -20,7 +20,7 @@
 #   $CI_PROJECT_ROOT/$CI_BOOT_NAME/bin/npx    (symlink)
 #
 # Overrideable env vars:
-#   $NODE_VERSION  : Node.js version to fetch (default: 24.11.1).
+#   $NODE_VERSION  : Node.js version to fetch (default: 24.15.0).
 #   $NODE_ENV_DIR  : override install target directory.
 #
 # Supply-chain pinning: SHA256 verification is MANDATORY and always on.
@@ -35,7 +35,7 @@
 
 set -euo pipefail
 
-NODE_VERSION="${NODE_VERSION:-24.11.1}"
+NODE_VERSION="${NODE_VERSION:-24.15.0}"
 
 _ci_lib="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
 # shellcheck source=lib/ci.sh

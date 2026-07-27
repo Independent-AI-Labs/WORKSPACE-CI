@@ -2,5 +2,5 @@
 
 [[IgnoredVulns]]
 id = "GHSA-mh99-v99m-4gvg"
-reason = "brace-expansion 1.x is pulled by minimatch@3 (eslint transitive, dev-only). The 5.x fix has an incompatible API (no expand export) and breaks eslint. DoS requires attacker-controlled glob patterns; all glob inputs here are repo-local config. Revisit when eslint drops minimatch@3."
+reason = "brace-expansion 1.x is pulled by minimatch@3 (eslint transitive, dev-only). The 5.x fix has an incompatible API (no expand export) and breaks eslint. Verified 2026-07-27: eslint@10.8.0 itself uses minimatch@10, but eslint-plugin-import@2.32.0, eslint-plugin-jsx-a11y@6.10.2, eslint-plugin-react@7.37.5 (all latest stable; peer ranges cap eslint <=9) and @eslint/eslintrc@3.3.6 still depend on minimatch@3, and eslint-plugin-react 7.37.5 is runtime-incompatible with eslint 10, so no upstream-fixed chain exists. DoS requires attacker-controlled glob patterns; all glob inputs here are repo-local config. Revisit when the eslint plugin ecosystem drops minimatch@3."
 ignoreUntil = 2026-10-27
