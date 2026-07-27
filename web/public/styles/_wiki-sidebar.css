@@ -14,7 +14,13 @@
   display: flex;
   align-items: center;
   gap: var(--wiki-nav-item-gap);
-  padding: var(--space-3) var(--wiki-inset-x);
+  /* Left inset centers the 32px logo on the same axis as the nav item icons
+     (and the collapsed-rail hamburger); right inset aligns the collapse arrow
+     glyph with the bracketed nav counters. */
+  padding: var(--space-3)
+    calc(var(--wiki-nav-item-padding-x) - var(--space-1))
+    var(--space-3)
+    calc((var(--wiki-sidebar-width-collapsed) - var(--space-8)) / 2);
   border-bottom: 1px solid var(--border);
   line-height: 1;
   min-height: var(--wiki-chrome-header-height);

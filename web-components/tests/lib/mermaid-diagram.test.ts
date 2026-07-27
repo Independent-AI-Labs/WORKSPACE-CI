@@ -274,7 +274,26 @@ describe('mountMermaidDiagram', () => {
     ctrl.destroy()
   })
 
-  it('wheel zoom calls preventDefault and changes the viewBox', async () => {
+  it('ctrl+wheel zoom calls preventDefault and changes the viewBox', async () => {
+    const frame = makeFrame('graph TD\nA-->B')
+    const ctrl = mountMermaidDiagram(frame)
+    await ctrl.render(fakeRunner())
+    const pre = frame.querySelector('pre.mermaid')!
+    const before = viewBoxOf(frame)
+    const event = new WheelEvent('wheel', {
+      deltaY: -120,
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    const preventSpy = vi.spyOn(event, 'preventDefault')
+    pre.dispatchEvent(event)
+    expect(preventSpy).toHaveBeenCalled()
+    expect(viewBoxOf(frame)).not.toBe(before)
+    ctrl.destroy()
+  })
+
+  it('plain wheel does not zoom or preventDefault (page scroll passes through)', async () => {
     const frame = makeFrame('graph TD\nA-->B')
     const ctrl = mountMermaidDiagram(frame)
     await ctrl.render(fakeRunner())
@@ -283,8 +302,18 @@ describe('mountMermaidDiagram', () => {
     const event = new WheelEvent('wheel', { deltaY: -120, bubbles: true, cancelable: true })
     const preventSpy = vi.spyOn(event, 'preventDefault')
     pre.dispatchEvent(event)
-    expect(preventSpy).toHaveBeenCalled()
-    expect(viewBoxOf(frame)).not.toBe(before)
+    expect(preventSpy).not.toHaveBeenCalled()
+    expect(viewBoxOf(frame)).toBe(before)
+    ctrl.destroy()
+  })
+
+  it('shows a ctrl+scroll hint in the toolbar', async () => {
+    const frame = makeFrame('graph TD\nA-->B')
+    const ctrl = mountMermaidDiagram(frame)
+    await ctrl.render(fakeRunner())
+    const hint = frame.querySelector('.mermaid-toolbar .mermaid-toolbar__hint')
+    expect(hint).not.toBeNull()
+    expect(hint?.textContent).toBe('Ctrl + scroll to zoom')
     ctrl.destroy()
   })
 

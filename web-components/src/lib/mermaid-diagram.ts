@@ -58,6 +58,10 @@ function buildToolbar(): HTMLDivElement {
   toolbar.className = 'mermaid-toolbar'
   toolbar.setAttribute('role', 'toolbar')
   toolbar.setAttribute('aria-label', 'Diagram controls')
+  const hint = document.createElement('span')
+  hint.className = 'mermaid-toolbar__hint'
+  hint.textContent = 'Ctrl + scroll to zoom'
+  toolbar.appendChild(hint)
   let lastGroup = ''
   for (const action of TOOLBAR_ACTIONS) {
     if (lastGroup && action.group !== lastGroup) {
@@ -93,7 +97,7 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
   pre.classList.add('mermaid-viewport')
   pre.setAttribute('tabindex', '0')
   pre.setAttribute('role', 'group')
-  pre.setAttribute('aria-label', 'Diagram viewport, scroll to zoom, drag to pan')
+  pre.setAttribute('aria-label', 'Diagram viewport, Ctrl+scroll to zoom, drag to pan')
 
   function fitSvgToContainer(target: SVGSVGElement): void {
     target.style.display = 'block'
@@ -110,6 +114,21 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
     const heightAttr = target.getAttribute('height')
     if (widthAttr?.includes('%')) target.removeAttribute('width')
     if (heightAttr?.includes('%')) target.removeAttribute('height')
+    // Tall diagrams would be clipped by the viewport's max-height (50vh).
+    // Cap the render width so the height fits; the user can zoom in for detail.
+    const liveVb = parseViewBox(target.getAttribute('viewBox'))
+    if (liveVb && liveVb.h > 0) {
+      const preStyle = getComputedStyle(pre)
+      const maxHeight = parseFloat(preStyle.maxHeight)
+      const contentWidth =
+        pre.clientWidth - parseFloat(preStyle.paddingLeft) - parseFloat(preStyle.paddingRight)
+      if (Number.isFinite(maxHeight) && contentWidth > 0) {
+        const aspect = liveVb.w / liveVb.h
+        if (contentWidth / aspect > maxHeight) {
+          target.style.width = `${Math.round(maxHeight * aspect)}px`
+        }
+      }
+    }
   }
 
   function syncPannableState(): void {
@@ -258,6 +277,9 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
 
   function onWheel(e: WheelEvent): void {
     if (!svg) return
+    // Only zoom on Ctrl/Cmd+scroll so plain wheel keeps scrolling the page.
+    // (Browsers report macOS trackpad pinch-zoom as wheel with ctrlKey set.)
+    if (!e.ctrlKey && !e.metaKey) return
     e.preventDefault()
     const rect = svg.getBoundingClientRect()
     const pivotX = e.clientX - rect.left

@@ -108,7 +108,7 @@ describe('WikiSidebar', () => {
 
   it('renders all nav items', () => {
     renderSidebar()
-    expect(screen.getByText('Enforced Policies')).toBeInTheDocument()
+    expect(screen.getByText('Policy Automation')).toBeInTheDocument()
     expect(screen.getByText('Guard Policies')).toBeInTheDocument()
     expect(screen.getByText('LLM Gateway')).toBeInTheDocument()
     expect(screen.getByText('Static Analysis')).toBeInTheDocument()
@@ -127,7 +127,7 @@ describe('WikiSidebar', () => {
 
   it('renders [0] for Runtime Hooks', () => {
     renderSidebar()
-    const runtimeHooksLink = screen.getByText('Enforced Policies').closest('a')
+    const runtimeHooksLink = screen.getByText('Policy Automation').closest('a')
     expect(runtimeHooksLink).toHaveTextContent('[0]')
   })
 

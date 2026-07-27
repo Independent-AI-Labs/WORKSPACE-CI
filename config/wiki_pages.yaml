@@ -56,11 +56,11 @@ pages:
     keywords:
       - guard
       - config
-  - id: page-enforced-policies
-    title: Enforced Policies
+  - id: page-policy-automation
+    title: Policy Automation
     section: Pages
     content: Runtime policy enforcement for AI agent execution monitoring
-    href: /enforced-policies
+    href: /policy-automation
     keywords:
       - runtime
       - policies

@@ -13,7 +13,7 @@ export const HOME_NAV_ITEM: WikiNavItem = { href: '/', label: 'Home', icon: 'ri-
 export const WIKI_NAV_ITEMS: WikiNavItem[] = [
   { href: '/projects', label: 'Open Source', icon: 'ri-dna-line', count: 'projects' },
   { href: '/hooks', label: 'Git Hooks', icon: 'ri-git-commit-line', count: 'hooks' },
-  { href: '/enforced-policies', label: 'Enforced Policies', icon: 'ri-pulse-line', count: 'runtimeHooks' },
+  { href: '/policy-automation', label: 'Policy Automation', icon: 'ri-pulse-line', count: 'runtimeHooks' },
   { href: '/anti-patterns', label: 'Anti-Patterns', icon: 'ri-error-warning-line', count: 'patterns' },
   { href: '/config', label: 'Config Files', icon: 'ri-settings-3-line', count: 'configs' },
   { href: '/tooling', label: 'Tools & Scripts', icon: 'ri-tools-line', count: 'scripts' },
