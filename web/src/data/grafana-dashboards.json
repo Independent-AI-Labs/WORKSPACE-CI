@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "dashboards": [
+    {
+      "title": "Gateway Cost Leaderboard",
+      "path": "/d/gateway-cost-leaderboard/gateway-cost-leaderboard",
+      "query": "orgId=1&from=now-30d&to=now&timezone=browser&var-model=$__all&var-api_key=$__all&refresh=5s",
+      "source": "WORKSPACE-GATEWAY/conf/grafana/dashboards/gateway-cost-leaderboard.json"
+    },
+    {
+      "title": "Gateway Cost & Usage",
+      "path": "/d/gateway-cost-usage/gateway-cost-and-usage",
+      "query": "orgId=1&from=now-30d&to=now&timezone=browser&var-model=$__all&var-api_key=$__all&refresh=5s",
+      "source": "WORKSPACE-GATEWAY/conf/grafana/dashboards/gateway-cost-usage.json"
+    },
+    {
+      "title": "Gateway Operations & Health",
+      "path": "/d/gateway-ops-health/gateway-operations-and-health",
+      "query": "orgId=1&from=now-30d&to=now&timezone=browser&var-model=$__all&var-api_key=$__all&refresh=5s",
+      "source": "WORKSPACE-GATEWAY/conf/grafana/dashboards/gateway-ops-health.json"
+    }
+  ]
+}

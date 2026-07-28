@@ -14,8 +14,7 @@ process.on('unhandledRejection', (reason) => {
 })
 
 const WEB_DIR = process.cwd()
-const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT
-  ?? path.resolve(WEB_DIR, '..', '..')
+const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT ?? path.resolve(WEB_DIR, '..', '..')
 const DEST_DIR = path.resolve(WEB_DIR, 'public', 'logos')
 
 function abort(message) {
@@ -24,28 +23,43 @@ function abort(message) {
 }
 
 // Local branding logos (themed variants) copied from this repo's res/ dir
-// into public/ so branding.yaml paths resolve. Named explicitly so a stale
-// file in public/ never survives a sync.
-const LOCAL_LOGOS = [
-  { src: 'res/LOGO.png', dest: 'public/LOGO.png' },
-  { src: 'res/LOGO_DARK_THEME.png', dest: 'public/LOGO_DARK_THEME.png' },
-  { src: 'res/LOGO_LIGHT_THEME.png', dest: 'public/LOGO_LIGHT_THEME.png' },
-]
+// into public/ so branding.yaml paths resolve. Derived from branding.yaml so
+// a stale file in public/ never survives a sync.
+function loadLocalLogos() {
+  const branding = load(readFileSync(path.resolve(WEB_DIR, 'branding.yaml'), 'utf8'))
+  const keys = ['logo_path', 'logo_path_dark', 'logo_path_light']
+  return keys
+    .map((key) => branding[key])
+    .filter((p) => typeof p === 'string' && p.startsWith('/'))
+    .map((publicPath) => ({
+      src: path.join('res', path.basename(publicPath)),
+      dest: path.join('public', publicPath),
+    }))
+}
 
 function loadProjects() {
+  const generatedPath = path.resolve(WEB_DIR, 'src', 'data', 'projects-registry.json')
+  if (existsSync(generatedPath)) {
+    return JSON.parse(readFileSync(generatedPath, 'utf8')).projects ?? []
+  }
   const raw = readFileSync(resolveConfigPath('projects'), 'utf8')
   const config = load(raw)
   return config.projects ?? []
 }
 
-function resolveLogoSource(slug, repoName) {
+function resolveRepoDir(slug, repoName) {
   if (slug === 'workspace-vm') {
     if (process.env.WORKSPACE_PROJECTS_ROOT) {
-      return path.resolve(PROJECTS_ROOT, 'WORKSPACE-VM', 'res', 'LOGO.png')
+      return path.resolve(PROJECTS_ROOT, 'WORKSPACE-VM')
     }
-    return path.resolve(PROJECTS_ROOT, '..', 'res', 'LOGO.png')
+    return path.resolve(PROJECTS_ROOT, '..')
   }
-  return path.resolve(PROJECTS_ROOT, repoName, 'res', 'LOGO.png')
+  return path.resolve(PROJECTS_ROOT, repoName)
+}
+
+function resolveLogoSource(project) {
+  const logo = project.logo ?? path.join('res', 'LOGO.png')
+  return path.join(resolveRepoDir(project.slug, project.repoName), logo)
 }
 
 async function syncLogos() {
@@ -57,15 +71,16 @@ async function syncLogos() {
   const results = await Promise.all(
     projects
       .filter((p) => p.logoPath)
-      .map(async ({ slug, repoName }) => {
-        const src = resolveLogoSource(slug, repoName)
+      .map(async (project) => {
+        const { slug } = project
+        const src = resolveLogoSource(project)
         if (!existsSync(src)) {
           return { slug, ok: false, reason: `missing source: ${src}` }
         }
         const dest = path.resolve(DEST_DIR, `${slug}.png`)
         await fs.copyFile(src, dest)
         return { slug, ok: true, dest }
-      }),
+      })
   )
   for (const r of results) {
     if (r.ok) {
@@ -76,7 +91,7 @@ async function syncLogos() {
   }
 
   // Local branding logos (themed variants) -> public/
-  for (const { src, dest } of LOCAL_LOGOS) {
+  for (const { src, dest } of loadLocalLogos()) {
     const srcAbs = path.resolve(WEB_DIR, src)
     const destAbs = path.resolve(WEB_DIR, dest)
     if (!existsSync(srcAbs)) {

@@ -25,4 +25,17 @@ export interface GuardConfigEntry {
   hasSchema: boolean
   description?: string
   fieldCount?: number
+  category?: string
+}
+
+export interface GuardPolicyIndexEntry {
+  id: string
+  title: string
+  category?: string
+  description?: string
+}
+
+export interface GuardPolicyIndex {
+  version: number
+  policies: GuardPolicyIndexEntry[]
 }

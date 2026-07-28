@@ -5,6 +5,10 @@ export interface ProjectEntry {
   repoName: string
   icon: string
   logoPath?: string
+  description?: string
+  grafanaSubtitle?: string
+  grafanaPort?: number
+  startCommand?: string
   readmePath: string
   makefilePath: string
   repoUrl?: string
@@ -18,6 +22,7 @@ export interface ProjectSummary {
   repoName: string
   icon: string
   logoPath?: string
+  description?: string
   title: string
   summary: string
   repoUrl?: string

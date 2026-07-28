@@ -12,6 +12,7 @@ import {
   DEV_GRAFANA_BASE_URL,
   normalizeGrafanaPublicBase,
 } from '@/lib/grafana-url'
+import { getGrafanaProject } from '@/lib/project-registry'
 
 export type { GrafanaDashboardConfig } from '@/lib/grafana-url'
 
@@ -39,14 +40,36 @@ export interface Branding {
 }
 
 const BRANDING_PATH = join(process.cwd(), 'branding.yaml')
+const GRAFANA_DASHBOARDS_PATH = join(process.cwd(), 'src', 'data', 'grafana-dashboards.json')
 
-type RawBranding = Omit<Branding, 'grafana_dashboards'> & {
+type RawBranding = Omit<Branding, 'grafana_dashboards' | 'grafana_subtitle'> & {
+  grafana_dashboards?: GrafanaDashboardSource[]
+  grafana_subtitle?: string
+}
+
+type ResolvedRawBranding = Omit<Branding, 'grafana_dashboards'> & {
   grafana_dashboards: GrafanaDashboardSource[]
 }
 
-function loadRawBranding(): RawBranding {
+function loadRawBranding(): ResolvedRawBranding {
   const raw = readFileSync(BRANDING_PATH, 'utf8')
-  return load(raw) as RawBranding
+  const branding = load(raw) as RawBranding
+  return {
+    ...branding,
+    grafana_subtitle: getGrafanaProject()?.grafanaSubtitle ?? branding.grafana_subtitle ?? '',
+    grafana_dashboards: loadGeneratedDashboards() ?? branding.grafana_dashboards ?? [],
+  }
+}
+
+function loadGeneratedDashboards(): GrafanaDashboardSource[] | null {
+  try {
+    const raw = readFileSync(GRAFANA_DASHBOARDS_PATH, 'utf8')
+    const data = JSON.parse(raw) as { dashboards?: GrafanaDashboardSource[] }
+    return data.dashboards ?? null
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+    return null
+  }
 }
 
 export function applyGrafanaBaseUrl(branding: Branding, base?: string): Branding {

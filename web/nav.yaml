@@ -1,0 +1,185 @@
+version: 1
+# Single route manifest: sidebar nav (nav: blocks) and search index metadata
+# (content/keywords) are derived from this file. wiki-nav.json and the search
+# index are generated from it; do not duplicate route info elsewhere.
+pages:
+  - id: page-home
+    title: Home
+    section: Pages
+    content: 'Mission, tech stack, and rotating posts on zero-trust agents and digital sovereignty'
+    href: /
+    nav:
+      label: Home
+      icon: ri-home-line
+    keywords:
+      - home
+      - mission
+      - landing
+      - sovereignty
+      - us sovereignty
+      - clankers
+  - id: page-projects
+    title: Projects
+    section: Pages
+    content: 'Project catalogue: browse READMEs for all backend projects'
+    href: /projects
+    nav:
+      label: Open Source
+      icon: ri-dna-line
+      count: projects
+    keywords:
+      - projects
+      - catalogue
+      - open source
+      - readme
+  - id: page-system-policies
+    title: System Policies
+    section: Pages
+    content: Meta and applied guardrails - policy invariance and filesystem sandboxing, LLM moderation, agent auditing, file access and network monitoring
+    href: /system-policies
+    nav:
+      label: System Policies
+      icon: ri-pulse-line
+      count: runtimeHooks
+    keywords:
+      - runtime
+      - policies
+      - enforcement
+      - monitoring
+      - audit
+  - id: page-hooks
+    title: Git Hooks
+    section: Pages
+    content: Required git hooks reference
+    href: /hooks
+    nav:
+      label: Git Hooks
+      icon: ri-git-commit-line
+      count: hooks
+    keywords:
+      - hooks
+      - pre-commit
+      - git
+  - id: page-patterns
+    title: Anti-Patterns
+    section: Pages
+    content: Banned words and patterns reference
+    href: /anti-patterns
+    nav:
+      label: Anti-Patterns
+      icon: ri-error-warning-line
+      count: patterns
+    keywords:
+      - patterns
+      - banned
+      - words
+  - id: page-hook-configs
+    title: Hook Configs
+    section: Pages
+    content: Hook configuration files reference
+    href: /hook-configs
+    nav:
+      label: Hook Configs
+      icon: ri-settings-3-line
+      count: configs
+    keywords:
+      - config
+      - configuration
+  - id: page-sandbox-configs
+    title: Sandbox Configs
+    section: Pages
+    content: Sandbox and guard configurations reference
+    href: /sandbox-configs
+    nav:
+      label: Sandbox Configs
+      icon: ri-shield-keyhole-line
+      count: guards
+    keywords:
+      - guard
+      - sandbox
+      - config
+  - id: page-tooling
+    title: Tools & Scripts
+    section: Pages
+    content: Tooling and scripts reference
+    href: /tooling
+    nav:
+      label: Tools & Scripts
+      icon: ri-tools-line
+      count: scripts
+    keywords:
+      - tooling
+      - scripts
+      - make
+  - id: page-standards
+    title: AI Governance
+    section: Pages
+    content: AI standards, regulations, frameworks, and declarations
+    href: /standards
+    nav:
+      label: AI Governance
+      icon: ri-book-marked-line
+      count: standards
+    keywords:
+      - standards
+      - regulations
+      - eu ai act
+      - nist
+      - oecd
+      - unesco
+      - iso
+      - ieee
+      - g7
+      - un
+      - coe
+  - id: page-llm-gateway
+    title: LLM Gateway
+    section: Pages
+    content: Gateway for routing, auditing, and governing LLM API calls
+    href: /llm-gateway
+    nav:
+      label: LLM Gateway
+      icon: ri-globe-line
+      divider: true
+    keywords:
+      - llm
+      - gateway
+      - routing
+      - audit
+      - token
+  - id: page-checks
+    title: Static Analysis
+    section: Pages
+    content: CI checks reference
+    href: /checks
+    nav:
+      label: Static Analysis
+      icon: ri-check-double-line
+    keywords:
+      - checks
+      - ci
+  - id: page-playground
+    title: Playground
+    section: Pages
+    content: Pattern testing playground
+    href: /playground
+    nav:
+      label: Playground
+      icon: ri-code-box-line
+    keywords:
+      - playground
+      - test
+      - regex
+  - id: page-integration
+    title: Integration Guide
+    section: Pages
+    content: Integration guide
+    href: /integration
+    nav:
+      label: Integration Guide
+      icon: ri-plug-line
+      divider: true
+    keywords:
+      - integration
+      - ci
+      - setup

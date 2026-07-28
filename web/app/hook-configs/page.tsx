@@ -2,13 +2,12 @@ import { WikiShell } from '@/components/wiki/WikiShell'
 import { ConfigDialog } from '@/components/wiki/ConfigDialog'
 import { FeedbackWidget } from '@/components/wiki/FeedbackWidget'
 import { CardListSection } from '@workspace-ci/web-components/components/CardListSection'
-import { guardConfigAdapter, deriveCategories } from '@/lib/card-adapters'
+import { configAdapter, deriveCategories } from '@/lib/card-adapters'
 import {
-  getGuardConfigIndex,
-  getGuardConfigEntries,
-  getGuardConfigSchema,
-  getGuardConfigRawYaml,
-  getGuardConfig,
+  getConfigIndex,
+  getConfigSchema,
+  getConfigRawYaml,
+  getConfigValue,
   getWikiLabels,
 } from '@/lib/yaml-loader'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
@@ -16,27 +15,26 @@ import { highlightCode } from '@workspace-ci/web-components/lib/highlight'
 import type { ConfigSchema } from '@/types/content'
 import type { ReactNode } from 'react'
 
-export default async function GuardPage() {
-  const names = await getGuardConfigIndex()
-  const entries = getGuardConfigEntries(names)
+export default async function ConfigPage() {
+  const configs = await getConfigIndex()
   const labels = getWikiLabels()
-  const items = guardConfigAdapter(entries, labels)
+  const items = configAdapter(configs, labels)
   const categories = deriveCategories(items)
-  const feedbackCounts = getAllFeedbackCounts('guard')
+  const feedbackCounts = getAllFeedbackCounts('config')
 
   const schemas: Record<string, ConfigSchema | null> = {}
   const rawYamls: Record<string, string> = {}
   const highlightedHtml: Record<string, string> = {}
   const values: Record<string, Record<string, unknown>> = {}
 
-  for (const e of entries) {
-    schemas[e.name] = await getGuardConfigSchema(e.name)
-    rawYamls[e.name] = getGuardConfigRawYaml(e.name)
-    highlightedHtml[e.name] = await highlightCode(rawYamls[e.name], 'yaml')
+  for (const c of configs) {
+    schemas[c.name] = await getConfigSchema(c.name)
+    rawYamls[c.name] = getConfigRawYaml(c.name)
+    highlightedHtml[c.name] = await highlightCode(rawYamls[c.name], 'yaml')
     try {
-      values[e.name] = await getGuardConfig(e.name)
+      values[c.name] = await getConfigValue(c.name)
     } catch {
-      values[e.name] = {}
+      values[c.name] = {}
     }
   }
 
@@ -52,17 +50,17 @@ export default async function GuardPage() {
         {html && (
           <ConfigDialog
             name={`${item.id}.yaml`}
-            sourceFile={`WORKSPACE-GUARD/config/${item.id}.yaml`}
+            sourceFile={`config/${item.id}.yaml`}
             rawContent={raw}
             highlightedHtml={html}
             schema={schema}
             values={vals}
-            titleId={`guard-src-${item.id}`}
+            titleId={`config-src-${item.id}`}
           />
         )}
         <FeedbackWidget
           targetId={item.id}
-          targetType="guard"
+          targetType="config"
           upCount={counts.upvotes}
           downCount={counts.downvotes}
         />
@@ -72,17 +70,17 @@ export default async function GuardPage() {
 
   return (
     <WikiShell>
-      <h1>Guard Policy Reference</h1>
+      <h1>Hook Configs</h1>
       <p className="page-intro">
-        Guard policy configurations from the sibling WORKSPACE-GUARD repository.
-        The guard tree is a soft dependency; configs appear here when available.
+        YAML configuration files and their field-level documentation. Each config may have an
+        associated schema that documents required and optional fields.
       </p>
       <CardListSection
         items={items}
         categories={categories}
-        itemLabel="guard policies"
+        itemLabel="configs"
         cardContent={cardContent}
-        emptyMessage="No guard policy configs found at WORKSPACE_GUARD_CONFIG_ROOT. The guard tree is a soft dependency; check that the sibling WORKSPACE-GUARD repo is checked out."
+        emptyMessage="No configuration files found. Check that the config directory is accessible at WORKSPACE_CI_CONFIG_ROOT."
       />
     </WikiShell>
   )

@@ -27,15 +27,14 @@ export function deriveCategories(items: CardItem[]): { id: string; label: string
 
 export function projectAdapter(
   projects: ProjectSummary[],
-  languagePercents: Record<string, LanguagePercent[]> = {},
+  languagePercents: Record<string, LanguagePercent[]> = {}
 ): CardItem[] {
   return projects.map((p) => {
     const langPercents = languagePercents[p.repoName] ?? []
     const maxPercent = langPercents.length > 0 ? langPercents[0].percent : 0
     const tags: CardItem['tags'] = langPercents.map((lp) => {
       const factor = maxPercent > 0 ? lp.percent / maxPercent : 0
-      const tier =
-        factor >= 0.75 ? 4 : factor >= 0.5 ? 3 : factor >= 0.25 ? 2 : 1
+      const tier = factor >= 0.75 ? 4 : factor >= 0.5 ? 3 : factor >= 0.25 ? 2 : 1
       return {
         label: `${lp.language} ${lp.percent}%`,
         variant: 'accent' as const,
@@ -57,10 +56,7 @@ export function projectAdapter(
   })
 }
 
-export function configAdapter(
-  configs: ConfigEntry[],
-  labels: WikiLabelsConfig,
-): CardItem[] {
+export function configAdapter(configs: ConfigEntry[], labels: WikiLabelsConfig): CardItem[] {
   return configs.map((c) => {
     const category = labels.config_categories[c.name] ?? 'Other'
     return {
@@ -77,10 +73,10 @@ export function configAdapter(
 
 export function guardConfigAdapter(
   entries: GuardConfigEntry[],
-  labels: WikiLabelsConfig,
+  labels: WikiLabelsConfig
 ): CardItem[] {
   return entries.map((e) => {
-    const category = labels.guard_categories[e.name] ?? 'Other'
+    const category = labels.guard_categories[e.name] ?? e.category ?? 'Other'
     return {
       id: e.name,
       title: e.name,
@@ -95,7 +91,7 @@ export function guardConfigAdapter(
 
 export function patternAdapter(
   patterns: ClassifiedPattern[],
-  labels: WikiLabelsConfig,
+  labels: WikiLabelsConfig
 ): CardItem[] {
   return patterns.map((p) => {
     const tags: CardItem['tags'] = []
@@ -118,8 +114,7 @@ export function patternAdapter(
     if (p.scope !== 'content') {
       meta.push({
         label: 'Scope',
-        value:
-          p.scope === 'filename' ? 'Filename match' : `Directory: ${p.directory}`,
+        value: p.scope === 'filename' ? 'Filename match' : `Directory: ${p.directory}`,
       })
     }
     return {
@@ -146,9 +141,7 @@ export function scriptAdapter(scripts: ScriptManifestEntry[]): CardItem[] {
       monoTitle: true,
       category: catLabel,
       tags: [{ label: catLabel, variant: 'accent' }],
-      meta: s.make_target
-        ? [{ label: 'Make target', value: s.make_target }]
-        : undefined,
+      meta: s.make_target ? [{ label: 'Make target', value: s.make_target }] : undefined,
     }
   })
 }
@@ -156,7 +149,7 @@ export function scriptAdapter(scripts: ScriptManifestEntry[]): CardItem[] {
 export function hookAdapter(
   hooks: HookRecord[],
   descriptions: Record<string, string>,
-  labels: WikiLabelsConfig,
+  labels: WikiLabelsConfig
 ): CardItem[] {
   return hooks.map((h) => {
     const tags: CardItem['tags'] = [
@@ -174,9 +167,7 @@ export function hookAdapter(
       },
     ]
 
-    const meta: CardItem['meta'] = [
-      { label: 'Applicable to', value: h.applicable_to.join(', ') },
-    ]
+    const meta: CardItem['meta'] = [{ label: 'Applicable to', value: h.applicable_to.join(', ') }]
 
     return {
       id: h.id,
@@ -190,10 +181,7 @@ export function hookAdapter(
   })
 }
 
-export function standardAdapter(
-  standards: StandardEntry[],
-  labels: WikiLabelsConfig,
-): CardItem[] {
+export function standardAdapter(standards: StandardEntry[], labels: WikiLabelsConfig): CardItem[] {
   return standards.map((s) => {
     const typeMeta = labels.standard_types[s.type]
     const typeLabel = typeMeta?.label ?? s.type

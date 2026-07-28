@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# code-stats-if-stale: regenerate web/src/data/code-stats.json only when a
+# workspace repo has commits newer than the file. cloc across the workspace
+# takes minutes, so callers (wiki-dev-restart, wiki-prod-build) run this
+# gate instead of the full extract on every invocation. Only committed work
+# is considered; uncommitted edits do not trigger a refresh.
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+out="$repo_root/web/src/data/code-stats.json"
+projects_root="$(cd "$repo_root/.." && pwd)"
+workspace_root="$(cd "$projects_root/.." && pwd)"
+
+needs_refresh() {
+  if [ ! -f "$out" ]; then
+    echo "[code-stats-if-stale] missing: $out" >&2
+    return 0
+  fi
+  local out_mtime repo head_ts
+  out_mtime=$(stat -c %Y "$out")
+  for repo in "$workspace_root" "$projects_root"/*/; do
+    [ -d "$repo/.git" ] || continue
+    if ! head_ts=$(git -C "$repo" log -1 --format=%ct); then
+      echo "[code-stats-if-stale] git log failed in $repo; treating as no commits" >&2
+      head_ts=0
+    fi
+    if [ "${head_ts:-0}" -gt "$out_mtime" ]; then
+      echo "[code-stats-if-stale] stale: $repo has commits newer than $out" >&2
+      return 0
+    fi
+  done
+  return 1
+}
+
+if needs_refresh; then
+  echo "[code-stats-if-stale] regenerating code-stats (cloc may take minutes)" >&2
+  uv run python "$repo_root/scripts/extract-code-stats.py"
+else
+  echo "[code-stats-if-stale] up to date, skipping cloc"
+fi

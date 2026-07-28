@@ -4,7 +4,7 @@ import { join } from 'path'
 import { load } from 'js-yaml'
 import type { BannedWordsConfig, SwallowPatternConfig } from '@/types/patterns'
 import type { RequiredHooksConfig } from '@/types/hooks'
-import type { ConfigSchema, ConfigEntry, GuardConfigEntry } from '@/types/content'
+import type { ConfigSchema, ConfigEntry, GuardConfigEntry, GuardPolicyIndex } from '@/types/content'
 import type { ScriptManifest } from '@/types/wiki'
 import type { StandardsConfig } from '@/types/standards'
 import type { WikiLabelsConfig } from '@/types/wiki-labels'
@@ -17,11 +17,9 @@ import {
   resolveGuardConfigPath,
 } from '@/lib/config-paths'
 
-const DOCS_ROOT = process.env.WORKSPACE_CI_DOCS_ROOT
-  ?? join(process.cwd(), '..', 'docs')
+const DOCS_ROOT = process.env.WORKSPACE_CI_DOCS_ROOT ?? join(process.cwd(), '..', 'docs')
 
-const SCRIPTS_ROOT = process.env.WORKSPACE_CI_SCRIPTS_ROOT
-  ?? join(process.cwd(), '..', 'scripts')
+const SCRIPTS_ROOT = process.env.WORKSPACE_CI_SCRIPTS_ROOT ?? join(process.cwd(), '..', 'scripts')
 
 export { getConfigRoot, getGuardConfigRoot }
 
@@ -48,12 +46,10 @@ export interface PatternCategoriesConfig {
   categories: PatternCategoryEntry[]
 }
 
-export const getPatternCategories = cache(
-  async (): Promise<PatternCategoriesConfig> => {
-    const raw = readFileSync(resolveConfigPath('pattern_categories'), 'utf8')
-    return load(raw) as PatternCategoriesConfig
-  },
-)
+export const getPatternCategories = cache(async (): Promise<PatternCategoriesConfig> => {
+  const raw = readFileSync(resolveConfigPath('pattern_categories'), 'utf8')
+  return load(raw) as PatternCategoriesConfig
+})
 
 export const getSwallowPatterns = cache(async (): Promise<SwallowPatternConfig> => {
   const raw = readFileSync(resolveConfigPath('silent_swallow_patterns'), 'utf8')
@@ -80,7 +76,9 @@ export function getWikiLabels(): WikiLabelsConfig {
 }
 
 export function getWikiPages(): WikiPagesConfig {
-  const raw = readFileSync(resolveConfigPath('wiki_pages'), 'utf8')
+  const navManifestPath = join(process.cwd(), 'nav.yaml')
+  const path = existsSync(navManifestPath) ? navManifestPath : resolveConfigPath('wiki_pages')
+  const raw = readFileSync(path, 'utf8')
   return load(raw) as WikiPagesConfig
 }
 
@@ -89,24 +87,20 @@ export const getRequiredHooks = cache(async (): Promise<RequiredHooksConfig> => 
   return load(raw) as RequiredHooksConfig
 })
 
-export const getConfigSchema = cache(
-  async (name: string): Promise<ConfigSchema | null> => {
-    const p = resolveConfigPath(`${name}.schema`)
-    try {
-      return load(readFileSync(p, 'utf8')) as ConfigSchema
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null
-      throw e
-    }
-  },
-)
+export const getConfigSchema = cache(async (name: string): Promise<ConfigSchema | null> => {
+  const p = resolveConfigPath(`${name}.schema`)
+  try {
+    return load(readFileSync(p, 'utf8')) as ConfigSchema
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw e
+  }
+})
 
-export const getConfigValue = cache(
-  async (name: string): Promise<Record<string, unknown>> => {
-    const raw = readFileSync(resolveConfigPath(name), 'utf8')
-    return load(raw) as Record<string, unknown>
-  },
-)
+export const getConfigValue = cache(async (name: string): Promise<Record<string, unknown>> => {
+  const raw = readFileSync(resolveConfigPath(name), 'utf8')
+  return load(raw) as Record<string, unknown>
+})
 
 export function getConfigRawYaml(name: string): string {
   return readFileSync(resolveConfigPath(name), 'utf8')
@@ -138,9 +132,7 @@ export const getConfigIndex = cache(async (): Promise<ConfigEntry[]> => {
       const entry: ConfigEntry = { name, hasSchema }
       if (hasSchema) {
         try {
-          const schema = load(
-            readFileSync(schemaPath, 'utf8'),
-          ) as ConfigSchema
+          const schema = load(readFileSync(schemaPath, 'utf8')) as ConfigSchema
           if (schema.description) entry.description = schema.description
           if (schema.fields) entry.fieldCount = schema.fields.length
         } catch {
@@ -157,19 +149,34 @@ export const getScriptManifest = cache(async (): Promise<ScriptManifest> => {
   return load(raw) as ScriptManifest
 })
 
-export const getGuardConfigIndex = cache(async (): Promise<string[]> => {
+const GUARD_POLICY_INDEX_FILE = 'policies.index.yaml'
+
+export function getGuardPolicyIndex(): GuardPolicyIndex | null {
   try {
-    const entries = readdirSync(getGuardConfigRoot())
-    const names = new Set(
-      entries
-        .filter(
-          (f) =>
-            f.startsWith('guard_') &&
-            f.endsWith('.yaml') &&
-            !f.endsWith('.schema.yaml'),
-        )
-        .map((f) => f.replace(/\.yaml$/, '')),
-    )
+    const raw = readFileSync(join(getGuardConfigRoot(), GUARD_POLICY_INDEX_FILE), 'utf8')
+    const parsed = load(raw) as GuardPolicyIndex
+    if (!parsed || !Array.isArray(parsed.policies)) return null
+    return parsed
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+    return null
+  }
+}
+
+function enumerateGuardConfigNames(): string[] {
+  const index = getGuardPolicyIndex()
+  if (index) {
+    return index.policies.map((p) => p.id).sort()
+  }
+  const entries = readdirSync(getGuardConfigRoot())
+  return entries
+    .filter((f) => f.startsWith('guard_') && f.endsWith('.yaml') && !f.endsWith('.schema.yaml'))
+    .map((f) => f.replace(/\.yaml$/, ''))
+}
+
+export function getGuardConfigNamesSync(): string[] {
+  try {
+    const names = new Set(enumerateGuardConfigNames())
     for (const stem of getConfigOverrideStems(true)) {
       names.add(stem)
     }
@@ -180,48 +187,52 @@ export const getGuardConfigIndex = cache(async (): Promise<string[]> => {
     }
     throw e
   }
+}
+
+export const getGuardConfigIndex = cache(async (): Promise<string[]> => {
+  return getGuardConfigNamesSync()
 })
 
-export const getGuardConfig = cache(
-  async (name: string): Promise<Record<string, unknown>> => {
-    const raw = readFileSync(resolveGuardConfigPath(name), 'utf8')
-    return load(raw) as Record<string, unknown>
-  },
-)
+export const getGuardConfig = cache(async (name: string): Promise<Record<string, unknown>> => {
+  const raw = readFileSync(resolveGuardConfigPath(name), 'utf8')
+  return load(raw) as Record<string, unknown>
+})
 
 export function getGuardConfigRawYaml(name: string): string {
   return readFileSync(resolveGuardConfigPath(name), 'utf8')
 }
 
-export const getGuardConfigSchema = cache(
-  async (name: string): Promise<ConfigSchema | null> => {
-    const p = resolveGuardConfigPath(`${name}.schema`)
-    try {
-      return load(readFileSync(p, 'utf8')) as ConfigSchema
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null
-      throw e
-    }
-  },
-)
+export const getGuardConfigSchema = cache(async (name: string): Promise<ConfigSchema | null> => {
+  const p = resolveGuardConfigPath(`${name}.schema`)
+  try {
+    return load(readFileSync(p, 'utf8')) as ConfigSchema
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw e
+  }
+})
 
 export function getGuardConfigEntries(names: string[]): GuardConfigEntry[] {
+  const indexById = new Map((getGuardPolicyIndex()?.policies ?? []).map((p) => [p.id, p]))
   return names.map((name): GuardConfigEntry => {
     const schemaPath = resolveGuardConfigPath(`${name}.schema`)
     const hasSchema = existsSync(schemaPath)
+    const manifest = indexById.get(name)
     const entry: GuardConfigEntry = {
       name,
-      title: name
-        .replace(/^guard_/, '')
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, (c) => c.toUpperCase()),
+      title:
+        manifest?.title ??
+        name
+          .replace(/^guard_/, '')
+          .replace(/_/g, ' ')
+          .replace(/\b\w/g, (c) => c.toUpperCase()),
       hasSchema,
     }
+    if (manifest?.description) entry.description = manifest.description
+    if (manifest?.category) entry.category = manifest.category
     if (hasSchema) {
       try {
-        const schema = load(
-          readFileSync(schemaPath, 'utf8'),
-        ) as ConfigSchema
+        const schema = load(readFileSync(schemaPath, 'utf8')) as ConfigSchema
         if (schema.description) entry.description = schema.description
         if (schema.fields) entry.fieldCount = schema.fields.length
       } catch {

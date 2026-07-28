@@ -8,8 +8,9 @@
     "npm": ">=11"
   },
   "scripts": {
-    "dev": "node scripts/sync-logos.mjs && node scripts/fetch-web-documents.mjs && node scripts/sync-web-content.mjs && next dev",
-    "prebuild": "node scripts/sync-logos.mjs && node scripts/fetch-web-documents.mjs && node scripts/sync-web-content.mjs",
+    "dev": "node scripts/sync-project-registry.mjs && node scripts/sync-logos.mjs && node scripts/sync-grafana-dashboards.mjs && node scripts/sync-wiki-nav.mjs && node scripts/fetch-web-documents.mjs && node scripts/sync-web-content.mjs && next dev",
+    "prebuild": "node scripts/sync-project-registry.mjs && node scripts/sync-logos.mjs && node scripts/sync-grafana-dashboards.mjs && node scripts/sync-wiki-nav.mjs && node scripts/fetch-web-documents.mjs && node scripts/sync-web-content.mjs",
+    "check:generated": "node scripts/sync-project-registry.mjs --check && node scripts/sync-grafana-dashboards.mjs --check && node scripts/sync-wiki-nav.mjs --check",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

@@ -1,4 +1,20 @@
+import projectsRegistry from '@/data/projects-registry.json'
+
 export const DEV_GRAFANA_BASE_URL = 'http://127.0.0.1:3030'
+
+const DEFAULT_GRAFANA_PORT = 3030
+
+interface RegistryProject {
+  slug: string
+  grafanaPort?: number
+}
+
+/** Dev Grafana origin, derived from the publishing project's manifest (grafanaPort). */
+export function getDevGrafanaBaseUrl(): string {
+  const projects = (projectsRegistry as { projects?: RegistryProject[] }).projects ?? []
+  const port = projects.find((p) => p.grafanaPort !== undefined)?.grafanaPort
+  return `http://127.0.0.1:${port ?? DEFAULT_GRAFANA_PORT}`
+}
 export const GRAFANA_HEALTH_API_PATH = '/api/grafana/health'
 
 export interface GrafanaDashboardSource {
@@ -13,9 +29,10 @@ export interface GrafanaDashboardConfig {
   url: string
 }
 
-export function normalizeGrafanaDashboardSource(
-  raw: GrafanaDashboardSource,
-): { path: string; query: string } {
+export function normalizeGrafanaDashboardSource(raw: GrafanaDashboardSource): {
+  path: string
+  query: string
+} {
   if (raw.path) {
     const path = raw.path.startsWith('/') ? raw.path : `/${raw.path}`
     return { path, query: raw.query ?? '' }
@@ -33,7 +50,7 @@ export function buildGrafanaDashboardUrl(base: string, path: string, query: stri
   const suffix = query ? `?${query}` : ''
   return new URL(
     `${basePath}${path}${suffix}`,
-    `${parsedBase.protocol}//${parsedBase.host}`,
+    `${parsedBase.protocol}//${parsedBase.host}`
   ).toString()
 }
 
@@ -70,8 +87,7 @@ export async function resolveGrafanaBaseUrl(): Promise<string> {
   if (host) {
     const primaryHost = host.split(',')[0].trim()
     const proto =
-      h.get('x-forwarded-proto') ??
-      (process.env.NODE_ENV === 'production' ? 'https' : 'http')
+      h.get('x-forwarded-proto') ?? (process.env.NODE_ENV === 'production' ? 'https' : 'http')
     return `${proto}://${primaryHost}/grafana`
   }
 
@@ -91,7 +107,7 @@ export function resolveGrafanaBaseUrlSync(): string {
 
 export function resolveGrafanaDashboards(
   sources: GrafanaDashboardSource[],
-  base: string,
+  base: string
 ): GrafanaDashboardConfig[] {
   return sources.map((raw) => {
     const { path, query } = normalizeGrafanaDashboardSource(raw)
@@ -118,10 +134,7 @@ export function appendGrafanaEmbedParams(src: string, theme: string): string {
 export function resolveGrafanaHealthUrl(base: string): string {
   const parsedBase = new URL(base.endsWith('/') ? base : `${base}/`)
   const basePath = parsedBase.pathname.replace(/\/$/, '')
-  return new URL(
-    `${basePath}/api/health`,
-    `${parsedBase.protocol}//${parsedBase.host}`,
-  ).toString()
+  return new URL(`${basePath}/api/health`, `${parsedBase.protocol}//${parsedBase.host}`).toString()
 }
 
 /** Server-side probe URL (container DNS). Browser embeds use resolveGrafanaHealthUrl. */
@@ -132,13 +145,10 @@ export function resolveGrafanaHealthUrlForServerProbe(publicBase: string): strin
   if (process.env.NODE_ENV === 'production') {
     return 'http://gw-grafana:3000/api/health'
   }
-  return `${DEV_GRAFANA_BASE_URL}/api/health`
+  return `${getDevGrafanaBaseUrl()}/api/health`
 }
 
-export async function checkGrafanaHealth(
-  healthUrl: string,
-  timeoutMs = 3000,
-): Promise<boolean> {
+export async function checkGrafanaHealth(healthUrl: string, timeoutMs = 3000): Promise<boolean> {
   try {
     const res = await fetch(healthUrl, {
       method: 'GET',
@@ -155,7 +165,7 @@ export async function checkGrafanaHealth(
 /** Browser-safe probe via same-origin Next.js route (avoids cross-origin CORS in dev). */
 export async function checkGrafanaHealthViaApi(
   apiPath = GRAFANA_HEALTH_API_PATH,
-  timeoutMs = 3000,
+  timeoutMs = 3000
 ): Promise<boolean> {
   try {
     const res = await fetch(apiPath, {

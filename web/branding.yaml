@@ -1,29 +1,18 @@
-name: "Digital and AI Workspace Guardrails"
-sidebar_title_thin: "workspace"
-sidebar_title_bold: "guardrails"
-logo_path: "/LOGO.png"
-logo_path_dark: "/LOGO_DARK_THEME.png"
-logo_path_light: "/LOGO_LIGHT_THEME.png"
-metadata_title: "Workspace Guardrails"
-metadata_description: "Self-hosted platform for digital and AI workspace guardrails"
-footer_tagline: "The Digital and AI Workspace Guardrails Platform"
-footer_copyright: "2026 ◆ Independent AI Labs"
-contact_email: "independentailabs@gmail.com"
-grafana_dashboards:
-  - title: "LEADERBOARD"
-    path: "/d/gateway-cost-leaderboard/gateway-cost-leaderboard"
-    query: "orgId=1&from=now-30d&to=now&timezone=browser&var-model=$__all&var-api_key=$__all&refresh=5s"
-  - title: "USAGE & COSTS"
-    path: "/d/gateway-cost-usage/gateway-cost-and-usage"
-    query: "orgId=1&from=now-30d&to=now&timezone=browser&var-model=$__all&var-api_key=$__all&refresh=5s"
-  - title: "OPERATIONS"
-    path: "/d/gateway-ops-health/gateway-operations-and-health"
-    query: "orgId=1&from=now-30d&to=now&timezone=browser&var-model=$__all&var-api_key=$__all&refresh=5s"
-grafana_subtitle: "Real-time metrics for the multi-tenant LLM gateway - routing, token accounting, PII redaction, and provider health across all upstream AI models."
-standards_page_intro: "Curated catalogue of AI standards, regulations, frameworks, and declarations from around the world. Open documents are available for direct download. Paid standards are listed with contact information for standardisation and audit-related inquiries."
-contact_button_label: "Contact for Access"
-contact_modal_title_template: "Obtaining {title}"
-contact_body_template: "{title} is a paid standard from {issuer}."
-contact_instruction: "For standardisation and audit-related inquiries, including assistance with purchasing, compliance assessment, and implementation guidance, contact:"
-contact_alt_purchase: "Or purchase directly from the issuer:"
-contact_issuer_store_template: "{issuer} Store"
+name: 'Digital and AI Workspace Guardrails'
+sidebar_title_thin: 'workspace'
+sidebar_title_bold: 'guardrails'
+logo_path: '/LOGO.png'
+logo_path_dark: '/LOGO_DARK_THEME.png'
+logo_path_light: '/LOGO_LIGHT_THEME.png'
+metadata_title: 'Workspace Guardrails'
+metadata_description: 'Self-hosted platform for digital and AI workspace guardrails'
+footer_tagline: 'The Digital and AI Workspace Guardrails Platform'
+footer_copyright: '2026 ◆ Independent AI Labs'
+contact_email: 'independentailabs@gmail.com'
+standards_page_intro: 'Curated catalogue of AI standards, regulations, frameworks, and declarations from around the world. Open documents are available for direct download. Paid standards are listed with contact information for standardisation and audit-related inquiries.'
+contact_button_label: 'Contact for Access'
+contact_modal_title_template: 'Obtaining {title}'
+contact_body_template: '{title} is a paid standard from {issuer}.'
+contact_instruction: 'For standardisation and audit-related inquiries, including assistance with purchasing, compliance assessment, and implementation guidance, contact:'
+contact_alt_purchase: 'Or purchase directly from the issuer:'
+contact_issuer_store_template: '{issuer} Store'

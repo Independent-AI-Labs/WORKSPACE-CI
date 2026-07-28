@@ -6,8 +6,7 @@ import { load } from 'js-yaml'
 import type { ProjectEntry, ProjectSummary, ProjectReadme } from '@/types/projects'
 import { resolveConfigPath } from '@/lib/config-paths'
 
-const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT
-  ?? join(process.cwd(), '..', '..')
+const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT ?? join(process.cwd(), '..', '..')
 
 const DEFAULT_BRANCH = 'main'
 
@@ -17,7 +16,13 @@ interface ProjectConfigEntry {
   language: string
   repoName: string
   icon: string
+  logo?: string
   logoPath?: string
+  description?: string
+  grafanaDashboards?: string
+  grafanaSubtitle?: string
+  grafanaPort?: number
+  startCommand?: string
 }
 
 interface ProjectsConfig {
@@ -25,7 +30,15 @@ interface ProjectsConfig {
   projects: ProjectConfigEntry[]
 }
 
+const GENERATED_REGISTRY_PATH = join(process.cwd(), 'src', 'data', 'projects-registry.json')
+
 function loadProjectsConfig(): ProjectsConfig {
+  try {
+    const raw = readFileSync(GENERATED_REGISTRY_PATH, 'utf8')
+    return JSON.parse(raw) as ProjectsConfig
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+  }
   const raw = readFileSync(resolveConfigPath('projects'), 'utf8')
   return load(raw) as ProjectsConfig
 }
@@ -50,6 +63,10 @@ function buildProjectEntry(cfg: ProjectConfigEntry): ProjectEntry {
     repoName: cfg.repoName,
     icon: cfg.icon,
     ...(cfg.logoPath ? { logoPath: cfg.logoPath } : {}),
+    ...(cfg.description ? { description: cfg.description } : {}),
+    ...(cfg.grafanaSubtitle ? { grafanaSubtitle: cfg.grafanaSubtitle } : {}),
+    ...(cfg.grafanaPort ? { grafanaPort: cfg.grafanaPort } : {}),
+    ...(cfg.startCommand ? { startCommand: cfg.startCommand } : {}),
     readmePath: join(repoDirPath, 'README.md'),
     makefilePath: join(repoDirPath, 'Makefile'),
     repoUrl: getRepoUrl(repoDirPath) || undefined,
@@ -97,6 +114,14 @@ export function getProjectBySlug(slug: string): ProjectEntry | undefined {
   return PROJECTS.find((p) => p.slug === slug)
 }
 
+/** The project that publishes Grafana integration metadata, if any. */
+export function getGrafanaProject(): ProjectEntry | undefined {
+  return PROJECTS.find(
+    (p) =>
+      p.grafanaSubtitle !== undefined || p.grafanaPort !== undefined || p.startCommand !== undefined
+  )
+}
+
 export function getProjectSlugs(): string[] {
   return PROJECTS.map((p) => p.slug)
 }
@@ -121,7 +146,10 @@ const EMBED_TOKEN =
   /\s*(?:\[!\[[^\]]*\]\([^)]*\)\]\([^)]*\)|!\[[^\]]*\]\([^)]*\)|<!--[\s\S]*?-->|<[^>]+>)/g
 
 function stripEmbeds(text: string): string {
-  return text.replace(EMBED_TOKEN, ' ').replace(/\s{2,}/g, ' ').trim()
+  return text
+    .replace(EMBED_TOKEN, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
 }
 
 const INTRO_SENTENCE_SPLIT = /(?<=\.)\s+(?=[A-Z])/
@@ -192,58 +220,52 @@ export function extractReadmeSummary(markdown: string): string {
   return resultParagraphs.join('\n\n').trim()
 }
 
-export const loadProjectReadme = cache(
-  async (slug: string): Promise<ProjectReadme | null> => {
-    const entry = getProjectBySlug(slug)
-    if (!entry) return null
+export const loadProjectReadme = cache(async (slug: string): Promise<ProjectReadme | null> => {
+  const entry = getProjectBySlug(slug)
+  if (!entry) return null
 
-    let content: string
-    try {
-      content = await readFile(entry.readmePath, 'utf8')
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
-      return null
-    }
+  let content: string
+  try {
+    content = await readFile(entry.readmePath, 'utf8')
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+    return null
+  }
 
-    return {
-      slug: entry.slug,
-      displayName: entry.displayName,
-      language: entry.language,
-      repoName: entry.repoName,
-      icon: entry.icon,
-      ...(entry.logoPath ? { logoPath: entry.logoPath } : {}),
-      title: extractReadmeTitle(content),
-      content,
-      ...(entry.repoUrl ? { repoUrl: entry.repoUrl } : {}),
-      branch: entry.branch,
-    }
-  },
-)
+  return {
+    slug: entry.slug,
+    displayName: entry.displayName,
+    language: entry.language,
+    repoName: entry.repoName,
+    icon: entry.icon,
+    ...(entry.logoPath ? { logoPath: entry.logoPath } : {}),
+    title: extractReadmeTitle(content),
+    content,
+    ...(entry.repoUrl ? { repoUrl: entry.repoUrl } : {}),
+    branch: entry.branch,
+  }
+})
 
-export const loadProjectMakefile = cache(
-  async (slug: string): Promise<string | null> => {
-    const entry = getProjectBySlug(slug)
-    if (!entry) return null
-    try {
-      return await readFile(entry.makefilePath, 'utf8')
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
-      return null
-    }
-  },
-)
+export const loadProjectMakefile = cache(async (slug: string): Promise<string | null> => {
+  const entry = getProjectBySlug(slug)
+  if (!entry) return null
+  try {
+    return await readFile(entry.makefilePath, 'utf8')
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+    return null
+  }
+})
 
-export const loadAllProjectSummaries = cache(
-  async (): Promise<ProjectSummary[]> => {
-    const results = await Promise.all(
-      PROJECTS.map(async (entry) => {
-        let content = ''
-        try {
-          content = await readFile(entry.readmePath, 'utf8')
-        } catch (e) {
-          if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
-          return null
-        }
+export const loadAllProjectSummaries = cache(async (): Promise<ProjectSummary[]> => {
+  const results = await Promise.all(
+    PROJECTS.map(async (entry) => {
+      let content = ''
+      try {
+        content = await readFile(entry.readmePath, 'utf8')
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+        if (!entry.description) return null
         return {
           slug: entry.slug,
           displayName: entry.displayName,
@@ -251,12 +273,25 @@ export const loadAllProjectSummaries = cache(
           repoName: entry.repoName,
           icon: entry.icon,
           ...(entry.logoPath ? { logoPath: entry.logoPath } : {}),
-          title: extractReadmeTitle(content),
-          summary: extractReadmeSummary(content),
+          description: entry.description,
+          title: entry.displayName,
+          summary: entry.description,
           ...(entry.repoUrl ? { repoUrl: entry.repoUrl } : {}),
         }
-      }),
-    )
-    return results.filter((r): r is ProjectSummary => r !== null)
-  },
-)
+      }
+      return {
+        slug: entry.slug,
+        displayName: entry.displayName,
+        language: entry.language,
+        repoName: entry.repoName,
+        icon: entry.icon,
+        ...(entry.logoPath ? { logoPath: entry.logoPath } : {}),
+        ...(entry.description ? { description: entry.description } : {}),
+        title: extractReadmeTitle(content),
+        summary: extractReadmeSummary(content),
+        ...(entry.repoUrl ? { repoUrl: entry.repoUrl } : {}),
+      }
+    })
+  )
+  return results.filter((r): r is ProjectSummary => r !== null)
+})

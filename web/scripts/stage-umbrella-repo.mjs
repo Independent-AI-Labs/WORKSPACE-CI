@@ -12,14 +12,14 @@ process.on('unhandledRejection', (reason) => {
 })
 
 const WEB_DIR = process.cwd()
-const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT
-  ?? path.resolve(WEB_DIR, '..', '..')
+const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT ?? path.resolve(WEB_DIR, '..', '..')
 const UMBRELLA_ROOT = path.resolve(PROJECTS_ROOT, '..')
 const STAGE_DIR = path.resolve(PROJECTS_ROOT, 'WORKSPACE-VM')
 
 const FILES = [
   { src: 'README.md', dest: 'README.md' },
   { src: 'Makefile', dest: 'Makefile' },
+  { src: 'project.yaml', dest: 'project.yaml' },
   { src: path.join('.git', 'config'), dest: path.join('.git', 'config') },
   { src: path.join('res', 'LOGO.png'), dest: path.join('res', 'LOGO.png') },
 ]

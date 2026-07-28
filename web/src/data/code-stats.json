@@ -1,27 +1,27 @@
 {
-  "generated_at": "2026-07-15T12:42:40.899029+00:00",
+  "generated_at": "2026-07-28T19:55:53.264343+00:00",
   "totals": {
-    "repos": 16,
-    "files": 24730,
-    "blank": 978108,
-    "comment": 650611,
-    "code": 7122731,
-    "lines": 8751450
+    "repos": 17,
+    "files": 25610,
+    "blank": 991805,
+    "comment": 655333,
+    "code": 7215592,
+    "lines": 8862730
   },
   "repos": [
     {
       "repo": "llamafile",
       "files": 8083,
       "blank": 380058,
-      "comment": 363026,
-      "code": 3424327
+      "comment": 362359,
+      "code": 3424994
     },
     {
       "repo": "opencode",
       "files": 5624,
       "blank": 120733,
-      "comment": 20774,
-      "code": 1082707
+      "comment": 19621,
+      "code": 1083860
     },
     {
       "repo": "llamafile/llama.cpp",
@@ -46,17 +46,17 @@
     },
     {
       "repo": "WORKSPACE-PORTAL",
-      "files": 716,
-      "blank": 15856,
-      "comment": 3244,
-      "code": 240530
+      "files": 724,
+      "blank": 15874,
+      "comment": 3319,
+      "code": 240681
     },
     {
       "repo": "WORKSPACE-STREAMS",
-      "files": 1308,
-      "blank": 35936,
-      "comment": 30790,
-      "code": 111422
+      "files": 1313,
+      "blank": 35945,
+      "comment": 30818,
+      "code": 111467
     },
     {
       "repo": "llamafile/stable-diffusion.cpp",
@@ -73,39 +73,46 @@
       "code": 94812
     },
     {
+      "repo": "WORKSPACE-CI",
+      "files": 597,
+      "blank": 10882,
+      "comment": 4605,
+      "code": 69246
+    },
+    {
       "repo": "CI",
-      "files": 455,
-      "blank": 9340,
-      "comment": 3978,
-      "code": 58783
+      "files": 587,
+      "blank": 10826,
+      "comment": 4594,
+      "code": 68057
     },
     {
       "repo": "WORKSPACE-GUARD",
-      "files": 175,
-      "blank": 12760,
-      "comment": 2366,
-      "code": 48188
+      "files": 230,
+      "blank": 13937,
+      "comment": 3361,
+      "code": 57660
     },
     {
       "repo": "WORKSPACE-VM",
-      "files": 368,
-      "blank": 10186,
-      "comment": 3260,
-      "code": 45352
+      "files": 374,
+      "blank": 10091,
+      "comment": 3267,
+      "code": 45383
     },
     {
       "repo": "DATAOPS",
-      "files": 183,
-      "blank": 6643,
-      "comment": 3125,
-      "code": 24360
+      "files": 190,
+      "blank": 6476,
+      "comment": 3152,
+      "code": 23619
     },
     {
       "repo": "WORKSPACE-GATEWAY",
-      "files": 112,
-      "blank": 3354,
-      "comment": 762,
-      "code": 16581
+      "files": 159,
+      "blank": 3381,
+      "comment": 938,
+      "code": 18078
     },
     {
       "repo": "WORKSPACE-STREAMS/himalaya",
@@ -116,10 +123,10 @@
     },
     {
       "repo": "WORKSPACE-WEB-CONTENT",
-      "files": 15,
-      "blank": 55,
-      "comment": 75,
-      "code": 570
+      "files": 38,
+      "blank": 415,
+      "comment": 88,
+      "code": 2636
     }
   ],
   "languages": [
@@ -127,8 +134,8 @@
       "language": "C++",
       "files": 2410,
       "blank": 245143,
-      "comment": 118480,
-      "code": 1318300,
+      "comment": 117813,
+      "code": 1318967,
       "repos": 5
     },
     {
@@ -149,11 +156,11 @@
     },
     {
       "language": "TypeScript",
-      "files": 4228,
-      "blank": 68963,
-      "comment": 37497,
-      "code": 629222,
-      "repos": 6
+      "files": 4574,
+      "blank": 71752,
+      "comment": 36615,
+      "code": 653467,
+      "repos": 7
     },
     {
       "language": "C",
@@ -165,11 +172,11 @@
     },
     {
       "language": "JSON",
-      "files": 693,
+      "files": 712,
       "blank": 86,
       "comment": 0,
-      "code": 418970,
-      "repos": 13
+      "code": 423338,
+      "repos": 14
     },
     {
       "language": "CSV",
@@ -181,19 +188,19 @@
     },
     {
       "language": "Markdown",
-      "files": 2052,
-      "blank": 124173,
+      "files": 2152,
+      "blank": 128367,
       "comment": 2784,
-      "code": 337817,
-      "repos": 16
+      "code": 353896,
+      "repos": 17
     },
     {
       "language": "Python",
-      "files": 1129,
-      "blank": 49437,
-      "comment": 38754,
-      "code": 223212,
-      "repos": 11
+      "files": 1184,
+      "blank": 51664,
+      "comment": 39871,
+      "code": 232430,
+      "repos": 13
     },
     {
       "language": "CUDA",
@@ -205,19 +212,19 @@
     },
     {
       "language": "JavaScript",
-      "files": 185,
-      "blank": 2823,
-      "comment": 1693,
-      "code": 142663,
-      "repos": 10
+      "files": 210,
+      "blank": 3033,
+      "comment": 1729,
+      "code": 144278,
+      "repos": 11
     },
     {
       "language": "YAML",
-      "files": 1486,
-      "blank": 17951,
-      "comment": 26213,
-      "code": 93246,
-      "repos": 16
+      "files": 1579,
+      "blank": 18482,
+      "comment": 27005,
+      "code": 98270,
+      "repos": 17
     },
     {
       "language": "OpenCL",
@@ -229,11 +236,11 @@
     },
     {
       "language": "HTML",
-      "files": 34,
-      "blank": 29380,
+      "files": 33,
+      "blank": 29208,
       "comment": 412,
-      "code": 83437,
-      "repos": 6
+      "code": 82628,
+      "repos": 5
     },
     {
       "language": "GLSL",
@@ -244,6 +251,14 @@
       "repos": 5
     },
     {
+      "language": "CSS",
+      "files": 307,
+      "blank": 7273,
+      "comment": 1292,
+      "code": 70135,
+      "repos": 7
+    },
+    {
       "language": "PO File",
       "files": 554,
       "blank": 30238,
@@ -252,28 +267,20 @@
       "repos": 2
     },
     {
-      "language": "CSS",
-      "files": 254,
-      "blank": 6547,
-      "comment": 1125,
-      "code": 65139,
-      "repos": 6
+      "language": "Bourne Shell",
+      "files": 529,
+      "blank": 9720,
+      "comment": 8777,
+      "code": 59883,
+      "repos": 15
     },
     {
       "language": "Jinja Template",
       "files": 590,
-      "blank": 7586,
+      "blank": 7593,
       "comment": 1547,
-      "code": 57860,
+      "code": 58132,
       "repos": 7
-    },
-    {
-      "language": "Bourne Shell",
-      "files": 466,
-      "blank": 8522,
-      "comment": 7261,
-      "code": 49283,
-      "repos": 14
     },
     {
       "language": "Metal",
@@ -292,6 +299,14 @@
       "repos": 2
     },
     {
+      "language": "Rust",
+      "files": 292,
+      "blank": 3961,
+      "comment": 4657,
+      "code": 31487,
+      "repos": 7
+    },
+    {
       "language": "CMake",
       "files": 406,
       "blank": 5567,
@@ -308,19 +323,19 @@
       "repos": 4
     },
     {
-      "language": "Rust",
-      "files": 248,
-      "blank": 3401,
-      "comment": 3881,
-      "code": 25112,
-      "repos": 5
-    },
-    {
       "language": "SVG",
-      "files": 1236,
+      "files": 1237,
       "blank": 25,
       "comment": 8,
-      "code": 18903,
+      "code": 18908,
+      "repos": 8
+    },
+    {
+      "language": "Bourne Again Shell",
+      "files": 122,
+      "blank": 2316,
+      "comment": 3484,
+      "code": 17397,
       "repos": 7
     },
     {
@@ -330,14 +345,6 @@
       "comment": 2047,
       "code": 13020,
       "repos": 1
-    },
-    {
-      "language": "Bourne Again Shell",
-      "files": 85,
-      "blank": 1470,
-      "comment": 1996,
-      "code": 11025,
-      "repos": 6
     },
     {
       "language": "Objective-C",
@@ -356,12 +363,20 @@
       "repos": 4
     },
     {
+      "language": "make",
+      "files": 62,
+      "blank": 1603,
+      "comment": 1860,
+      "code": 6775,
+      "repos": 15
+    },
+    {
       "language": "Text",
-      "files": 156,
-      "blank": 1039,
+      "files": 160,
+      "blank": 1044,
       "comment": 0,
-      "code": 6668,
-      "repos": 12
+      "code": 6721,
+      "repos": 13
     },
     {
       "language": "Fortran 77",
@@ -372,12 +387,12 @@
       "repos": 1
     },
     {
-      "language": "make",
-      "files": 53,
-      "blank": 1404,
-      "comment": 1674,
-      "code": 5722,
-      "repos": 14
+      "language": "Lua",
+      "files": 24,
+      "blank": 528,
+      "comment": 172,
+      "code": 3838,
+      "repos": 2
     },
     {
       "language": "Kotlin",
@@ -436,28 +451,20 @@
       "repos": 2
     },
     {
+      "language": "TOML",
+      "files": 96,
+      "blank": 581,
+      "comment": 1712,
+      "code": 2648,
+      "repos": 13
+    },
+    {
       "language": "Dockerfile",
       "files": 53,
       "blank": 959,
       "comment": 305,
       "code": 2539,
       "repos": 7
-    },
-    {
-      "language": "TOML",
-      "files": 83,
-      "blank": 516,
-      "comment": 1674,
-      "code": 2354,
-      "repos": 12
-    },
-    {
-      "language": "Lua",
-      "files": 12,
-      "blank": 281,
-      "comment": 83,
-      "code": 1887,
-      "repos": 2
     },
     {
       "language": "Nix",
@@ -509,19 +516,27 @@
     },
     {
       "language": "SQL",
-      "files": 97,
-      "blank": 32,
-      "comment": 74,
-      "code": 771,
+      "files": 101,
+      "blank": 44,
+      "comment": 89,
+      "code": 856,
       "repos": 2
     },
     {
       "language": "awk",
+      "files": 5,
+      "blank": 57,
+      "comment": 59,
+      "code": 532,
+      "repos": 3
+    },
+    {
+      "language": "Containerfile",
       "files": 3,
-      "blank": 31,
-      "comment": 31,
+      "blank": 54,
+      "comment": 42,
       "code": 277,
-      "repos": 2
+      "repos": 3
     },
     {
       "language": "INI",
@@ -537,14 +552,6 @@
       "blank": 22,
       "comment": 46,
       "code": 149,
-      "repos": 2
-    },
-    {
-      "language": "Containerfile",
-      "files": 2,
-      "blank": 27,
-      "comment": 19,
-      "code": 134,
       "repos": 2
     },
     {
@@ -617,41 +624,41 @@
       "repo": "WORKSPACE-VM",
       "language": "Python",
       "files": 178,
-      "blank": 5745,
+      "blank": 5748,
       "comment": 1670,
-      "code": 25899
+      "code": 25918
     },
     {
       "repo": "WORKSPACE-VM",
       "language": "Markdown",
-      "files": 25,
-      "blank": 2568,
+      "files": 27,
+      "blank": 2512,
       "comment": 0,
-      "code": 8579
+      "code": 8373
     },
     {
       "repo": "WORKSPACE-VM",
       "language": "Bourne Shell",
       "files": 55,
-      "blank": 794,
-      "comment": 624,
-      "code": 4304
+      "blank": 744,
+      "comment": 630,
+      "code": 4396
     },
     {
       "repo": "WORKSPACE-VM",
       "language": "YAML",
-      "files": 49,
-      "blank": 358,
-      "comment": 497,
-      "code": 2194
+      "files": 53,
+      "blank": 364,
+      "comment": 490,
+      "code": 2231
     },
     {
       "repo": "WORKSPACE-VM",
       "language": "Bourne Again Shell",
       "files": 15,
-      "blank": 258,
+      "blank": 259,
       "comment": 248,
-      "code": 2088
+      "code": 2127
     },
     {
       "repo": "WORKSPACE-VM",
@@ -665,9 +672,9 @@
       "repo": "WORKSPACE-VM",
       "language": "make",
       "files": 1,
-      "blank": 85,
-      "comment": 85,
-      "code": 382
+      "blank": 86,
+      "comment": 93,
+      "code": 432
     },
     {
       "repo": "WORKSPACE-VM",
@@ -736,90 +743,90 @@
     {
       "repo": "CI",
       "language": "TypeScript",
-      "files": 208,
-      "blank": 1741,
-      "comment": 110,
-      "code": 15323
+      "files": 277,
+      "blank": 2254,
+      "comment": 179,
+      "code": 19147
     },
     {
       "repo": "CI",
       "language": "Markdown",
-      "files": 18,
-      "blank": 2774,
+      "files": 35,
+      "blank": 3395,
       "comment": 0,
-      "code": 9912
+      "code": 12498
     },
     {
       "repo": "CI",
       "language": "Bourne Shell",
-      "files": 47,
-      "blank": 950,
-      "comment": 1203,
-      "code": 8526
+      "files": 53,
+      "blank": 1005,
+      "comment": 1332,
+      "code": 9077
     },
     {
       "repo": "CI",
       "language": "Python",
-      "files": 48,
-      "blank": 2017,
-      "comment": 1008,
-      "code": 8459
-    },
-    {
-      "repo": "CI",
-      "language": "YAML",
-      "files": 46,
-      "blank": 435,
-      "comment": 564,
-      "code": 3656
+      "files": 51,
+      "blank": 2113,
+      "comment": 1060,
+      "code": 8785
     },
     {
       "repo": "CI",
       "language": "Bourne Again Shell",
-      "files": 21,
-      "blank": 499,
-      "comment": 799,
-      "code": 3637
-    },
-    {
-      "repo": "CI",
-      "language": "JSON",
-      "files": 8,
-      "blank": 0,
-      "comment": 0,
-      "code": 3625
+      "files": 25,
+      "blank": 564,
+      "comment": 1024,
+      "code": 4156
     },
     {
       "repo": "CI",
       "language": "CSS",
-      "files": 33,
-      "blank": 438,
-      "comment": 117,
-      "code": 2858
+      "files": 43,
+      "blank": 582,
+      "comment": 142,
+      "code": 3927
     },
     {
       "repo": "CI",
-      "language": "HTML",
-      "files": 1,
-      "blank": 172,
+      "language": "JSON",
+      "files": 12,
+      "blank": 0,
       "comment": 0,
-      "code": 809
+      "code": 3844
+    },
+    {
+      "repo": "CI",
+      "language": "YAML",
+      "files": 47,
+      "blank": 438,
+      "comment": 577,
+      "code": 3519
     },
     {
       "repo": "CI",
       "language": "JavaScript",
-      "files": 11,
-      "blank": 106,
+      "files": 15,
+      "blank": 139,
       "comment": 11,
-      "code": 794
+      "code": 1005
     },
     {
       "repo": "CI",
       "language": "make",
-      "files": 3,
-      "blank": 110,
-      "comment": 120,
-      "code": 580
+      "files": 6,
+      "blank": 145,
+      "comment": 131,
+      "code": 735
+    },
+    {
+      "repo": "CI",
+      "language": "Rust",
+      "files": 7,
+      "blank": 82,
+      "comment": 75,
+      "code": 694
     },
     {
       "repo": "CI",
@@ -832,18 +839,18 @@
     {
       "repo": "CI",
       "language": "TOML",
-      "files": 3,
-      "blank": 48,
-      "comment": 4,
-      "code": 190
+      "files": 8,
+      "blank": 55,
+      "comment": 17,
+      "code": 235
     },
     {
       "repo": "CI",
       "language": "Containerfile",
       "files": 1,
-      "blank": 19,
-      "comment": 14,
-      "code": 105
+      "blank": 23,
+      "comment": 18,
+      "code": 124
     },
     {
       "repo": "CI",
@@ -851,7 +858,7 @@
       "files": 4,
       "blank": 5,
       "comment": 0,
-      "code": 49
+      "code": 51
     },
     {
       "repo": "CI",
@@ -867,31 +874,31 @@
       "files": 152,
       "blank": 5659,
       "comment": 3007,
-      "code": 20614
+      "code": 20617
     },
     {
       "repo": "DATAOPS",
       "language": "Markdown",
-      "files": 16,
-      "blank": 882,
+      "files": 18,
+      "blank": 705,
       "comment": 0,
-      "code": 3030
+      "code": 2240
     },
     {
       "repo": "DATAOPS",
       "language": "YAML",
-      "files": 9,
-      "blank": 23,
-      "comment": 69,
-      "code": 325
+      "files": 14,
+      "blank": 32,
+      "comment": 90,
+      "code": 362
     },
     {
       "repo": "DATAOPS",
       "language": "make",
       "files": 1,
-      "blank": 70,
-      "comment": 49,
-      "code": 230
+      "blank": 71,
+      "comment": 55,
+      "code": 239
     },
     {
       "repo": "DATAOPS",
@@ -930,8 +937,8 @@
       "language": "C++",
       "files": 1168,
       "blank": 116852,
-      "comment": 58342,
-      "code": 630136
+      "comment": 57675,
+      "code": 630803
     },
     {
       "repo": "llamafile",
@@ -2258,8 +2265,8 @@
       "language": "TypeScript",
       "files": 2931,
       "blank": 50823,
-      "comment": 19298,
-      "code": 504180
+      "comment": 18145,
+      "code": 505333
     },
     {
       "repo": "opencode",
@@ -2414,28 +2421,156 @@
       "code": 8
     },
     {
+      "repo": "WORKSPACE-CI",
+      "language": "TypeScript",
+      "files": 277,
+      "blank": 2273,
+      "comment": 181,
+      "code": 19231
+    },
+    {
+      "repo": "WORKSPACE-CI",
+      "language": "Markdown",
+      "files": 35,
+      "blank": 3395,
+      "comment": 0,
+      "code": 12498
+    },
+    {
+      "repo": "WORKSPACE-CI",
+      "language": "Bourne Shell",
+      "files": 53,
+      "blank": 1005,
+      "comment": 1332,
+      "code": 9077
+    },
+    {
+      "repo": "WORKSPACE-CI",
+      "language": "Python",
+      "files": 51,
+      "blank": 2113,
+      "comment": 1060,
+      "code": 8785
+    },
+    {
+      "repo": "WORKSPACE-CI",
+      "language": "Bourne Again Shell",
+      "files": 26,
+      "blank": 568,
+      "comment": 1029,
+      "code": 4208
+    },
+    {
+      "repo": "WORKSPACE-CI",
+      "language": "JSON",
+      "files": 15,
+      "blank": 0,
+      "comment": 0,
+      "code": 4149
+    },
+    {
+      "repo": "WORKSPACE-CI",
+      "language": "YAML",
+      "files": 50,
+      "blank": 438,
+      "comment": 580,
+      "code": 3930
+    },
+    {
+      "repo": "WORKSPACE-CI",
+      "language": "CSS",
+      "files": 43,
+      "blank": 582,
+      "comment": 142,
+      "code": 3927
+    },
+    {
+      "repo": "WORKSPACE-CI",
+      "language": "JavaScript",
+      "files": 18,
+      "blank": 169,
+      "comment": 11,
+      "code": 1330
+    },
+    {
+      "repo": "WORKSPACE-CI",
+      "language": "make",
+      "files": 6,
+      "blank": 148,
+      "comment": 131,
+      "code": 747
+    },
+    {
+      "repo": "WORKSPACE-CI",
+      "language": "Rust",
+      "files": 7,
+      "blank": 82,
+      "comment": 75,
+      "code": 694
+    },
+    {
+      "repo": "WORKSPACE-CI",
+      "language": "awk",
+      "files": 2,
+      "blank": 26,
+      "comment": 28,
+      "code": 255
+    },
+    {
+      "repo": "WORKSPACE-CI",
+      "language": "TOML",
+      "files": 8,
+      "blank": 55,
+      "comment": 17,
+      "code": 235
+    },
+    {
+      "repo": "WORKSPACE-CI",
+      "language": "Containerfile",
+      "files": 1,
+      "blank": 23,
+      "comment": 19,
+      "code": 124
+    },
+    {
+      "repo": "WORKSPACE-CI",
+      "language": "Text",
+      "files": 4,
+      "blank": 5,
+      "comment": 0,
+      "code": 51
+    },
+    {
+      "repo": "WORKSPACE-CI",
+      "language": "SVG",
+      "files": 1,
+      "blank": 0,
+      "comment": 0,
+      "code": 5
+    },
+    {
       "repo": "WORKSPACE-GATEWAY",
       "language": "Markdown",
-      "files": 25,
-      "blank": 1911,
+      "files": 42,
+      "blank": 1475,
       "comment": 0,
-      "code": 7584
+      "code": 5341
     },
     {
       "repo": "WORKSPACE-GATEWAY",
       "language": "Bourne Shell",
-      "files": 43,
-      "blank": 1020,
-      "comment": 512,
-      "code": 4427
+      "files": 46,
+      "blank": 1186,
+      "comment": 548,
+      "code": 5137
     },
     {
       "repo": "WORKSPACE-GATEWAY",
       "language": "Lua",
-      "files": 9,
-      "blank": 239,
-      "comment": 41,
-      "code": 1596
+      "files": 21,
+      "blank": 486,
+      "comment": 130,
+      "code": 3547
     },
     {
       "repo": "WORKSPACE-GATEWAY",
@@ -2448,10 +2583,34 @@
     {
       "repo": "WORKSPACE-GATEWAY",
       "language": "YAML",
-      "files": 17,
-      "blank": 36,
-      "comment": 75,
-      "code": 478
+      "files": 27,
+      "blank": 51,
+      "comment": 98,
+      "code": 1097
+    },
+    {
+      "repo": "WORKSPACE-GATEWAY",
+      "language": "Jinja Template",
+      "files": 1,
+      "blank": 10,
+      "comment": 0,
+      "code": 397
+    },
+    {
+      "repo": "WORKSPACE-GATEWAY",
+      "language": "SQL",
+      "files": 13,
+      "blank": 44,
+      "comment": 74,
+      "code": 306
+    },
+    {
+      "repo": "WORKSPACE-GATEWAY",
+      "language": "make",
+      "files": 1,
+      "blank": 62,
+      "comment": 49,
+      "code": 239
     },
     {
       "repo": "WORKSPACE-GATEWAY",
@@ -2463,35 +2622,19 @@
     },
     {
       "repo": "WORKSPACE-GATEWAY",
-      "language": "make",
-      "files": 1,
-      "blank": 61,
-      "comment": 46,
-      "code": 224
-    },
-    {
-      "repo": "WORKSPACE-GATEWAY",
-      "language": "SQL",
-      "files": 9,
-      "blank": 32,
-      "comment": 59,
-      "code": 221
-    },
-    {
-      "repo": "WORKSPACE-GATEWAY",
-      "language": "Jinja Template",
-      "files": 1,
-      "blank": 3,
-      "comment": 0,
-      "code": 125
-    },
-    {
-      "repo": "WORKSPACE-GATEWAY",
       "language": "TOML",
       "files": 1,
       "blank": 23,
+      "comment": 10,
+      "code": 101
+    },
+    {
+      "repo": "WORKSPACE-GATEWAY",
+      "language": "Python",
+      "files": 1,
+      "blank": 15,
       "comment": 5,
-      "code": 98
+      "code": 85
     },
     {
       "repo": "WORKSPACE-GATEWAY",
@@ -2512,42 +2655,42 @@
     {
       "repo": "WORKSPACE-GUARD",
       "language": "Rust",
-      "files": 24,
-      "blank": 697,
-      "comment": 393,
-      "code": 6064
+      "files": 54,
+      "blank": 1093,
+      "comment": 1019,
+      "code": 11051
     },
     {
       "repo": "WORKSPACE-GUARD",
       "language": "Markdown",
-      "files": 26,
-      "blank": 1741,
+      "files": 32,
+      "blank": 2228,
       "comment": 0,
-      "code": 5772
+      "code": 7984
     },
     {
       "repo": "WORKSPACE-GUARD",
       "language": "Bourne Again Shell",
-      "files": 39,
-      "blank": 599,
-      "comment": 840,
-      "code": 4760
+      "files": 46,
+      "blank": 811,
+      "comment": 1074,
+      "code": 6366
     },
     {
       "repo": "WORKSPACE-GUARD",
       "language": "Bourne Shell",
-      "files": 28,
-      "blank": 315,
-      "comment": 172,
-      "code": 2477
+      "files": 29,
+      "blank": 337,
+      "comment": 185,
+      "code": 2647
     },
     {
       "repo": "WORKSPACE-GUARD",
       "language": "YAML",
-      "files": 36,
-      "blank": 332,
-      "comment": 433,
-      "code": 1634
+      "files": 47,
+      "blank": 376,
+      "comment": 533,
+      "code": 2047
     },
     {
       "repo": "WORKSPACE-GUARD",
@@ -2561,17 +2704,17 @@
       "repo": "WORKSPACE-GUARD",
       "language": "make",
       "files": 1,
-      "blank": 79,
-      "comment": 76,
-      "code": 331
+      "blank": 92,
+      "comment": 95,
+      "code": 404
     },
     {
       "repo": "WORKSPACE-GUARD",
       "language": "TOML",
       "files": 3,
-      "blank": 11,
-      "comment": 33,
-      "code": 50
+      "blank": 14,
+      "comment": 36,
+      "code": 61
     },
     {
       "repo": "WORKSPACE-GUARD",
@@ -2600,18 +2743,18 @@
     {
       "repo": "WORKSPACE-PORTAL",
       "language": "JavaScript",
-      "files": 84,
-      "blank": 1231,
-      "comment": 496,
-      "code": 134234
+      "files": 87,
+      "blank": 1239,
+      "comment": 521,
+      "code": 134308
     },
     {
       "repo": "WORKSPACE-PORTAL",
       "language": "TypeScript",
       "files": 485,
-      "blank": 6787,
-      "comment": 2031,
-      "code": 54115
+      "blank": 6790,
+      "comment": 2052,
+      "code": 54152
     },
     {
       "repo": "WORKSPACE-PORTAL",
@@ -2647,19 +2790,19 @@
     },
     {
       "repo": "WORKSPACE-PORTAL",
-      "language": "make",
-      "files": 1,
-      "blank": 72,
-      "comment": 43,
-      "code": 329
+      "language": "YAML",
+      "files": 13,
+      "blank": 41,
+      "comment": 85,
+      "code": 361
     },
     {
       "repo": "WORKSPACE-PORTAL",
-      "language": "YAML",
-      "files": 8,
-      "blank": 34,
-      "comment": 61,
-      "code": 328
+      "language": "make",
+      "files": 1,
+      "blank": 72,
+      "comment": 48,
+      "code": 336
     },
     {
       "repo": "WORKSPACE-PORTAL",
@@ -2808,10 +2951,10 @@
     {
       "repo": "WORKSPACE-STREAMS",
       "language": "YAML",
-      "files": 472,
-      "blank": 5839,
-      "comment": 10353,
-      "code": 23577
+      "files": 477,
+      "blank": 5848,
+      "comment": 10378,
+      "code": 23619
     },
     {
       "repo": "WORKSPACE-STREAMS",
@@ -2874,8 +3017,8 @@
       "language": "make",
       "files": 2,
       "blank": 45,
-      "comment": 33,
-      "code": 166
+      "comment": 36,
+      "code": 169
     },
     {
       "repo": "WORKSPACE-STREAMS",
@@ -2991,19 +3134,19 @@
     },
     {
       "repo": "WORKSPACE-WEB-CONTENT",
-      "language": "YAML",
-      "files": 12,
-      "blank": 16,
-      "comment": 50,
-      "code": 465
+      "language": "Markdown",
+      "files": 22,
+      "blank": 378,
+      "comment": 0,
+      "code": 2070
     },
     {
       "repo": "WORKSPACE-WEB-CONTENT",
-      "language": "Markdown",
-      "files": 1,
-      "blank": 18,
-      "comment": 0,
-      "code": 48
+      "language": "YAML",
+      "files": 14,
+      "blank": 16,
+      "comment": 63,
+      "code": 515
     },
     {
       "repo": "WORKSPACE-WEB-CONTENT",
@@ -3011,7 +3154,7 @@
       "files": 1,
       "blank": 19,
       "comment": 24,
-      "code": 44
+      "code": 38
     },
     {
       "repo": "WORKSPACE-WEB-CONTENT",

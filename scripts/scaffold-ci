@@ -42,6 +42,7 @@ _force_all=0
 _make_backup=1
 _assume_yes=0
 _emit_template=0
+_check_template=0
 _analyze_only=0
 _diff_only=0
 _json_only=0
@@ -66,6 +67,7 @@ while [[ $# -gt 0 ]]; do
         --yes)             _assume_yes=1; shift ;;
         --no-backup)       _make_backup=0; shift ;;
         --emit-template)   _emit_template=1; shift ;;
+        --check-template)  _check_template=1; shift ;;
 --force)
             _scl_force_error_msg
             exit 1
@@ -88,6 +90,8 @@ _generated=()
 _skipped=()
 
 # ── --emit-template mode ───────────────────────────────────────────────────
+if [[ $_check_template -eq 1 ]]; then _emit_template=1; fi
+
 if [[ $_emit_template -eq 1 ]]; then
     _emit_target="$_CI_ROOT/templates/ci-profile.template.yaml"
     [[ -f "$_REGISTRY" ]] || { ci_fail "required_hooks.yaml not found"; exit 1; }
@@ -117,6 +121,34 @@ if [[ $_emit_template -eq 1 ]]; then
     IFS=$'\n' _tpl_pp_sorted=($(printf '%s\n' "${_tpl_pp[@]:-}" | sort)); unset IFS
 
     _emit_content="$(_scl_gen_template)"
+    if [[ $_check_template -eq 1 ]]; then
+        _tmp=$(mktemp)
+        printf '%s\n' "$_emit_content" > "$_tmp"
+        sed -i 's/^# Generated: .*/# Generated: NORMALIZED/' "$_tmp"
+        if [[ -f "$_emit_target" ]]; then
+            _cur=$(mktemp)
+            sed 's/^# Generated: .*/# Generated: NORMALIZED/' "$_emit_target" > "$_cur"
+        else
+            _cur=/dev/null
+        fi
+        _diff_rc=0
+        _diff_out=$(diff -u "$_cur" "$_tmp" 2>&1) || _diff_rc=$?
+        if [[ $_diff_rc -eq 0 ]]; then
+            rm -f "$_tmp"
+            ci_pass "Template is up to date: $_emit_target"
+            exit 0
+        fi
+        if [[ $_diff_rc -gt 1 ]]; then
+            echo "ERROR: diff failed while comparing $_emit_target:" >&2
+            printf '%s\n' "$_diff_out" >&2
+            rm -f "$_tmp" ${_cur:+"$_cur"}
+            exit 1
+        fi
+        echo "ERROR: $_emit_target is stale; regenerate with: scripts/scaffold-ci --emit-template" >&2
+        printf '%s\n' "$_diff_out" | sed -n '1,40p' >&2
+        rm -f "$_tmp" ${_cur:+"$_cur"}
+        exit 1
+    fi
     if [[ $_dry_run -eq 1 ]]; then
         echo "================================================================================"
         echo "Would write: $_emit_target"

@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "projects": [
+    {
+      "slug": "workspace-vm",
+      "displayName": "WORKSPACE-VM",
+      "language": "Python",
+      "repoName": "WORKSPACE-VM",
+      "icon": "ri-server-line",
+      "logo": "res/LOGO.png",
+      "logoPath": "/logos/workspace-vm.png",
+      "description": "Sovereign digital workspace stack. A federated repository for developing and running web services and AI agents on infrastructure you control, built on data sovereignty, system immutability, and workspace-wide compliance."
+    },
+    {
+      "slug": "workspace-ci",
+      "displayName": "WORKSPACE-CI",
+      "language": "Python",
+      "repoName": "WORKSPACE-CI",
+      "icon": "ri-terminal-box-line",
+      "logo": "res/LOGO.png",
+      "logoPath": "/logos/workspace-ci.png",
+      "description": "Practical guardrails for coding agents: required git hooks, banned-pattern scanning, quality gates, and this wiki for browsing the workspace's projects, policies, standards, and tooling."
+    },
+    {
+      "slug": "workspace-gateway",
+      "displayName": "WORKSPACE-GATEWAY",
+      "language": "Lua",
+      "repoName": "WORKSPACE-GATEWAY",
+      "icon": "ri-globe-line",
+      "logo": "res/LOGO.png",
+      "logoPath": "/logos/workspace-gateway.png",
+      "description": "Multi-tenant LLM gateway on Apache APISIX for shared LLM traffic with virtual key sharding, spend limits, PII redaction, and built-in safety and moderation. Ships Grafana dashboards for cost, usage, and operations.",
+      "grafanaDashboards": "conf/grafana/dashboards",
+      "grafanaSubtitle": "Real-time metrics for the multi-tenant LLM gateway - routing, token accounting, PII redaction, and provider health across all upstream AI models.",
+      "startCommand": "make gateway-start",
+      "grafanaPort": 3030
+    },
+    {
+      "slug": "workspace-guard",
+      "displayName": "WORKSPACE-GUARD",
+      "language": "Rust",
+      "repoName": "WORKSPACE-GUARD",
+      "icon": "ri-shield-keyhole-line",
+      "logo": "res/LOGO.png",
+      "logoPath": "/logos/workspace-guard.png",
+      "description": "Compiled Rust guards wrapping the most abusable surfaces of an agent dev machine, vetting every git invocation for destructive history and policy bypass while containing GTFOBins-class SUID and file-capability escapes."
+    }
+  ]
+}

@@ -2,35 +2,48 @@ import { WikiShell } from '@/components/wiki/WikiShell'
 import { ConfigDialog } from '@/components/wiki/ConfigDialog'
 import { FeedbackWidget } from '@/components/wiki/FeedbackWidget'
 import { CardListSection } from '@workspace-ci/web-components/components/CardListSection'
-import { configAdapter, deriveCategories } from '@/lib/card-adapters'
-import { getConfigIndex, getConfigSchema, getConfigRawYaml, getConfigValue, getWikiLabels } from '@/lib/yaml-loader'
+import { guardConfigAdapter, deriveCategories } from '@/lib/card-adapters'
+import {
+  getGuardConfigIndex,
+  getGuardConfigEntries,
+  getGuardConfigSchema,
+  getGuardConfigRawYaml,
+  getGuardConfig,
+  getGuardConfigRoot,
+  getWikiLabels,
+} from '@/lib/yaml-loader'
 import { getAllFeedbackCounts } from '@/lib/feedback-loader'
 import { highlightCode } from '@workspace-ci/web-components/lib/highlight'
 import type { ConfigSchema } from '@/types/content'
 import type { ReactNode } from 'react'
+import { basename, dirname } from 'path'
 
-export default async function ConfigPage() {
-  const configs = await getConfigIndex()
+export default async function GuardPage() {
+  const names = await getGuardConfigIndex()
+  const entries = getGuardConfigEntries(names)
   const labels = getWikiLabels()
-  const items = configAdapter(configs, labels)
+  const items = guardConfigAdapter(entries, labels)
   const categories = deriveCategories(items)
-  const feedbackCounts = getAllFeedbackCounts('config')
+  const feedbackCounts = getAllFeedbackCounts('guard')
 
   const schemas: Record<string, ConfigSchema | null> = {}
   const rawYamls: Record<string, string> = {}
   const highlightedHtml: Record<string, string> = {}
   const values: Record<string, Record<string, unknown>> = {}
 
-  for (const c of configs) {
-    schemas[c.name] = await getConfigSchema(c.name)
-    rawYamls[c.name] = getConfigRawYaml(c.name)
-    highlightedHtml[c.name] = await highlightCode(rawYamls[c.name], 'yaml')
+  for (const e of entries) {
+    schemas[e.name] = await getGuardConfigSchema(e.name)
+    rawYamls[e.name] = getGuardConfigRawYaml(e.name)
+    highlightedHtml[e.name] = await highlightCode(rawYamls[e.name], 'yaml')
     try {
-      values[c.name] = await getConfigValue(c.name)
+      values[e.name] = await getGuardConfig(e.name)
     } catch {
-      values[c.name] = {}
+      values[e.name] = {}
     }
   }
+
+  const guardRoot = getGuardConfigRoot()
+  const guardSourceDir = `${basename(dirname(guardRoot))}/${basename(guardRoot)}`
 
   const cardContent: Record<string, ReactNode> = {}
   for (const item of items) {
@@ -44,17 +57,17 @@ export default async function ConfigPage() {
         {html && (
           <ConfigDialog
             name={`${item.id}.yaml`}
-            sourceFile={`config/${item.id}.yaml`}
+            sourceFile={`${guardSourceDir}/${item.id}.yaml`}
             rawContent={raw}
             highlightedHtml={html}
             schema={schema}
             values={vals}
-            titleId={`config-src-${item.id}`}
+            titleId={`guard-src-${item.id}`}
           />
         )}
         <FeedbackWidget
           targetId={item.id}
-          targetType="config"
+          targetType="guard"
           upCount={counts.upvotes}
           downCount={counts.downvotes}
         />
@@ -64,18 +77,17 @@ export default async function ConfigPage() {
 
   return (
     <WikiShell>
-      <h1>Configuration Reference</h1>
+      <h1>Sandbox Configs</h1>
       <p className="page-intro">
-        YAML configuration files and their field-level documentation.
-        Each config may have an associated schema that documents required
-        and optional fields.
+        Guard policy configurations from the sibling WORKSPACE-GUARD repository. The guard tree is a
+        soft dependency; configs appear here when available.
       </p>
       <CardListSection
         items={items}
         categories={categories}
-        itemLabel="configs"
+        itemLabel="guard policies"
         cardContent={cardContent}
-        emptyMessage="No configuration files found. Check that the config directory is accessible at WORKSPACE_CI_CONFIG_ROOT."
+        emptyMessage="No guard policy configs found at WORKSPACE_GUARD_CONFIG_ROOT. The guard tree is a soft dependency; check that the sibling WORKSPACE-GUARD repo is checked out."
       />
     </WikiShell>
   )

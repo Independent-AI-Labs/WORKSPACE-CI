@@ -3,6 +3,7 @@ import { GatewayTabs } from '@/components/wiki/GatewayTabs'
 import { HeroBanner } from '@/components/wiki/HeroBanner'
 import { ServiceUnavailable } from '@workspace-ci/web-components/components/ServiceUnavailable'
 import { getBrandingForRequest } from '@/lib/branding'
+import { getGrafanaProject } from '@/lib/project-registry'
 import {
   checkGrafanaHealth,
   resolveGrafanaBaseUrl,
@@ -16,6 +17,10 @@ export default async function LLMGatewayPage() {
   const grafanaBase = await resolveGrafanaBaseUrl()
   const probeUrl = resolveGrafanaHealthUrlForServerProbe(grafanaBase)
   const grafanaHealthy = await checkGrafanaHealth(probeUrl)
+  const gatewayProject = getGrafanaProject()
+  const startHint = gatewayProject?.startCommand
+    ? ` Start the ${gatewayProject.displayName} stack (${gatewayProject.startCommand}) and refresh this page.`
+    : ' Start the gateway stack and refresh this page.'
 
   return (
     <WikiShell>
@@ -28,7 +33,7 @@ export default async function LLMGatewayPage() {
           <ServiceUnavailable
             compact
             title="Grafana Unavailable"
-            description="Live gateway metrics are temporarily offline. Start the WORKSPACE-GATEWAY stack (make gateway-start) and refresh this page."
+            description={`Live gateway metrics are temporarily offline.${startHint}`}
           />
         )}
       </div>

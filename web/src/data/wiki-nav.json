@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "href": "/",
+      "label": "Home",
+      "icon": "ri-home-line"
+    },
+    {
+      "href": "/projects",
+      "label": "Open Source",
+      "icon": "ri-dna-line",
+      "count": "projects"
+    },
+    {
+      "href": "/system-policies",
+      "label": "System Policies",
+      "icon": "ri-pulse-line",
+      "count": "runtimeHooks"
+    },
+    {
+      "href": "/hooks",
+      "label": "Git Hooks",
+      "icon": "ri-git-commit-line",
+      "count": "hooks"
+    },
+    {
+      "href": "/anti-patterns",
+      "label": "Anti-Patterns",
+      "icon": "ri-error-warning-line",
+      "count": "patterns"
+    },
+    {
+      "href": "/hook-configs",
+      "label": "Hook Configs",
+      "icon": "ri-settings-3-line",
+      "count": "configs"
+    },
+    {
+      "href": "/sandbox-configs",
+      "label": "Sandbox Configs",
+      "icon": "ri-shield-keyhole-line",
+      "count": "guards"
+    },
+    {
+      "href": "/tooling",
+      "label": "Tools & Scripts",
+      "icon": "ri-tools-line",
+      "count": "scripts"
+    },
+    {
+      "href": "/standards",
+      "label": "AI Governance",
+      "icon": "ri-book-marked-line",
+      "count": "standards"
+    },
+    {
+      "href": "/llm-gateway",
+      "label": "LLM Gateway",
+      "icon": "ri-globe-line",
+      "divider": true
+    },
+    {
+      "href": "/checks",
+      "label": "Static Analysis",
+      "icon": "ri-check-double-line"
+    },
+    {
+      "href": "/playground",
+      "label": "Playground",
+      "icon": "ri-code-box-line"
+    },
+    {
+      "href": "/integration",
+      "label": "Integration Guide",
+      "icon": "ri-plug-line",
+      "divider": true
+    }
+  ]
+}

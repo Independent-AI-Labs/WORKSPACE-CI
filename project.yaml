@@ -1,0 +1,12 @@
+version: 1
+project:
+  slug: workspace-ci
+  displayName: WORKSPACE-CI
+  repoName: WORKSPACE-CI
+  language: Python
+  icon: ri-terminal-box-line
+  logo: res/LOGO.png
+  description: >-
+    Practical guardrails for coding agents: required git hooks, banned-pattern
+    scanning, quality gates, and this wiki for browsing the workspace's
+    projects, policies, standards, and tooling.

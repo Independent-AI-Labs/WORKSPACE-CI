@@ -227,7 +227,11 @@ sync: ## Sync .venv deps + reinstall hooks
 
 .PHONY: check
 check: ## Run all quality gates (lint + type-check + test)
-	$(MAKE) _lint-impl && $(MAKE) _type-check-impl && $(MAKE) _test-impl
+	$(MAKE) check-templates && $(MAKE) _lint-impl && $(MAKE) _type-check-impl && $(MAKE) _test-impl
+
+.PHONY: check-templates
+check-templates: ## Verify generated templates are fresh vs config/required_hooks.yaml
+	bash scripts/scaffold-ci --check-template
 
 .PHONY: lint
 lint: ## Runs ruff format and ruff lint with auto-fix on all ci/ modules. Catches style violations, import sorting issues, and unused variables before they reach the remote. Acts as the first stage of the pre-commit quality gate.
@@ -314,8 +318,9 @@ wiki-dev: wiki-dev-start ## Alias for wiki-dev-start
 	:
 wiki-dev-stop: ## Stop wiki dev server
 	$(MAKE) -C web dev-stop
-wiki-dev-restart: ## Restart wiki dev server (stop + sync content + start; fast, no cloc)
-	echo "[wiki-dev-restart] stop + sync WORKSPACE-WEB-CONTENT + start (use wiki-dev-restart-refresh for cloc)"
+wiki-dev-restart: ## Restart wiki dev server (stop + sync content + start; refreshes code-stats if stale)
+	echo "[wiki-dev-restart] stop + sync WORKSPACE-WEB-CONTENT + start (code-stats refreshed only when stale)"
+	$(MAKE) extract-code-stats-if-stale
 	$(MAKE) -C web dev-restart
 wiki-dev-restart-refresh: ## Restart wiki dev server after regenerating wiki JSON (cloc may take minutes)
 	echo "[wiki-dev-restart-refresh] phase 1/2: extract-wiki-data (code-stats/cloc may take several minutes)"
@@ -333,11 +338,12 @@ wiki-dev-logs: ## Tail wiki dev server logs
 # Wiki Production
 # =============================================================================
 
-.PHONY: wiki-prod-check-syntax wiki-prod-build wiki-prod-start wiki-prod-stop wiki-prod-restart wiki-prod-verify wiki-prod-status wiki-prod-logs
+.PHONY: wiki-prod-check-syntax wiki-prod-build wiki-prod-start wiki-prod-stop wiki-prod-redeploy wiki-prod-verify wiki-prod-status wiki-prod-logs
 .PHONY: wiki-prod-deploy wiki-prod-undeploy wiki-prod-systemd-logs
 wiki-prod-check-syntax: ## Verify wiki prod Makefile recipes parse under bash -n
 	$(MAKE) -C web prod-check-syntax
-wiki-prod-build: ## Build wiki production image (Podman)
+wiki-prod-build: ## Build wiki production image (Podman; refreshes code-stats if stale)
+	$(MAKE) extract-code-stats-if-stale
 	$(MAKE) -C web prod-build
 wiki-build-prod: wiki-prod-build ## Alias for wiki-prod-build
 wiki-prod-start: ## Start wiki production stack on :8080/:8443
@@ -346,8 +352,8 @@ wiki-prod-start: ## Start wiki production stack on :8080/:8443
 		ALLOWED_ORIGINS="$(ALLOWED_ORIGINS)" WIKI_HOME_LANDING_ENABLED="$(WIKI_HOME_LANDING_ENABLED)"
 wiki-prod-stop: ## Stop wiki production stack
 	$(MAKE) -C web prod-stop
-wiki-prod-restart: ## Restart wiki production stack + verify health
-	$(MAKE) -C web prod-restart WIKI_HTTP_PORT="$(WIKI_HTTP_PORT)" WIKI_HTTPS_PORT="$(WIKI_HTTPS_PORT)" \
+wiki-prod-redeploy: ## Restart wiki production stack + verify health
+	$(MAKE) -C web prod-redeploy WIKI_HTTP_PORT="$(WIKI_HTTP_PORT)" WIKI_HTTPS_PORT="$(WIKI_HTTPS_PORT)" \
 		WIKI_TLS_DIR="$(WIKI_TLS_DIR)" WIKI_TLS_MODE="$(WIKI_TLS_MODE)" WIKI_TLS_CN="$(WIKI_TLS_CN)" \
 		ALLOWED_ORIGINS="$(ALLOWED_ORIGINS)" WIKI_HOME_LANDING_ENABLED="$(WIKI_HOME_LANDING_ENABLED)" \
 		WIKI_PUBLIC_URL="https://$(_WIKI_TLS_HOST)/"
@@ -483,8 +489,11 @@ extract-code-stats: ## Generate web/src/data/code-stats.json for wiki Project Ca
 	echo "[extract-wiki-data] code-stats (cloc across workspace; slow)..."
 	uv run python scripts/extract-code-stats.py
 
+.PHONY: extract-code-stats-if-stale
+extract-code-stats-if-stale: ## Regenerate code-stats.json only when workspace repos have newer commits
+	bash scripts/code-stats-if-stale
+
 .PHONY: extract-hook-sources extract-script-sources extract-swallow-source extract-wiki-data
-export CI_WEB_DATA_DIR ?= $(HOME)/data/workspace-ci/wiki/data
 _WIKI_EXTRACT_ENV = CI_CONFIG_DIR=config
 
 extract-hook-sources: ## Generate web/src/data/hook-sources.json for wiki Hook EntryPointDialog

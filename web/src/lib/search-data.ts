@@ -7,15 +7,12 @@ import type { BannedWordsConfig, SwallowPatternConfig } from '@/types/patterns'
 import type { RequiredHooksConfig } from '@/types/hooks'
 import type { ScriptManifest } from '@/types/wiki'
 import { classifyAll, classifySwallowPatterns } from '@/lib/patterns'
-import {
-  buildSearchIndexFromPatterns,
-  buildSearchIndexFromHooks,
-} from '@/lib/search-index'
+import { buildSearchIndexFromPatterns, buildSearchIndexFromHooks } from '@/lib/search-index'
 import {
   getConfigRoot,
   getScriptsRoot,
-  getGuardConfigRoot,
   getGuardConfigEntries,
+  getGuardConfigNamesSync,
   getStandardsSync,
   getWikiPages,
 } from '@/lib/yaml-loader'
@@ -24,19 +21,13 @@ import { PROJECTS } from '@/lib/project-registry'
 
 function loadPatterns(): SearchIndexEntry[] {
   try {
-    const bannedRaw = readFileSync(
-      join(getConfigRoot(), 'banned_words.yaml'),
-      'utf8',
-    )
+    const bannedRaw = readFileSync(join(getConfigRoot(), 'banned_words.yaml'), 'utf8')
     const bannedConfig = load(bannedRaw) as BannedWordsConfig
     const bannedPatterns = classifyAll(bannedConfig)
 
     let swallowPatterns: ReturnType<typeof classifySwallowPatterns> = []
     try {
-      const swallowRaw = readFileSync(
-        join(getConfigRoot(), 'silent_swallow_patterns.yaml'),
-        'utf8',
-      )
+      const swallowRaw = readFileSync(join(getConfigRoot(), 'silent_swallow_patterns.yaml'), 'utf8')
       const swallowConfig = load(swallowRaw) as SwallowPatternConfig
       const detectorData = loadSwallowDetectors()
       swallowPatterns = classifySwallowPatterns(swallowConfig, detectorData)
@@ -53,20 +44,14 @@ function loadPatterns(): SearchIndexEntry[] {
 
 function loadHooks(): SearchIndexEntry[] {
   try {
-    const raw = readFileSync(
-      join(getConfigRoot(), 'required_hooks.yaml'),
-      'utf8',
-    )
+    const raw = readFileSync(join(getConfigRoot(), 'required_hooks.yaml'), 'utf8')
     const config = load(raw) as RequiredHooksConfig
     const sourceData = loadHookSources()
     const descriptions: Record<string, string> = {}
     for (const s of sourceData?.sources ?? []) {
       if (s.description) descriptions[s.id] = s.description
     }
-    return buildSearchIndexFromHooks(
-      config.hooks,
-      descriptions,
-    )
+    return buildSearchIndexFromHooks(config.hooks, descriptions)
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') return []
     throw e
@@ -81,7 +66,7 @@ function loadConfigs(): SearchIndexEntry[] {
         (f) =>
           f.endsWith('.yaml') &&
           !f.endsWith('.schema.yaml') &&
-          !f.includes('banned_words_exceptions'),
+          !f.includes('banned_words_exceptions')
       )
       .map((f) => {
         const name = f.replace(/\.yaml$/, '')
@@ -103,17 +88,7 @@ function loadConfigs(): SearchIndexEntry[] {
 
 function loadGuardConfigs(): SearchIndexEntry[] {
   try {
-    const entries = readdirSync(getGuardConfigRoot())
-    const names = entries
-      .filter(
-        (f) =>
-          f.startsWith('guard_') &&
-          f.endsWith('.yaml') &&
-          !f.endsWith('.schema.yaml'),
-      )
-      .map((f) => f.replace(/\.yaml$/, ''))
-      .sort()
-    return getGuardConfigEntries(names).map((g) => ({
+    return getGuardConfigEntries(getGuardConfigNamesSync()).map((g) => ({
       id: `guard-${g.name}`,
       title: g.title,
       section: 'Guard',
@@ -138,16 +113,7 @@ function loadStandardsSearch(): SearchIndexEntry[] {
     content: `${s.summary} Issuer: ${s.issuer}, Jurisdiction: ${s.jurisdiction}, Type: ${s.type}, Status: ${s.status}.`,
     href: `/standards#${s.id}`,
     type: 'standard' as const,
-    keywords: [
-      s.id,
-      s.title,
-      s.fullTitle,
-      s.issuer,
-      s.jurisdiction,
-      s.type,
-      s.status,
-      ...s.tags,
-    ],
+    keywords: [s.id, s.title, s.fullTitle, s.issuer, s.jurisdiction, s.type, s.status, ...s.tags],
   }))
 }
 

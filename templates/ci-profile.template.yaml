@@ -29,7 +29,8 @@ pre-push:
   - block-coauthored-history
   - ci-check-push
   - check-dead-code
+  - osv-scan
 
-# Total hooks: 20 (pre-commit=15 commit-msg=2 pre-push=3)
-# Generated: 2026-07-04T17:55:01Z
+# Total hooks: 21 (pre-commit=15 commit-msg=2 pre-push=4)
+# Generated: 2026-07-28T18:31:02Z
 # Source: config/required_hooks.yaml

@@ -7,7 +7,7 @@ export default function ChecksPage() {
       description="This page will run CI checks directly in your browser. Upload a source archive or point to a Git repository to get started."
       links={[
         { href: '/anti-patterns', label: 'Browse Anti-Patterns' },
-        { href: '/config', label: 'View Config Files' },
+        { href: '/hook-configs', label: 'View Hook Configs' },
       ]}
     />
   )

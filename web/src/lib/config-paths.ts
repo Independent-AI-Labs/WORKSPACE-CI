@@ -19,8 +19,7 @@ export function getConfigRoot(): string {
 }
 
 export function getGuardConfigRoot(): string {
-  const env =
-    process.env.CI_GUARD_CONFIG_DIR ?? process.env.WORKSPACE_GUARD_CONFIG_ROOT
+  const env = process.env.CI_GUARD_CONFIG_DIR ?? process.env.WORKSPACE_GUARD_CONFIG_ROOT
   if (env) return resolve(env)
   return resolve(cwd(), '..', '..', 'WORKSPACE-GUARD', 'config')
 }
@@ -28,8 +27,6 @@ export function getGuardConfigRoot(): string {
 export function getWebDataRoot(): string {
   const env = process.env.CI_WEB_DATA_DIR
   if (env) return resolve(env)
-  const home = process.env.HOME
-  if (home) return resolve(home, 'data', 'workspace-ci', 'wiki', 'data')
   return resolve(cwd(), 'src', 'data')
 }
 
@@ -83,9 +80,7 @@ export function resolveConfigPath(stem: string, consumerPath?: string): string {
   if (existsSync(defaultPath)) return defaultPath
 
   if (consumerPath) {
-    const localPath = isAbsolute(consumerPath)
-      ? consumerPath
-      : resolve(cwd(), consumerPath)
+    const localPath = isAbsolute(consumerPath) ? consumerPath : resolve(cwd(), consumerPath)
     if (existsSync(localPath)) return localPath
   }
 

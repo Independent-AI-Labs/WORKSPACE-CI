@@ -1,4 +1,5 @@
 import type { WikiStats } from '@/lib/search-data'
+import wikiNavData from '@/data/wiki-nav.json'
 
 export interface WikiNavItem {
   href: string
@@ -8,25 +9,37 @@ export interface WikiNavItem {
   divider?: boolean
 }
 
-export const HOME_NAV_ITEM: WikiNavItem = { href: '/', label: 'Home', icon: 'ri-home-line' }
+interface WikiNavData {
+  version: number
+  items: Array<{
+    href: string
+    label: string
+    icon: string
+    count?: string
+    divider?: boolean
+  }>
+}
 
-export const WIKI_NAV_ITEMS: WikiNavItem[] = [
-  { href: '/projects', label: 'Open Source', icon: 'ri-dna-line', count: 'projects' },
-  { href: '/hooks', label: 'Git Hooks', icon: 'ri-git-commit-line', count: 'hooks' },
-  { href: '/policy-automation', label: 'Policy Automation', icon: 'ri-pulse-line', count: 'runtimeHooks' },
-  { href: '/anti-patterns', label: 'Anti-Patterns', icon: 'ri-error-warning-line', count: 'patterns' },
-  { href: '/config', label: 'Config Files', icon: 'ri-settings-3-line', count: 'configs' },
-  { href: '/tooling', label: 'Tools & Scripts', icon: 'ri-tools-line', count: 'scripts' },
-  { href: '/guard', label: 'Guard Policies', icon: 'ri-shield-keyhole-line', count: 'guards' },
-  { href: '/standards', label: 'AI Governance', icon: 'ri-book-marked-line', count: 'standards' },
-  { href: '/llm-gateway', label: 'LLM Gateway', icon: 'ri-globe-line', divider: true },
-  { href: '/checks', label: 'Static Analysis', icon: 'ri-check-double-line' },
-  { href: '/playground', label: 'Playground', icon: 'ri-code-box-line' },
-  { href: '/integration', label: 'Integration Guide', icon: 'ri-plug-line', divider: true },
-]
+const data = wikiNavData as WikiNavData
+
+const ALL_NAV_ITEMS: WikiNavItem[] = data.items.map((item) => ({
+  href: item.href,
+  label: item.label,
+  icon: item.icon,
+  ...(item.count ? { count: item.count as keyof WikiStats } : {}),
+  ...(item.divider ? { divider: true } : {}),
+}))
+
+export const HOME_NAV_ITEM: WikiNavItem = ALL_NAV_ITEMS[0] ?? {
+  href: '/',
+  label: 'Home',
+  icon: 'ri-home-line',
+}
+
+export const WIKI_NAV_ITEMS: WikiNavItem[] = ALL_NAV_ITEMS.slice(1)
 
 const NAV_LABEL_BY_HREF = new Map<string, string>(
-  [HOME_NAV_ITEM, ...WIKI_NAV_ITEMS].map((item) => [item.href, item.label]),
+  ALL_NAV_ITEMS.map((item) => [item.href, item.label])
 )
 
 export function getNavLabelForHref(href: string): string | undefined {

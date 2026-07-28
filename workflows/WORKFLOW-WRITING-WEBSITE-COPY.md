@@ -127,7 +127,7 @@ from code and config.
 6. **Paste into source.** `web/branding.yaml` for reusable strings;
    `web/app/page.tsx` only when the string is home-only.
 7. **Rebuild prod wiki** after hero/branding changes:
-   `make wiki-prod-build && make wiki-prod-restart` from `projects/CI`.
+   `make wiki-prod-build && make wiki-prod-redeploy` from `projects/CI`.
 
 ### Project catalogue README intro (any repo)
 
