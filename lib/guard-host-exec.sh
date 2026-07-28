@@ -31,10 +31,10 @@ guard_host_short_name() {
 }
 
 guard_host_profiles_file() {
-    printf '%s/config/guard-host-profiles.yaml\n' "$_guard_dir"
+    printf '%s/config/shared_host_profiles.yaml\n' "$_guard_dir"
 }
 
-# Emit deployment class for hostname from guard-host-profiles.yaml (empty if unknown).
+# Emit deployment class for hostname from shared_host_profiles.yaml (empty if unknown).
 guard_host_profile_class() {
     local host="${1:?host}"
     local profiles
