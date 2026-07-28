@@ -333,7 +333,7 @@ wiki-dev-logs: ## Tail wiki dev server logs
 # Wiki Production
 # =============================================================================
 
-.PHONY: wiki-prod-check-syntax wiki-prod-build wiki-prod-start wiki-prod-stop wiki-prod-restart wiki-prod-status wiki-prod-logs
+.PHONY: wiki-prod-check-syntax wiki-prod-build wiki-prod-start wiki-prod-stop wiki-prod-restart wiki-prod-verify wiki-prod-status wiki-prod-logs
 .PHONY: wiki-prod-deploy wiki-prod-undeploy wiki-prod-systemd-logs
 wiki-prod-check-syntax: ## Verify wiki prod Makefile recipes parse under bash -n
 	$(MAKE) -C web prod-check-syntax
@@ -346,10 +346,13 @@ wiki-prod-start: ## Start wiki production stack on :8080/:8443
 		ALLOWED_ORIGINS="$(ALLOWED_ORIGINS)" WIKI_HOME_LANDING_ENABLED="$(WIKI_HOME_LANDING_ENABLED)"
 wiki-prod-stop: ## Stop wiki production stack
 	$(MAKE) -C web prod-stop
-wiki-prod-restart: ## Restart wiki production stack
+wiki-prod-restart: ## Restart wiki production stack + verify health
 	$(MAKE) -C web prod-restart WIKI_HTTP_PORT="$(WIKI_HTTP_PORT)" WIKI_HTTPS_PORT="$(WIKI_HTTPS_PORT)" \
 		WIKI_TLS_DIR="$(WIKI_TLS_DIR)" WIKI_TLS_MODE="$(WIKI_TLS_MODE)" WIKI_TLS_CN="$(WIKI_TLS_CN)" \
-		ALLOWED_ORIGINS="$(ALLOWED_ORIGINS)" WIKI_HOME_LANDING_ENABLED="$(WIKI_HOME_LANDING_ENABLED)"
+		ALLOWED_ORIGINS="$(ALLOWED_ORIGINS)" WIKI_HOME_LANDING_ENABLED="$(WIKI_HOME_LANDING_ENABLED)" \
+		WIKI_PUBLIC_URL="https://$(_WIKI_TLS_HOST)/"
+wiki-prod-verify: ## Wiki prod health report (containers, probes, TLS, public URL, settle check)
+	$(MAKE) -C web prod-verify WIKI_PUBLIC_URL="https://$(_WIKI_TLS_HOST)/"
 wiki-prod-status: ## Show wiki production stack status
 	$(MAKE) -C web prod-status
 wiki-prod-logs: ## Tail wiki production stack logs

@@ -39,7 +39,12 @@ ci_check_unstaged() {
         echo ""
         ci_fail "Unstaged or untracked files detected, auto-staging now."
         git diff
-        git add -A
+        local add_rc=0
+        git add -A || add_rc=$?
+        if [[ $add_rc -ne 0 ]]; then
+            ci_fail "Auto-stage FAILED: git add -A exited $add_rc. Nothing was staged; stage manually and re-run."
+            return 1
+        fi
         if [ -n "$untracked" ]; then
             echo ""
             ci_info "Untracked files being staged:"

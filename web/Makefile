@@ -74,7 +74,8 @@ help: ## Show this help
 	echo "  prod-build    Build workspace-ci-wiki:prod image"
 	echo "  prod-start    Start nginx + Next.js stack"
 	echo "  prod-stop     Stop production stack"
-	echo "  prod-restart  Restart production stack"
+	echo "  prod-restart  Restart production stack + verify health"
+	echo "  prod-verify   Health report (containers, probes, TLS, public URL)"
 	echo "  prod-status   Show stack status + HTTP probe"
 	echo "  prod-logs     Tail production logs"
 	echo ""
@@ -252,15 +253,17 @@ prod-check-syntax: ## Verify prod shell scripts parse under bash -n
 	bash -n scripts/prod.sh
 	echo "OK  scripts/prod.sh"
 
-.PHONY: prod-build prod-start prod-stop prod-restart prod-status prod-logs
+.PHONY: prod-build prod-start prod-stop prod-restart prod-verify prod-status prod-logs
 prod-build: ## Build production wiki image (context: projects root)
 	./scripts/prod.sh build
 prod-start: ## Start production stack (HTTP :$(PROD_HTTP_PORT), HTTPS :$(PROD_HTTPS_PORT))
 	./scripts/prod.sh start
 prod-stop: ## Stop production stack
 	./scripts/prod.sh stop
-prod-restart: ## Restart production stack
+prod-restart: ## Restart production stack + verify health
 	./scripts/prod.sh restart
+prod-verify: ## Health report: containers, probes, TLS, public URL, settle check
+	./scripts/prod.sh verify
 prod-status: ## Show production stack status + HTTP probe
 	./scripts/prod.sh status
 prod-logs: ## Tail production stack logs

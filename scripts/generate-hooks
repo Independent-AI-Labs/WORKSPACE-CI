@@ -130,6 +130,27 @@ if [[ -z "\${_CI_CAPS_SCRUBBED:-}" ]]; then
     fi
 fi
 
+# PATH sanitize (hook-git resolution): git exports GIT_EXEC_PATH and prepends
+# its exec dir (/usr/lib/git-core) to PATH for hook children. That dir holds
+# the VANILLA distro git with no file capabilities: any 'git' resolved from
+# there bypasses the workspace guard, never receives the CAP_DAC_OVERRIDE
+# loan, and fails writing the root-owned .git tree (EACCES on
+# .git/index.lock) -- this broke check-unstaged's 'git add -A'. Filter the
+# exec-path entry out so every hook-spawned git resolves to the guard
+# wrapper (/usr/bin/git) and re-acquires the loan per call, at any depth.
+_git_exec_path="\$(command git --exec-path)"
+if [[ -n "\$_git_exec_path" ]]; then
+    _sanitized_path=""
+    _saved_ifs="\$IFS"
+    IFS=':'
+    for _p in \$PATH; do
+        [[ "\$_p" == "\$_git_exec_path" ]] && continue
+        _sanitized_path="\${_sanitized_path:+\$_sanitized_path:}\$_p"
+    done
+    IFS="\$_saved_ifs"
+    export PATH="\$_sanitized_path"
+fi
+
 _ROOT="\$(git rev-parse --show-toplevel)"
 cd "\$_ROOT"
 if ! source "\${_ROOT}/${_ci_rel}/lib/ci.sh"; then

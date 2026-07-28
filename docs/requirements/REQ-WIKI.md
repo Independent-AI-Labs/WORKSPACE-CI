@@ -29,12 +29,12 @@
 
 **Sibling-repo guard policy configs (cross-repo source, §9.3 guard root):**
 
-- [`WORKSPACE-GUARD/config/guard_subcommands.yaml`](../../../WORKSPACE-GUARD/config/guard_subcommands.yaml): blocked / partial / contract-check git subcommands
-- [`WORKSPACE-GUARD/config/guard_config_keys.yaml`](../../../WORKSPACE-GUARD/config/guard_config_keys.yaml): dangerous git-config key glob patterns; sudo-gated keys
-- [`WORKSPACE-GUARD/config/guard_protected_branches.yaml`](../../../WORKSPACE-GUARD/config/guard_protected_branches.yaml): protected branch names + prefixes
-- [`WORKSPACE-GUARD/config/guard_environment.yaml`](../../../WORKSPACE-GUARD/config/guard_environment.yaml): allowed / sudo-gated / blocked env vars
-- [`WORKSPACE-GUARD/config/guard_resource_limits.yaml`](../../../WORKSPACE-GUARD/config/guard_resource_limits.yaml): rlimit thresholds
-- [`WORKSPACE-GUARD/config/guard_paths.yaml`](../../../WORKSPACE-GUARD/config/guard_paths.yaml): guard log/contract/enforcement/markers paths
+- [`WORKSPACE-GUARD/config/git_guard_subcommands.yaml`](../../../WORKSPACE-GUARD/config/git_guard_subcommands.yaml): blocked / partial / contract-check git subcommands
+- [`WORKSPACE-GUARD/config/git_guard_config_keys.yaml`](../../../WORKSPACE-GUARD/config/git_guard_config_keys.yaml): dangerous git-config key glob patterns; sudo-gated keys
+- [`WORKSPACE-GUARD/config/git_guard_protected_branches.yaml`](../../../WORKSPACE-GUARD/config/git_guard_protected_branches.yaml): protected branch names + prefixes
+- [`WORKSPACE-GUARD/config/git_guard_environment.yaml`](../../../WORKSPACE-GUARD/config/git_guard_environment.yaml): allowed / sudo-gated / blocked env vars
+- [`WORKSPACE-GUARD/config/git_guard_resource_limits.yaml`](../../../WORKSPACE-GUARD/config/git_guard_resource_limits.yaml): rlimit thresholds
+- [`WORKSPACE-GUARD/config/shared_paths.yaml`](../../../WORKSPACE-GUARD/config/shared_paths.yaml): guard log/contract/enforcement/markers paths
 
 ---
 
