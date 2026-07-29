@@ -20,8 +20,8 @@ describe('WikiBreadcrumbs', () => {
     }
   })
 
-  it('shows only the nav label on /projects when home landing is disabled', () => {
-    mockUsePathname.mockReturnValue('/projects')
+  it('shows only the nav label on /open-source when home landing is disabled', () => {
+    mockUsePathname.mockReturnValue('/open-source')
     render(<WikiBreadcrumbs homeLandingEnabled={false} />)
     expect(screen.getByText('Open Source')).toBeInTheDocument()
     expect(screen.queryByText('Projects')).not.toBeInTheDocument()

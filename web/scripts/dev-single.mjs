@@ -14,7 +14,10 @@ process.on('unhandledRejection', (reason) => {
 })
 
 const APP_PORT = Number(process.env.WIKI_DEV_PORT || 4000)
-const HOST = process.env.WIKI_DEV_HOST || '0.0.0.0'
+if (process.env.WIKI_DEV_HOST === undefined || process.env.WIKI_DEV_HOST.trim() === '') {
+  throw new Error('[dev-single] WIKI_DEV_HOST env var is required')
+}
+const HOST = process.env.WIKI_DEV_HOST
 const LOCK_DIR = path.resolve(process.cwd(), '.next')
 const LOCK_FILE = path.join(LOCK_DIR, 'dev-server.lock')
 
@@ -149,20 +152,26 @@ async function main() {
 
   const heartbeat = setInterval(() => {
     const uptimeSec = Math.round((Date.now() - startedAt) / 1000)
-    console.error(`[dev-single] heartbeat uptime=${uptimeSec}s child=${child.pid ?? 'dead'}`)
+    if (child.pid === undefined) {
+      throw new Error('[dev-single] child process has no pid')
+    }
+    console.error(`[dev-single] heartbeat uptime=${uptimeSec}s child=${child.pid}`)
   }, 300_000)
   heartbeat.unref()
 
   child.on('exit', (code, signal) => {
     const uptimeSec = Math.round((Date.now() - startedAt) / 1000)
     console.error(
-      `[dev-single] child exited code=${code} signal=${signal ?? 'none'} uptime=${uptimeSec}s`,
+      `[dev-single] child exited code=${code} signal=${signal} uptime=${uptimeSec}s`,
     )
     cleanup()
     if (signal) {
       process.kill(process.pid, signal)
     } else {
-      process.exit(code ?? 1)
+      if (code === null) {
+        throw new Error('[dev-single] child exited with neither code nor signal')
+      }
+      process.exit(code)
     }
   })
 

@@ -15,7 +15,10 @@ export function splitMermaidBlocks(content: string): MermaidSegment[] {
   let lastIndex = 0
 
   for (const match of content.matchAll(re)) {
-    const index = match.index ?? 0
+    if (match.index === undefined) {
+      throw new Error('mermaid fence match is missing an index')
+    }
+    const index = match.index
     if (index > lastIndex) {
       segments.push({ type: 'md', body: content.slice(lastIndex, index) })
     }
@@ -40,13 +43,17 @@ export function parseCodeFences(md: string): CodeSegment[] {
   let lastIndex = 0
 
   for (const match of md.matchAll(re)) {
-    const index = match.index ?? 0
+    if (match.index === undefined) {
+      throw new Error('code fence match is missing an index')
+    }
+    const index = match.index
     if (index > lastIndex) {
       segments.push({ type: 'md', text: md.slice(lastIndex, index) })
     }
+    const lang = match[1]
     segments.push({
       type: 'code',
-      lang: match[1] || '',
+      lang: lang === undefined ? '' : lang,
       code: match[2],
     })
     lastIndex = index + match[0].length

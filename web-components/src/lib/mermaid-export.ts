@@ -169,17 +169,17 @@ export function serializeSvg(svg: SVGSVGElement): string {
 
 export interface SvgExportOptions {
   scale?: number
-  background?: string
+  background: string
 }
 
 /** Serialises a clone of `svg` with its viewBox reset to `base` so the PNG
  *  always captures the entire diagram, regardless of the live zoom/pan state. */
 export async function svgToPngDataUrl(
   svg: SVGSVGElement,
-  options: SvgExportOptions = {},
+  options: SvgExportOptions,
 ): Promise<string> {
   const scale = options.scale ?? PNG_EXPORT_BASE_SCALE
-  const background = options.background ?? 'transparent'
+  const background = options.background
   const base = deriveBaseViewBox(svg)
   const width = base.w
   const height = base.h
@@ -260,8 +260,12 @@ export async function copyText(text: string): Promise<boolean> {
   }
 }
 
-/** Reads a CSS custom property from :root; empty string if unavailable. */
-export function readCssVar(name: string): string {
-  if (typeof document === 'undefined') return ''
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+/** Reads a required CSS custom property from :root; throws when unset. */
+export function requireCssVar(name: string): string {
+  if (typeof document === 'undefined') {
+    throw new Error(`required CSS variable ${name} is not available without a document`)
+  }
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  if (!value) throw new Error(`required CSS variable ${name} is not set`)
+  return value
 }

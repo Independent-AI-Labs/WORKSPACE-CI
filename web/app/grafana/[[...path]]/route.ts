@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
-const DEV_UPSTREAM = process.env.GRAFANA_DEV_UPSTREAM ?? 'http://127.0.0.1:3030'
+const devUpstream = process.env.GRAFANA_DEV_UPSTREAM
+if (devUpstream === undefined || devUpstream.trim() === '') {
+  throw new Error('GRAFANA_DEV_UPSTREAM env var is required (e.g. http://127.0.0.1:3030)')
+}
+const DEV_UPSTREAM = devUpstream
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -28,7 +32,7 @@ async function proxyToGrafana(request: NextRequest, pathSegments: string[] | und
   }
 
   const incoming = new URL(request.url)
-  const suffix = pathSegments?.join('/') ?? ''
+  const suffix = pathSegments === undefined ? '' : pathSegments.join('/')
   const targetPath = suffix ? `/grafana/${suffix}` : '/grafana'
   const targetUrl = `${DEV_UPSTREAM}${targetPath}${incoming.search}`
 

@@ -7,7 +7,7 @@
       "icon": "ri-home-line"
     },
     {
-      "href": "/projects",
+      "href": "/open-source",
       "label": "Open Source",
       "icon": "ri-dna-line",
       "count": "projects"
@@ -19,7 +19,7 @@
       "count": "runtimeHooks"
     },
     {
-      "href": "/hooks",
+      "href": "/git-hooks",
       "label": "Git Hooks",
       "icon": "ri-git-commit-line",
       "count": "hooks"
@@ -43,13 +43,13 @@
       "count": "guards"
     },
     {
-      "href": "/tooling",
+      "href": "/tools-scripts",
       "label": "Tools & Scripts",
       "icon": "ri-tools-line",
       "count": "scripts"
     },
     {
-      "href": "/standards",
+      "href": "/ai-governance",
       "label": "AI Governance",
       "icon": "ri-book-marked-line",
       "count": "standards"
@@ -61,7 +61,7 @@
       "divider": true
     },
     {
-      "href": "/checks",
+      "href": "/static-analysis",
       "label": "Static Analysis",
       "icon": "ri-check-double-line"
     },
@@ -71,7 +71,7 @@
       "icon": "ri-code-box-line"
     },
     {
-      "href": "/integration",
+      "href": "/integration-guide",
       "label": "Integration Guide",
       "icon": "ri-plug-line",
       "divider": true

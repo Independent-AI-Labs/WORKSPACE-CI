@@ -1,6 +1,8 @@
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 
+process.env.WIKI_DEV_PORT = '4000'
+
 if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'localStorage', {
     value: {

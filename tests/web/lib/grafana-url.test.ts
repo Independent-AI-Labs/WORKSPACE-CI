@@ -78,8 +78,14 @@ describe('resolveGrafanaBaseUrlSync', () => {
     delete process.env.GRAFANA_BASE_URL
   })
 
-  it('defaults to dev wiki /grafana proxy when env unset', () => {
+  it('uses WIKI_DEV_PORT for the dev wiki /grafana proxy', () => {
+    process.env.WIKI_DEV_PORT = '4000'
     expect(resolveGrafanaBaseUrlSync()).toBe('http://127.0.0.1:4000/grafana')
+  })
+
+  it('throws when WIKI_DEV_PORT is unset', () => {
+    delete process.env.WIKI_DEV_PORT
+    expect(() => resolveGrafanaBaseUrlSync()).toThrow('WIKI_DEV_PORT')
   })
 })
 

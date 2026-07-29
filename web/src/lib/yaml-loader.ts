@@ -76,9 +76,7 @@ export function getWikiLabels(): WikiLabelsConfig {
 }
 
 export function getWikiPages(): WikiPagesConfig {
-  const navManifestPath = join(process.cwd(), 'nav.yaml')
-  const path = existsSync(navManifestPath) ? navManifestPath : resolveConfigPath('wiki_pages')
-  const raw = readFileSync(path, 'utf8')
+  const raw = readFileSync(join(process.cwd(), 'nav.yaml'), 'utf8')
   return load(raw) as WikiPagesConfig
 }
 

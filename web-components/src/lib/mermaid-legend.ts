@@ -76,10 +76,21 @@ function scaleLegendEdges(
   transform: string,
 ): void {
   for (const path of svg.querySelectorAll<SVGPathElement>('path[data-id]')) {
-    const edgeId = path.getAttribute('data-id') ?? ''
+    const edgeId = path.getAttribute('data-id')
+    if (edgeId === null) {
+      throw new Error('mermaid legend: edge path is missing data-id')
+    }
     if (!isLegendInternalEdge(edgeId)) continue
     appendTransform(path, transform)
   }
+}
+
+function requireRectDimension(el: SVGRectElement, name: 'width' | 'height'): number {
+  const value = el.getAttribute(name)
+  if (value === null) {
+    throw new Error(`mermaid legend: cluster rect is missing ${name}`)
+  }
+  return parseFloat(value)
 }
 
 function refitLegendClusterOutline(
@@ -102,11 +113,9 @@ function refitLegendClusterOutline(
 
   const outer = rects.reduce((largest, rect) => {
     const largestArea =
-      parseFloat(largest.getAttribute('width') || '0') *
-      parseFloat(largest.getAttribute('height') || '0')
+      requireRectDimension(largest, 'width') * requireRectDimension(largest, 'height')
     const rectArea =
-      parseFloat(rect.getAttribute('width') || '0') *
-      parseFloat(rect.getAttribute('height') || '0')
+      requireRectDimension(rect, 'width') * requireRectDimension(rect, 'height')
     return rectArea >= largestArea ? rect : largest
   })
 

@@ -19,10 +19,10 @@ pages:
       - us sovereignty
       - clankers
   - id: page-projects
-    title: Projects
+    title: Open Source
     section: Pages
     content: 'Project catalogue: browse READMEs for all backend projects'
-    href: /projects
+    href: /open-source
     nav:
       label: Open Source
       icon: ri-dna-line
@@ -51,7 +51,7 @@ pages:
     title: Git Hooks
     section: Pages
     content: Required git hooks reference
-    href: /hooks
+    href: /git-hooks
     nav:
       label: Git Hooks
       icon: ri-git-commit-line
@@ -102,7 +102,7 @@ pages:
     title: Tools & Scripts
     section: Pages
     content: Tooling and scripts reference
-    href: /tooling
+    href: /tools-scripts
     nav:
       label: Tools & Scripts
       icon: ri-tools-line
@@ -115,7 +115,7 @@ pages:
     title: AI Governance
     section: Pages
     content: AI standards, regulations, frameworks, and declarations
-    href: /standards
+    href: /ai-governance
     nav:
       label: AI Governance
       icon: ri-book-marked-line
@@ -151,7 +151,7 @@ pages:
     title: Static Analysis
     section: Pages
     content: CI checks reference
-    href: /checks
+    href: /static-analysis
     nav:
       label: Static Analysis
       icon: ri-check-double-line
@@ -174,7 +174,7 @@ pages:
     title: Integration Guide
     section: Pages
     content: Integration guide
-    href: /integration
+    href: /integration-guide
     nav:
       label: Integration Guide
       icon: ri-plug-line

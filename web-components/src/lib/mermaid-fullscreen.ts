@@ -9,7 +9,7 @@ import {
   getSvgCssSize,
   panBy,
   parseViewBox,
-  readCssVar,
+  requireCssVar,
   serializeSvgForExport,
   svgToPngDataUrl,
   viewBoxScale,
@@ -31,10 +31,6 @@ export interface PanState {
   originVb: ViewBox
   pointerId: number
 }
-
-// Re-export readCssVar so the mermaid-diagram module's existing imports from
-// '@/lib/mermaid-fullscreen' keep working without churn.
-export { readCssVar }
 
 export function createButton(action: ToolbarAction): HTMLButtonElement {
   const btn = document.createElement('button')
@@ -79,15 +75,15 @@ export class FullscreenOverlay {
       { action: 'download-png', icon: 'ri-image-line', label: 'Download PNG' },
       { action: 'close', icon: 'ri-close-line', label: 'Close fullscreen' },
     ]
-    let lastGroup = ''
+    let lastGroup: string | undefined
     for (const a of actions) {
-      if (lastGroup && a.group !== lastGroup) {
+      if (lastGroup !== undefined && a.group !== lastGroup) {
         const sep = document.createElement('span')
         sep.className = 'mermaid-toolbar__sep'
         toolbar.appendChild(sep)
       }
       toolbar.appendChild(createButton(a))
-      lastGroup = a.group ?? ''
+      lastGroup = a.group
     }
 
     this.stage = document.createElement('div')
@@ -202,7 +198,7 @@ export class FullscreenOverlay {
       const zoom = viewBoxScale(this.vb, this.base)
       const dataUrl = await svgToPngDataUrl(this.svg, {
         scale: exportScaleForZoom(zoom),
-        background: readCssVar('--bg') || '#181818',
+        background: requireCssVar('--bg'),
       })
       downloadDataUrl(dataUrl, 'mermaid-diagram.png')
     } catch (err) {
@@ -273,7 +269,13 @@ export class FullscreenOverlay {
     try {
       this.stage.releasePointerCapture(this.pan.pointerId)
     } catch (err) {
-      console.debug('pointer capture already released:', err)
+      const alreadyReleased =
+        (err instanceof DOMException && err.name === 'NotFoundError') ||
+        (err instanceof TypeError && !('releasePointerCapture' in this.stage))
+      if (!alreadyReleased) {
+        console.error('failed to release pointer capture:', err)
+        throw err
+      }
     }
     this.pan = null
     this.stage.classList.remove('is-grabbing')

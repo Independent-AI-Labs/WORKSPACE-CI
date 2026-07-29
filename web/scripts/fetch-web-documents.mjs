@@ -94,7 +94,9 @@ async function convertHtmlUrlToPdf(sourceUrl, dest) {
     timeout: 120_000,
   })
   if (result.status !== 0) {
-    throw new Error(`${sourceUrl}: chrome print-to-pdf exited ${result.status ?? 'unknown'}`)
+    throw new Error(
+      `${sourceUrl}: chrome print-to-pdf exited status=${result.status} signal=${result.signal}`
+    )
   }
   const buf = await readPdfFile(tmpPdf)
   if (buf.length < 10_000) {
@@ -132,7 +134,7 @@ async function tryReuseExistingPdf(dest, docId) {
 async function downloadDocument(postsDir, doc) {
   const dest = path.join(postsDir, doc.file)
   await fs.mkdir(path.dirname(dest), { recursive: true })
-  const mode = doc.fetch_mode ?? 'direct'
+  const mode = doc.fetch_mode === undefined ? 'direct' : doc.fetch_mode
   const wantsPdf = doc.file.toLowerCase().endsWith('.pdf')
   const forceFetch = process.env.WIKI_FORCE_FETCH_DOCUMENTS === '1'
 

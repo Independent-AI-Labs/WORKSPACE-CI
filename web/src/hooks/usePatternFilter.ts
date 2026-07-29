@@ -57,7 +57,8 @@ export function usePatternFilter(
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     for (const p of patterns) {
-      counts[p.category] = (counts[p.category] ?? 0) + 1
+      const prev = counts[p.category]
+      counts[p.category] = prev === undefined ? 1 : prev + 1
     }
     return counts
   }, [patterns])

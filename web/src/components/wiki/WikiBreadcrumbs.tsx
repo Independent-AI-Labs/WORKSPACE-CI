@@ -2,15 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { getNavLabelForHref } from '@/lib/wiki-nav'
+import { getNavLabelForHref, requireNavLabelForHref } from '@/lib/wiki-nav'
 
 function getBreadcrumbs(
   pathname: string,
   homeLandingEnabled: boolean,
 ): { label: string; href: string }[] {
   const parts = pathname.split('/').filter(Boolean)
-  const rootHref = homeLandingEnabled ? '/' : '/projects'
-  const rootLabel = getNavLabelForHref(rootHref) ?? rootHref
+  const rootHref = homeLandingEnabled ? '/' : '/open-source'
+  const rootLabel = requireNavLabelForHref(rootHref)
   const root = { label: rootLabel, href: rootHref }
 
   if (parts.length === 0) {
@@ -25,8 +25,8 @@ function getBreadcrumbs(
     crumbs.push({ label, href })
   }
 
-  if (!homeLandingEnabled && parts[0] === 'projects' && parts.length === 1) {
-    return [{ label: getNavLabelForHref('/projects') ?? '/projects', href: '/projects' }]
+  if (!homeLandingEnabled && parts[0] === 'open-source' && parts.length === 1) {
+    return [{ label: requireNavLabelForHref('/open-source'), href: '/open-source' }]
   }
 
   return homeLandingEnabled ? [root, ...crumbs] : crumbs

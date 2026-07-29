@@ -1,4 +1,6 @@
-import { createCsrfToken, verifyCsrfToken } from '@/lib/csrf'
+process.env.CSRF_SECRET = 'test-secret'
+
+const { createCsrfToken, verifyCsrfToken } = await import('@/lib/csrf')
 
 describe('csrf', () => {
   it('creates a verifiable token', () => {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { Icon } from './Icon'
 
 interface ModalProps {
@@ -66,7 +66,12 @@ export function Modal({
     }
   }
 
-  const resolvedTitleId = title ? (titleId ?? 'modal-title') : undefined
+  const generatedTitleId = useId()
+  const resolvedTitleId = title
+    ? titleId !== undefined
+      ? titleId
+      : generatedTitleId
+    : undefined
   const labelledBy = resolvedTitleId
 
   return (

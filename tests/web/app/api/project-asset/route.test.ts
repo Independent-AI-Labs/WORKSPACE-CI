@@ -36,7 +36,7 @@ describe('GET /api/project-asset', () => {
   it('returns 200 with correct content type for an existing asset', async () => {
     const response = await GET(makeRequest('workspace-ci', 'README.md'))
     expect(response.status).toBe(200)
-    expect(response.headers.get('Content-Type')).toContain('application/octet-stream')
+    expect(response.headers.get('Content-Type')).toContain('text/markdown')
   })
 
   it('returns 404 for a missing asset', async () => {

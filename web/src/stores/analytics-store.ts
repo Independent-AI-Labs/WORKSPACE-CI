@@ -57,6 +57,19 @@ function loadFromStorage(): Partial<AnalyticsState> | null {
   }
 }
 
+function requireSavedTotal(
+  saved: Partial<AnalyticsState>,
+  field: 'totalViews' | 'totalFeedback' | 'totalSearches',
+): number {
+  const value = saved[field]
+  if (typeof value !== 'number') {
+    throw new Error(
+      `analytics-store: persisted state is corrupt: "${field}" is missing or not a number`
+    )
+  }
+  return value
+}
+
 let pendingSaveTimer: ReturnType<typeof setTimeout> | null = null
 
 function scheduleSave(): void {
@@ -171,9 +184,9 @@ export const useAnalyticsStore = create<InternalState>((set, get) => ({
         dwellTimes: saved.dwellTimes ?? {},
         feedback: saved.feedback ?? {},
         searchQueries: saved.searchQueries ?? [],
-        totalViews: saved.totalViews ?? 0,
-        totalFeedback: saved.totalFeedback ?? 0,
-        totalSearches: saved.totalSearches ?? 0,
+        totalViews: requireSavedTotal(saved, 'totalViews'),
+        totalFeedback: requireSavedTotal(saved, 'totalFeedback'),
+        totalSearches: requireSavedTotal(saved, 'totalSearches'),
         sessionId,
         lastActivityAt,
         _topPagesDirty: true,
@@ -205,17 +218,22 @@ export const useAnalyticsStore = create<InternalState>((set, get) => ({
       let totalSearches = state.totalSearches
 
       if (eventWithSession.type === 'page_view') {
-        pageViews = { ...pageViews, [eventWithSession.path]: (pageViews[eventWithSession.path] ?? 0) + 1 }
+        const prevViews = pageViews[eventWithSession.path]
+        pageViews = {
+          ...pageViews,
+          [eventWithSession.path]: prevViews === undefined ? 1 : prevViews + 1,
+        }
         totalViews = totalViews + 1
       }
 
       if (eventWithSession.type === 'page_exit') {
+        const prevDwell = dwellTimes[eventWithSession.path]
         dwellTimes = {
           ...dwellTimes,
-          [eventWithSession.path]: Math.max(
-            dwellTimes[eventWithSession.path] ?? 0,
-            eventWithSession.dwellMs,
-          ),
+          [eventWithSession.path]:
+            prevDwell === undefined
+              ? eventWithSession.dwellMs
+              : Math.max(prevDwell, eventWithSession.dwellMs),
         }
       }
 
@@ -280,11 +298,13 @@ export const useAnalyticsStore = create<InternalState>((set, get) => ({
   },
 
   getPageViews: (path: string) => {
-    return get().pageViews[path] ?? 0
+    const views = get().pageViews[path]
+    return views === undefined ? 0 : views
   },
 
   getDwellTime: (path: string) => {
-    return get().dwellTimes[path] ?? 0
+    const dwell = get().dwellTimes[path]
+    return dwell === undefined ? 0 : dwell
   },
 
   getTopPages: (limit: number) => {

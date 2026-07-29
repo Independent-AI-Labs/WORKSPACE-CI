@@ -30,11 +30,11 @@ const ALL_NAV_ITEMS: WikiNavItem[] = data.items.map((item) => ({
   ...(item.divider ? { divider: true } : {}),
 }))
 
-export const HOME_NAV_ITEM: WikiNavItem = ALL_NAV_ITEMS[0] ?? {
-  href: '/',
-  label: 'Home',
-  icon: 'ri-home-line',
+const firstNavItem = ALL_NAV_ITEMS[0]
+if (!firstNavItem) {
+  throw new Error('wiki-nav.json contains no nav items; run scripts/sync-wiki-nav.mjs')
 }
+export const HOME_NAV_ITEM: WikiNavItem = firstNavItem
 
 export const WIKI_NAV_ITEMS: WikiNavItem[] = ALL_NAV_ITEMS.slice(1)
 
@@ -44,4 +44,12 @@ const NAV_LABEL_BY_HREF = new Map<string, string>(
 
 export function getNavLabelForHref(href: string): string | undefined {
   return NAV_LABEL_BY_HREF.get(href)
+}
+
+export function requireNavLabelForHref(href: string): string {
+  const label = NAV_LABEL_BY_HREF.get(href)
+  if (!label) {
+    throw new Error(`no nav label for known route ${href}; check nav.yaml`)
+  }
+  return label
 }

@@ -21,10 +21,10 @@ import {
 import {
   type ToolbarAction,
   type PanState,
-  readCssVar,
   createButton,
   FullscreenOverlay,
 } from './mermaid-fullscreen'
+import { requireCssVar } from './mermaid-export'
 import { scaleLegendSubgraph } from './mermaid-legend'
 
 export interface MermaidRunner {
@@ -62,15 +62,15 @@ function buildToolbar(): HTMLDivElement {
   hint.className = 'mermaid-toolbar__hint'
   hint.textContent = 'Ctrl + scroll to zoom'
   toolbar.appendChild(hint)
-  let lastGroup = ''
+  let lastGroup: string | undefined
   for (const action of TOOLBAR_ACTIONS) {
-    if (lastGroup && action.group !== lastGroup) {
+    if (lastGroup !== undefined && action.group !== lastGroup) {
       const sep = document.createElement('span')
       sep.className = 'mermaid-toolbar__sep'
       toolbar.appendChild(sep)
     }
     toolbar.appendChild(createButton(action))
-    lastGroup = action.group ?? ''
+    lastGroup = action.group
   }
   return toolbar
 }
@@ -81,7 +81,11 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
     throw new Error('mermaid frame missing <pre class="mermaid">')
   }
   const pre: HTMLPreElement = preEl
-  const source = pre.textContent ?? ''
+  const text = pre.textContent
+  if (text === null) {
+    throw new Error('mermaid frame <pre> has no text content')
+  }
+  const source = text
 
   let vb: ViewBox = { x: 0, y: 0, w: 800, h: 600 }
   let base: ViewBox = { x: 0, y: 0, w: 800, h: 600 }
@@ -114,21 +118,6 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
     const heightAttr = target.getAttribute('height')
     if (widthAttr?.includes('%')) target.removeAttribute('width')
     if (heightAttr?.includes('%')) target.removeAttribute('height')
-    // Tall diagrams would be clipped by the viewport's max-height (50vh).
-    // Cap the render width so the height fits; the user can zoom in for detail.
-    const liveVb = parseViewBox(target.getAttribute('viewBox'))
-    if (liveVb && liveVb.h > 0) {
-      const preStyle = getComputedStyle(pre)
-      const maxHeight = parseFloat(preStyle.maxHeight)
-      const contentWidth =
-        pre.clientWidth - parseFloat(preStyle.paddingLeft) - parseFloat(preStyle.paddingRight)
-      if (Number.isFinite(maxHeight) && contentWidth > 0) {
-        const aspect = liveVb.w / liveVb.h
-        if (contentWidth / aspect > maxHeight) {
-          target.style.width = `${Math.round(maxHeight * aspect)}px`
-        }
-      }
-    }
   }
 
   function syncPannableState(): void {
@@ -192,7 +181,7 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
   }
 
   function exportBackground(): string {
-    return readCssVar('--bg') || '#181818'
+    return requireCssVar('--bg')
   }
 
   function downloadSvg(): void {
@@ -322,7 +311,10 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
     try {
       pre.releasePointerCapture(pan.pointerId)
     } catch (err) {
-      console.debug('pointer capture already released:', err)
+      const alreadyReleased =
+        (err instanceof DOMException && err.name === 'NotFoundError') ||
+        (err instanceof TypeError && !('releasePointerCapture' in pre))
+      if (!alreadyReleased) throw err
     }
     pan = null
     pre.classList.remove('is-grabbing')

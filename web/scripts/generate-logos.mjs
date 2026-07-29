@@ -11,7 +11,8 @@ const PROJECTS_ROOT = process.env.WORKSPACE_PROJECTS_ROOT
 const REMIX_ROOT = path.resolve(WEB_DIR, 'node_modules', 'remixicon', 'icons')
 
 // Catalogue navy: mask-friendly single fill (matches process-logo.mjs / CI finals).
-const NAVY = '#263847'
+const NAVY_RGB = { r: 38, g: 55, b: 71 }
+const NAVY = `rgb(${NAVY_RGB.r}, ${NAVY_RGB.g}, ${NAVY_RGB.b})`
 const CANVAS = 512
 const ICON_PADDING = 96 // 24px icon grid centered in 512px canvas (~62% scale)
 

@@ -14,11 +14,21 @@ const EXT_TO_MIME: Record<string, string> = {
   '.bmp': 'image/bmp',
   '.ico': 'image/x-icon',
   '.pdf': 'application/pdf',
+  '.md': 'text/markdown',
+  '.markdown': 'text/markdown',
+  '.txt': 'text/plain',
+  '.json': 'application/json',
+  '.yaml': 'application/yaml',
+  '.yml': 'application/yaml',
 }
 
 function mimeTypeFor(path: string): string {
   const ext = path.toLowerCase().slice(path.lastIndexOf('.'))
-  return EXT_TO_MIME[ext] ?? 'application/octet-stream'
+  const mime = EXT_TO_MIME[ext]
+  if (mime === undefined) {
+    throw new Error(`no MIME type registered for asset extension "${ext}" (${path})`)
+  }
+  return mime
 }
 
 function isPathInside(target: string, root: string): boolean {

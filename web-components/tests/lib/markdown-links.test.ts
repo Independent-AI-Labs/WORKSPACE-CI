@@ -59,10 +59,10 @@ describe('rewriteRelativeHref', () => {
     )
   })
 
-  it('defaults to main when branch missing', () => {
-    expect(rewriteRelativeHref('docs/HOOKS.md', { repoUrl: 'https://github.com/org/repo' })).toBe(
-      'https://github.com/org/repo/blob/main/docs/HOOKS.md',
-    )
+  it('throws when branch is missing', () => {
+    expect(() =>
+      rewriteRelativeHref('docs/HOOKS.md', { repoUrl: 'https://github.com/org/repo' }),
+    ).toThrow(/branch is required/)
   })
 
   it('leaves anchor links untouched', () => {
@@ -122,10 +122,10 @@ describe('rewriteRelativeImageSrc', () => {
     )
   })
 
-  it('defaults to main branch for raw github fallback', () => {
-    expect(rewriteRelativeImageSrc('docs/screen.png', { repoUrl: 'https://github.com/org/repo' })).toBe(
-      'https://github.com/org/repo/raw/main/docs/screen.png',
-    )
+  it('throws when branch is missing for raw github fallback', () => {
+    expect(() =>
+      rewriteRelativeImageSrc('docs/screen.png', { repoUrl: 'https://github.com/org/repo' }),
+    ).toThrow(/branch is required/)
   })
 
   it('leaves absolute urls untouched', () => {

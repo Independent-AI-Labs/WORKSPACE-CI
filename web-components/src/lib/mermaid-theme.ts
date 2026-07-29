@@ -1,4 +1,5 @@
 import type { MermaidConfig } from 'mermaid'
+import { requireCssVar } from './mermaid-export'
 
 export type MermaidThemeName = 'dark' | 'light'
 
@@ -8,85 +9,62 @@ const FONT_WEIGHT = '600'
 
 type ThemeVars = Record<string, string>
 
-const DARK_PALETTE: ThemeVars = {
-  background: 'transparent',
-  primaryColor: '#1f1f1f',
-  primaryBorderColor: '#247ba0',
-  primaryTextColor: '#ededed',
-  secondaryColor: '#101010',
-  secondaryBorderColor: '#70c1b3',
-  secondaryTextColor: '#ededed',
-  tertiaryColor: '#2a2a2a',
-  tertiaryBorderColor: '#ffe066',
-  tertiaryTextColor: '#ededed',
-  lineColor: '#8cada7',
-  textColor: '#ededed',
-  clusterBkg: 'rgba(0, 0, 0, 0.3)',
-  clusterBorder: '#50514f',
-  edgeLabelBackground: '#181818',
-  nodeBorder: '#247ba0',
-  nodeTextColor: '#ededed',
-  mainBkg: '#1f1f1f',
-  secondBkg: '#101010',
-  actorBkg: '#1f1f1f',
-  actorBorder: '#247ba0',
-  actorTextColor: '#ededed',
-  actorLineColor: '#8cada7',
-  signalColor: '#8cada7',
-  signalTextColor: '#ededed',
-  labelBoxBkg: '#101010',
-  labelBoxBorder: '#70c1b3',
-  labelTextColor: '#ededed',
-  loopTextColor: '#ededed',
-  noteBkg: '#f2f4cb',
-  noteBorderColor: '#b7990d',
-  noteTextColor: '#1a1a1a',
-  activationBkg: '#70c1b3',
-  activationBorderColor: '#247ba0',
-  sequenceNumberColor: '#181818',
-}
-
-const LIGHT_PALETTE: ThemeVars = {
-  background: 'transparent',
-  primaryColor: '#ffffff',
-  primaryBorderColor: '#247ba0',
-  primaryTextColor: '#1a1a1a',
-  secondaryColor: '#e6e6e6',
-  secondaryBorderColor: '#247ba0',
-  secondaryTextColor: '#1a1a1a',
-  tertiaryColor: '#f7f7f7',
-  tertiaryBorderColor: '#b7990d',
-  tertiaryTextColor: '#1a1a1a',
-  lineColor: '#247ba0',
-  textColor: '#1a1a1a',
-  clusterBkg: 'rgba(0, 0, 0, 0.04)',
-  clusterBorder: '#50514f',
-  edgeLabelBackground: '#f0f0f0',
-  nodeBorder: '#247ba0',
-  nodeTextColor: '#1a1a1a',
-  mainBkg: '#ffffff',
-  secondBkg: '#e6e6e6',
-  actorBkg: '#ffffff',
-  actorBorder: '#247ba0',
-  actorTextColor: '#1a1a1a',
-  actorLineColor: '#50514f',
-  signalColor: '#1a1a1a',
-  signalTextColor: '#1a1a1a',
-  labelBoxBkg: '#e6e6e6',
-  labelBoxBorder: '#247ba0',
-  labelTextColor: '#1a1a1a',
-  loopTextColor: '#1a1a1a',
-  noteBkg: '#fff7cc',
-  noteBorderColor: '#b7990d',
-  noteTextColor: '#1a1a1a',
-  activationBkg: '#70c1b3',
-  activationBorderColor: '#247ba0',
-  sequenceNumberColor: '#ffffff',
+function resolvePalette(theme: MermaidThemeName): ThemeVars {
+  const docTheme = document.documentElement.getAttribute('data-theme')
+  if (docTheme !== null && docTheme !== theme) {
+    throw new Error(
+      `mermaid theme "${theme}" requested but the document theme is "${docTheme}"`,
+    )
+  }
+  const primaryColor = requireCssVar('--mermaid-primary-color')
+  const secondaryColor = requireCssVar('--mermaid-secondary-color')
+  const tertiaryColor = requireCssVar('--mermaid-tertiary-color')
+  const primaryBorderColor = requireCssVar('--mermaid-primary-border')
+  const secondaryBorderColor = requireCssVar('--mermaid-secondary-border')
+  const tertiaryBorderColor = requireCssVar('--mermaid-tertiary-border')
+  const textColor = requireCssVar('--mermaid-text-color')
+  const lineColor = requireCssVar('--mermaid-line-color')
+  return {
+    background: 'transparent',
+    primaryColor,
+    primaryBorderColor,
+    primaryTextColor: textColor,
+    secondaryColor,
+    secondaryBorderColor,
+    secondaryTextColor: textColor,
+    tertiaryColor,
+    tertiaryBorderColor,
+    tertiaryTextColor: textColor,
+    lineColor,
+    textColor,
+    clusterBkg: requireCssVar('--mermaid-cluster-bkg'),
+    clusterBorder: requireCssVar('--mermaid-cluster-border'),
+    edgeLabelBackground: requireCssVar('--mermaid-edge-label-bg'),
+    nodeBorder: primaryBorderColor,
+    nodeTextColor: textColor,
+    mainBkg: primaryColor,
+    secondBkg: secondaryColor,
+    actorBkg: primaryColor,
+    actorBorder: primaryBorderColor,
+    actorTextColor: textColor,
+    actorLineColor: requireCssVar('--mermaid-actor-line-color'),
+    signalColor: requireCssVar('--mermaid-signal-color'),
+    signalTextColor: textColor,
+    labelBoxBkg: secondaryColor,
+    labelBoxBorder: secondaryBorderColor,
+    labelTextColor: textColor,
+    loopTextColor: textColor,
+    noteBkg: requireCssVar('--mermaid-note-bkg'),
+    noteBorderColor: requireCssVar('--mermaid-note-border'),
+    noteTextColor: requireCssVar('--mermaid-note-text'),
+    activationBkg: requireCssVar('--mermaid-activation-bkg'),
+    activationBorderColor: primaryBorderColor,
+    sequenceNumberColor: requireCssVar('--mermaid-sequence-number-color'),
+  }
 }
 
 export function getMermaidThemeConfig(theme: MermaidThemeName): MermaidConfig {
-  const themeVariables =
-    theme === 'light' ? { ...LIGHT_PALETTE } : { ...DARK_PALETTE }
+  const themeVariables = resolvePalette(theme)
   themeVariables.fontFamily = FONT_STACK
   themeVariables.fontSize = FONT_SIZE
   themeVariables.fontWeight = FONT_WEIGHT
@@ -109,8 +87,4 @@ export function getMermaidThemeConfig(theme: MermaidThemeName): MermaidConfig {
     gantt: { useMaxWidth: true },
     journey: { useMaxWidth: true },
   }
-}
-
-export function getMermaidBackground(theme: MermaidThemeName): string {
-  return theme === 'light' ? '#ffffff' : '#181818'
 }

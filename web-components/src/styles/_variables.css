@@ -181,6 +181,28 @@
   --z-sidebar: var(--z-sticky);
   --z-header: var(--z-sticky);
   --z-search: var(--z-modal);
+
+  /* ---- Tier 2: Mermaid diagram palette (dark) ----
+     Consumed at runtime by getMermaidThemeConfig via requireCssVar;
+     every value must stay in sync visually with the wiki dark palette. */
+  --mermaid-primary-color: #1f1f1f;
+  --mermaid-secondary-color: #101010;
+  --mermaid-tertiary-color: #2a2a2a;
+  --mermaid-primary-border: var(--cerulean);
+  --mermaid-secondary-border: var(--tropical-teal);
+  --mermaid-tertiary-border: var(--royal-gold);
+  --mermaid-text-color: var(--text);
+  --mermaid-line-color: var(--muted-teal);
+  --mermaid-cluster-bkg: rgba(0, 0, 0, 0.3);
+  --mermaid-cluster-border: var(--charcoal);
+  --mermaid-edge-label-bg: var(--bg);
+  --mermaid-actor-line-color: var(--muted-teal);
+  --mermaid-signal-color: var(--muted-teal);
+  --mermaid-note-bkg: var(--cream);
+  --mermaid-note-border: var(--golden-bronze);
+  --mermaid-note-text: #1a1a1a;
+  --mermaid-activation-bkg: var(--tropical-teal);
+  --mermaid-sequence-number-color: var(--bg);
 }
 
 [data-theme='light'] {
@@ -206,6 +228,26 @@
   --shadow-md: 0 4px 8px rgb(0 0 0 / 0.08);
   --shadow-lg: 0 8px 32px rgb(0 0 0 / 0.12);
   --overlay-backdrop: rgb(0 0 0 / 0.4);
+
+  /* Mermaid diagram palette (light) */
+  --mermaid-primary-color: var(--panel);
+  --mermaid-secondary-color: #e6e6e6;
+  --mermaid-tertiary-color: #f7f7f7;
+  --mermaid-primary-border: var(--cerulean);
+  --mermaid-secondary-border: var(--cerulean);
+  --mermaid-tertiary-border: var(--golden-bronze);
+  --mermaid-text-color: var(--text);
+  --mermaid-line-color: var(--cerulean);
+  --mermaid-cluster-bkg: rgba(0, 0, 0, 0.04);
+  --mermaid-cluster-border: var(--charcoal);
+  --mermaid-edge-label-bg: var(--bg);
+  --mermaid-actor-line-color: var(--charcoal);
+  --mermaid-signal-color: var(--text);
+  --mermaid-note-bkg: #fff7cc;
+  --mermaid-note-border: var(--golden-bronze);
+  --mermaid-note-text: var(--text);
+  --mermaid-activation-bkg: var(--tropical-teal);
+  --mermaid-sequence-number-color: var(--panel);
 }
 
 /* Expose token scales to Tailwind via @theme so utility classes

@@ -39,7 +39,12 @@ export function runPatterns(
       while ((match = re.exec(sourceCode)) !== null) {
         const before = sourceCode.slice(0, match.index)
         const lineNumber = before.split('\n').length
-        const lineText = lines[lineNumber - 1] ?? ''
+        const lineText = lines[lineNumber - 1]
+        if (lineText === undefined) {
+          throw new Error(
+            `runPatterns: match at line ${lineNumber} out of range for ${lines.length} lines (pattern "${p.pattern}")`
+          )
+        }
         const column = match.index - before.lastIndexOf('\n') - (before.lastIndexOf('\n') >= 0 ? 1 : 0)
 
         const key = `${lineNumber}:${p.pattern}`

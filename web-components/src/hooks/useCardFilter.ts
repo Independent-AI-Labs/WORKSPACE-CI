@@ -54,18 +54,27 @@ export function useCardFilter(
 
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {}
+    for (const category of categories) {
+      counts[category.id] = 0
+    }
     for (const item of items) {
-      const cat = item.category ?? 'other'
-      counts[cat] = (counts[cat] ?? 0) + 1
+      if (item.category === undefined) {
+        throw new Error(`card item "${item.id}" is missing a category`)
+      }
+      const prev = counts[item.category]
+      counts[item.category] = prev === undefined ? 1 : prev + 1
     }
     return counts
-  }, [items])
+  }, [items, categories])
 
   const filtered = useMemo(
     () =>
-      items.filter((item) =>
-        activeCategories.has(item.category ?? 'other'),
-      ),
+      items.filter((item) => {
+        if (item.category === undefined) {
+          throw new Error(`card item "${item.id}" is missing a category`)
+        }
+        return activeCategories.has(item.category)
+      }),
     [items, activeCategories],
   )
 

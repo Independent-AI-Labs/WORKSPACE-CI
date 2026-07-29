@@ -50,7 +50,10 @@ export default async function GuardPage() {
     const counts = feedbackCounts[item.id] ?? { upvotes: 0, downvotes: 0 }
     const schema = schemas[item.id] ?? null
     const html = highlightedHtml[item.id]
-    const raw = rawYamls[item.id] ?? ''
+    const raw = rawYamls[item.id]
+    if (raw === undefined) {
+      throw new Error(`sandbox-configs: no raw yaml loaded for "${item.id}"`)
+    }
     const vals = values[item.id] ?? {}
     cardContent[item.id] = (
       <>

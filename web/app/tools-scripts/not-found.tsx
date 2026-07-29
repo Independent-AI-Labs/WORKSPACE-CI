@@ -5,7 +5,7 @@ export default function ToolingNotFound() {
     <NotFoundShell
       title="Not found"
       description="The requested page does not exist."
-      backHref="/tooling"
+      backHref="/tools-scripts"
       backLabel="View all tools"
     />
   )

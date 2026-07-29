@@ -11,6 +11,14 @@ interface StageFilterProps {
   stageCounts: Record<string, number>
 }
 
+function requireStageCount(stageCounts: Record<string, number>, stage: HookStage): number {
+  const count = stageCounts[stage]
+  if (count === undefined) {
+    throw new Error(`StageFilter: no count computed for stage "${stage}"`)
+  }
+  return count
+}
+
 export function StageFilter({ stages, stageLabels, activeStages, toggleStage, stageCounts }: StageFilterProps) {
   return (
     <div className="stage-filter">
@@ -26,7 +34,7 @@ export function StageFilter({ stages, stageLabels, activeStages, toggleStage, st
         >
           {stageLabels[stage] ?? stage}
           <span className="filter-pill__count">
-            {stageCounts[stage] ?? 0}
+            {requireStageCount(stageCounts, stage)}
           </span>
         </button>
       ))}

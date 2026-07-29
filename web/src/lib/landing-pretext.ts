@@ -14,13 +14,21 @@ export const SLIDE_LINKS_BLOCK_HEIGHT_PX = 76
 export const SLIDE_LINKS_DOUBLE_BLOCK_HEIGHT_PX = 118
 
 export function typographyFromComputed(style: CSSStyleDeclaration): PretextTypography {
-  const weight = style.fontWeight || '400'
-  const size = style.fontSize || '16px'
-  const family =
-    style.fontFamily
-      .split(',')[0]
-      ?.trim()
-      .replace(/^["']|["']$/g, '') || 'Montserrat'
+  if (style.fontWeight === '') {
+    throw new Error('typographyFromComputed: computed fontWeight is empty')
+  }
+  const weight = style.fontWeight
+  if (style.fontSize === '') {
+    throw new Error('typographyFromComputed: computed fontSize is empty')
+  }
+  const size = style.fontSize
+  const family = style.fontFamily
+    .split(',')[0]
+    ?.trim()
+    .replace(/^["']|["']$/g, '')
+  if (!family) {
+    throw new Error('typographyFromComputed: computed fontFamily is empty')
+  }
   const font = `${weight} ${size} ${family}`
 
   const fontSizePx = parseFloat(size)

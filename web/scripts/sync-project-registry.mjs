@@ -125,7 +125,12 @@ async function main() {
   }
   const output = renderRegistry(projects)
   if (CHECK_ONLY) {
-    const current = existsSync(OUT_PATH) ? readFileSync(OUT_PATH, 'utf8') : ''
+    if (!existsSync(OUT_PATH)) {
+      abort(
+        `[sync-project-registry] ${OUT_PATH} is missing; run: node scripts/sync-project-registry.mjs`
+      )
+    }
+    const current = readFileSync(OUT_PATH, 'utf8')
     if (current !== output) {
       abort(
         `[sync-project-registry] ${OUT_PATH} is stale; run: node scripts/sync-project-registry.mjs`

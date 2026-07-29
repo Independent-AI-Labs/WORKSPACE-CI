@@ -56,7 +56,10 @@ async function main() {
   }
   const output = render(items)
   if (CHECK_ONLY) {
-    const current = existsSync(OUT_PATH) ? readFileSync(OUT_PATH, 'utf8') : ''
+    if (!existsSync(OUT_PATH)) {
+      abort(`[sync-wiki-nav] ${OUT_PATH} is missing; run: node scripts/sync-wiki-nav.mjs`)
+    }
+    const current = readFileSync(OUT_PATH, 'utf8')
     if (current !== output) {
       abort(`[sync-wiki-nav] ${OUT_PATH} is stale; run: node scripts/sync-wiki-nav.mjs`)
     }

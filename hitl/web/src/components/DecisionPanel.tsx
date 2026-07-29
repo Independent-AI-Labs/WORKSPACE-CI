@@ -23,7 +23,11 @@ export function DecisionPanel({
         body: JSON.stringify({ request_id: requestId, decision }),
       })
       const data = (await response.json()) as { outcome?: string }
-      setResult(data.outcome ?? 'recorded')
+      if (typeof data.outcome !== 'string' || data.outcome.length === 0) {
+        setResult('error: missing outcome from server')
+        return
+      }
+      setResult(data.outcome)
     } catch {
       setResult('error')
     } finally {

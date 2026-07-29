@@ -89,7 +89,7 @@ describe("WikiSidebar", () => {
   });
 
   it("pins Home in a dedicated nav section when landing flag is enabled", () => {
-    mockUsePathname.mockReturnValue("/hooks");
+    mockUsePathname.mockReturnValue("/git-hooks");
     const { container } = renderSidebar(true);
     const pinned = container.querySelector(".wiki-sidebar__nav--pinned");
     expect(pinned).toBeTruthy();
@@ -116,7 +116,7 @@ describe("WikiSidebar", () => {
     const brand = screen.getByRole("link", {
       name: /workspace.*guardrails logo/i,
     });
-    expect(brand).toHaveAttribute("href", "/projects");
+    expect(brand).toHaveAttribute("href", "/open-source");
   });
 
   it("renders all nav items", () => {

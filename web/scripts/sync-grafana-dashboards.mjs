@@ -83,7 +83,12 @@ async function main() {
   const dashboards = collectDashboards()
   const output = render(dashboards)
   if (CHECK_ONLY) {
-    const current = existsSync(OUT_PATH) ? readFileSync(OUT_PATH, 'utf8') : ''
+    if (!existsSync(OUT_PATH)) {
+      abort(
+        `[sync-grafana-dashboards] ${OUT_PATH} is missing; run: node scripts/sync-grafana-dashboards.mjs`
+      )
+    }
+    const current = readFileSync(OUT_PATH, 'utf8')
     if (current !== output) {
       abort(
         `[sync-grafana-dashboards] ${OUT_PATH} is stale; run: node scripts/sync-grafana-dashboards.mjs`

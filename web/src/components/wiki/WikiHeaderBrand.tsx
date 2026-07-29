@@ -8,8 +8,8 @@ interface WikiHeaderBrandProps {
 }
 
 export function WikiHeaderBrand({ branding, homeLandingEnabled }: WikiHeaderBrandProps) {
-  const brandHref = homeLandingEnabled ? '/' : '/projects'
-  const brandTitle = homeLandingEnabled ? 'Home' : 'Projects'
+  const brandHref = homeLandingEnabled ? '/' : '/open-source'
+  const brandTitle = homeLandingEnabled ? 'Home' : 'Open Source'
 
   return (
     <Link href={brandHref} className="wiki-header__brand" title={brandTitle}>

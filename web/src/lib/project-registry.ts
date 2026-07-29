@@ -130,7 +130,11 @@ export function extractReadmeTitle(markdown: string): string {
   const match = markdown.match(/^#\s+(.+)$/m)
   if (match) return match[1].trim()
   const firstLine = markdown.trim().split('\n')[0]
-  return firstLine.replace(/^#+\s*/, '').trim() || 'Untitled'
+  const title = firstLine.replace(/^#+\s*/, '').trim()
+  if (title === '') {
+    throw new Error('extractReadmeTitle: README has no title (expected a leading "# " heading)')
+  }
+  return title
 }
 
 function isIntroBoundary(trimmed: string): boolean {

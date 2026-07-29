@@ -34,7 +34,9 @@ function svgOf(frame: HTMLElement): SVGSVGElement {
 function viewBoxOf(frame: HTMLElement): string {
   const svg = svgOf(frame)
   expect(svg).not.toBeNull()
-  return svg.getAttribute('viewBox') ?? ''
+  const viewBox = svg.getAttribute('viewBox')
+  if (viewBox === null) throw new Error('svg is missing a viewBox attribute')
+  return viewBox
 }
 
 function viewBoxObj(frame: HTMLElement): { x: number; y: number; w: number; h: number } {
@@ -117,11 +119,13 @@ describe('mountMermaidDiagram', () => {
         const nodes = options?.nodes
         if (!nodes || nodes.length === 0) return
         const pre = nodes[0] as HTMLElement
-        const label = (pre.textContent ?? '').includes('C-->D')
+        const text = pre.textContent
+        if (text === null) throw new Error('pre has no text content')
+        const label = text.includes('C-->D')
           ? 'diagram-1'
-          : (pre.textContent ?? '').includes('E-->F')
+          : text.includes('E-->F')
             ? 'diagram-2'
-            : (pre.textContent ?? '').includes('G-->H')
+            : text.includes('G-->H')
               ? 'diagram-3'
               : 'diagram-0'
         pre.innerHTML = `<svg data-label="${label}"></svg>`

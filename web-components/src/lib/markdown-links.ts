@@ -45,7 +45,10 @@ export function rewriteRelativeHref(
   if (ABSOLUTE_URL_RE.test(href)) return href
   if (href.startsWith('mailto:') || href.startsWith('tel:')) return href
 
-  const branch = ctx.branch || 'main'
+  if (ctx.branch === undefined || ctx.branch === '') {
+    throw new Error('ReadmeLinkContext.branch is required when repoUrl is set')
+  }
+  const branch = ctx.branch
   const path = href.replace(/^\.\//, '')
   const segment = path.endsWith('/') ? 'tree' : 'blob'
   return `${ctx.repoUrl}/${segment}/${branch}/${path}`
@@ -67,8 +70,10 @@ export function rewriteRelativeImageSrc(
   }
 
   if (ctx.repoUrl) {
-    const branch = ctx.branch || 'main'
-    return `${ctx.repoUrl}/raw/${branch}/${path}`
+    if (ctx.branch === undefined || ctx.branch === '') {
+      throw new Error('ReadmeLinkContext.branch is required when repoUrl is set')
+    }
+    return `${ctx.repoUrl}/raw/${ctx.branch}/${path}`
   }
 
   return href
@@ -105,7 +110,8 @@ export function buildReadmeMarked(ctx: ReadmeLinkContext): Marked {
     heading({ tokens, depth }: Tokens.Heading) {
       const inner = this.parser.parseInline(tokens)
       const base = slugifyHeading(inner)
-      const count = seen.get(base) ?? 0
+      const prev = seen.get(base)
+      const count = prev === undefined ? 0 : prev
       seen.set(base, count + 1)
       const slug = count === 0 ? base : `${base}-${count}`
       return `<h${depth} id="${slug}">${inner}</h${depth}>\n`

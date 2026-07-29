@@ -12,7 +12,7 @@ import { ThemeLogo } from '@workspace-ci/web-components/components/ThemeLogo'
 
 function isPathActive(pathname: string, href: string): boolean {
   if (href === '/') return pathname === '/'
-  if (href === '/projects') return pathname === '/projects'
+  if (href === '/open-source') return pathname === '/open-source'
   return pathname === href || pathname.startsWith(href + '/')
 }
 
@@ -58,8 +58,8 @@ export function WikiSidebar({ stats, branding, homeLandingEnabled }: WikiSidebar
   const setMobileOpen = useSidebarStore((s) => s.setMobileOpen)
   const toggle = useSidebarStore((s) => s.toggle)
   const navScrollRef = useRef<HTMLDivElement>(null)
-  const brandHref = homeLandingEnabled ? '/' : '/projects'
-  const brandTitle = homeLandingEnabled ? 'Home' : 'Projects'
+  const brandHref = homeLandingEnabled ? '/' : '/open-source'
+  const brandTitle = homeLandingEnabled ? 'Home' : 'Open Source'
 
   useEffect(() => {
     if (!mobileOpen) return

@@ -35,11 +35,11 @@ describe('WikiHeaderBrand', () => {
     )
   })
 
-  it('links to projects when landing is disabled', () => {
+  it('links to open source when landing is disabled', () => {
     render(<WikiHeaderBrand branding={branding} homeLandingEnabled={false} />)
     expect(screen.getByRole('link', { name: /workspaceguardrails logo/i })).toHaveAttribute(
       'href',
-      '/projects',
+      '/open-source',
     )
   })
 })

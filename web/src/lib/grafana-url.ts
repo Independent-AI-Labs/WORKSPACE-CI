@@ -35,7 +35,7 @@ export function normalizeGrafanaDashboardSource(raw: GrafanaDashboardSource): {
 } {
   if (raw.path) {
     const path = raw.path.startsWith('/') ? raw.path : `/${raw.path}`
-    return { path, query: raw.query ?? '' }
+    return { path, query: raw.query === undefined ? '' : raw.query }
   }
   if (raw.url) {
     const u = new URL(raw.url)
@@ -91,14 +91,21 @@ export async function resolveGrafanaBaseUrl(): Promise<string> {
     return `${proto}://${primaryHost}/grafana`
   }
 
-  const devPort = process.env.WIKI_DEV_PORT ?? '4000'
-  return `http://127.0.0.1:${devPort}/grafana`
+  return `http://127.0.0.1:${requireWikiDevPort()}/grafana`
+}
+
+function requireWikiDevPort(): string {
+  const devPort = process.env.WIKI_DEV_PORT
+  if (devPort === undefined || devPort.trim() === '') {
+    throw new Error('WIKI_DEV_PORT env var is required to resolve the dev Grafana base URL')
+  }
+  return devPort
 }
 
 export function resolveGrafanaBaseUrlSync(): string {
   const fromEnv = resolveGrafanaBaseUrlFromEnv()
   if (fromEnv) return normalizeGrafanaPublicBase(fromEnv)
-  const devPort = process.env.WIKI_DEV_PORT ?? '4000'
+  const devPort = requireWikiDevPort()
   if (process.env.NODE_ENV === 'production') {
     return 'https://127.0.0.1/grafana'
   }

@@ -276,6 +276,22 @@ inline_patterns:
     regex: 'StandardOutput\s*=\s*journal'
     language: systemd
     description: 'Service logs stdout only to journald; terminal operators see nothing.'
+  - id: js-existssync-source-select
+    regex: \bexistsSync\([^)]*\)\s*\?
+    language: js_ts
+    description: existsSync ternary silently selects a fallback source/config; require the canonical source and fail explicitly.
+  - id: js-or-literal-default
+    regex: \|\|\s*(?:\x27|\x22|\x60)
+    language: js_ts
+    description: Logical-or literal default masks a missing value; resolve the real value or throw.
+  - id: js-nullish-literal-default
+    regex: \?\?\s*(?:\x27|\x22|\x60|\d)
+    language: js_ts
+    description: Nullish-coalescing literal default masks a missing value; resolve the real value or throw.
+  - id: js-hardcoded-hex-color
+    regex: (?:\x27|\x22)#[0-9a-fA-F]{3,8}\b
+    language: js_ts
+    description: Hardcoded hex color bypasses the theme tokens; read the CSS variable and fail if unset.
 
 custom_detectors:
   - id: cron-no-log-redirect
@@ -483,3 +499,9 @@ multiline_detectors:
     source_file: lib/check_silent_swallow_container.py
     language: container
     description: 'Traced RUN chain lacks echo before tar/npm/uv/bash scripts step.'
+  - id: js-catch-debug-only
+    detector: detect_js_multiline
+    source_function: _check_catch_debug_only
+    source_file: lib/check_silent_swallow_js.py
+    language: js_ts
+    description: Catch block contains only console.debug/log/info; errors are demoted to low-severity noise with no escalation.

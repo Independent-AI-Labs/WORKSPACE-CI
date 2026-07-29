@@ -15,6 +15,14 @@ const TIER_LABELS: Record<HookTier, string> = {
   poc: 'POC (safety)',
 }
 
+function requireTierCount(tierCounts: Record<string, number>, tier: HookTier): number {
+  const count = tierCounts[tier]
+  if (count === undefined) {
+    throw new Error(`TierFilter: no count computed for tier "${tier}"`)
+  }
+  return count
+}
+
 export function TierFilter({ tiers, activeTiers, toggleTier, tierCounts }: TierFilterProps) {
   return (
     <div className="tier-filter">
@@ -30,7 +38,7 @@ export function TierFilter({ tiers, activeTiers, toggleTier, tierCounts }: TierF
         >
           {TIER_LABELS[tier]}
           <span className="filter-pill__count">
-            {tierCounts[tier] ?? 0}
+            {requireTierCount(tierCounts, tier)}
           </span>
         </button>
       ))}

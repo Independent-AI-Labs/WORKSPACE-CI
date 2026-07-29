@@ -128,7 +128,7 @@ function loadScriptsSearch(): SearchIndexEntry[] {
       content: `${s.summary} Category: ${s.category}. Usage: ${s.usage}. Output: ${s.output}.`,
       href: `/tooling#${s.id}`,
       type: 'tooling' as const,
-      keywords: [s.id, s.category, s.make_target ?? ''].filter(Boolean),
+      keywords: [s.id, s.category, ...(s.make_target === undefined ? [] : [s.make_target])].filter(Boolean),
     }))
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') return []

@@ -1,6 +1,14 @@
 import { randomBytes, createHmac } from 'node:crypto'
 
-const CSRF_SECRET = process.env.CSRF_SECRET ?? 'hitl-csrf-secret-dev-only'
+function loadCsrfSecret(): string {
+  const secret = process.env.CSRF_SECRET
+  if (!secret) {
+    throw new Error('CSRF_SECRET environment variable must be set')
+  }
+  return secret
+}
+
+const CSRF_SECRET = loadCsrfSecret()
 
 export function createCsrfToken(sessionId: string): string {
   const random = randomBytes(16).toString('hex')

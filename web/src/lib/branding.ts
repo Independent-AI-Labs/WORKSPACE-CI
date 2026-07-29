@@ -54,9 +54,15 @@ type ResolvedRawBranding = Omit<Branding, 'grafana_dashboards'> & {
 function loadRawBranding(): ResolvedRawBranding {
   const raw = readFileSync(BRANDING_PATH, 'utf8')
   const branding = load(raw) as RawBranding
+  const grafanaSubtitle = getGrafanaProject()?.grafanaSubtitle ?? branding.grafana_subtitle
+  if (grafanaSubtitle === undefined) {
+    throw new Error(
+      'grafana_subtitle unresolved: set it in the project registry (project.yaml) or branding.yaml'
+    )
+  }
   return {
     ...branding,
-    grafana_subtitle: getGrafanaProject()?.grafanaSubtitle ?? branding.grafana_subtitle ?? '',
+    grafana_subtitle: grafanaSubtitle,
     grafana_dashboards: loadGeneratedDashboards() ?? branding.grafana_dashboards ?? [],
   }
 }

@@ -5,7 +5,7 @@ export default function HooksNotFound() {
     <NotFoundShell
       title="Not found"
       description="The requested page does not exist."
-      backHref="/hooks"
+      backHref="/git-hooks"
       backLabel="View all hooks"
     />
   )

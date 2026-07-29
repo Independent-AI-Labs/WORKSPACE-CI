@@ -76,12 +76,15 @@ export function assignPanAxisForSlide(
   seed?: SlidePan,
 ): Record<string, SlidePan> {
   const key = panSlideKey(postId, slideIndex)
+  const prevToken = prev[key]?.token
+  const seedToken = seed?.token
+  const baseToken = prevToken !== undefined ? prevToken : seedToken !== undefined ? seedToken : 0
   return {
     ...prev,
     [key]: {
       axis: randomPanAxis(),
       origin: randomPanOrigin(),
-      token: (prev[key]?.token ?? seed?.token ?? 0) + 1,
+      token: baseToken + 1,
     },
   }
 }

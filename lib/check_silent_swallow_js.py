@@ -29,6 +29,36 @@ JS_SILENT_RETURN = re.compile(
 )
 JS_CONSOLE_LOG = re.compile(r"\bconsole\.(?:error|warn|log|info|debug)\b")
 JS_THROW = re.compile(r"\bthrow\b")
+JS_CONSOLE_LOW = re.compile(r"\bconsole\.(?:debug|log|info)\s*\(")
+JS_CONSOLE_HIGH = re.compile(r"\bconsole\.(?:error|warn)\s*\(")
+
+
+def _check_catch_debug_only(
+    lines: dict[int, AddedLine],
+    lineno: int,
+    header_indent: int,
+) -> str | None:
+    """Catch block whose only handling is console.debug/log/info.
+
+    Returns "js-catch-debug-only" when the catch body contains nothing but
+    low-severity logging (no console.error/warn, no throw, no other logic).
+    """
+    saw_low_log = False
+    for offset in range(1, 6):
+        body = lines.get(lineno + offset)
+        if body is None:
+            continue
+        text = body.text.strip()
+        if text == "}":
+            break
+        if JS_CONSOLE_HIGH.search(body.text) or JS_THROW.search(body.text):
+            return None
+        if JS_CONSOLE_LOW.search(body.text):
+            saw_low_log = True
+            continue
+        if text and not text.startswith("//"):
+            return None
+    return "js-catch-debug-only" if saw_low_log else None
 
 
 def _check_catch_body(
@@ -106,6 +136,8 @@ def detect_js_multiline(
                 continue
             header_indent = len(m.group("indent"))
             pid = _check_catch_body(lines, lineno, header_indent)
+            if pid is None:
+                pid = _check_catch_debug_only(lines, lineno, header_indent)
             if pid is not None:
                 yield header, pid
 

@@ -33,22 +33,26 @@ export function PillFilter({
         </div>
       </div>
       <div className="category-nav__pills">
-        {categories.map((cat) => (
-          <button
-            key={cat.id}
-            className={clsx(
-              'filter-pill',
-              activeCategories.has(cat.id) && 'is-active',
-            )}
-            onClick={() => toggleCategory(cat.id)}
-            aria-pressed={activeCategories.has(cat.id)}
-          >
-            {cat.label}
-            <span className="filter-pill__count">
-              {categoryCounts[cat.id] ?? 0}
-            </span>
-          </button>
-        ))}
+        {categories.map((cat) => {
+          const count = categoryCounts[cat.id]
+          if (count === undefined) {
+            throw new Error(`category count missing for "${cat.id}"`)
+          }
+          return (
+            <button
+              key={cat.id}
+              className={clsx(
+                'filter-pill',
+                activeCategories.has(cat.id) && 'is-active',
+              )}
+              onClick={() => toggleCategory(cat.id)}
+              aria-pressed={activeCategories.has(cat.id)}
+            >
+              {cat.label}
+              <span className="filter-pill__count">{count}</span>
+            </button>
+          )
+        })}
       </div>
     </div>
   )

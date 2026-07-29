@@ -5,7 +5,7 @@ export default function IntegrationNotFound() {
     <NotFoundShell
       title="Not found"
       description="The requested page does not exist."
-      backHref="/integration"
+      backHref="/integration-guide"
       backLabel="View integration guide"
     />
   )

@@ -7,7 +7,13 @@ export type TransitionDirection = 1 | -1
 export function slideOrdinal(posts: LandingPost[], position: SlidePosition): number {
   let ordinal = 0
   for (let postIndex = 0; postIndex < position.postIndex; postIndex++) {
-    ordinal += posts[postIndex]?.slides.length ?? 0
+    const post = posts[postIndex]
+    if (post === undefined) {
+      throw new Error(
+        `slideOrdinal: postIndex ${postIndex} out of range for ${posts.length} posts (target ${position.postIndex}:${position.slideIndex})`
+      )
+    }
+    ordinal += post.slides.length
   }
   return ordinal + position.slideIndex
 }

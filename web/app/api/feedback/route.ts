@@ -27,10 +27,18 @@ function checkRateLimit(ip: string): boolean {
 function getClientIp(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for')
   if (forwarded) return forwarded.split(',')[0].trim()
-  return request.headers.get('x-real-ip') ?? 'unknown'
+  const realIp = request.headers.get('x-real-ip')
+  if (realIp === null) {
+    throw new Error('client IP unavailable: x-forwarded-for and x-real-ip headers are both missing')
+  }
+  return realIp
 }
 
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '')
+const allowedOriginsEnv = process.env.ALLOWED_ORIGINS
+if (allowedOriginsEnv === undefined) {
+  throw new Error('ALLOWED_ORIGINS env var is required (comma-separated origins; empty string allowed)')
+}
+const ALLOWED_ORIGINS = allowedOriginsEnv
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean)

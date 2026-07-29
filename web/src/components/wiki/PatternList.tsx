@@ -60,10 +60,10 @@ export function PatternList({
             : undefined
           return (
             <Card key={`${item.id}-${i}`} item={item}>
-              {p.detectorFunction && p.detectorSource && html && (
+              {p.detectorFunction && p.detectorSource && p.detectorSourceFile && html && (
                 <EntryPointDialog
                   name={`${p.detectorFunction}()`}
-                  sourceFile={p.detectorSourceFile ?? ''}
+                  sourceFile={p.detectorSourceFile}
                   source={p.detectorSource}
                   highlightedHtml={html}
                   docstring={p.detectorDocstring}

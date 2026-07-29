@@ -47,7 +47,7 @@ export function useRotatingPostsController(posts: LandingPost[], settings: Landi
   const slideIndex = activeSlide.slideIndex
   const post = posts[postIndex]
   const slide = post?.slides[slideIndex]
-  const slideCount = post?.slides.length ?? 0
+  const slideCount = post === undefined ? 0 : post.slides.length
 
   const resetTimer = useCallback(() => {
     setPrefadingSlideIndex(null)

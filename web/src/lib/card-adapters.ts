@@ -58,11 +58,17 @@ export function projectAdapter(
 
 export function configAdapter(configs: ConfigEntry[], labels: WikiLabelsConfig): CardItem[] {
   return configs.map((c) => {
-    const category = labels.config_categories[c.name] ?? 'Other'
+    const category = labels.config_categories[c.name]
+    if (category === undefined) {
+      throw new Error(`configAdapter: no config_categories label for "${c.name}" in wiki_labels`)
+    }
+    if (c.description === undefined) {
+      throw new Error(`configAdapter: config entry "${c.name}" has no description`)
+    }
     return {
       id: c.name,
       title: c.name,
-      description: c.description ?? '',
+      description: c.description,
       icon: 'ri-settings-3-line',
       monoTitle: true,
       category,
@@ -76,11 +82,19 @@ export function guardConfigAdapter(
   labels: WikiLabelsConfig
 ): CardItem[] {
   return entries.map((e) => {
-    const category = labels.guard_categories[e.name] ?? e.category ?? 'Other'
+    const category = labels.guard_categories[e.name] ?? e.category
+    if (category === undefined) {
+      throw new Error(
+        `guardConfigAdapter: no guard_categories label or category for "${e.name}" in wiki_labels`
+      )
+    }
+    if (e.description === undefined) {
+      throw new Error(`guardConfigAdapter: guard config entry "${e.name}" has no description`)
+    }
     return {
       id: e.name,
       title: e.name,
-      description: e.description ?? '',
+      description: e.description,
       icon: 'ri-shield-keyhole-line',
       monoTitle: true,
       category,
@@ -184,8 +198,11 @@ export function hookAdapter(
 export function standardAdapter(standards: StandardEntry[], labels: WikiLabelsConfig): CardItem[] {
   return standards.map((s) => {
     const typeMeta = labels.standard_types[s.type]
-    const typeLabel = typeMeta?.label ?? s.type
-    const typeIcon = typeMeta?.icon ?? 'ri-book-marked-line'
+    if (typeMeta === undefined) {
+      throw new Error(`standardAdapter: no standard_types entry for type "${s.type}" in wiki_labels`)
+    }
+    const typeLabel = typeMeta.label
+    const typeIcon = typeMeta.icon
     const tags: CardItem['tags'] = [
       { label: s.jurisdiction, variant: 'accent' },
       {

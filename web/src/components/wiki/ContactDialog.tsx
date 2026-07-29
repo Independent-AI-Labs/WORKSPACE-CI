@@ -15,7 +15,13 @@ interface ContactDialogProps {
 }
 
 function fillTemplate(template: string, vars: Record<string, string>): string {
-  return template.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '')
+  return template.replace(/\{(\w+)\}/g, (_, key) => {
+    const value = vars[key]
+    if (value === undefined) {
+      throw new Error(`fillTemplate: template references unknown variable "${key}"`)
+    }
+    return value
+  })
 }
 
 export function ContactDialog({
