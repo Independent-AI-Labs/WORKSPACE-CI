@@ -38,8 +38,8 @@
     "@vitest/coverage-v8": "4.1.10",
     "eslint": "9.39.5",
     "eslint-config-next": "16.2.11",
-    "jsdom": "30.0.0",
-    "postcss": "8.5.22",
+    "jsdom": "30.0.1",
+    "postcss": "8.5.25",
     "typescript": "5.9.3",
     "vitest": "4.1.10"
   }
