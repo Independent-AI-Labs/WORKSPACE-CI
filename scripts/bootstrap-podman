@@ -370,7 +370,6 @@ fi
 if [[ -f "${PODMAN_DIR}/usr/local/lib/podman/rootlessport" ]]; then
     ln -sf "${PODMAN_DIR}/usr/local/lib/podman/rootlessport" "${VENV_DIR}/bin/rootlessport"
 fi
-
 # Quadlet user generator (systemd user units from .container files).
 # Copy next to the guarded podman binary: quadlet resolves the podman
 # executable from the directory of /proc/self/exe before trying PATH.
@@ -379,7 +378,6 @@ log_info "Installing Podman quadlet user generator"
 GENERATOR_SRC="${PODMAN_DIR}/usr/local/lib/systemd/user-generators/podman-user-generator"
 GENERATOR_BIN="${VENV_DIR}/bin/podman-user-generator"
 SYSTEM_GENERATOR_DIR="/usr/local/lib/systemd/user-generators"
-
 if [[ -f "${GENERATOR_SRC}" ]]; then
     cp "${GENERATOR_SRC}" "${GENERATOR_BIN}"
     chmod +x "${GENERATOR_BIN}"
@@ -387,11 +385,13 @@ if [[ -f "${GENERATOR_SRC}" ]]; then
     if [[ -w /usr/local/lib ]] || [[ -w "${SYSTEM_GENERATOR_DIR}" ]]; then
         mkdir -p "${SYSTEM_GENERATOR_DIR}"
         ln -sf "${GENERATOR_BIN}" "${SYSTEM_GENERATOR_DIR}/podman-user-generator"
+        ln -sf "${VENV_DIR}/bin/podman" /usr/local/bin/podman
         log_info "✓ Linked generator into ${SYSTEM_GENERATOR_DIR}"
     else
         log_warn "Quadlet generator link requires root. Operator must run:"
         log_warn "  mkdir -p ${SYSTEM_GENERATOR_DIR}"
         log_warn "  ln -sf ${GENERATOR_BIN} ${SYSTEM_GENERATOR_DIR}/podman-user-generator"
+        log_warn "  ln -sf ${VENV_DIR}/bin/podman /usr/local/bin/podman"
         log_warn "Then each user runs: systemctl --user daemon-reload"
     fi
 else
