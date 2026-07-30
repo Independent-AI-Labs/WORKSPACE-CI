@@ -240,7 +240,6 @@ if [[ ${#MISSING_SYS_DEPS[@]} -gt 0 ]]; then
     log_warn ""
     log_warn "Continuing with Podman installation (may have limited rootless functionality)..."
 fi
-
 # AppArmor profile check (informational only)
 _aa_err="$(mktemp)"
 APPARMOR_USERNS=$(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>"$_aa_err") || {
@@ -365,7 +364,6 @@ else
     log_error "Guard script not found at $GUARD_SCRIPT. Bootstrap is broken."
     exit 1
 fi
-
 # Create symlink for rootlessport (required for port forwarding in rootless mode)
 if [[ -f "${PODMAN_DIR}/usr/local/lib/podman/rootlessport" ]]; then
     ln -sf "${PODMAN_DIR}/usr/local/lib/podman/rootlessport" "${VENV_DIR}/bin/rootlessport"
@@ -398,8 +396,7 @@ else
     log_warn "podman-user-generator missing from ${GENERATOR_SRC} - quadlet support unavailable"
 fi
 
-# Note: podman-compose is installed via pyproject.toml dependencies
-# Run: uv sync or run uv sync to install it
+# Note: podman-compose is installed via pyproject.toml dependencies (uv sync).
 
 # Docker alias symlinks (docker → podman) are created by register_extensions.py,
 # not here. Bootstrap only installs the podman binary itself.
@@ -414,6 +411,9 @@ cat > "${CONTAINERS_CONF}" <<EOF
 [engine]
 helper_binaries_dir = ["${VENV_DIR}/bin"]
 conmon_path = ["${VENV_DIR}/bin/conmon"]
+
+[engine.runtimes]
+crun = ["${VENV_DIR}/bin/crun"]
 
 [network]
 network_backend = "netavark"
