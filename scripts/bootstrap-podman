@@ -354,7 +354,7 @@ elif [[ -f "${PODMAN_DIR}/bin/podman" ]]; then
 fi
 
 # Install guard script as the main podman command
-GUARD_SCRIPT="${SCRIPT_DIR}/../utils/podman-guard"
+GUARD_SCRIPT="${CI_WORKSPACE_ROOT}/workspace/scripts/utils/podman-guard"
 if [[ -f "$GUARD_SCRIPT" ]]; then
     rm -f "${VENV_DIR}/bin/podman"  # Remove existing symlink first
     cp "$GUARD_SCRIPT" "${VENV_DIR}/bin/podman"
