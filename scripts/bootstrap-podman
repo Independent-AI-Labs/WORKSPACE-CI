@@ -371,6 +371,33 @@ if [[ -f "${PODMAN_DIR}/usr/local/lib/podman/rootlessport" ]]; then
     ln -sf "${PODMAN_DIR}/usr/local/lib/podman/rootlessport" "${VENV_DIR}/bin/rootlessport"
 fi
 
+# Quadlet user generator (systemd user units from .container files).
+# Copy next to the guarded podman binary: quadlet resolves the podman
+# executable from the directory of /proc/self/exe before trying PATH.
+# systemd only scans system generator dirs, so the link step needs root.
+log_info "Installing Podman quadlet user generator"
+GENERATOR_SRC="${PODMAN_DIR}/usr/local/lib/systemd/user-generators/podman-user-generator"
+GENERATOR_BIN="${VENV_DIR}/bin/podman-user-generator"
+SYSTEM_GENERATOR_DIR="/usr/local/lib/systemd/user-generators"
+
+if [[ -f "${GENERATOR_SRC}" ]]; then
+    cp "${GENERATOR_SRC}" "${GENERATOR_BIN}"
+    chmod +x "${GENERATOR_BIN}"
+    log_info "✓ Staged quadlet generator at ${GENERATOR_BIN}"
+    if [[ -w /usr/local/lib ]] || [[ -w "${SYSTEM_GENERATOR_DIR}" ]]; then
+        mkdir -p "${SYSTEM_GENERATOR_DIR}"
+        ln -sf "${GENERATOR_BIN}" "${SYSTEM_GENERATOR_DIR}/podman-user-generator"
+        log_info "✓ Linked generator into ${SYSTEM_GENERATOR_DIR}"
+    else
+        log_warn "Quadlet generator link requires root. Operator must run:"
+        log_warn "  mkdir -p ${SYSTEM_GENERATOR_DIR}"
+        log_warn "  ln -sf ${GENERATOR_BIN} ${SYSTEM_GENERATOR_DIR}/podman-user-generator"
+        log_warn "Then each user runs: systemctl --user daemon-reload"
+    fi
+else
+    log_warn "podman-user-generator missing from ${GENERATOR_SRC} - quadlet support unavailable"
+fi
+
 # Note: podman-compose is installed via pyproject.toml dependencies
 # Run: uv sync or run uv sync to install it
 
@@ -468,9 +495,8 @@ log_info "  - netavark ${NETAVARK_VERSION}"
 log_info "  - aardvark-dns ${AARDVARK_DNS_VERSION}"
 log_info "  - podman-compose (installed via pip if available)"
 log_info "  - podman-guard (safety wrapper)"
-log_info ""
+log_info "  - podman-user-generator (quadlet support for systemd user units)"
 log_info "Docker alias symlinks created: docker -> podman, docker-compose -> podman-compose"
-log_info ""
 log_warn "SAFETY GUARD ACTIVE - The following commands are BLOCKED:"
 log_warn "  - podman system migrate/reset/prune"
 log_warn "  - podman rm -a / rmi -a"
