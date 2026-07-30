@@ -16,12 +16,18 @@
 #                     agent-writable. Used by `make lock-repo` and by
 #                     deploy-ci as its final step for the work repo.
 #
-# No seal/unseal cycle exists: root-owned files are only ever written by
-# root, so chown alone is the complete invariant. Idempotent.
+# Full mode also sets the immutable flag (chattr +i) on every tracked
+# file and the .git tree when chattr is available: the workspace guard
+# loans CAP_DAC_OVERRIDE to the agent's git, so chown alone does not stop
+# an agent-side git write from rewriting "root-locked" files.
+# cap_linux_immutable is never loaned, so the flag holds. deploy-ci runs
+# lock-repo --unseal (root only) to strip the flags before syncing, and
+# the full lock re-applies them. Idempotent.
 #
 # Usage:
 #   lock-repo [--branch <name>] <repo-dir>
 #   lock-repo --config-only <repo-dir>
+#   lock-repo --unseal <repo-dir>
 set -euo pipefail
 
 log_info() { printf '\033[0;32m[INFO]\033[0m %s\n' "$*"; }
@@ -34,11 +40,13 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 _CONFIG_ONLY=0
+_UNSEAL=0
 _BRANCH=""
 _REPO=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --config-only) _CONFIG_ONLY=1; shift ;;
+        --unseal) _UNSEAL=1; shift ;;
         --branch) _BRANCH="${2:?--branch needs a value}"; shift 2 ;;
         --*) log_error "unknown flag: $1"; exit 1 ;;
         *)
@@ -50,12 +58,46 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 if [[ -z "$_REPO" || ! -d "$_REPO/.git" ]]; then
-    log_error "usage: lock-repo [--config-only] [--branch <name>] <repo-dir>"
+    log_error "usage: lock-repo [--config-only] [--unseal] [--branch <name>] <repo-dir>"
     exit 1
 fi
 if [[ "$_CONFIG_ONLY" -eq 1 && -n "$_BRANCH" ]]; then
     log_error "--branch is meaningless with --config-only"
     exit 1
+fi
+if [[ "$_UNSEAL" -eq 1 && ( "$_CONFIG_ONLY" -eq 1 || -n "$_BRANCH" ) ]]; then
+    log_error "--unseal cannot be combined with --config-only or --branch"
+    exit 1
+fi
+
+# chattr capability probe: the immutable flag is the only ownership-
+# independent barrier against agents running git with loaned
+# CAP_DAC_OVERRIDE (cap_linux_immutable is never loaned). Filesystems
+# without chattr support degrade to ownership-only locking with a warning.
+_has_chattr() {
+    _cv="$(command -v chattr 2>&1)" || return 1
+    _cv="$(command -v lsattr 2>&1)" || return 1
+}
+
+# --- --unseal: strip immutable flags so a root deploy can rewrite ---------
+if [[ "$_UNSEAL" -eq 1 ]]; then
+    if ! _has_chattr; then
+        log_info "chattr unavailable; nothing to unseal in $_REPO"
+        exit 0
+    fi
+    if ! _ul_out="$(chattr -R -i "$_REPO/.git" 2>&1)"; then
+        log_warn "chattr -i on .git reported errors: $_ul_out"
+    fi
+    git_as_root() {
+        env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' \
+            git "$@"
+    }
+    _n="$(git_as_root -C "$_REPO" ls-files | wc -l)"
+    if ! _ul_out="$(cd "$_REPO" && git_as_root ls-files -z | xargs -0 -r chattr -i 2>&1)"; then
+        log_warn "chattr -i on tracked files reported errors: $_ul_out"
+    fi
+    log_info "removed immutable flags from $_n tracked files + .git in $_REPO"
+    exit 0
 fi
 
 # Root-side git reads repos whose .git may be agent- or root-owned; pin
@@ -155,6 +197,38 @@ while IFS= read -r -d '' _entry; do
 done < "$_lss_tmp"
 [[ "$_exec_fixed" -gt 0 ]] && log_warn "restored exec bit on $_exec_fixed file(s) from index modes"
 
+# 4b. Immutable-flag every tracked file and the .git tree. chown alone is
+#     not a barrier here: the workspace guard loans CAP_DAC_OVERRIDE to
+#     the agent's git, so ownership does not stop an agent-side git
+#     write (e.g. git pull) from rewriting "root-locked" files as uid
+#     1000. cap_linux_immutable is never loaned, so chattr +i holds.
+#     deploy-ci strips the flags via lock-repo --unseal before syncing.
+#     Directories are deliberately NOT flagged: agent-owned runtime trees
+#     (.venv, node_modules) must stay creatable inside them.
+_immutable=0
+if _has_chattr; then
+    _im_fail=0
+    if ! _im_out="$(chattr -R +i "$_REPO/.git" 2>&1)"; then
+        _im_fail=1
+        log_warn "chattr +i on .git failed: $_im_out"
+    fi
+    if ! _im_out="$(cd "$_REPO" && git_as_root ls-files -z | xargs -0 -r chattr +i 2>&1)"; then
+        _im_fail=1
+        log_warn "chattr +i on tracked files failed: $_im_out"
+    fi
+    if [[ "$_im_fail" -eq 0 ]]; then
+        _immutable=1
+        log_info "immutable flag set on tracked files + .git"
+    else
+        if ! _rb_out="$(chattr -R -i "$_REPO/.git" 2>&1)"; then
+            log_warn "rollback chattr -i on .git failed: $_rb_out"
+        fi
+        log_warn "chattr +i unsupported under $_REPO; ownership-only locking"
+    fi
+else
+    log_warn "chattr/lsattr not found; ownership-only locking"
+fi
+
 # 5. Final integrity gate: the deployment must verify clean before any
 #    consumer commit/push is allowed against it (guard ci_integrity).
 _verify_fail=0
@@ -170,6 +244,13 @@ while IFS= read -r -d '' _entry; do
         log_error "verify: index 100755 but not executable: $_f"
         _verify_fail=1
     fi
+    if [[ "$_immutable" -eq 1 && ! -L "$_p" ]]; then
+        _attrs="$(lsattr -d "$_p" | awk '{print $1}')"
+        if [[ "$_attrs" != *i* ]]; then
+            log_error "verify: immutable flag missing: $_f"
+            _verify_fail=1
+        fi
+    fi
 done < "$_lss_tmp"
 rm -f "$_lss_tmp"
 while IFS= read -r -d '' _d; do
@@ -177,6 +258,13 @@ while IFS= read -r -d '' _d; do
 done < "$_dirs_tmp"
 rm -f "$_dirs_tmp"
 [[ "$(stat -c '%u' "$_REPO/.git")" == "0" ]] || { log_error "verify: .git not root-owned"; _verify_fail=1; }
+if [[ "$_immutable" -eq 1 ]]; then
+    _git_attrs="$(lsattr -d "$_REPO/.git" | awk '{print $1}')"
+    if [[ "$_git_attrs" != *i* ]]; then
+        log_error "verify: immutable flag missing on .git"
+        _verify_fail=1
+    fi
+fi
 if [[ -n "$_BRANCH" ]]; then
     _head="$(git_as_root -C "$_REPO" rev-parse HEAD)"
     _origin="$(git_as_root -C "$_REPO" rev-parse refs/remotes/origin/"$_BRANCH")"

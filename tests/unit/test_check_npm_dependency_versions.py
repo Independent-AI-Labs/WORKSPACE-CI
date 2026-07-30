@@ -7,13 +7,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ci.check_dependency_versions import (
+from ci._npm_versions import (
     check_npm_and_collect,
     get_latest_npm_version,
-    main,
     parse_npm_dependency,
     upgrade_package_json,
 )
+from ci.check_dependency_versions import main
 from ci.models import LooseDependency, OutdatedDependency
 
 
@@ -28,7 +28,7 @@ def _skip_exemption_validation():
 class TestGetLatestNpmVersion:
     """Tests for get_latest_npm_version function."""
 
-    @patch("ci.check_dependency_versions.urllib.request.urlopen")
+    @patch("ci._npm_versions.urllib.request.urlopen")
     def test_returns_version_on_success(self, mock_urlopen) -> None:
         """Test returns version when npm registry API succeeds."""
         mock_response = MagicMock()
@@ -41,7 +41,7 @@ class TestGetLatestNpmVersion:
 
         assert version == "19.1.1"
 
-    @patch("ci.check_dependency_versions.urllib.request.urlopen")
+    @patch("ci._npm_versions.urllib.request.urlopen")
     def test_returns_none_on_url_error(self, mock_urlopen) -> None:
         """Test returns None when URL request fails."""
         mock_urlopen.side_effect = urllib.error.URLError("Connection failed")
@@ -50,7 +50,7 @@ class TestGetLatestNpmVersion:
 
         assert version is None
 
-    @patch("ci.check_dependency_versions.urllib.request.urlopen")
+    @patch("ci._npm_versions.urllib.request.urlopen")
     def test_returns_none_on_json_error(self, mock_urlopen) -> None:
         """Test returns None when JSON parsing fails."""
         mock_response = MagicMock()
@@ -63,7 +63,7 @@ class TestGetLatestNpmVersion:
 
         assert version is None
 
-    @patch("ci.check_dependency_versions.urllib.request.urlopen")
+    @patch("ci._npm_versions.urllib.request.urlopen")
     def test_encodes_scoped_package(self, mock_urlopen) -> None:
         """Test properly encodes scoped npm packages in URL."""
         mock_response = MagicMock()
@@ -148,7 +148,7 @@ class TestParseNpmDependency:
 class TestCheckNpmAndCollect:
     """Tests for check_npm_and_collect function."""
 
-    @patch("ci.check_dependency_versions.get_latest_npm_version")
+    @patch("ci._npm_versions.get_latest_npm_version")
     def test_detects_loose_caret(self, mock_npm, tmp_path: Path) -> None:
         """Test detects caret range as loose."""
         mock_npm.return_value = "19.1.1"
@@ -160,7 +160,7 @@ class TestCheckNpmAndCollect:
         assert len(loose) == 1
         assert loose[0].name == "react"
 
-    @patch("ci.check_dependency_versions.get_latest_npm_version")
+    @patch("ci._npm_versions.get_latest_npm_version")
     def test_detects_outdated(self, mock_npm, tmp_path: Path) -> None:
         """Test detects outdated strict pin."""
         mock_npm.return_value = "19.1.1"
@@ -175,7 +175,7 @@ class TestCheckNpmAndCollect:
         assert outdated[0].old_version == "18.0.0"
         assert outdated[0].new_version == "19.1.1"
 
-    @patch("ci.check_dependency_versions.get_latest_npm_version")
+    @patch("ci._npm_versions.get_latest_npm_version")
     def test_up_to_date_passes(self, mock_npm, tmp_path: Path) -> None:
         """Test up-to-date strict pin passes."""
         mock_npm.return_value = "19.1.1"
@@ -187,7 +187,7 @@ class TestCheckNpmAndCollect:
         assert loose == []
         assert outdated == []
 
-    @patch("ci.check_dependency_versions.get_latest_npm_version")
+    @patch("ci._npm_versions.get_latest_npm_version")
     def test_checks_dev_dependencies(self, mock_npm, tmp_path: Path) -> None:
         """Test checks devDependencies."""
         mock_npm.return_value = "10.0.0"
@@ -199,7 +199,7 @@ class TestCheckNpmAndCollect:
         assert len(loose) == 1
         assert loose[0].name == "eslint"
 
-    @patch("ci.check_dependency_versions.get_latest_npm_version")
+    @patch("ci._npm_versions.get_latest_npm_version")
     def test_skips_workspace_refs(self, mock_npm, tmp_path: Path) -> None:
         """Test skips workspace: references."""
         mock_npm.return_value = "1.0.0"
@@ -212,7 +212,7 @@ class TestCheckNpmAndCollect:
         assert outdated == []
         mock_npm.assert_not_called()
 
-    @patch("ci.check_dependency_versions.get_latest_npm_version")
+    @patch("ci._npm_versions.get_latest_npm_version")
     def test_respects_excludes(self, mock_npm, tmp_path: Path) -> None:
         """Test respects exclusion set."""
         mock_npm.return_value = "2.0.0"
@@ -226,7 +226,7 @@ class TestCheckNpmAndCollect:
         assert len(loose) == 1
         assert loose[0].name == "next"
 
-    @patch("ci.check_dependency_versions.get_latest_npm_version")
+    @patch("ci._npm_versions.get_latest_npm_version")
     def test_skips_when_registry_returns_none(self, mock_npm, tmp_path: Path) -> None:
         """Test skips when npm registry lookup fails."""
         mock_npm.return_value = None

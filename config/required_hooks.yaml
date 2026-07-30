@@ -244,6 +244,19 @@ hooks:
     safety: false
     applicable_to: [any]
 
+  - id: check-npm-lock-sync
+    kind: python_module
+    entry: ci.check_npm_lock_sync
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    # Fails package.json <-> package-lock.json drift at commit time instead
+    # of letting npm ci explode later in deploy pipelines. Pure JSON parsing,
+    # offline-safe; repos without a lockfile pass trivially.
+    mandatory: true
+    safety: false
+    applicable_to: [node]
+
   - id: check-duplicate-dependencies
     kind: python_module
     entry: ci.check_duplicate_dependencies

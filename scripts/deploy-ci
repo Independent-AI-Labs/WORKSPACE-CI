@@ -11,7 +11,10 @@
 #   - The deployment consumes upstream (origin/main) exclusively. Local
 #     commits that were never pushed are NOT deployed: hook-sourced code
 #     must have server-side provenance.
-#   - After sync, every git-tracked file is chowned root:root. The boot
+#   - After sync, every git-tracked file is chowned root:root AND
+#     immutable-flagged (chattr +i, lock-repo step 4b): the guard loans
+#     CAP_DAC_OVERRIDE to the agent's git, so chown alone is bypassable;
+#     cap_linux_immutable is never loaned. The boot
 #     tool dir (.boot-linux) is installed during deploy (step 8) as root:
 #     root-locked, world readable/executable, since every workspace
 #     consumer resolves tools from it. Other runtime trees (.venv,
@@ -164,6 +167,20 @@ runuser -u "$_REPO_OWNER" -- env HOME="$_OWNER_HOME" \
 # 3. Fast-forward the deployment clone to the origin ref the work repo
 #    just fetched. Local transport: root never authenticates to SSH
 #    (see identity model above); ff-only semantics regardless.
+# The deployment is immutable-flagged between deploys (lock-repo step 4b),
+# so strip the flags first; an EXIT trap re-locks if the deploy aborts
+# anywhere past this point so the mirror never stays mutable.
+if [[ -d "$_DEPLOY_DIR/.git" ]]; then
+    log_info "unsealing $_DEPLOY_DIR immutable flags for deploy"
+    "$_SCRIPT_DIR/lock-repo" --unseal "$_DEPLOY_DIR"
+    _deploy_done=0
+    trap 'if [[ $_deploy_done -eq 0 ]]; then
+        log_error "deploy aborted; re-locking $_DEPLOY_DIR"
+        if ! "$_SCRIPT_DIR/lock-repo" --branch "$_BRANCH" "$_DEPLOY_DIR"; then
+            log_error "RE-LOCK FAILED: $_DEPLOY_DIR may be mutable; re-run deploy-ci"
+        fi
+    fi' EXIT
+fi
 log_info "syncing $_DEPLOY_DIR to origin/$_BRANCH (via work repo refs)"
 git_as_root -C "$_DEPLOY_DIR" fetch "$_WORK_REPO" \
     "+refs/remotes/origin/$_BRANCH:refs/remotes/origin/$_BRANCH"
@@ -248,4 +265,5 @@ runuser -u "$_REPO_OWNER" -- env HOME="$_agent_home" \
 log_info "locking work repo catalogs + regenerating hooks (make lock-repo)"
 make -C "$_WORK_REPO" lock-repo
 
-log_info "deploy-ci complete: $_DEPLOY_DIR @ $_deployed (root-locked, tools installed)"
+_deploy_done=1
+log_info "deploy-ci complete: $_DEPLOY_DIR @ $_deployed (root-locked, immutable, tools installed)"

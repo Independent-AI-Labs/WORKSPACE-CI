@@ -323,6 +323,51 @@ dependencies = [
         assert "uvicorn[standard]==0.30.0" in content
 
 
+class TestSyncLockfileAfterUpgrade:
+    """Tests for ci._npm_versions.sync_lockfile_after_upgrade."""
+
+    def test_no_lockfile_is_noop(self, tmp_path: Path) -> None:
+        """No package-lock.json anywhere above the manifest: nothing to do."""
+        from ci._npm_versions import sync_lockfile_after_upgrade
+
+        manifest = tmp_path / "web" / "package.json"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text("{}")
+        with patch("ci._npm_versions.subprocess.run") as mock_run:
+            sync_lockfile_after_upgrade(manifest)
+        mock_run.assert_not_called()
+
+    def test_runs_npm_at_lock_root(self, tmp_path: Path) -> None:
+        """Lockfile above the manifest triggers npm install --package-lock-only."""
+        from ci._npm_versions import sync_lockfile_after_upgrade
+
+        manifest = tmp_path / "web" / "package.json"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text("{}")
+        (tmp_path / "package-lock.json").write_text("{}")
+        ok = MagicMock(returncode=0)
+        with (
+            patch("ci._npm_versions.shutil.which", return_value="/bin/npm"),
+            patch("ci._npm_versions.subprocess.run", return_value=ok) as mock_run,
+        ):
+            sync_lockfile_after_upgrade(manifest)
+        mock_run.assert_called_once()
+        args, kwargs = mock_run.call_args
+        assert args[0] == ["/bin/npm", "install", "--package-lock-only"]
+        assert kwargs["cwd"] == tmp_path
+
+    def test_missing_npm_warns_with_fix_hint(self, tmp_path: Path, capsys) -> None:
+        """No npm on PATH: warn and print the manual fix command."""
+        from ci._npm_versions import sync_lockfile_after_upgrade
+
+        manifest = tmp_path / "package.json"
+        manifest.write_text("{}")
+        (tmp_path / "package-lock.json").write_text("{}")
+        with patch("ci._npm_versions.shutil.which", return_value=None):
+            sync_lockfile_after_upgrade(manifest)
+        assert "npm install --package-lock-only" in capsys.readouterr().out
+
+
 class TestMain:
     """Tests for main function."""
 
@@ -379,13 +424,29 @@ class TestMain:
         assert result == 1
 
     @patch("ci.check_dependency_versions.Path")
-    def test_returns_one_for_missing_pyproject(self, mock_path_class) -> None:
-        """Test returns 1 when all paths missing (nothing to check)."""
+    def test_returns_zero_for_missing_default_paths(self, mock_path_class) -> None:
+        """Test returns 0 when implicit default paths are missing.
+
+        Consumer repos without dependency manifests must pass cleanly:
+        their generated hook runs the checker with no explicit paths.
+        """
         mock_path = MagicMock()
         mock_path.exists.return_value = False
         mock_path_class.return_value = mock_path
 
         with patch("sys.argv", ["check_dependency_versions.py"]):
+            result = main()
+
+        assert result == 0
+
+    @patch("ci.check_dependency_versions.Path")
+    def test_returns_one_for_missing_explicit_path(self, mock_path_class) -> None:
+        """Test returns 1 when an explicitly requested path is missing."""
+        mock_path = MagicMock()
+        mock_path.exists.return_value = False
+        mock_path_class.return_value = mock_path
+
+        with patch("sys.argv", ["check_dependency_versions.py", "foo/package.json"]):
             result = main()
 
         assert result == 1

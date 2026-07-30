@@ -20,6 +20,13 @@ import yaml
 from packaging.version import InvalidVersion, Version
 
 from ci import _docker_versions as docker
+from ci._npm_versions import check_npm_and_collect, upgrade_package_json
+from ci._registry_common import (
+    QUERY_RESULTS as _QUERY_RESULTS,
+)
+from ci._registry_common import (
+    is_strictly_pinned_or_bounded as _is_strictly_pinned_or_bounded,
+)
 from ci.models import (
     DependencyCheckResult,
     LooseDependency,
@@ -28,8 +35,6 @@ from ci.models import (
     PathCheckResult,
 )
 from ci.paths import resolve_config_path, validate_exemption_file
-
-_QUERY_RESULTS: dict[str, int] = {"failures": 0, "successes": 0}
 
 BUILTIN_EXCLUDES = {
     "torch",
@@ -162,21 +167,6 @@ def parse_dependency(dep: str) -> ParsedDependency:
     return ParsedDependency(name, extras, None, None)
 
 
-_UPPER_BOUND_RE = re.compile(r"[, ]\s*(<=?)\s*\d")
-
-
-def _is_strictly_pinned_or_bounded(dep_str: str) -> bool:
-    """Exact pin (==) or both min+max bounds (>=X,<Y). Everything else rejected."""
-    spec = dep_str.strip()
-    if not spec:
-        return False
-    if "==" in spec:
-        return True
-    if re.match(r"^\d+\.\d+", spec):
-        return True
-    return bool(_UPPER_BOUND_RE.search(spec))
-
-
 def check_and_collect(path: Path, excludes: set[str]) -> DependencyCheckResult:
     """Check pyproject.toml: returns (loose, outdated, toml_data)."""
     with open(path, "rb") as f:
@@ -219,100 +209,6 @@ def check_and_collect(path: Path, excludes: set[str]) -> DependencyCheckResult:
             )
 
     return DependencyCheckResult(loose_deps, outdated_deps, data)
-
-
-# --- npm support ---
-
-_NPM_STRICT_RE = re.compile(r"^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?(\+[a-zA-Z0-9.]+)?$")
-_NPM_SKIP_PREFIXES = ("workspace:", "file:", "git:", "git+", "http:", "https:", "link:")
-
-
-def get_latest_npm_version(package_name: str) -> str | None:
-    """Query npm registry for the latest version of a package."""
-    encoded = urllib.parse.quote(package_name, safe="@")
-    url = f"https://registry.npmjs.org/{encoded}/latest"
-    try:
-        with urllib.request.urlopen(url, timeout=10) as response:
-            data = json.loads(response.read().decode("utf-8"))
-            version: str | None = data.get("version")
-            _QUERY_RESULTS["successes"] += 1
-            return version
-    except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as exc:
-        _QUERY_RESULTS["failures"] += 1
-        print(f"  WARNING: Failed to query npm for {package_name}: {exc}")
-        return None
-
-
-def parse_npm_dependency(name: str, version_spec: str) -> ParsedDependency:
-    """Parse an npm dependency name and version specifier."""
-    spec = version_spec.strip()
-    if not spec or spec in ("*", "latest"):
-        return ParsedDependency(name, None, None, None)
-    for prefix in (">=", "<=", ">", "<", "^", "~"):
-        if spec.startswith(prefix):
-            return ParsedDependency(name, None, prefix, spec[len(prefix) :].strip())
-    if _NPM_STRICT_RE.match(spec):
-        return ParsedDependency(name, None, "==", spec)
-    return ParsedDependency(name, None, None, spec)
-
-
-def check_npm_and_collect(path: Path, excludes: set[str]) -> DependencyCheckResult:
-    """Check package.json and collect issues."""
-    with open(path) as f:
-        data = json.load(f)
-
-    deps = data.get("dependencies", {})
-    dev_deps = data.get("devDependencies", {})
-    all_deps = {**deps, **dev_deps}
-
-    loose_deps: list[LooseDependency] = []
-    outdated_deps: list[OutdatedDependency] = []
-
-    for name, version_spec in all_deps.items():
-        if name.lower() in excludes:
-            continue
-        if version_spec.startswith(_NPM_SKIP_PREFIXES):
-            continue
-
-        parsed = parse_npm_dependency(name, version_spec)
-        latest = get_latest_npm_version(name)
-        if latest is None:
-            continue
-
-        if not _is_strictly_pinned_or_bounded(version_spec):
-            current_spec = f"{name}@{version_spec}"
-            loose_deps.append(LooseDependency(name, current_spec, latest))
-        elif parsed.version != latest:
-            outdated_deps.append(OutdatedDependency(name, None, parsed.version, latest))
-
-    return DependencyCheckResult(loose_deps, outdated_deps, data)
-
-
-def upgrade_package_json(
-    path: Path,
-    loose: list[LooseDependency],
-    outdated: list[OutdatedDependency],
-) -> None:
-    """Upgrade versions in package.json to latest strict pins."""
-    with open(path) as f:
-        data = json.load(f)
-
-    upgrade_map = {}
-    for loose_dep in loose:
-        upgrade_map[loose_dep.name] = loose_dep.latest_version
-    for outdated_dep in outdated:
-        upgrade_map[outdated_dep.name] = outdated_dep.new_version
-
-    for section in ("dependencies", "devDependencies"):
-        if section not in data:
-            continue
-        for pkg_name in data[section]:
-            if pkg_name in upgrade_map:
-                data[section][pkg_name] = upgrade_map[pkg_name]
-
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2)
-        f.write("\n")
 
 
 def upgrade_pyproject(
@@ -436,14 +332,17 @@ def main() -> int:
         default="",
         help="Comma-separated list of packages to exclude from checking",
     )
+    default_paths = ["pyproject.toml", "web/package.json"]
     parser.add_argument(
         "paths",
         nargs="*",
-        default=["pyproject.toml", "web/package.json"],
+        default=default_paths,
         help="Paths to check (pyproject.toml, package.json, "
         "docker-compose.yml, Dockerfile)",
     )
     args = parser.parse_args()
+    paths_explicit = bool(args.paths) and args.paths is not default_paths
+    paths = args.paths
 
     cli_excludes = {x.strip().lower() for x in args.exclude.split(",") if x.strip()}
     pypi_excludes = cli_excludes | load_config_excludes()
@@ -454,7 +353,7 @@ def main() -> int:
     upgrade_count = 0
     found_count = 0
 
-    for path_str in args.paths:
+    for path_str in paths:
         path = Path(path_str)
         if not path.exists():
             print(f"Warning: {path} not found, skipping")
@@ -474,10 +373,27 @@ def main() -> int:
         print(f"Updated {upgrade_count} dependencies.")
         return 0
 
+    return _report_result(
+        dep_errors=dep_errors,
+        found_count=found_count,
+        paths_explicit=paths_explicit,
+    )
+
+
+def _report_result(
+    *,
+    dep_errors: bool,
+    found_count: int,
+    paths_explicit: bool,
+) -> int:
+    """Exit-code logic for the non-upgrade path."""
     if dep_errors:
         print("\nRun with --upgrade to auto-fix.")
         return 1
     if found_count == 0:
+        if not paths_explicit:
+            print("No dependency manifests found; nothing to check.")
+            return 0
         print("ERROR: No dependency files found to check.")
         return 1
 

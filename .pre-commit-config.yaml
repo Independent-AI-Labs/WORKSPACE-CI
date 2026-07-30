@@ -53,6 +53,13 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: check-npm-lock-sync
+        name: Check npm package.json/lockfile sync
+        entry: "bash -c 'source lib/ci.sh && exec uv run python -m ci.check_npm_lock_sync' --"
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: check-duplicate-dependencies
         name: Check Duplicate/Redundant Dependencies
         entry: "bash -c 'source lib/ci.sh && exec uv run python -m ci.check_duplicate_dependencies \"$@\"' --"
