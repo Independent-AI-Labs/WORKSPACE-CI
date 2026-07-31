@@ -1,6 +1,15 @@
 # hitl/backend Makefile
 # Cargo quality gates for the HITL relay workspace (NFR-3.4).
 
+# Absolute cargo from CI's boot dir: the shell guard resets PATH on
+# every exec, so a bare `cargo` cannot be found and cargo could not
+# locate rustc/rustfmt/clippy-driver anyway. Prefix the boot bin dir on
+# PATH per invocation (same pattern as WORKSPACE-GUARD's Makefile).
+_OS := $(shell uname -s)
+_BOOT_NAME := $(if $(filter Darwin,$(_OS)),.boot-macos,.boot-linux)
+CARGO_BOOT_BIN := $(abspath ../..)/$(_BOOT_NAME)/bin
+CARGO := PATH="$(CARGO_BOOT_BIN):$$PATH" $(CARGO_BOOT_BIN)/cargo
+
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -10,16 +19,16 @@ help: ## Show this help
 
 .PHONY: lint
 lint: ## cargo fmt --check + clippy deny-warnings
-	cargo fmt --all -- --check
-	cargo clippy --workspace --all-targets -- -D warnings
+	$(CARGO) fmt --all -- --check
+	$(CARGO) clippy --workspace --all-targets -- -D warnings
 
 .PHONY: type-check
 type-check: ## cargo check across the workspace
-	cargo check --workspace --all-targets
+	$(CARGO) check --workspace --all-targets
 
 .PHONY: test
 test: ## cargo test across the workspace
-	cargo test --workspace
+	$(CARGO) test --workspace
 
 .PHONY: check
 check: lint type-check test ## Run all cargo gates
@@ -27,4 +36,4 @@ check: lint type-check test ## Run all cargo gates
 
 .PHONY: clean
 clean: ## cargo clean
-	cargo clean
+	$(CARGO) clean
