@@ -467,14 +467,18 @@ ci_resolve_boot_path() {
 #   $CI_BOOT_NAME/bin/<tool-name>. Falls back to command -v. Prints the
 #   resolved path to stdout; returns 1 if not found.
 ci_resolve_tool_path() {
-    local start="$1" tool="$2" walk _boot_name="${CI_BOOT_NAME:-$(ci_boot_name)}"
+    local start="$1" tool="$2" walk _next _boot_name="${CI_BOOT_NAME:-$(ci_boot_name)}"
+    # Empty start (e.g. caller's git rev-parse failed) is not a walkable
+    # dir: skip the walk and go straight to PATH resolution.
     walk="$start"
-    while [[ "$walk" != "/" && "$walk" != "." ]]; do
+    while [[ -n "$walk" && "$walk" != "/" && "$walk" != "." ]]; do
         if [[ -x "$walk/$_boot_name/bin/$tool" ]]; then
             printf '%s\n' "$walk/$_boot_name/bin/$tool"
             return 0
         fi
-        walk="$(dirname "$walk")"
+        _next="$(dirname "$walk")" || return 1
+        [[ "$_next" == "$walk" ]] && break
+        walk="$_next"
     done
     if _tool_path="$(command -v "$tool" 2>&1)"; then
         printf '%s\n' "$_tool_path"

@@ -15,9 +15,10 @@
 # sole filter.
 # Redacts secret values in output to prevent re-exposure in CI logs.
 ci_scan_secrets() {
-    local _ss_gitleaks_bin
-    _ss_gitleaks_bin="$(command -v gitleaks)" || {
-        ci_fail "gitleaks not found on PATH"
+    local _ss_gitleaks_bin _ss_root
+    _ss_root="$(git rev-parse --show-toplevel)"
+    _ss_gitleaks_bin="$(ci_resolve_tool_path "$_ss_root" gitleaks)" || {
+        ci_fail "gitleaks not found (boot dir or PATH)"
         return 1
     }
 

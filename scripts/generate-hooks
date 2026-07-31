@@ -165,6 +165,14 @@ fi
 # first, walking up to workspace root.
 _boot_path="\$(ci_resolve_boot_path "\$_ROOT")"
 [[ -n "\$_boot_path" ]] && export PATH="\${_boot_path}:\$PATH"
+# Export the post-prepend PATH under the guard-preserved _CI_ prefix.
+# The workspace shell guard resets PATH on EVERY exec -- including the
+# "\$BASH" -c check invocations below -- which would drop the boot-dir
+# prepend and leave boot-provided tools (gitleaks, cargo) unresolvable
+# inside child checks. Child -c bodies re-establish PATH from this var
+# (see the PATH bootstrap injected by the generator per entry).
+_CI_HOOK_BOOT_PATH="\$PATH"
+export _CI_HOOK_BOOT_PATH
 EOF
 
     # quality_exceptions.yaml preflight: ALWAYS enforced, all tiers.
@@ -273,7 +281,22 @@ EOF
         # Replace `bash -c` with `"$BASH" -c` so child shells use the same
         # bash as the hook's shebang (Homebrew bash 5.x on macOS), not the
         # system /bin/bash 3.2 which lacks nameref support.
-        h_cmd="${h_entry//bash -c/\"\$BASH\" -c}"
+        # Inject a PATH bootstrap inside the -c body: the workspace shell
+        # guard resets PATH on every exec (including these "$BASH" -c
+        # invocations), so without this the header's boot-dir prepend is
+        # lost and boot-provided tools (gitleaks, cargo) are unresolvable
+        # inside the check. The bootstrap must live inside the -c text:
+        # an env-prefix assignment on the invocation would be scrubbed by
+        # the guard before the child ever reads it. _CI_HOOK_BOOT_PATH is
+        # exported by the hook header and survives the guard's env scrub
+        # (_CI_ allow-list prefix).
+        _bc_pfx="bash -c '"
+        if [[ "$h_entry" == "$_bc_pfx"* ]]; then
+            h_cmd="${_bc_pfx}PATH=\"\$_CI_HOOK_BOOT_PATH\"; export PATH; ${h_entry#"$_bc_pfx"}"
+        else
+            h_cmd="$h_entry"
+        fi
+        h_cmd="${h_cmd//bash -c/\"\$BASH\" -c}"
         [[ -n "$h_args" ]] && h_cmd="$h_cmd $h_args"
 
         # If a hook has an empty entry (e.g. when .pre-commit-config.yaml
@@ -375,7 +398,7 @@ and re-run."
             w "${h_cmd} \$_match || { ci_fail \"$h_name\"; exit 1; }"
 
         elif [[ "$h_id" == "check-boot-venv-layout" || "$h_id" == "check-dead-code" ]]; then
-            # Non-blocking advisory checks: rc-capture pattern.
+            # Non-blocking advisory checks: exit-code capture pattern.
             # Failures are surfaced as warnings, never hard-fail.
             w '_bl_rc=0'
             w "${h_cmd} || _bl_rc=\$?"

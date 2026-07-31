@@ -48,21 +48,21 @@ repos:
 
       - id: check-dependency-versions
         name: Check Dependency Versions (strict pinning + latest)
-        entry: "bash -c 'source lib/ci.sh && exec uv run python -m ci.check_dependency_versions \"$@\"' --"
+        entry: "uv run python -m ci.check_dependency_versions"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-npm-lock-sync
         name: Check npm package.json/lockfile sync
-        entry: "bash -c 'source lib/ci.sh && exec uv run python -m ci.check_npm_lock_sync' --"
+        entry: "uv run python -m ci.check_npm_lock_sync"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-duplicate-dependencies
         name: Check Duplicate/Redundant Dependencies
-        entry: "bash -c 'source lib/ci.sh && exec uv run python -m ci.check_duplicate_dependencies \"$@\"' --"
+        entry: "uv run python -m ci.check_duplicate_dependencies"
         language: system
         pass_filenames: false
         always_run: true
@@ -125,21 +125,21 @@ repos:
 
       - id: check-markdown-docs
         name: Check Markdown Documentation References
-        entry: "bash -c 'source lib/ci.sh && exec uv run python -m ci.check_markdown_docs --all-md --check-remote'"
+        entry: "uv run python -m ci.check_markdown_docs --all-md --check-remote"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-required-hooks-present
         name: CI Self-Check (manifest + exceptions + rendered hooks)
-        entry: "bash -c 'source lib/ci.sh && exec uv run python -m ci.check_required_hooks_present'"
+        entry: "uv run python -m ci.check_required_hooks_present"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-boot-venv-layout
         name: Boot Layout Audit (non-blocking)
-        entry: "bash -c 'source lib/ci.sh && exec uv run python -m ci.check_boot_venv_layout'"
+        entry: "uv run python -m ci.check_boot_venv_layout"
         language: system
         pass_filenames: false
         always_run: true

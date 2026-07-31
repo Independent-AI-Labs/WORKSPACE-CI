@@ -24,8 +24,8 @@
 #   OSV_SCANNER_OUTPUT  : file path for JSON report (default: stdout).
 ci_scan_vulnerabilities() {
     local _vs_bin
-    _vs_bin="$(command -v osv-scanner)" || {
-        ci_warn "osv-scanner not found on PATH; vulnerability scan SKIPPED"
+    _vs_bin="$(ci_resolve_tool_path "$(git rev-parse --show-toplevel)" osv-scanner)" || {
+        ci_warn "osv-scanner not found (boot dir or PATH); vulnerability scan SKIPPED"
         echo "  Fix: run scripts/bootstrap-osv-scanner (or make install)" >&2
         return 0
     }

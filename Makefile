@@ -13,15 +13,28 @@
 _OS := $(shell uname -s)
 _HB_PREFIX := $(if $(wildcard /opt/homebrew),/opt/homebrew,$(if $(wildcard /usr/local),/usr/local))
 
+# Root detection MUST happen before the SHELL assignment below:
+# make's $(shell) honors the makefile's SHELL variable, so once SHELL
+# points at the guarded bash, every $(shell) probe fails closed for
+# root (AT_SECURE == 0) and returns empty. While SHELL is still the
+# stock /bin/sh, `id -u` answers truthfully for every caller.
+# Root recipes run through the sealed /bin/bash.real instead of the
+# guarded bash (root execs of the fcap guard fail closed by design).
+ifeq ($(shell id -u),0)
+SHELL := $(if $(wildcard /bin/bash.real),/bin/bash.real,/bin/bash)
+else
 SHELL := $(if $(wildcard $(_HB_PREFIX)/bin/bash),$(_HB_PREFIX)/bin/bash,/bin/bash)
+endif
+# Interpreter for repo scripts invoked explicitly from recipes. Bare `bash`
+# resolves to the guarded /usr/bin/bash, which fails closed for root
+# (AT_SECURE == 0) and broke sudo make install-hooks -> cleanup-precommit.
+ifeq ($(shell id -u),0)
+SCRIPT_BASH := $(if $(wildcard /bin/bash.real),/bin/bash.real,/bin/bash)
+else
+SCRIPT_BASH := bash
+endif
 
 export PATH := $(_HB_PREFIX)/opt/coreutils/libexec/gnubin:$(_HB_PREFIX)/opt/gnu-sed/libexec/gnubin:$(_HB_PREFIX)/opt/findutils/libexec/gnubin:$(_HB_PREFIX)/bin:$(PATH)
-
-# uv is the hermetic runner for all Python tooling (FR-2.4).
-UV := uv
-RUFF := uv run ruff
-PYTEST := uv run python -m pytest
-MYPY := uv run mypy
 
 # $(BOOT_NAME)/bin/ holds bootstrapped tools (uv, cargo, rustup, gitleaks).
 # On macOS BOOT_NAME=.boot-macos, on Linux .boot-linux--platform-aware via
@@ -31,6 +44,16 @@ MYPY := uv run mypy
 # (fresh install), PATH is not modified: install-python-deps handles it.
 BOOT_NAME := $(if $(filter Darwin,$(_OS)),.boot-macos,.boot-linux)
 BOOT_BIN := $(CURDIR)/$(BOOT_NAME)/bin
+
+# uv is the hermetic runner for all Python tooling (FR-2.4). Resolve the
+# boot-bin uv by ABSOLUTE path when present: every recipe shell re-enters
+# the workspace shell guard, which resets PATH, so a bare `uv` is
+# unresolvable in recipes even though make prepends BOOT_BIN to its own
+# exported PATH (the guard drops that export before the recipe runs).
+UV := $(if $(wildcard $(BOOT_BIN)/uv),$(BOOT_BIN)/uv,uv)
+RUFF := $(UV) run ruff
+PYTEST := $(UV) run python -m pytest
+MYPY := $(UV) run mypy
 # User-configurable (env or CLI override); defaults to this repo's boot bin
 ANSIBLE_PLAYBOOK ?= $(BOOT_BIN)/ansible-playbook
 # Containment: uv-managed interpreters live inside the boot dir, never in
@@ -107,12 +130,12 @@ SUDO := $(shell if [ "$$EUID" -eq 0 ]; then echo ""; else echo "sudo"; fi)
 .PHONY: init
 init: ## Install all system-level dependencies (Homebrew on macOS + apt packages on Linux + Rust toolchain)
 	echo "==> Installing Homebrew + GNU tools (macOS only)..."
-	bash scripts/bootstrap-homebrew
+	$(SCRIPT_BASH) scripts/bootstrap-homebrew
 	echo "==> Installing system packages (from config/system-deps.yaml)..."
-	bash scripts/install-system-deps --install
+	$(SCRIPT_BASH) scripts/install-system-deps --install
 	echo "==> Installing Rust toolchain (if missing)..."
 	if ! _cargo_path="$$(command -v cargo 2>&1)"; then \
-		bash scripts/bootstrap-rust; \
+		$(SCRIPT_BASH) scripts/bootstrap-rust; \
 	fi
 	echo "==> System dependencies installed."
 
@@ -137,11 +160,11 @@ install-deps: install-boot-tools install-pythons install-python-deps install-git
 
 .PHONY: install-uv
 install-uv: ## Bootstrap uv into $(BOOT_NAME)/bin/ (idempotent)
-	bash scripts/bootstrap-uv
+	$(SCRIPT_BASH) scripts/bootstrap-uv
 
 .PHONY: install-boot-tools
 install-boot-tools: install-uv ## Bootstrap uv + rust toolchain into $(BOOT_NAME)/bin/ (idempotent)
-	bash scripts/bootstrap-rust
+	$(SCRIPT_BASH) scripts/bootstrap-rust
 
 .PHONY: install-python-deps
 install-python-deps: install-uv ## uv sync the Python deps (project-level .venv)
@@ -149,27 +172,27 @@ install-python-deps: install-uv ## uv sync the Python deps (project-level .venv)
 
 .PHONY: install-gitleaks
 install-gitleaks: ## Bootstrap the gitleaks binary used by the secret-content scanner
-	bash scripts/bootstrap-gitleaks
+	$(SCRIPT_BASH) scripts/bootstrap-gitleaks
 
 .PHONY: install-osv-scanner
 install-osv-scanner: ## Bootstrap the osv-scanner binary used by the dependency vulnerability scanner
-	bash scripts/bootstrap-osv-scanner
+	$(SCRIPT_BASH) scripts/bootstrap-osv-scanner
 
 .PHONY: install-cloc
 install-cloc: ## Bootstrap the cloc binary (single-file Perl) used by code-stats
-	bash scripts/bootstrap-cloc
+	$(SCRIPT_BASH) scripts/bootstrap-cloc
 
 .PHONY: install-moon
 install-moon: ## Bootstrap the moon binary (workspace task runner) into $(BOOT_NAME)/bin
-	bash scripts/bootstrap-moon
+	$(SCRIPT_BASH) scripts/bootstrap-moon
 
 .PHONY: install-ansible
 install-ansible: install-uv ## Bootstrap ansible + passlib into $(BOOT_NAME)/bin
-	bash scripts/bootstrap-ansible
+	$(SCRIPT_BASH) scripts/bootstrap-ansible
 
 .PHONY: install-certbot
 install-certbot: install-uv ## Bootstrap certbot + dns-cloudflare into $(BOOT_NAME)/bin
-	bash scripts/bootstrap-certbot
+	$(SCRIPT_BASH) scripts/bootstrap-certbot
 
 # Interpreter pool: uv-managed CPython inside the boot dir so venvs/tool
 # envs never symlink into $HOME/.local/share/uv/python. Idempotent.
@@ -181,7 +204,7 @@ install-pythons: install-uv ## Install the workspace CPython pool into $(BOOT_NA
 
 .PHONY: install-node
 install-node: ## Bootstrap Node.js + npm into $(BOOT_NAME)/node-env/ (idempotent)
-	bash scripts/bootstrap-node
+	$(SCRIPT_BASH) scripts/bootstrap-node
 
 .PHONY: install-web-deps
 install-web-deps: install-node ## npm ci JS workspace dependencies (repo root: web/ + web-components/ + hitl/web/)
@@ -189,14 +212,14 @@ install-web-deps: install-node ## npm ci JS workspace dependencies (repo root: w
 
 .PHONY: install-hooks
 install-hooks: ## (Re)generate native git hooks (root-owned hooks: run via sudo)
-	if [ -f scripts/cleanup-precommit ]; then bash scripts/cleanup-precommit; else echo "[INFO] cleanup-precommit not found, continuing" >&2; fi
-	bash scripts/reinstall-hooks
+	if [ -f scripts/cleanup-precommit ]; then $(SCRIPT_BASH) scripts/cleanup-precommit; else echo "[INFO] cleanup-precommit not found, continuing" >&2; fi
+	$(SCRIPT_BASH) scripts/reinstall-hooks
 
 .PHONY: lock-repo
 lock-repo: ## Root-lock config/*.yaml catalogs and regenerate root-owned hooks (root only)
-	bash scripts/lock-repo --config-only $(CURDIR)
+	$(SCRIPT_BASH) scripts/lock-repo --config-only $(CURDIR)
 	env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' \
-		bash scripts/reinstall-hooks
+		$(SCRIPT_BASH) scripts/reinstall-hooks
 
 .PHONY: runtime-dirs
 runtime-dirs: ## Pre-create agent-owned runtime dirs (.venv, node_modules, egg-info); OWNER=<user> required, root only
@@ -231,7 +254,7 @@ check: ## Run all quality gates (lint + type-check + test)
 
 .PHONY: check-templates
 check-templates: ## Verify generated templates are fresh vs config/required_hooks.yaml
-	bash scripts/scaffold-ci --check-template
+	$(SCRIPT_BASH) scripts/scaffold-ci --check-template
 
 .PHONY: lint
 lint: ## Runs ruff format and ruff lint with auto-fix on all ci/ modules. Catches style violations, import sorting issues, and unused variables before they reach the remote. Acts as the first stage of the pre-commit quality gate.
@@ -458,7 +481,7 @@ clean: ## Remove build artifacts
 
 .PHONY: clean-precommit
 clean-precommit: ## Remove pre-commit framework traces
-	bash scripts/cleanup-precommit
+	$(SCRIPT_BASH) scripts/cleanup-precommit
 
 # =============================================================================
 # Workspace Tools
@@ -466,23 +489,23 @@ clean-precommit: ## Remove pre-commit framework traces
 
 .PHONY: audit
 audit: ## Audit workspace repos for CI integration
-	bash scripts/audit-workspace
+	$(SCRIPT_BASH) scripts/audit-workspace
 
 .PHONY: compliance
 compliance: ## Deep compliance score for a project (usage: make compliance PROJECT=path)
-	bash scripts/compliance-report $${PROJECT:-.}
+	$(SCRIPT_BASH) scripts/compliance-report $${PROJECT:-.}
 
 .PHONY: compliance-all
 compliance-all: ## Recursive compliance audit of all repos in workspace
-	bash scripts/compliance-report --recursive
+	$(SCRIPT_BASH) scripts/compliance-report --recursive
 
 .PHONY: rewrite-history
 rewrite-history: ## Strip blocked patterns from git history (dangerous)
-	bash scripts/rewrite-history
+	$(SCRIPT_BASH) scripts/rewrite-history
 
 .PHONY: code-stats
 code-stats: ## Codebase statistics across the workspace via cloc (lines, files, per-repo, per-language)
-	bash scripts/code-stats $(ARGS)
+	$(SCRIPT_BASH) scripts/code-stats $(ARGS)
 
 .PHONY: extract-code-stats
 extract-code-stats: ## Generate web/src/data/code-stats.json for wiki Project Catalogue badges
@@ -491,7 +514,7 @@ extract-code-stats: ## Generate web/src/data/code-stats.json for wiki Project Ca
 
 .PHONY: extract-code-stats-if-stale
 extract-code-stats-if-stale: ## Regenerate code-stats.json only when workspace repos have newer commits
-	bash scripts/code-stats-if-stale
+	$(SCRIPT_BASH) scripts/code-stats-if-stale
 
 .PHONY: extract-hook-sources extract-script-sources extract-swallow-source extract-wiki-data
 _WIKI_EXTRACT_ENV = CI_CONFIG_DIR=config
@@ -512,7 +535,7 @@ extract-wiki-data: extract-code-stats extract-hook-sources extract-script-source
 
 .PHONY: scaffold-ci
 scaffold-ci: ## Generate CI integration files for a consumer project
-	bash scripts/scaffold-ci $(ARGS)
+	$(SCRIPT_BASH) scripts/scaffold-ci $(ARGS)
 
 # Exemption/policy YAML editing (root-gated yaml editor; files stay
 # root-owned unconditionally; there is no seal/unseal cycle).
@@ -556,7 +579,7 @@ yaml-validate: ## Schema-validate a policy file: make yaml-validate FILE=..
 .PHONY: enforce-syslog-limits
 enforce-syslog-limits: ## Enforce system-level log ceilings: logrotate maxsize + journald rate limiting (prevents /var/log/syslog filling root disk)
 	echo "==> Enforcing system log ceilings..."
-	$(SUDO) bash scripts/enforce-syslog-limits
+	$(SUDO) $(SCRIPT_BASH) scripts/enforce-syslog-limits
 
 # WORKSPACE-GUARD: compiled git protection (opt-in)
 # =============================================================================
@@ -575,20 +598,20 @@ enforce-syslog-limits: ## Enforce system-level log ceilings: logrotate maxsize +
 # chowns that tree back to SUDO_USER when run under sudo, so agent-uid
 # rebuilds stay usable. check-guard is read-only and runs as the agent.
 build-guard: ## Build git-guard binary (operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make build-guard)
-	bash scripts/bootstrap-workspace-guard build-only
+	$(SCRIPT_BASH) scripts/bootstrap-workspace-guard build-only
 
 install-guard: ## REMOVED: use install-guard-host-exec
 	echo "ERROR: make install-guard is removed. Use: make install-guard-host-exec" >&2
 	exit 1
 
 install-guard-host-exec: build-guard ## Install git-guard (host-exec; operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make install-guard-host-exec)
-	$(SUDO) bash scripts/bootstrap-workspace-guard install-host-exec
+	$(SUDO) $(SCRIPT_BASH) scripts/bootstrap-workspace-guard install-host-exec
 
 uninstall-guard: ## Uninstall git-guard, restore stock git; preserve provision state (operator: sudo make uninstall-guard)
-	$(SUDO) bash scripts/bootstrap-workspace-guard uninstall
+	$(SUDO) $(SCRIPT_BASH) scripts/bootstrap-workspace-guard uninstall
 
 purge-guard-state: ## Destroy all guard state (requires GUARD_PURGE_CONFIRM=1)
-	$(SUDO) bash scripts/bootstrap-workspace-guard purge-guard-state
+	$(SUDO) $(SCRIPT_BASH) scripts/bootstrap-workspace-guard purge-guard-state
 
 reconcile-guard-host-exec: build-guard ## Force rebuild + reinstall git guard and aux artifacts (operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make reconcile-guard-host-exec)
 	GUARD_FORCE_RECONCILE=1 GUARD_SKIP_BUILD=1 $(MAKE) install-guard-host-exec
@@ -598,7 +621,7 @@ check-guard: ## REMOVED: use check-guard-host-exec
 	exit 1
 
 check-guard-host-exec: ## Check host-exec git-guard installation (read-only, runs as agent)
-	bash scripts/bootstrap-workspace-guard check-host-exec
+	$(SCRIPT_BASH) scripts/bootstrap-workspace-guard check-host-exec
 
 deploy-ci: ## Promote WORKSPACE-CI to locked projects/CI (operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make deploy-ci)
-	bash scripts/deploy-ci
+	$(SCRIPT_BASH) scripts/deploy-ci

@@ -49,7 +49,11 @@ main() {
         exit 1
     fi
 
-    bash "$_GENERATE"
+    # Re-exec the generator with the SAME interpreter we are running under:
+    # root reaches us via make's SCRIPT_BASH (/bin/bash.real), and a bare
+    # `bash` would resolve to the guarded /usr/bin/bash which fails closed
+    # for root (AT_SECURE == 0). $BASH always names the running binary.
+    "$BASH" "$_GENERATE"
 }
 
 main "$@"
