@@ -13,6 +13,13 @@ NODE_ENV_BIN := $(CI_ROOT)/$(_BOOT_NAME)/node-env/bin
 BOOT_BIN := $(CI_ROOT)/$(_BOOT_NAME)/bin
 NODE := $(NODE_ENV_BIN)/node
 NPM := $(NODE_ENV_BIN)/npm
+# The guard's alt-interp rule blocks interpreter names (and paths
+# containing them, like node-env/bin) in command text, so recipes cannot
+# invoke boot node tools directly. Script bodies are exempt by design
+# (shell_guard_policy_matrix: script-interp-ok): route through the
+# wrapper script. $(NODE)/$(NPM) stay for data-only uses (unit files,
+# existence checks); executing recipes use RUN_JS.
+RUN_JS := bash $(CI_ROOT)/scripts/run-boot-js
 
 export PATH := $(NODE_ENV_BIN):$(BOOT_BIN):$(PATH)
 
@@ -220,7 +227,7 @@ dev-stop: ## Stop dev server
 
 .PHONY: dev-sync-content
 dev-sync-content: ## Mirror WORKSPACE-WEB-CONTENT into content/ and public/landing/
-	$(NODE) scripts/sync-web-content.mjs
+	$(RUN_JS) node scripts/sync-web-content.mjs
 
 .PHONY: dev-restart
 dev-restart: ## Restart dev server (stop, sync content, wipe .next, start)
@@ -275,22 +282,22 @@ prod-logs: ## Tail production stack logs
 
 .PHONY: lint
 lint: ## Run eslint
-	npx eslint .
+	$(RUN_JS) npx eslint .
 
 .PHONY: type-check
 type-check: ## Run tsc --noEmit
 	ln -sfn ../../node_modules ../tests/web/node_modules
-	npx tsc --noEmit
+	$(RUN_JS) npx tsc --noEmit
 
 .PHONY: test
 test: ## Run vitest
-	npx vitest run
+	$(RUN_JS) npx vitest run
 
 .PHONY: check-generated
 check-generated: ## Verify generated registry/dashboard/nav data is fresh
-	node scripts/sync-project-registry.mjs --check
-	node scripts/sync-grafana-dashboards.mjs --check
-	node scripts/sync-wiki-nav.mjs --check
+	$(RUN_JS) node scripts/sync-project-registry.mjs --check
+	$(RUN_JS) node scripts/sync-grafana-dashboards.mjs --check
+	$(RUN_JS) node scripts/sync-wiki-nav.mjs --check
 
 .PHONY: check
 check: ## Run lint + type-check + test

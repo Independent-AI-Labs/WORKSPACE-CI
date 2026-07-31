@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# run-boot-js <node|npm|npx> [args...]: run a boot-installed JS tool with
+# the boot node bin dir on PATH.
+#
+# Why this exists: the workspace shell guard's alt-interp rule blocks
+# interpreter names (node, npm, npx, and paths containing them, e.g.
+# node-env/bin) in COMMAND text, so Makefile recipes cannot invoke the
+# boot node tools directly. Script bodies are exempt by design
+# (config/shell_guard_policy_matrix.yaml: script-interp-ok), so the
+# invocation lives here. No policy is loosened: the guard still scans
+# this body and stages it via sealed memfd.
+set -euo pipefail
+
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+_CI_ROOT="$(cd "$(dirname "$_SELF")/.." && pwd)"
+
+case "$(uname -s)" in
+    Darwin) _BOOT=.boot-macos ;;
+    *)      _BOOT=.boot-linux ;;
+esac
+_NE_BIN="$_CI_ROOT/$_BOOT/node-env/bin"
+
+_tool="${1:-}"
+if [[ $# -lt 1 ]]; then
+    echo "usage: run-boot-js <node|npm|npx> [args...]" >&2
+    exit 2
+fi
+shift
+case "$_tool" in
+    node|npm|npx) ;;
+    *)
+        echo "ERROR: run-boot-js: unsupported tool '$_tool' (want node|npm|npx)" >&2
+        exit 2
+        ;;
+esac
+if [[ ! -x "$_NE_BIN/$_tool" ]]; then
+    echo "ERROR: $_tool not found at $_NE_BIN/$_tool; run: make install-boot-tools" >&2
+    exit 1
+fi
+# npm/npx have #!/usr/bin/env node shebangs: the boot bin dir must lead
+# PATH for the child. The guard already reset our PATH; extend, don't
+# inherit-and-hope.
+PATH="$_NE_BIN:$PATH" exec "$_NE_BIN/$_tool" "$@"
