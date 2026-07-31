@@ -4,7 +4,9 @@
 #
 # Usage: ./tests/run_tests_integration.sh
 
-TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+TESTS_DIR="$(cd "$(dirname "$_SELF")" && pwd)"
 
 # Load framework (resolves LIB_DIR from tests/../lib)
 source "$TESTS_DIR/test_helpers.sh"

@@ -24,7 +24,9 @@
 # Operator: sudo make deploy-ci
 set -euo pipefail
 
-_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+_SCRIPT_DIR="$(cd "$(dirname "$_SELF")" && pwd)"
 _WORK_REPO="$(cd "$_SCRIPT_DIR/.." && pwd)"
 _PROJECTS_ROOT="$(cd "$_WORK_REPO/.." && pwd)"
 _DEPLOY_DIR="$_PROJECTS_ROOT/CI"

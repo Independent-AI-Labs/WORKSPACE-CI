@@ -231,10 +231,14 @@ EOF
 _make_mock_dangle() {
     local _mmd_bindir="$1" _mmd_fixture="$2" _mmd_rc="${3:-0}" _mmd_err="${4:-}"
     mkdir -p "$_mmd_bindir"
+    # /bin/sh (dash) is not wrapped by the shell guard; a bash shebang
+    # would route the mock through the guard, whose script-body scan
+    # blocks the 2>/dev/null suppression and whose env scrub would hide
+    # nothing here anyway (paths are baked in literally).
     cat > "$_mmd_bindir/dangle" <<MOCK_EOF
-#!/usr/bin/env bash
+#!/bin/sh
 ${_mmd_err:+echo "$_mmd_err" >&2}
-cat "$_mmd_fixture" 2>/dev/null
+[ -f "$_mmd_fixture" ] && cat "$_mmd_fixture"
 exit $_mmd_rc
 MOCK_EOF
     chmod +x "$_mmd_bindir/dangle"

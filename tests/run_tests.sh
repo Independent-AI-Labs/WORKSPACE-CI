@@ -5,7 +5,9 @@
 #
 # Usage: ./tests/run_tests.sh
 
-TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+TESTS_DIR="$(cd "$(dirname "$_SELF")" && pwd)"
 
 # Run unit and integration suites as separate processes so their
 # test counters are independent. Combined summary at the end.

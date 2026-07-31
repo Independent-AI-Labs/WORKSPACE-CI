@@ -3,7 +3,9 @@
 # Called from CI Makefile: lives in the CI repo, builds from sibling WORKSPACE-GUARD.
 set -euo pipefail
 
-_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+_SCRIPT_DIR="$(cd "$(dirname "$_SELF")" && pwd)"
 _CI_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
 WORKSPACE_ROOT="$(cd "$_CI_ROOT/../.." && pwd)"
 

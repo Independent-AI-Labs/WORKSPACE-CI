@@ -6,7 +6,9 @@
 # is considered; uncommitted edits do not trigger a refresh.
 set -euo pipefail
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+repo_root="$(cd "$(dirname "$_SELF")/.." && pwd)"
 out="$repo_root/web/src/data/code-stats.json"
 projects_root="$(cd "$repo_root/.." && pwd)"
 workspace_root="$(cd "$projects_root/.." && pwd)"

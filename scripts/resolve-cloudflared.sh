@@ -2,7 +2,9 @@
 # Resolve cloudflared binary: CLOUDFLARED_BIN env, boot-dir walk-up, then PATH.
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+SCRIPT_DIR="$(cd "$(dirname "$_SELF")" && pwd)"
 _CI_LIB="${SCRIPT_DIR}/../lib"
 # shellcheck source=../lib/ci.sh
 if ! source "${_CI_LIB}/ci.sh"; then

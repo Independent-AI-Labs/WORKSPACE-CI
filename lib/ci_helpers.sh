@@ -41,13 +41,24 @@ ci_has_cmd() {
     return 0
 }
 
-# ci_uv_bin: resolve uv from boot dir or PATH.
+# ci_uv_bin: resolve uv from the project boot dir, the CI installation
+# boot dir, or PATH.
 ci_uv_bin() {
     local _root="${CI_PROJECT_ROOT:-}"
     local _uv=""
     if [[ -n "$_root" ]]; then
         local _boot_uv="${_root}/$(ci_boot_name)/bin/uv"
         [[ -x "$_boot_uv" ]] && _uv="$_boot_uv"
+    fi
+    if [[ -z "$_uv" ]]; then
+        # Tool installs belong to the CI installation (this lib), not the
+        # consuming project: resolve the lib's physical location so a
+        # symlinked fixture lib still finds the real boot dir under the
+        # shell guard's reset PATH.
+        local _lib_phys
+        _lib_phys="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+        local _inst_uv="${_lib_phys}/../$(ci_boot_name)/bin/uv"
+        [[ -x "$_inst_uv" ]] && _uv="$_inst_uv"
     fi
     if [[ -z "$_uv" ]] && _uv_path="$(command -v uv 2>&1)"; then
         _uv="$_uv_path"

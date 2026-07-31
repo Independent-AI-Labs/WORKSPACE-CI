@@ -12,7 +12,9 @@
 
 set -euo pipefail
 
-_CI_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+_CI_ROOT="$(cd "$(dirname "$_SELF")/.." && pwd)"
 # shellcheck source=../lib/ci.sh
 if ! source "$_CI_ROOT/lib/ci.sh"; then
     echo "ERROR: failed to source $_CI_ROOT/lib/ci.sh" >&2

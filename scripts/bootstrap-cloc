@@ -40,7 +40,9 @@ CLOC_VERSION="${CLOC_VERSION:-2.02}"
 # Recompute with: sha256sum <(curl -fsSL <url>)  when bumping CLOC_VERSION.
 CLOC_SHA256="373b4424acdf4bfb38e735a85c8a0e5731ee789e2fd95df2618d254cbdb7f355"
 
-_ci_lib="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+_ci_lib="$(cd "$(dirname "$_SELF")/../lib" && pwd)"
 # shellcheck source=lib/ci.sh
 if ! source "$_ci_lib/ci.sh"; then
     echo "ERROR: failed to source $_ci_lib/ci.sh" >&2

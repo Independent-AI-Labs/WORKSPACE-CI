@@ -24,7 +24,9 @@ set -euo pipefail
 
 OSV_SCANNER_VERSION="2.4.0"
 
-_ci_lib="$(cd "$(dirname "${BASH_SOURCE[0]}")/../lib" && pwd)"
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+_ci_lib="$(cd "$(dirname "$_SELF")/../lib" && pwd)"
 # shellcheck source=lib/ci.sh
 if ! source "$_ci_lib/ci.sh"; then
     echo "ERROR: failed to source $_ci_lib/ci.sh" >&2

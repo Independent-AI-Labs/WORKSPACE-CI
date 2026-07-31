@@ -29,8 +29,12 @@ test_resolve_cloudflared_honors_env() {
     printf '#!/bin/sh\necho ok\n' > "$_bin"
     chmod +x "$_bin"
 
+    # Source in a subshell, not `bash script`: the shell guard scrubs
+    # non-allowlisted env on every exec, so CLOUDFLARED_BIN can only
+    # reach the script within a single process (sourcing or same-shell
+    # export). This mirrors the operator contract under a live guard.
     local _out
-    _out="$(CLOUDFLARED_BIN="$_bin" bash "$PROJECT_DIR/scripts/resolve-cloudflared.sh")"
+    _out="$(CLOUDFLARED_BIN="$_bin"; source "$PROJECT_DIR/scripts/resolve-cloudflared.sh")"
     _teardown_tmpdir
 
     if [[ "$_out" != "$_bin" ]]; then
@@ -51,8 +55,10 @@ test_resolve_cloudflared_script_walks_up() {
     ln -s "$PROJECT_DIR/lib" "$_ci/lib"
     ln -s "$PROJECT_DIR/scripts" "$_ci/scripts"
 
+    # Sourced (see honors_env): CI_PROJECT_ROOT would not survive the
+    # guard's env scrub across a `bash script` exec either.
     local _out
-    _out="$(unset CLOUDFLARED_BIN; CI_PROJECT_ROOT="$_ci" bash "$_ci/scripts/resolve-cloudflared.sh")"
+    _out="$(unset CLOUDFLARED_BIN; CI_PROJECT_ROOT="$_ci"; source "$_ci/scripts/resolve-cloudflared.sh")"
     _teardown_tmpdir
 
     if [[ "$_out" != "$_boot/cloudflared" ]]; then

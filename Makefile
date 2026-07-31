@@ -52,7 +52,7 @@ BOOT_BIN := $(CURDIR)/$(BOOT_NAME)/bin
 # exported PATH (the guard drops that export before the recipe runs).
 UV := $(if $(wildcard $(BOOT_BIN)/uv),$(BOOT_BIN)/uv,uv)
 RUFF := $(UV) run ruff
-PYTEST := $(UV) run python -m pytest
+PYTEST := $(UV) run pytest
 MYPY := $(UV) run mypy
 # User-configurable (env or CLI override); defaults to this repo's boot bin
 ANSIBLE_PLAYBOOK ?= $(BOOT_BIN)/ansible-playbook
@@ -287,7 +287,7 @@ _type-check-impl:
 
 .PHONY: _test-impl
 _test-impl:
-	./tests/run_tests.sh
+	cd tests && $(SCRIPT_BASH) -c 'source ./run_tests.sh'
 	$(PYTEST) tests/unit tests/integration -v --timeout=30
 
 # =============================================================================
@@ -298,7 +298,7 @@ _test-impl:
 
 .PHONY: test-shell
 test-shell: ## Run shell tests only (no moon caching)
-	./tests/run_tests.sh
+	cd tests && $(SCRIPT_BASH) -c 'source ./run_tests.sh'
 
 .PHONY: test-python
 test-python: ## Run Python tests only (no moon caching)
@@ -317,9 +317,13 @@ check-push: ## Single-pass pre-push gate running ruff lint, mypy, shell unit tes
 	$(MAKE) _lint-impl && $(MAKE) _type-check-impl && $(MAKE) _test-push-impl
 
 .PHONY: _test-push-impl
+# The runners are SOURCED, not executed: the workspace shell guard
+# memfd-stages executed scripts ($0 becomes /proc/self/fd/N), which breaks
+# their BASH_SOURCE-relative suite loading and runs zero tests without
+# any error.
 _test-push-impl:
-	./tests/run_tests_unit.sh
-	./tests/run_tests_integration.sh
+	cd tests && $(SCRIPT_BASH) -c 'source ./run_tests_unit.sh'
+	cd tests && $(SCRIPT_BASH) -c 'source ./run_tests_integration.sh'
 	$(PYTEST) tests/unit --cov=ci --cov-report=term-missing --cov-fail-under=90 --tb=short
 	$(PYTEST) tests/integration --cov=ci --cov-report=term-missing --cov-fail-under=5 --tb=short
 	$(MAKE) -C web lint type-check test

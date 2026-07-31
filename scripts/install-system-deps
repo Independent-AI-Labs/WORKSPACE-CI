@@ -34,7 +34,9 @@ set -euo pipefail
 # install phase -- a separate bootstrap phase (install-boot-tools) owns
 # hermetic installs.
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+SCRIPT_DIR="$(cd "$(dirname "$_SELF")" && pwd)"
 
 # ---------------------------------------------------------------------------
 # Platform detection

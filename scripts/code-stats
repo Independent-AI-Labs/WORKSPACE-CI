@@ -22,7 +22,9 @@
 #   2  no repos found
 set -euo pipefail
 
-_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+_SCRIPT_DIR="$(cd "$(dirname "$_SELF")" && pwd)"
 # shellcheck source=../lib/ci.sh
 _ci_lib="$_SCRIPT_DIR/../lib/ci.sh"
 if ! source "$_ci_lib"; then

@@ -41,7 +41,9 @@ fi
 # relative to the workspace root. Includes nested repos at any depth,
 # except repos whose tier resolves to vendored (third-party mirrors the
 # workspace does not manage).
-_self_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+_self_dir="$(cd "$(dirname "$_SELF")" && pwd)"
 if ! source "$_self_dir/../lib/checks_quality.sh"; then
     echo "walk-projects: failed to source $_self_dir/../lib/checks_quality.sh" >&2
     exit 1

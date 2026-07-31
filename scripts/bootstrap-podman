@@ -7,7 +7,9 @@ set -euo pipefail
 # This script ensures Podman is available without requiring system-wide installation
 # FORCE INSTALLS TO .boot-linux - NO FALLBACKS, NO .venv, ONLY .boot-linux
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+SCRIPT_DIR="$(cd "$(dirname "$_SELF")" && pwd)"
 
 _ci_lib="$(cd "${SCRIPT_DIR}/../lib" && pwd)"
 # shellcheck source=lib/ci.sh
