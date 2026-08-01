@@ -56,7 +56,7 @@ _find_cloc() {
 # Resolve cloc; empty string if not found. _find_cloc returns 0/1 only
 # (writes path to stdout on success, no output on failure); no stderr
 # normally. Command substitution's exit status IS the inner command's,
-# so `if CLOC="$(...)"` is rc-capture: enters the if-branch on rc=0.
+# so `if CLOC="$(...)"` is status-capture: enters the if-branch on status=0.
 CLOC=""
 if CLOC="$(_find_cloc)"; then
     :
@@ -200,10 +200,10 @@ for _repo in "${_repos[@]}"; do
     fi
     if [[ $_co_rc -ne 0 ]]; then
         if [[ -s "$_co_err" ]]; then
-            printf '[code-stats] cloc failed on %s (rc=%d): %s\n' \
+            printf '[code-stats] cloc failed on %s (status=%d): %s\n' \
                 "$_rel" "$_co_rc" "$(head -1 "$_co_err")" >&2
         else
-            printf '[code-stats] cloc failed on %s (rc=%d, no stderr)\n' \
+            printf '[code-stats] cloc failed on %s (status=%d, no stderr)\n' \
                 "$_rel" "$_co_rc" >&2
         fi
         rm -f "$_co_out" "$_co_err"

@@ -102,7 +102,7 @@ systemctl daemon-reload
 _journald_rc=0
 _journald_out="$(systemctl restart systemd-journald 2>&1)" || _journald_rc=$?
 if [[ $_journald_rc -ne 0 ]]; then
-    echo "    journald restart failed (rc=$_journald_rc): $_journald_out" >&2
+    echo "    journald restart failed (status=$_journald_rc): $_journald_out" >&2
 else
     echo "    journald reloaded"
 fi
@@ -113,7 +113,7 @@ if [[ $_rsyslog_rc -eq 0 ]]; then
     systemctl restart rsyslog
     echo "    rsyslog restarted"
 else
-    echo "    rsyslog not active (rc=$_rsyslog_rc) - skipped"
+    echo "    rsyslog not active (status=$_rsyslog_rc) - skipped"
 fi
 
 echo ""

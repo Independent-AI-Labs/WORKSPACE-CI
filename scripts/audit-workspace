@@ -20,12 +20,12 @@ fi
 # degrade to a static default rather than abort the audit.
 _capture_or_default() {
     local default="$1"; shift
-    local out err rc=0
+    local out err status=0
     out="$(mktemp)"; err="$(mktemp)"
-    "$@" >"$out" 2>"$err" || rc=$?
-    if [[ $rc -ne 0 ]]; then
+    "$@" >"$out" 2>"$err" || status=$?
+    if [[ $status -ne 0 ]]; then
         if [[ -s "$err" ]]; then
-            printf '[audit-workspace] %s (rc=%d): %s\n' "$*" "$rc" \
+            printf '[audit-workspace] %s (status=%d): %s\n' "$*" "$status" \
                 "$(head -1 "$err")" >&2
         fi
         printf '%s' "$default"

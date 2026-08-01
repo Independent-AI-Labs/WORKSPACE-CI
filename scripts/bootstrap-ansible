@@ -79,7 +79,7 @@ main() {
     local v_out v_rc=0
     v_out="$("$target_dir/ansible-playbook" --version 2>&1)" || v_rc=$?
     if [[ "$v_rc" -ne 0 ]]; then
-        _log "post-install verification failed: ansible-playbook --version returned rc=$v_rc"
+        _log "post-install verification failed: ansible-playbook --version returned status=$v_rc"
         _log "$v_out"
         return 1
     fi

@@ -84,7 +84,7 @@ main() {
             _log "found existing node ($cur), upgrading to v${NODE_VERSION}"
         else
             rm -f "$v_out"
-            _log "existing binary at $node_bin did not respond to '--version' (rc=$v_rc)"
+            _log "existing binary at $node_bin did not respond to '--version' (status=$v_rc)"
             _log "re-downloading fresh copy"
         fi
     fi
@@ -117,7 +117,7 @@ main() {
     local dl_rc=0
     curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/${tarball}" "$tarball_url" || dl_rc=$?
     if [[ "$dl_rc" -ne 0 ]]; then
-        _log "curl failed for $tarball_url (rc=$dl_rc)"
+        _log "curl failed for $tarball_url (status=$dl_rc)"
         return 1
     fi
 
@@ -128,7 +128,7 @@ main() {
     local sha_rc=0
     curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/SHASUMS256.txt" "$shasums_url" || sha_rc=$?
     if [[ "$sha_rc" -ne 0 ]]; then
-        _log "failed to fetch SHASUMS256.txt from $shasums_url (rc=$sha_rc)"
+        _log "failed to fetch SHASUMS256.txt from $shasums_url (status=$sha_rc)"
         _log "cannot verify tarball integrity; refusing to install"
         return 1
     fi
@@ -177,7 +177,7 @@ main() {
     v_out2="$(mktemp)"
     "$node_env/bin/node" --version >"$v_out2" 2>&1 || v_rc2=$?
     if [[ "$v_rc2" -ne 0 ]]; then
-        _log "post-install verification failed: '$node_env/bin/node --version' rc=$v_rc2"
+        _log "post-install verification failed: '$node_env/bin/node --version' status=$v_rc2"
         rm -f "$v_out2"
         return 1
     fi
@@ -189,7 +189,7 @@ main() {
     npm_out="$(mktemp)"
     "$node_env/bin/npm" --version >"$npm_out" 2>&1 || npm_rc=$?
     if [[ "$npm_rc" -ne 0 ]]; then
-        _log "post-install verification failed: 'npm --version' rc=$npm_rc"
+        _log "post-install verification failed: 'npm --version' status=$npm_rc"
         rm -f "$npm_out"
         return 1
     fi

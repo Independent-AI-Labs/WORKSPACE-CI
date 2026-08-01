@@ -73,7 +73,7 @@ main() {
             local err_msg
             err_msg="$(head -1 "$v_err")"
             rm -f "$v_out" "$v_err"
-            _log "existing binary at $target did not respond to 'version' (rc=$v_rc): $err_msg"
+            _log "existing binary at $target did not respond to 'version' (status=$v_rc): $err_msg"
             _log "re-downloading fresh copy"
         fi
     fi
@@ -116,7 +116,7 @@ main() {
     local sha_rc=0
     curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/checksums.txt" "$checksums_url" || sha_rc=$?
     if [[ "$sha_rc" -ne 0 ]]; then
-        _log "failed to fetch checksums sidecar (rc=$sha_rc): $checksums_url"
+        _log "failed to fetch checksums sidecar (status=$sha_rc): $checksums_url"
         _log "cannot verify tarball integrity without sidecar; refusing to install"
         return 1
     fi
@@ -151,7 +151,7 @@ main() {
     v_out2="$(mktemp)"
     "$target" version >"$v_out2" 2>&1 || v_rc2=$?
     if [[ "$v_rc2" -ne 0 ]]; then
-        _log "post-install verification failed: '$target version' returned rc=$v_rc2"
+        _log "post-install verification failed: '$target version' returned status=$v_rc2"
         rm -f "$v_out2"
         return 1
     fi

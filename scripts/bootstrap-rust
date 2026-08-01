@@ -66,7 +66,7 @@ _create_symlinks() {
     tc_out="$(mktemp)"; tc_err="$(mktemp)"
     "$_rh/bin/rustup" show active-toolchain >"$tc_out" 2>"$tc_err" || tc_rc=$?
     if [[ $tc_rc -ne 0 ]]; then
-        _log "rustup show active-toolchain failed (rc=$tc_rc):"
+        _log "rustup show active-toolchain failed (status=$tc_rc):"
         cat "$tc_err" >&2
         rm -f "$tc_out" "$tc_err"
         return 1
@@ -144,7 +144,7 @@ _install_components() {
     "$_rh/bin/rustup" component add llvm-tools-preview rust-src \
         >"$c_out" 2>"$c_err" || c_rc=$?
     if [[ $c_rc -ne 0 ]]; then
-        _log "rustup component add failed (rc=$c_rc):"
+        _log "rustup component add failed (status=$c_rc):"
         cat "$c_err" >&2
         rm -f "$c_out" "$c_err"
         return 1
@@ -179,7 +179,7 @@ main() {
             _install_components "$target_dir" "$rust_home"
             return 0
         fi
-        _log "toolchain broken (rc=$v_rc): $(head -1 "$v_err")"
+        _log "toolchain broken (status=$v_rc): $(head -1 "$v_err")"
         _log "removing $rust_home and reinstalling"
         rm -f "$v_out" "$v_err"
         rm -rf "$rust_home"
@@ -206,7 +206,7 @@ main() {
     curl -fsSL --retry 3 --retry-delay 2 \
         -o "$tmp/rustup-init.sh" "$rustup_url" || dl_rc=$?
     if [[ $dl_rc -ne 0 ]]; then
-        _log "curl failed (rc=$dl_rc): $rustup_url"
+        _log "curl failed (status=$dl_rc): $rustup_url"
         return 1
     fi
 
@@ -217,7 +217,7 @@ main() {
         --default-toolchain "$RUST_TOOLCHAIN" >"$ru_out" 2>"$ru_err" \
         || ru_rc=$?
     if [[ $ru_rc -ne 0 ]]; then
-        _log "rustup-init failed (rc=$ru_rc):"
+        _log "rustup-init failed (status=$ru_rc):"
         cat "$ru_err" >&2
         rm -f "$ru_out" "$ru_err"
         return 1
@@ -234,7 +234,7 @@ main() {
     fi
     "$rust_home/bin/rustc" --version >"$p_out" 2>"$p_err" || p_rc=$?
     if [[ $p_rc -ne 0 ]]; then
-        _log "rustc --version failed (rc=$p_rc): $(head -1 "$p_err")"
+        _log "rustc --version failed (status=$p_rc): $(head -1 "$p_err")"
         rm -f "$p_out" "$p_err"
         return 1
     fi
@@ -247,7 +247,7 @@ main() {
     fi
     "$rust_home/bin/cargo" --version >"$p_out" 2>"$p_err" || p_rc=$?
     if [[ $p_rc -ne 0 ]]; then
-        _log "cargo --version failed (rc=$p_rc): $(head -1 "$p_err")"
+        _log "cargo --version failed (status=$p_rc): $(head -1 "$p_err")"
         rm -f "$p_out" "$p_err"
         return 1
     fi

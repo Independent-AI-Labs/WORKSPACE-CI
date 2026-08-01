@@ -78,7 +78,7 @@ main() {
             err_msg="$(head -1 "$v_err")"
             rm -f "$v_out" "$v_err"
             _log "existing binary at $target did not respond to '--version'"
-            _log "rc=$v_rc: $err_msg: re-downloading fresh copy"
+            _log "status=$v_rc: $err_msg: re-downloading fresh copy"
         fi
     fi
 
@@ -110,7 +110,7 @@ main() {
     local dl_rc=0
     curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/${tarball}" "$url" || dl_rc=$?
     if [[ "$dl_rc" -ne 0 ]]; then
-        _log "curl failed for $url (rc=$dl_rc)"
+        _log "curl failed for $url (status=$dl_rc)"
         return 1
     fi
 
@@ -123,7 +123,7 @@ main() {
     local sha_rc=0
     curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/${tarball}.sha256" "$sha_url" || sha_rc=$?
     if [[ "$sha_rc" -ne 0 ]]; then
-        _log "failed to fetch SHA256 sidecar from $sha_url (rc=$sha_rc)"
+        _log "failed to fetch SHA256 sidecar from $sha_url (status=$sha_rc)"
         _log "cannot verify tarball integrity without sidecar; refusing to install"
         return 1
     fi
@@ -187,7 +187,7 @@ main() {
     v_err2="$(mktemp)"
     "$target" --version >"$v_out2" 2>"$v_err2" || v_rc2=$?
     if [[ "$v_rc2" -ne 0 ]]; then
-        _log "post-install verification failed: '$target --version' rc=$v_rc2"
+        _log "post-install verification failed: '$target --version' status=$v_rc2"
         _log "stderr: $(head -1 "$v_err2")"
         rm -f "$v_out2" "$v_err2"
         return 1
