@@ -85,6 +85,9 @@ if [[ "$_UNSEAL" -eq 1 ]]; then
         log_info "chattr unavailable; nothing to unseal in $_REPO"
         exit 0
     fi
+    if ! _ul_out="$(chattr -i "$_REPO" 2>&1)"; then
+        log_warn "chattr -i on $_REPO itself reported errors: $_ul_out"
+    fi
     if ! _ul_out="$(chattr -R -i "$_REPO/.git" 2>&1)"; then
         log_warn "chattr -i on .git reported errors: $_ul_out"
     fi
@@ -203,7 +206,10 @@ done < "$_lss_tmp"
 #     write (e.g. git pull) from rewriting "root-locked" files as uid
 #     1000. cap_linux_immutable is never loaned, so chattr +i holds.
 #     deploy-ci strips the flags via lock-repo --unseal before syncing.
-#     Directories are deliberately NOT flagged: agent-owned runtime trees
+#     The repo root directory itself IS flagged: it is the shell guard's
+#     anchored-trust boundary (REQ-SHG-214) and flagging it also stops
+#     rename-swap of the deployment root. Other directories are
+#     deliberately NOT flagged: agent-owned runtime trees
 #     (.venv, node_modules) must stay creatable inside them.
 _immutable=0
 if _has_chattr; then
@@ -219,6 +225,9 @@ if _has_chattr; then
     if [[ "$_im_fail" -eq 0 ]]; then
         _immutable=1
         log_info "immutable flag set on tracked files + .git"
+        if ! _im_out="$(chattr +i "$_REPO" 2>&1)"; then
+            log_warn "chattr +i on $_REPO itself failed: $_im_out"
+        fi
     else
         if ! _rb_out="$(chattr -R -i "$_REPO/.git" 2>&1)"; then
             log_warn "rollback chattr -i on .git failed: $_rb_out"
