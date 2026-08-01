@@ -6,20 +6,20 @@ SHELL := /bin/bash
 # containing them, like node-env/bin) in command text, so recipes cannot
 # invoke boot node tools directly. Script bodies are exempt by design
 # (shell_guard_policy_matrix: script-interp-ok): route through the
-# wrapper script (same pattern as web/Makefile).
-RUN_JS := bash $(abspath ../..)/scripts/run-boot-js
+# dispatcher script (same pattern as web/Makefile).
+WEB_TOOL := bash $(abspath ../..)/scripts/web-tool
 
 .PHONY: lint
 lint: ## Run eslint
-	$(RUN_JS) npx eslint .
+	$(WEB_TOOL) lint hitl/web
 
 .PHONY: type-check
 type-check: ## Run tsc --noEmit
-	$(RUN_JS) npx tsc --noEmit
+	$(WEB_TOOL) typecheck hitl/web
 
 .PHONY: test
 test: ## Run vitest
-	$(RUN_JS) npx vitest run
+	$(WEB_TOOL) test hitl/web
 
 .PHONY: check
 check: ## Run lint + type-check + test

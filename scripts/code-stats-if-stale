@@ -36,7 +36,17 @@ needs_refresh() {
 
 if needs_refresh; then
   echo "[code-stats-if-stale] regenerating code-stats (cloc may take minutes)" >&2
-  uv run python "$repo_root/scripts/extract-code-stats.py"
+  _ci_lib="$repo_root/lib/ci.sh"
+  if ! source "$_ci_lib"; then
+    echo "ERROR: failed to source $_ci_lib" >&2
+    exit 2
+  fi
+  UV_BIN="${CI_PROJECT_ROOT}/$(ci_boot_name)/bin/uv"
+  if [ ! -x "$UV_BIN" ]; then
+    echo "ERROR: uv not found at $UV_BIN; run: make install-uv" >&2
+    exit 2
+  fi
+  "$UV_BIN" run python "$repo_root/scripts/extract-code-stats.py"
 else
   echo "[code-stats-if-stale] up to date, skipping cloc"
 fi

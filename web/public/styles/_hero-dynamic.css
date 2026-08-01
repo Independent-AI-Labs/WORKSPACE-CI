@@ -39,7 +39,8 @@
 
 @media (max-width: 2559px) and (max-height: 1439px) {
   .hero--dynamic {
-    padding: var(--space-3) var(--space-4);
+    padding: 0;
+    margin-bottom: var(--space-2);
     transition:
       margin 300ms ease,
       padding 300ms ease;
@@ -47,7 +48,17 @@
   }
 
   .landing-page .hero--dynamic {
-    margin: var(--space-6) var(--wiki-inset-x) 0;
+    margin: var(--space-2) var(--wiki-inset-x) 0;
+  }
+
+  .hero--dynamic .hero__subtitle {
+    line-height: var(--leading-tight);
+    transition: line-height 300ms ease;
+  }
+
+  .hero--dynamic:hover .hero__subtitle,
+  .hero--dynamic:focus-within .hero__subtitle {
+    line-height: var(--leading-relaxed);
   }
 
   .hero--dynamic .hero__title {
@@ -64,6 +75,7 @@
   .hero--dynamic:hover,
   .hero--dynamic:focus-within {
     padding: var(--space-8) var(--wiki-inset-x);
+    margin-bottom: var(--wiki-section-gap);
   }
 
   .landing-page .hero--dynamic:hover,

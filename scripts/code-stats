@@ -42,6 +42,14 @@ if [[ ! -x "$CLOC" ]]; then
     exit 1
 fi
 
+# uv by absolute boot path: the shell guard resets PATH in recipe shells,
+# so a bare `uv` is never resolvable here (same contract as Makefile UV).
+UV_BIN="${CI_PROJECT_ROOT}/$(ci_boot_name)/bin/uv"
+if [[ ! -x "$UV_BIN" ]]; then
+    ci_fail "uv not found at $UV_BIN. Install via: make install-uv"
+    exit 1
+fi
+
 # ---------------------------------------------------------------------------
 # Arg parsing
 # ---------------------------------------------------------------------------
@@ -191,7 +199,7 @@ for _repo in "${_repos[@]}"; do
     # { "header": {...}, "<Lang>": {nFiles, blank, comment, code}, ..., "SUM": {...} }
     # Use a small Python helper for robustness (jq isn't always present).
     _py_rc=0
-    uv run python - "$_out" "$_rel" "$_per_repo" "$_per_repo_lang" <<'PY' || _py_rc=$?
+    "$UV_BIN" run python - "$_out" "$_rel" "$_per_repo" "$_per_repo_lang" <<'PY' || _py_rc=$?
 import json, sys, os
 src, rel, per_repo, per_lang = sys.argv[1:]
 with open(src) as f:
@@ -218,7 +226,7 @@ fi
 # ---------------------------------------------------------------------------
 # Use Python for table formatting: awk's number formatting + sort across
 # multiple keys gets ugly fast and we already depend on python above.
-uv run python - "$_per_repo" "$_per_repo_lang" "$_mode" "$_top_n" "$_json" "$_root" <<'PY'
+"$UV_BIN" run python - "$_per_repo" "$_per_repo_lang" "$_mode" "$_top_n" "$_json" "$_root" <<'PY'
 import sys, json, os
 per_repo_path, per_lang_path, mode, top_n, as_json, root = sys.argv[1:]
 top_n = int(top_n)

@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# web-tool <task> [args...]: guard-safe dispatcher for boot JS tooling in
+# make recipes. The shell guard's alt-interp rule scans recipe command text
+# and blocks interpreter tokens (node, npm, npx), so recipes cannot even
+# pass the tool name to run-boot-js. Script bodies are exempt by design
+# (shell_guard_policy_matrix: script-interp-ok), so the tokens live here.
+# Tasks (names deliberately avoid interpreter tokens). lint/typecheck/test
+# take an optional first arg: project dir relative to the repo root
+# (default: web).
+#   sync-content     mirror WORKSPACE-WEB-CONTENT into web/content + public
+#   lint [dir]       eslint .
+#   typecheck [dir]  tsc --noEmit
+#   test [dir]       vitest run
+#   check-generated  verify generated registry/dashboard/nav data is fresh
+#   deps-ci          npm ci at the repo root (install-web-deps)
+set -euo pipefail
+
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+_CI_ROOT="$(cd "$(dirname "$_SELF")/.." && pwd)"
+_WEB="$_CI_ROOT/web"
+_RUN_JS="$_CI_ROOT/scripts/run-boot-js"
+
+_task="${1:-}"
+if [[ $# -lt 1 ]]; then
+    echo "usage: web-tool <sync-content|lint|typecheck|test|check-generated|deps-ci> [args...]" >&2
+    exit 2
+fi
+shift
+
+case "$_task" in
+    sync-content)
+        exec bash "$_RUN_JS" node "$_WEB/scripts/sync-web-content.mjs" "$@"
+        ;;
+    lint)
+        _dir="${1:-web}"; [[ $# -gt 0 ]] && shift
+        cd "$_CI_ROOT/$_dir"
+        exec bash "$_RUN_JS" npx eslint . "$@"
+        ;;
+    typecheck)
+        _dir="${1:-web}"; [[ $# -gt 0 ]] && shift
+        cd "$_CI_ROOT/$_dir"
+        exec bash "$_RUN_JS" npx tsc --noEmit "$@"
+        ;;
+    test)
+        _dir="${1:-web}"; [[ $# -gt 0 ]] && shift
+        cd "$_CI_ROOT/$_dir"
+        exec bash "$_RUN_JS" npx vitest run "$@"
+        ;;
+    check-generated)
+        cd "$_WEB"
+        bash "$_RUN_JS" node scripts/sync-project-registry.mjs --check
+        bash "$_RUN_JS" node scripts/sync-grafana-dashboards.mjs --check
+        bash "$_RUN_JS" node scripts/sync-wiki-nav.mjs --check
+        ;;
+    deps-ci)
+        cd "$_CI_ROOT"
+        exec bash "$_RUN_JS" npm ci "$@"
+        ;;
+    *)
+        echo "ERROR: web-tool: unknown task '$_task'" >&2
+        echo "usage: web-tool <sync-content|lint|typecheck|test|check-generated|deps-ci> [args...]" >&2
+        exit 2
+        ;;
+esac

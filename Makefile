@@ -231,7 +231,7 @@ install-node: ## Bootstrap Node.js + npm into $(BOOT_NAME)/node-env/ (idempotent
 
 .PHONY: install-web-deps
 install-web-deps: install-node ## npm ci JS workspace dependencies (repo root: web/ + web-components/ + hitl/web/)
-	$(SCRIPT_BASH) $(CURDIR)/scripts/run-boot-js npm ci
+	$(SCRIPT_BASH) $(CURDIR)/scripts/web-tool deps-ci
 
 .PHONY: install-hooks
 install-hooks: ## (Re)generate native git hooks (root-owned hooks: run via sudo)
@@ -537,7 +537,7 @@ code-stats: ## Codebase statistics across the workspace via cloc (lines, files, 
 .PHONY: extract-code-stats
 extract-code-stats: ## Generate web/src/data/code-stats.json for wiki Project Catalogue badges
 	echo "[extract-wiki-data] code-stats (cloc across workspace; slow)..."
-	uv run python scripts/extract-code-stats.py
+	$(UV) run python scripts/extract-code-stats.py
 
 .PHONY: extract-code-stats-if-stale
 extract-code-stats-if-stale: ## Regenerate code-stats.json only when workspace repos have newer commits
@@ -548,15 +548,15 @@ _WIKI_EXTRACT_ENV = CI_CONFIG_DIR=config
 
 extract-hook-sources: ## Generate web/src/data/hook-sources.json for wiki Hook EntryPointDialog
 	echo "[extract-wiki-data] hook-sources..."
-	$(_WIKI_EXTRACT_ENV) uv run python scripts/extract-hook-sources.py
+	$(_WIKI_EXTRACT_ENV) $(UV) run python scripts/extract-hook-sources.py
 
 extract-script-sources: ## Generate web/src/data/script-sources.json for wiki Tooling EntryPointDialog
 	echo "[extract-wiki-data] script-sources..."
-	$(_WIKI_EXTRACT_ENV) uv run python scripts/extract-script-sources.py
+	$(_WIKI_EXTRACT_ENV) $(UV) run python scripts/extract-script-sources.py
 
 extract-swallow-source: ## Generate web/src/data/swallow-detectors.json for wiki Silent Swallow Detectors
 	echo "[extract-wiki-data] swallow-detectors..."
-	$(_WIKI_EXTRACT_ENV) uv run python scripts/extract-swallow-source.py
+	$(_WIKI_EXTRACT_ENV) $(UV) run python scripts/extract-swallow-source.py
 
 extract-wiki-data: extract-code-stats extract-hook-sources extract-script-sources extract-swallow-source ## Regenerate all wiki JSON data files
 
