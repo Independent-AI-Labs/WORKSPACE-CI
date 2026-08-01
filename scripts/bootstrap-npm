@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bootstrap-node: fetch the Node.js runtime and place it on PATH.
+# bootstrap-npm: fetch the Node.js runtime and place it on PATH.
 #
 # Node.js is required by the CI wiki (web/ directory, a Next.js app).
 # The pre-push quality gate runs eslint, tsc, and vitest against web/,
@@ -50,7 +50,7 @@ if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
     exit 2
 fi
 
-_log() { printf '[bootstrap-node] %s\n' "$*" >&2; }
+_log() { printf '[bootstrap-npm] %s\n' "$*" >&2; }
 
 main() {
     local boot_dir bin_dir node_env target_dir

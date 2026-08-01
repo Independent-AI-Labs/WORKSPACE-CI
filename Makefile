@@ -204,7 +204,7 @@ install-pythons: install-uv ## Install the workspace CPython pool into $(BOOT_NA
 
 .PHONY: install-node
 install-node: ## Bootstrap Node.js + npm into $(BOOT_NAME)/node-env/ (idempotent)
-	$(SCRIPT_BASH) scripts/bootstrap-node
+	$(SCRIPT_BASH) scripts/bootstrap-npm
 
 .PHONY: install-web-deps
 install-web-deps: install-node ## npm ci JS workspace dependencies (repo root: web/ + web-components/ + hitl/web/)
