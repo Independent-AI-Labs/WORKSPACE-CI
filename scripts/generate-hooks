@@ -441,7 +441,7 @@ and re-run."
             if [[ $_attrs_rc -eq 0 && "${_attrs%% *}" == *i* ]]; then
                 ci_fail "hook $_stage is immutable (chattr +i). Clear it first: sudo chattr -i $_output_dir/$_stage"
             else
-                ci_fail "hook $_stage is root-owned. Regenerate as root: sudo make -C projects/CI install-hooks CONSUMER=<repo>"
+                ci_fail "hook $_stage is root-owned. Regenerate as root from the consumer: sudo make -C <repo> install-hooks"
             fi
             exit 1
         fi

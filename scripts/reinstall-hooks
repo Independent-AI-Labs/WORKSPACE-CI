@@ -47,7 +47,7 @@ main() {
     _repo_root="$(git rev-parse --show-toplevel)"
 
     if _hooks_root_owned "$_repo_root/.git/hooks" && [[ "$(id -u)" -ne 0 ]]; then
-        ci_fail "hooks are root-owned; regenerate as root: sudo make -C projects/CI install-hooks CONSUMER=$_repo_root"
+        ci_fail "hooks are root-owned; regenerate as root: sudo make -C $_repo_root install-hooks"
         exit 1
     fi
 
