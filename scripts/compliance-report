@@ -5,7 +5,7 @@
 #   compliance-report [PROJECT_DIR]     Audit a single project
 #   compliance-report --recursive [ROOT] Discover all .git roots under ROOT and audit each
 #
-# ROOT defaults to the workspace root (auto-detected).
+# ROOT: the workspace root (auto-detected) when unset.
 set -euo pipefail
 
 _SELF="${BASH_SOURCE[0]:-$0}"

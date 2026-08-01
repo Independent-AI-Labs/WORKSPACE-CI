@@ -180,11 +180,11 @@ test_dc_scan_paths_file_outside_dropped() {
 }
 _run_test "dc: file outside scan_paths dropped" test_dc_scan_paths_file_outside_dropped
 
-test_dc_scan_paths_empty_defaults_to_ci() {
+test_dc_scan_paths_empty_stock_is_ci() {
     _dc_mock_setup 0
     rm -f config/dead_code.yaml
     cat > config/dead_code.yaml <<'YAML'
-# No scan_paths key - should default to ["ci"]
+# No scan_paths key - stock value is ["ci"]
 ignored_names: []
 ignored_name_patterns: []
 ignore_paths: []
@@ -192,10 +192,10 @@ reference_only_paths: []
 YAML
     _dc_write_fixture "ci/foo.py:5:1: function bar is not referenced"
     _dc_run
-    _assert_eq 1 "$dc_rc" "ci/ file should be reported when scan_paths defaults to ci"
+    _assert_eq 1 "$dc_rc" "ci/ file should be reported when scan_paths is the stock value ci"
     grep -q "ci/foo.py" "$TEST_TMP/dc_out" || return 1
 }
-_run_test "dc: scan_paths empty defaults to ci" test_dc_scan_paths_empty_defaults_to_ci
+_run_test "dc: scan_paths empty uses stock ci" test_dc_scan_paths_empty_stock_is_ci
 
 # =========================================================================
 # ignore_paths filter tests (2)

@@ -73,7 +73,7 @@ fi
 # chattr capability probe: the immutable flag is the only ownership-
 # independent barrier against agents running git with loaned
 # CAP_DAC_OVERRIDE (cap_linux_immutable is never loaned). Filesystems
-# without chattr support degrade to ownership-only locking with a warning.
+# without chattr support get ownership-only locking with a warning.
 _has_chattr() {
     _cv="$(command -v chattr 2>&1)" || return 1
     _cv="$(command -v lsattr 2>&1)" || return 1

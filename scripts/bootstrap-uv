@@ -149,8 +149,8 @@ main() {
         return 1
     fi
 
-    # Locate the uv binary inside the extracted subdir; fall back to the
-    # archive root in case a future release flattens the layout.
+    # Locate the uv binary: versioned subdir first, archive root for
+    # flattened layouts; hard error below when neither exists.
     local uv_src="${tmp}/${subdir}/uv"
     if [[ ! -f "$uv_src" ]]; then
         uv_src="${tmp}/uv"

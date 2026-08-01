@@ -252,7 +252,7 @@ ever writes into a parent's or sibling's boot directory.
 | FR-10.2 | The boot directory name SHALL follow the pattern `.boot-<platform>` where `<platform>` is the output of `ci_platform_name()`. On Linux: `.boot-linux`. On macOS: `.boot-macos`. |
 | FR-10.3 | The system SHALL provide a `ci_boot_name()` shell function that echoes just the directory name (e.g. `.boot-linux` or `.boot-macos`), without the project root prefix. This is used by workspace root detection logic that needs to check for directory existence. |
 | FR-10.4 | When `ci.sh` is sourced, it SHALL resolve `CI_BOOT_DIR` (absolute path) and `CI_BOOT_NAME` (directory name) as variables available to all consumers. These SHALL be computed once at source-time, not on every invocation. |
-| FR-10.5 | `ci_boot_dir()` MUST NOT fall back from a missing platform-preferred directory to a different platform's directory. If the boot directory does not exist on disk, it is a FATAL error at the point of use (not at source-time -- the library provides the path string; consumers validate existence). |
+| FR-10.5 | `ci_boot_dir()` MUST NOT substitute a different platform's directory when the platform-preferred directory is missing. If the boot directory does not exist on disk, it is a FATAL error at the point of use (not at source-time -- the library provides the path string; consumers validate existence). |
 | FR-10.6 | The source-time resolution in `ci.sh` MUST NOT emit a FATAL error if the boot directory does not exist on disk. `ci.sh` is a passive library: it computes and exports path strings. Existence validation is the responsibility of the consumer (bootstrap scripts, hook execution, compliance check). |
 
 ### FR-11: Portable Relative Path Computation

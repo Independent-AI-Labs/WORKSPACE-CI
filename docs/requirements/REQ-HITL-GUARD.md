@@ -38,7 +38,7 @@
 Today GUARD hard-blocks non-root invocation of sudo-gated operations
 with a "run with sudo" hint, and fleet users have no sudo at all. For
 operations that are legitimate but gated, this creates either dangerous
-workarounds or dead ends. The HITL integration gives GUARD-wrapped
+circumventions or dead ends. The HITL integration gives GUARD-wrapped
 surfaces a third verdict beside PASS and BLOCK: ELEVATE - request
 human approval through the relay, and proceed only with a valid,
 locally verifiable elevation token. Credentials are never involved at
@@ -100,7 +100,7 @@ Inherits REQ-HITL §1.3 and REQ-HITL-RELAY §1.3. Additionally:
 | FR-2.2 | Approval MUST produce a relay-signed elevation token (SPEC-HITL-RELAY §5.1); denial/expiry/unreachable relay MUST resolve to local denial (fail-closed, REQ-HITL FR-5.3). |
 | FR-2.3 | Token hand-off to the exec context MUST use the root-owned state-file pattern: root-owned directory, symlink-verified regular file, fail-closed when absent/unreadable/mismatched (the root-gated policy-file precedent). |
 | FR-2.4 | Redemption MUST verify, locally and offline against the pre-provisioned relay grant public key: signature, `exp` (≤ 5 min from issue), `request_hash` equality with the pending request, `cnf` thumbprint match to the requesting session key, and `jti` not previously redeemed. Any failure = denial. |
-| FR-2.5 | A redeemed token MUST authorise exactly one exec of the exact hashed argv; post-exec the token MUST be invalidated locally and redemption MUST be reported to the relay (best-effort notification; local invalidation is authoritative). |
+| FR-2.5 | A redeemed token MUST authorise exactly one exec of the exact hashed argv; post-exec the token MUST be invalidated locally and redemption MUST be reported to the relay (notification is attempted and logged on failure; local invalidation is authoritative). |
 | FR-2.6 | Token verification and argv hashing MUST run in the wrapper's privilege context with the closed-environment discipline of existing GUARD exec paths; any new env/fd plumbing MUST be explicitly allow-listed. |
 
 ### FR-3: Agent Client Contract

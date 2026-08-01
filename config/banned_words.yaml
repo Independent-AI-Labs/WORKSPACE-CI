@@ -929,6 +929,42 @@ banned:
   - pattern: '\u2013'
     reason: "Unicode en-dash (U+2013) forbidden. Use ASCII hyphen (-) for ranges."
     category: special-chars
+  - pattern: \bfall back\b
+    reason: No fall back to resolution. Single explicit source or fail.
+    category: obsolete-paths
+  - pattern: \bdefaults? to\b
+    reason: No default-to resolution language. State the single source or the hard error.
+    category: obsolete-paths
+  - pattern: \bdefaulting to\b
+    reason: No defaulting behavior. Explicit logic or fail.
+    category: obsolete-paths
+  - pattern: \bbest[- ]?effort\b
+    reason: No best-effort operations. Succeed or fail explicitly.
+    category: obsolete-paths
+  - pattern: \bdegrade[sd]?\b
+    reason: No degraded operation. Fail fast.
+    category: obsolete-paths
+  - pattern: \bdegrading\b
+    reason: No degraded operation. Fail fast.
+    category: obsolete-paths
+  - pattern: \bgraceful(ly)?\b
+    reason: No graceful degradation. Fail fast.
+    category: obsolete-paths
+  - pattern: \bworkarounds?\b
+    reason: No workarounds. Fix the underlying problem.
+    category: obsolete-paths
+  - pattern: \bfor now\b
+    reason: No for-now deferrals. Do it right or fail.
+    category: obsolete-paths
+  - pattern: \bstopgap\b
+    reason: No stopgap measures. Fix properly.
+    category: obsolete-paths
+  - pattern: \bquick[- ]?hack\b
+    reason: No quick hacks. Fix properly.
+    category: obsolete-paths
+  - pattern: \$\(if \$\(wildcard
+    reason: No wildcard-conditional tool resolution in Makefiles. Single absolute path or fail.
+    category: obsolete-paths
 
 directory_rules:
   tests:

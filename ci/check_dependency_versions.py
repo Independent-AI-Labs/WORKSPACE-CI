@@ -106,7 +106,7 @@ def get_latest_pypi_version(package_name: str) -> str | None:
     """Query PyPI JSON API for the latest version of a package.
 
     If the very latest release has no Linux-compatible wheel or sdist,
-    fall back to the newest release that does.
+    select the newest release that does.
     """
     normalized = re.sub(r"[-_.]+", "-", package_name).lower()
     url = f"https://pypi.org/pypi/{normalized}/json"

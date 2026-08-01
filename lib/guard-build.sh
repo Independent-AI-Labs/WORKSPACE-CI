@@ -86,11 +86,33 @@ build_guard_binary() {
     local ws_rust_home="${WORKSPACE_ROOT}/$_boot_name/rust"
     local ci_boot_rust="${_CI_ROOT}/$_boot_name/bin"
     local ci_rust_home="${_CI_ROOT}/$_boot_name/rust"
-    local boot_rust="$ws_boot_rust"
-    local rust_home="$ws_rust_home"
-    if [[ ! -x "$boot_rust/cargo" && -x "$ci_boot_rust/cargo" ]]; then
+    # Cargo toolchain resolution: explicit precedence, hard failure.
+    # 1. workspace-root boot (shared toolchain home)
+    # 2. CI boot (bootstrap-rust installs here)
+    # 3. bootstrap into the CI boot, then require cargo there
+    local boot_rust rust_home
+    if [[ -x "$ws_boot_rust/cargo" ]]; then
+        boot_rust="$ws_boot_rust"
+        rust_home="$ws_rust_home"
+    elif [[ -x "$ci_boot_rust/cargo" ]]; then
         boot_rust="$ci_boot_rust"
         rust_home="$ci_rust_home"
+    else
+        log_info "cargo not in workspace or CI boot: bootstrapping Rust..."
+        bash "${_CI_ROOT}/scripts/bootstrap-rust" || {
+            log_error "Rust installation failed"
+            return 1
+        }
+        if [[ -x "$ci_boot_rust/cargo" ]]; then
+            boot_rust="$ci_boot_rust"
+            rust_home="$ci_rust_home"
+        elif [[ -x "$ws_boot_rust/cargo" ]]; then
+            boot_rust="$ws_boot_rust"
+            rust_home="$ws_rust_home"
+        else
+            log_error "cargo not found after bootstrap: expected $ci_boot_rust/cargo"
+            return 1
+        fi
     fi
     if [[ -n "$preset_cargo_home" ]]; then
         local _mk_err _mk_rc=0
@@ -112,24 +134,9 @@ build_guard_binary() {
     export RUSTUP_HOME="${preset_rustup_home:-$rust_home}"
     export CARGO_HOME="$rust_home"
 
-    if ! _path="$(command -v cargo 2>&1)"; then
-        log_warn "cargo not on PATH: bootstrapping Rust..."
-        bash "${_CI_ROOT}/scripts/bootstrap-rust" || {
-            log_error "Rust installation failed"
-            return 1
-        }
-        if [[ -x "$ci_boot_rust/cargo" ]]; then
-            boot_rust="$ci_boot_rust"
-            rust_home="$ci_rust_home"
-            export PATH="$boot_rust:$PATH"
-            export RUSTUP_HOME="$rust_home"
-            export CARGO_HOME="$rust_home"
-        fi
-        if ! _path="$(command -v cargo 2>&1)"; then
-            log_error "cargo still not found after bootstrap: check $ws_boot_rust/ or $ci_boot_rust/"
-            return 1
-        fi
-        log_info "Rust bootstrapped successfully"
+    if [[ ! -x "$boot_rust/cargo" ]]; then
+        log_error "cargo missing at resolved toolchain: $boot_rust/cargo"
+        return 1
     fi
 
     if _path="$(command -v rustup 2>&1)"; then

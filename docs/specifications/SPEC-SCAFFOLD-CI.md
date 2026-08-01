@@ -56,8 +56,8 @@ Config files compound the problem. Per-project-overridable configs
 `dependency_excludes.yaml`, `duplicate_dependency_excludes.yaml`,
 `markdown_docs.yaml`) SHOULD exist in every consumer's `config/` directory
 so each project can tune them locally. There is no bootstrap mechanism:
-new projects either skip them (and the corresponding checkers fall back to
-CI's defaults, which may be wrong for a Rust repo) or copy them by hand
+new projects either skip them (and the corresponding checkers use CI's
+stock values, which may be wrong for a Rust repo) or copy them by hand
 (creating drift as the canonical defaults evolve).
 
 ### 1.2 What `scaffold-ci` Does
@@ -696,15 +696,15 @@ The following six files are copied from `CI/config/` into `<consumer>/config/`:
 |---------------|-------------------------|--------------|
 | `coverage_thresholds.yaml` | `config/coverage_thresholds.yaml` | Unit / integration min coverage, source paths. **CRITICAL:** the generator post-processes this file to substitute `source_path: ci` for `source_path: <project>` (the project name from the profile). |
 | `file_length_limits.yaml` | `config/file_length_limits.yaml` | Max lines (default 512), recognised extensions. |
-| `dead_code.yaml` | `config/dead_code.yaml` | `scan_paths`, `entry_points`. **CRITICAL:** generator substitutes `scan_paths: [ci]` with `scan_paths: [<project-language-default-dir>]` based on declared languages. For `rust`, defaults to `[src]`. For `python`, defaults to `[]` (no scan paths; the consumer fills them). For `node`, defaults to `[]`. |
+| `dead_code.yaml` | `config/dead_code.yaml` | `scan_paths`, `entry_points`. **CRITICAL:** generator substitutes `scan_paths: [ci]` with `scan_paths: [<project-language-default-dir>]` based on declared languages. For `rust`, stock is `[src]`. For `python`, stock is `[]` (no scan paths; the consumer fills them). For `node`, stock is `[]`. |
 | `dependency_excludes.yaml` | `config/dependency_excludes.yaml` | PyPI / npm excludes. |
 | `duplicate_dependency_excludes.yaml` | `config/duplicate_dependency_excludes.yaml` | Duplicate-dep heuristic exceptions. |
 | `markdown_docs.yaml` | `config/markdown_docs.yaml` | Markdown check targets. |
 
 ### 8.2 Why These Six (and No Others)
 
-These six are the per-project-OVERRIDABLE configs -- checkers look at
-`<consumer>/config/<file>` first and fall back to CI defaults if absent.
+These six are the per-project-OVERRIDABLE configs -- checkers read
+`<consumer>/config/<file>` first and use CI's stock file when absent.
 The remaining CI configs (`banned_words.yaml`, `silent_swallow_patterns.yaml`,
 `sensitive_files.yaml`, `blocked_commit_patterns.yaml`,
 `required_hooks.yaml`, `boot_layout.yaml`, `*_schema.yaml`) are workspace

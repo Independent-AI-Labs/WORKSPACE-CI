@@ -54,13 +54,15 @@ _guard_read_lines() {
     return $_rc
 }
 
-# Best-effort: run command, log failure, do not abort caller.
-_guard_best_effort() {
+# Attempt: run command, log failure, do not abort caller. Used only for
+# cleanup mutations whose absence is itself harmless (setcap -r on a
+# binary about to be replaced, chattr -i on a file being unlinked).
+_guard_attempt() {
     local rc=0 err=""
     err="$("$@" 2>&1)" || rc=$?
     if [ $rc -ne 0 ]; then
         [[ -n "$err" ]] && printf '%s\n' "$err" >&2
-        printf 'guard best-effort: %q failed (rc=%s)\n' "$*" "$rc" >&2
+        printf 'guard attempt: %q failed (rc=%s)\n' "$*" "$rc" >&2
     fi
 }
 

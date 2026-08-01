@@ -57,6 +57,23 @@ ci_check_unstaged() {
     return 0
 }
 
+# --- ci_check_fallback_resolution ---
+# Delegates to lib/check_fallback_resolution.py to scan tracked shell files
+# for multi-source resolution shapes: probe-backed ${VAR:-...} defaults,
+# try-A-then-B reassignment after '! -x' probes, boot-then-PATH resolvers,
+# and multi-candidate boot-dir arrays. Complements the banned-words
+# catalog with shape detection.
+ci_check_fallback_resolution() {
+    local script_path="${CI_LIB_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}/check_fallback_resolution.py"
+    if [[ ! -f "$script_path" ]]; then
+        ci_fail "Fallback-resolution: helper not found at $script_path"
+        return 1
+    fi
+    local _scan_root="${CI_SCAN_ROOT:-$PWD}"
+    CI_SCAN_ROOT="$_scan_root" \
+        ci_uv_run "$script_path" "$@" </dev/null
+}
+
 # --- ci_check_banned_words [files...] ---
 # Delegates to lib/check_banned_words.py to scan all tracked files for banned
 # patterns defined in config/banned_words.yaml.

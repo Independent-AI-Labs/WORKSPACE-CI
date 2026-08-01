@@ -99,3 +99,11 @@ exceptions:
   - pattern: \belevate\b
     paths:
       - docs/specifications/SPEC-HITL-GUARD\.md$
+  - pattern: \bfallback\b
+    paths:
+      - lib/check_fallback_resolution\.py$
+  - pattern: \bdegrade[sd]?\b
+    paths:
+      - hitl/
+      - docs/requirements/REQ-HITL
+      - docs/specifications/SPEC-HITL

@@ -33,18 +33,22 @@ fi
 # that the user invokes manually. The git-guard blocks --force which
 # filter-branch requires. Prepend system git dir to PATH so all git calls
 # (including filter-branch's internal subprocesses) bypass the guard.
-_REAL_GIT="${GIT_GUARD_REAL_GIT:-}"
-if [[ -z "$_REAL_GIT" || ! -x "$_REAL_GIT" ]]; then
-    # Check for git.original first (system guard renames real git)
-    for _candidate in /usr/bin/git.original /usr/local/bin/git.original /usr/bin/git /usr/local/bin/git /snap/bin/git; do
-        if [[ -x "$_candidate" ]]; then
-            _REAL_GIT="$_candidate"
-            break
-        fi
-    done
+# Real-git resolution: explicit precedence, hard failure.
+# 1. GIT_GUARD_REAL_GIT env (operator override)
+# 2. /usr/bin/git.original (present when the git guard renamed system git)
+# 3. /usr/bin/git (unguarded system)
+if [[ -n "${GIT_GUARD_REAL_GIT:-}" ]]; then
+    _REAL_GIT="$GIT_GUARD_REAL_GIT"
+elif [[ -x /usr/bin/git.original ]]; then
+    _REAL_GIT=/usr/bin/git.original
+elif [[ -x /usr/bin/git ]]; then
+    _REAL_GIT=/usr/bin/git
+else
+    ci_fail "System git not found (checked GIT_GUARD_REAL_GIT, /usr/bin/git.original, /usr/bin/git). Cannot rewrite history without real git."
+    exit 1
 fi
-if [[ -z "$_REAL_GIT" ]]; then
-    ci_fail "System git not found. Cannot rewrite history without real git."
+if [[ ! -x "$_REAL_GIT" ]]; then
+    ci_fail "GIT_GUARD_REAL_GIT is not executable: $_REAL_GIT"
     exit 1
 fi
 # Create temp dir with git symlink pointing to real binary, prepend to PATH.

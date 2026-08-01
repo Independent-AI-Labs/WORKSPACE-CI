@@ -239,7 +239,7 @@ install_guard_binary() {
         cp "$guard_bin" /usr/bin/git
         chown root:root /usr/bin/git
         chmod 0755 /usr/bin/git
-        _guard_best_effort setcap -r /usr/bin/git
+        _guard_attempt setcap -r /usr/bin/git
         if ! install_guard_host_exec; then
             log_error "host-exec capability delivery failed: rolling back"
             rollback_guard

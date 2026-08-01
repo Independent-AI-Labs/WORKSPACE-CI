@@ -405,9 +405,9 @@ install_guard_host_exec() {
     cap_str="$(guard_workload_file_cap_string)"
 
     if _chattr_path="$(command -v chattr 2>&1)" && [[ -f /usr/bin/git ]]; then
-        _guard_best_effort chattr -i /usr/bin/git
+        _guard_attempt chattr -i /usr/bin/git
     fi
-    _guard_best_effort setcap -r /usr/bin/git
+    _guard_attempt setcap -r /usr/bin/git
 
     local _setcap_err
     _setcap_err="$(mktemp)"

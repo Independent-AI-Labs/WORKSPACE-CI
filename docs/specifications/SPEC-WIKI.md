@@ -33,7 +33,7 @@ a **single source of truth** model:
    configs, so the existing `ConfigFieldTable` component renders guard field
    documentation without a parallel field-docs implementation. The guard tree
    is a **soft dependency**: when absent at the resolved root the `/guard`
-   section degrades to an empty-state (never crashes), and the `/config`
+   section renders an empty state (never crashes), and the `/config`
    section remains unaffected.
 
 ### 1.1 Architecture Principles
@@ -766,7 +766,7 @@ export const getRequiredHooks = cache(async (): Promise<RequiredHooksConfig> => 
 })
 
 // Schema loader (§21.4): returns null when no schema file exists so the
-// config detail page can fall back to raw-YAML-only rendering.
+// config detail page then renders raw YAML only.
 export const getConfigSchema = cache(async (name: string): Promise<ConfigSchema | null> => {
   const p = join(CONFIG_ROOT, `${name}.schema.yaml`)
   try {
@@ -781,7 +781,7 @@ export const getConfigSchema = cache(async (name: string): Promise<ConfigSchema 
 
 // ── Guard policy config root (sibling WORKSPACE-GUARD repo) ───────────
 // Resolved separately so the guard tree is an independent, soft dependency:
-// when absent, the /guard section degrades to an empty-state (never crashes)
+// when absent, the /guard section renders an empty state (never crashes)
 // and the /config section remains unaffected.
 const GUARD_CONFIG_ROOT = process.env.WORKSPACE_GUARD_CONFIG_ROOT
   ?? join(process.cwd(), '..', '..', 'WORKSPACE-GUARD', 'config')
@@ -808,7 +808,7 @@ export const getGuardConfig = cache(async (name: string): Promise<unknown> => {
 })
 
 // Guard schema loader: returns null when no schema file exists so the
-// /guard/[name] page can fall back to raw-YAML-only rendering, mirroring
+// /guard/[name] page then renders raw YAML only, mirroring
 // getConfigSchema (§21.4). The same ConfigSchema type and ConfigFieldTable
 // component render guard field docs without a parallel implementation.
 export const getGuardConfigSchema = cache(async (name: string): Promise<ConfigSchema | null> => {
@@ -828,7 +828,7 @@ The wiki is a self-contained Next.js app but has a runtime data dependency on
 the workspace-ci `config/` and `docs/` trees. The supported deployment shapes:
 
 1. **In-tree (default):** `web/` lives inside a workspace-ci checkout;
-   `CONFIG_ROOT` defaults to `../config`. This is the primary mode.
+   `CONFIG_ROOT` is `../config` when unset. This is the primary mode.
 2. **External config tree:** Set `CI_CONFIG_DIR` (or wiki alias
    `WORKSPACE_CI_CONFIG_ROOT`) to an absolute path pointing at a config tree.
    Redirect individual files with `CI_CONFIG_OVERRIDES` (manifest) or
@@ -846,8 +846,8 @@ the workspace-ci `config/` and `docs/` trees. The supported deployment shapes:
 Missing files at the resolved root MUST surface as a server-render error on
 the affected page (caught by the route's `error.tsx`), not a crash. The
 `/config` index page MUST list only the YAML files actually present at
-`CONFIG_ROOT` (directory listing), so a partial config tree degrades
-gracefully. The `/guard` index page lists only the `guard_*.yaml` files
+`CONFIG_ROOT` (directory listing), so a partial config tree still
+renders. The `/guard` index page lists only the `guard_*.yaml` files
 actually present at `GUARD_CONFIG_ROOT` and returns `[]` (empty-state) when
 the resolved root does not exist at all (§9.3 deployment shape 3).
 
@@ -2228,7 +2228,7 @@ description: "<one-line summary>"
 fields:
   - path: <dotpath>        # [] suffix = list; [].<sub> = item field; <name> = variable key
     type: <yaml|string|integer|boolean|list|list<T>|map|object>
-    required: <true|false> # defaults to false
+    required: <true|false> # false when omitted
     default: <value>       # omit if none
     description: "<human-readable field description>"
 ```
@@ -2299,7 +2299,7 @@ pointed at different locations (or one absent while the other is present).
 
 #### Validation
 
-`scripts/extract-docs` Phase 1 SHOULD best-effort validate `guard_*.schema.yaml`
+`scripts/extract-docs` Phase 1 SHOULD validate `guard_*.schema.yaml`
 files when the guard tree is present: parse each schema and resolve every
 `path` against the corresponding `guard_<name>.yaml`'s top-level keys, emitting
 a build-time warning on drift (mirroring §21.4 validation). A **missing guard

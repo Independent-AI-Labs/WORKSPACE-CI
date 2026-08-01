@@ -220,7 +220,7 @@ BLOCKED_CASES: list[SwallowCase] = [
     SwallowCase(
         "sh_silent_ok_no_longer_exempts",
         "x.sh",
-        ["rm /tmp/foo || true # silent-ok: best-effort cleanup"],
+        ["rm /tmp/foo || true # silent-ok: non-critical cleanup"],
         _SHOULD_BLOCK,
         None,
     ),

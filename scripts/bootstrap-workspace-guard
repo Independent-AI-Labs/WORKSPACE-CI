@@ -61,13 +61,13 @@ _restore_stock_git() {
         mv /usr/bin/git.original /usr/bin/git
         chown root:root /usr/bin/git
         chmod 0755 /usr/bin/git
-        _guard_best_effort setcap -r /usr/bin/git
+        _guard_attempt setcap -r /usr/bin/git
         log_info "Restored /usr/bin/git from git.original"
     elif [[ -f /usr/bin/git.distrib ]]; then
         mv /usr/bin/git.distrib /usr/bin/git
         chown root:root /usr/bin/git
         chmod 0755 /usr/bin/git
-        _guard_best_effort setcap -r /usr/bin/git
+        _guard_attempt setcap -r /usr/bin/git
         log_info "Restored /usr/bin/git from git.distrib"
     else
         log_error "No git backup found: cannot restore"
@@ -103,12 +103,12 @@ uninstall_guard() {
     if ! guard_is_installed; then
         log_info "Git guard not installed; removing git-install artifacts only"
         if _has_chattr; then
-            [[ -f /usr/bin/git ]] && _guard_best_effort chattr -i /usr/bin/git
-            [[ -f /usr/bin/git.original ]] && _guard_best_effort chattr -i /usr/bin/git.original
+            [[ -f /usr/bin/git ]] && _guard_attempt chattr -i /usr/bin/git
+            [[ -f /usr/bin/git.original ]] && _guard_attempt chattr -i /usr/bin/git.original
         fi
         _cleanup_git_guard_sidecars
         if [[ -x /usr/bin/git ]]; then
-            _guard_best_effort setcap -r /usr/bin/git
+            _guard_attempt setcap -r /usr/bin/git
         fi
         log_info "Cleanup complete (provision state preserved)"
         git --version
@@ -153,13 +153,13 @@ rollback_guard() {
         mv /usr/bin/git.original /usr/bin/git
         chown root:root /usr/bin/git
         chmod 0755 /usr/bin/git
-        _guard_best_effort setcap -r /usr/bin/git
+        _guard_attempt setcap -r /usr/bin/git
         log_info "Restored /usr/bin/git from git.original"
     elif [[ -f /usr/bin/git.distrib ]]; then
         mv /usr/bin/git.distrib /usr/bin/git
         chown root:root /usr/bin/git
         chmod 0755 /usr/bin/git
-        _guard_best_effort setcap -r /usr/bin/git
+        _guard_attempt setcap -r /usr/bin/git
         log_info "Restored /usr/bin/git from git.distrib"
     fi
     rm -f /etc/apt/apt.conf.d/99workspace-guard

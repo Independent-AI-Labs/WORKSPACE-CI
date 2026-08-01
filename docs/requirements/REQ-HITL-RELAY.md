@@ -98,7 +98,7 @@ Inherits REQ-HITL §1.3. Additionally:
 
 | ID | Requirement |
 |----|-------------|
-| FR-3.1 | The PDP MUST assign approval tiers per REQ-HITL §4 policy: any request naming an OpenBao path or credential role is Tier 2; classification failure defaults to Tier 2. |
+| FR-3.1 | The PDP MUST assign approval tiers per REQ-HITL §4 policy: any request naming an OpenBao path or credential role is Tier 2; classification failure is assigned Tier 2. |
 | FR-3.2 | The PDP MUST route requests to the approver scope mapped from the request's target/agent owner (REQ-HITL FR-3.4) and MUST exclude self-approval (REQ-HITL FR-3.5). |
 | FR-3.3 | The PDP MUST enforce per-agent submission rate limits and per-approver decision rate limits (REQ-HITL NFR-3.1), with configurable thresholds. |
 | FR-3.4 | The PDP MUST countersign decisions into approval records binding request ID, request hash, approver identity, tier evidence, nonce, and timestamp; the record MUST be single-use. |

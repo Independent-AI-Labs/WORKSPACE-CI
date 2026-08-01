@@ -11,7 +11,9 @@
 # simply don't exist); after `make init` installs Homebrew, subsequent
 # make invocations pick them up automatically.
 _OS := $(shell uname -s)
-_HB_PREFIX := $(if $(wildcard /opt/homebrew),/opt/homebrew,$(if $(wildcard /usr/local),/usr/local))
+# Homebrew prefix is fixed per CPU architecture: /opt/homebrew on Apple
+# silicon, /usr/local on Intel. No probing: the mapping is authoritative.
+_HB_PREFIX := $(if $(filter arm64,$(shell uname -m)),/opt/homebrew,/usr/local)
 
 # Root detection MUST happen before the SHELL assignment below:
 # make's $(shell) honors the makefile's SHELL variable, so once SHELL
@@ -21,15 +23,29 @@ _HB_PREFIX := $(if $(wildcard /opt/homebrew),/opt/homebrew,$(if $(wildcard /usr/
 # Root recipes run through the sealed /bin/bash.real instead of the
 # guarded bash (root execs of the fcap guard fail closed by design).
 ifeq ($(shell id -u),0)
-SHELL := $(if $(wildcard /bin/bash.real),/bin/bash.real,/bin/bash)
+# /bin/bash.real is REQUIRED for root recipes: the guarded bash fails
+# closed for root (AT_SECURE == 0). Missing file = broken host install.
+ifeq ($(wildcard /bin/bash.real),)
+$(error /bin/bash.real missing: reinstall the shell guard (sudo make guard-refresh in WORKSPACE-GUARD))
+endif
+SHELL := /bin/bash.real
 else
-SHELL := $(if $(wildcard $(_HB_PREFIX)/bin/bash),$(_HB_PREFIX)/bin/bash,/bin/bash)
+# Homebrew bash 5.x preferred on macOS for nameref support; /bin/bash
+# otherwise. Two explicit branches, no chain.
+ifneq ($(wildcard $(_HB_PREFIX)/bin/bash),)
+SHELL := $(_HB_PREFIX)/bin/bash
+else
+SHELL := /bin/bash
+endif
 endif
 # Interpreter for repo scripts invoked explicitly from recipes. Bare `bash`
 # resolves to the guarded /usr/bin/bash, which fails closed for root
 # (AT_SECURE == 0) and broke sudo make install-hooks -> cleanup-precommit.
 ifeq ($(shell id -u),0)
-SCRIPT_BASH := $(if $(wildcard /bin/bash.real),/bin/bash.real,/bin/bash)
+ifeq ($(wildcard /bin/bash.real),)
+$(error /bin/bash.real missing: reinstall the shell guard (sudo make guard-refresh in WORKSPACE-GUARD))
+endif
+SCRIPT_BASH := /bin/bash.real
 else
 SCRIPT_BASH := bash
 endif
@@ -50,11 +66,18 @@ BOOT_BIN := $(CURDIR)/$(BOOT_NAME)/bin
 # the workspace shell guard, which resets PATH, so a bare `uv` is
 # unresolvable in recipes even though make prepends BOOT_BIN to its own
 # exported PATH (the guard drops that export before the recipe runs).
-UV := $(if $(wildcard $(BOOT_BIN)/uv),$(BOOT_BIN)/uv,uv)
+# Single source: the boot-bin uv by ABSOLUTE path. Bare `uv` is never
+# resolved (the guard resets PATH in every recipe shell). On a fresh
+# clone the file does not exist yet: warn loudly at parse time; python
+# targets fail until `make install-python-deps` bootstraps it.
+UV := $(BOOT_BIN)/uv
+ifeq ($(wildcard $(UV)),)
+$(warning boot uv missing at $(UV): run 'make install-python-deps' first)
+endif
 RUFF := $(UV) run ruff
 PYTEST := $(UV) run pytest
 MYPY := $(UV) run mypy
-# User-configurable (env or CLI override); defaults to this repo's boot bin
+# User-configurable (env or CLI override); stock value: this repo's boot bin
 ANSIBLE_PLAYBOOK ?= $(BOOT_BIN)/ansible-playbook
 # Containment: uv-managed interpreters live inside the boot dir, never in
 # $HOME/.local/share/uv/python (no unsanctioned HOME/system resources)
@@ -104,9 +127,9 @@ endif
 endif
 export ALLOWED_ORIGINS
 
-ifneq ($(wildcard $(BOOT_BIN)/uv),)
-    export PATH := $(BOOT_BIN):$(PATH)
-endif
+# Prepending a not-yet-existing boot bin to PATH is harmless; keep the
+# export unconditional so post-bootstrap invocations need no re-parse.
+export PATH := $(BOOT_BIN):$(PATH)
 
 # Contract compliance
 -include lib/makefile_contract.mk

@@ -35,9 +35,12 @@ _BRANCH="${DEPLOY_CI_BRANCH:-main}"
 # Root-only script: exec helper scripts via the sealed real bash. A plain
 # shebang-exec lands on the shell guard at /usr/bin/bash, which refuses to
 # run for root outside a capability context (AT_SECURE == 0) by design.
+# bash.real is installed by the shell-guard install; its absence means the
+# host is not guarded and deploy must not proceed.
 _REAL_BASH=/bin/bash.real
 if [[ ! -x "$_REAL_BASH" ]]; then
-    _REAL_BASH=/bin/bash
+    printf '\033[0;31m[ERROR]\033[0m %s\n' "$_REAL_BASH not found or not executable; install the shell guard first" >&2
+    exit 1
 fi
 
 log_info() { printf '\033[0;32m[INFO]\033[0m %s\n' "$*"; }

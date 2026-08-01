@@ -33,38 +33,12 @@ if ! source "$_ci_lib"; then
 fi
 
 # ---------------------------------------------------------------------------
-# Locate cloc: prefer CI's own .boot-linux (CI owns the cloc bootstrap), then
-# the workspace root's boot dir, then .boot-macos, then fall back to PATH.
+# cloc lives in CI's own boot dir: scripts/bootstrap-cloc is the single
+# owning installer. Missing binary is a hard error with the remediation.
 # ---------------------------------------------------------------------------
-_find_cloc() {
-    local _cands=(
-        "${CI_PROJECT_ROOT:-}/.boot-linux/bin/cloc"
-        "$CI_WORKSPACE_ROOT/.boot-linux/bin/cloc"
-        "$CI_WORKSPACE_ROOT/.boot-macos/bin/cloc"
-    )
-    for _c in "${_cands[@]}"; do
-        [[ -x "$_c" ]] && { echo "$_c"; return 0; }
-    done
-    local _cloc_path=""
-    if _cloc_path="$(command -v cloc 2>&1)"; then
-        echo "$_cloc_path"
-        return 0
-    fi
-    return 1
-}
-
-# Resolve cloc; empty string if not found. _find_cloc returns 0/1 only
-# (writes path to stdout on success, no output on failure); no stderr
-# normally. Command substitution's exit status IS the inner command's,
-# so `if CLOC="$(...)"` is status-capture: enters the if-branch on status=0.
-CLOC=""
-if CLOC="$(_find_cloc)"; then
-    :
-else
-    CLOC=""
-fi
-if [[ -z "$CLOC" ]]; then
-    ci_fail "cloc not found. Install via: bash scripts/bootstrap-cloc  (or: make install-cloc)"
+CLOC="${CI_PROJECT_ROOT}/$(ci_boot_name)/bin/cloc"
+if [[ ! -x "$CLOC" ]]; then
+    ci_fail "cloc not found at $CLOC. Install via: bash scripts/bootstrap-cloc  (or: make install-cloc)"
     exit 1
 fi
 

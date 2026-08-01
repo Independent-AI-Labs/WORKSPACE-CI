@@ -794,9 +794,13 @@ requires:
 
 ```makefile
 _OS := $(shell uname -s)
-_HB_PREFIX := $(if $(wildcard /opt/homebrew),/opt/homebrew,$(if $(wildcard /usr/local),/usr/local))
+_HB_PREFIX := $(if $(filter arm64,$(shell uname -m)),/opt/homebrew,/usr/local)
 
-SHELL := $(if $(wildcard $(_HB_PREFIX)/bin/bash),$(_HB_PREFIX)/bin/bash,/bin/bash)
+ifneq ($(wildcard $(_HB_PREFIX)/bin/bash),)
+SHELL := $(_HB_PREFIX)/bin/bash
+else
+SHELL := /bin/bash
+endif
 
 export PATH := $(_HB_PREFIX)/opt/coreutils/libexec/gnubin:$(_HB_PREFIX)/opt/gnu-sed/libexec/gnubin:$(_HB_PREFIX)/opt/findutils/libexec/gnubin:$(_HB_PREFIX)/bin:$(PATH)
 ```
@@ -846,7 +850,7 @@ init:
 uv run python -m ci.check_boot_venv_layout [PROJECT_DIR]
 ```
 
-`PROJECT_DIR` defaults to CWD. The module scans `<PROJECT_DIR>/moon.yml`.
+`PROJECT_DIR` is CWD when unset. The module scans `<PROJECT_DIR>/moon.yml`.
 
 ### 14.2 Output Format
 

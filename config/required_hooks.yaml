@@ -277,3 +277,13 @@ hooks:
     mandatory: true
     safety: true
     applicable_to: [any]
+  - id: check-resolution-shapes
+    kind: shell
+    entry: ci_check_fallback_resolution
+    stage: pre-commit
+    pass_filenames: false
+    always_run: false
+    mandatory: true
+    safety: true
+    applicable_to:
+      - any

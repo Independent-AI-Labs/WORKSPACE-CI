@@ -104,7 +104,7 @@ export class FullscreenOverlay {
     if (heightAttr?.includes('%')) svg.removeAttribute('height')
 
     // If the cloned svg already has a parsed viewBox, derive base from it;
-    // otherwise fall back to the source diagram's base.
+    // otherwise use the source diagram's base.
     const live = parseViewBox(svg.getAttribute('viewBox'))
     this.base = live ? live : { ...sourceBase }
     this.vb = { ...this.base }

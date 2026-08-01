@@ -35,7 +35,7 @@ ci_check_quality_exceptions_present() {
 # repo_path:     path of the repo, relative to workspace root (e.g.
 #                "projects/my-project"). Trailing slash optional.
 # registry_path: path to the project_enforcement.yaml file. If omitted,
-#                defaults to the CI template (read-only template).
+#                the CI template is used (read-only template).
 ci_resolve_tier() {
     local _rel="${1:-}"
     local _registry="${2:-}"
@@ -44,7 +44,7 @@ ci_resolve_tier() {
     _rel="${_rel#./}"
     _rel="${_rel%/}"
 
-    # If registry not given or missing, fall back to CI template.
+    # Registry selection: explicit argument, else the CI template.
     if [[ -z "$_registry" || ! -f "$_registry" ]]; then
         local _self_dir
         _self_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -152,8 +152,8 @@ main() {
         return 1
     fi
 
-    # Locate the moon binary inside the extracted subdir; fall back to the
-    # archive root in case a future release flattens the layout.
+    # Locate the moon binary: versioned subdir first, archive root for
+    # flattened layouts; hard error below when neither exists.
     local moon_src="${tmp}/${subdir}/moon"
     if [[ ! -f "$moon_src" ]]; then
         moon_src="${tmp}/moon"

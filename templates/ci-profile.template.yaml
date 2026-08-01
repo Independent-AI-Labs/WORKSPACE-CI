@@ -13,12 +13,14 @@ pre-commit:
   - check-banned-words
   - check-portable-shell
   - check-markdown-docs
+  - check-resolution-shapes
   - check-boot-venv-layout
   - check-file-length
   - check-required-hooks-present
   - ci-lint
   - ci-type-check
   - check-dependency-versions
+  - check-npm-lock-sync
   - check-duplicate-dependencies
 
 commit-msg:
@@ -31,6 +33,6 @@ pre-push:
   - check-dead-code
   - osv-scan
 
-# Total hooks: 21 (pre-commit=15 commit-msg=2 pre-push=4)
-# Generated: 2026-07-28T18:31:02Z
+# Total hooks: 23 (pre-commit=17 commit-msg=2 pre-push=4)
+# Generated: 2026-08-01T10:21:53Z
 # Source: config/required_hooks.yaml
