@@ -238,11 +238,6 @@ guard_remove_git_install_artifacts() {
     local base
     base="$(guard_state_dir)"
     rm -f "$base/deployment-class" "$base/git-ssh-wrapper" "$base/delivery.mode"
-    if [[ "$base" != "/usr/lib/workspace-guard" ]]; then
-        rm -f /usr/lib/workspace-guard/deployment-class \
-            /usr/lib/workspace-guard/git-ssh-wrapper \
-            /usr/lib/workspace-guard/delivery.mode
-    fi
 }
 
 purge_guard_state() {
