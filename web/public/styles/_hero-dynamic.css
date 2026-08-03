@@ -1,64 +1,48 @@
-.landing-page .hero--dynamic {
-  flex-shrink: 0;
-  margin: var(--space-8) var(--wiki-inset-x) 0;
+.hero-region {
+  max-width: 1200px;
+  width: 100%;
+}
+
+.wiki-content--hero {
+  padding-top: 0;
+}
+
+.wiki-content--hero .hero-region {
+  padding-top: var(--space-2);
+}
+
+.wiki-content--landing.wiki-content--hero .hero-region {
+  padding: var(--space-2) var(--wiki-inset-x) 0;
+  margin: 0 auto;
 }
 
 .hero--dynamic .hero__title {
   font-weight: 200;
 }
 
-@media (max-width: 1279px) {
-  .hero--dynamic .hero__title {
-    font-size: calc(var(--text-4xl) * 0.75);
-  }
-
-  .hero--dynamic .hero__subtitle {
-    font-size: calc(var(--text-base) * 0.75);
-  }
-}
-
-@media (max-width: 768px) {
-  .landing-page .hero--dynamic {
-    margin: var(--wiki-inset-x-compact) var(--wiki-inset-x) 0;
-  }
-
-  .hero--dynamic .hero__title {
-    font-size: var(--text-2xl);
-  }
-
-  .hero--dynamic .hero__subtitle {
-    font-size: var(--text-sm);
-  }
-}
-
-@media (max-width: 480px) {
-  .landing-page .hero--dynamic {
-    margin: var(--wiki-inset-x-tight) var(--wiki-inset-x) 0;
-  }
+.hero--dynamic {
+  margin-bottom: var(--space-2);
 }
 
 @media (max-width: 2559px) and (max-height: 1439px) {
   .hero--dynamic {
-    padding: 0;
-    margin-bottom: var(--space-2);
-    transition:
-      margin 300ms ease,
-      padding 300ms ease;
+    padding: var(--space-1) var(--space-3);
+    transition: padding 300ms ease;
     cursor: pointer;
-  }
-
-  .landing-page .hero--dynamic {
-    margin: var(--space-2) var(--wiki-inset-x) 0;
   }
 
   .hero--dynamic .hero__subtitle {
     line-height: var(--leading-tight);
-    transition: line-height 300ms ease;
+    font-size: calc(var(--text-base) * 0.9);
+    transition:
+      line-height 300ms ease,
+      font-size 300ms ease;
   }
 
   .hero--dynamic:hover .hero__subtitle,
   .hero--dynamic:focus-within .hero__subtitle {
     line-height: var(--leading-relaxed);
+    font-size: var(--text-base);
   }
 
   .hero--dynamic .hero__title {
@@ -74,13 +58,7 @@
 
   .hero--dynamic:hover,
   .hero--dynamic:focus-within {
-    padding: var(--space-8) var(--wiki-inset-x);
-    margin-bottom: var(--wiki-section-gap);
-  }
-
-  .landing-page .hero--dynamic:hover,
-  .landing-page .hero--dynamic:focus-within {
-    margin: var(--space-8) var(--wiki-inset-x) 0;
+    padding: var(--space-4) var(--wiki-inset-x);
   }
 
   .hero--dynamic:hover .hero__title,
@@ -88,6 +66,23 @@
     opacity: 1;
     max-height: 4rem;
     margin: 0 0 var(--space-2) 0;
+  }
+
+  @media (max-width: 768px) {
+    .hero--dynamic .hero__subtitle {
+      font-size: calc(var(--text-sm) * 0.9);
+    }
+
+    .hero--dynamic:hover .hero__subtitle,
+    .hero--dynamic:focus-within .hero__subtitle {
+      font-size: var(--text-sm);
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .hero--dynamic .hero__title {
+    font-size: var(--text-2xl);
   }
 }
 

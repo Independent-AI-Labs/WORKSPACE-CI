@@ -54,7 +54,7 @@ do_start() {
     if [ ! -f "$HOME/.config/wiki-ci-dev.env" ] && [ -f "$_WEB_ROOT/grafana.env.example" ]; then
         echo "[dev-start] Creating $HOME/.config/wiki-ci-dev.env from grafana.env.example"
         cp "$_WEB_ROOT/grafana.env.example" "$HOME/.config/wiki-ci-dev.env"
-        echo "[dev-start] Edit it to set GRAFANA_BASE_URL to the reachable Grafana origin."
+        echo "[dev-start] Editing $HOME/.config/wiki-ci-dev.env: set GRAFANA_DEV_UPSTREAM to the dev Grafana origin."
     fi
     if [ -f "$HOME/.config/wiki-ci-dev.env" ]; then
         _grafana_url=
@@ -69,7 +69,7 @@ do_start() {
             if ! curl -fsS --max-time 3 "$_health_url" -o "$_health_tmp" 2>"$_health_err"; then
                 echo "[dev-start] WARNING: Grafana health probe failed at $_health_url"
                 [ -s "$_health_err" ] && cat "$_health_err" >&2
-                echo "[dev-start] Dev wiki proxies /grafana to loopback :3030; leave GRAFANA_BASE_URL unset"
+                echo "[dev-start] Dev wiki proxies /grafana to GRAFANA_DEV_UPSTREAM; leave GRAFANA_BASE_URL unset"
             fi
             rm -f "$_health_tmp" "$_health_err"
         fi

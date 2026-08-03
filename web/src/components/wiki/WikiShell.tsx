@@ -7,6 +7,7 @@ import { ThemeToggle } from '@workspace-ci/web-components/components/ThemeToggle
 import { WikiSearch } from '@/components/wiki/WikiSearch'
 import { MobileNavToggle } from '@/components/wiki/MobileNavToggle'
 import { MermaidRenderer } from '@workspace-ci/web-components/components/MermaidRenderer'
+import { HeroBanner } from '@/components/wiki/HeroBanner'
 import { buildSearchData, getWikiStats } from '@/lib/search-data'
 import { getBranding } from '@/lib/branding'
 import { isHomeLandingEnabled } from '@/lib/feature-flags'
@@ -15,9 +16,14 @@ import clsx from 'clsx'
 interface WikiShellProps {
   children: ReactNode
   contentClassName?: string
+  hero?: {
+    title: string
+    subtitle?: string
+    dynamic?: boolean
+  }
 }
 
-export function WikiShell({ children, contentClassName }: WikiShellProps) {
+export function WikiShell({ children, contentClassName, hero }: WikiShellProps) {
   const searchData = buildSearchData()
   const stats = getWikiStats()
   const branding = getBranding()
@@ -41,7 +47,12 @@ export function WikiShell({ children, contentClassName }: WikiShellProps) {
             <WikiSearch searchData={searchData} />
           </div>
         </header>
-        <main id="main-content" tabIndex={-1} className={clsx('wiki-content', contentClassName)}>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className={clsx('wiki-content', contentClassName, hero && 'wiki-content--hero')}
+        >
+          {hero && <HeroBanner title={hero.title} subtitle={hero.subtitle} dynamic={hero.dynamic} />}
           {children}
         </main>
         <WikiFooter branding={branding} />

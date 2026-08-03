@@ -8,6 +8,7 @@
 # take an optional first arg: project dir relative to the repo root
 # (default: web).
 #   sync-content     mirror WORKSPACE-WEB-CONTENT into web/content + public
+#   sync-generated   regenerate registry/dashboard/nav data
 #   lint [dir]       eslint .
 #   typecheck [dir]  tsc --noEmit
 #   test [dir]       vitest run
@@ -23,7 +24,7 @@ _RUN_JS="$_CI_ROOT/scripts/run-boot-js"
 
 _task="${1:-}"
 if [[ $# -lt 1 ]]; then
-    echo "usage: web-tool <sync-content|lint|typecheck|test|check-generated|deps-ci> [args...]" >&2
+    echo "usage: web-tool <sync-content|sync-generated|lint|typecheck|test|check-generated|deps-ci> [args...]" >&2
     exit 2
 fi
 shift
@@ -31,6 +32,12 @@ shift
 case "$_task" in
     sync-content)
         exec bash "$_RUN_JS" node "$_WEB/scripts/sync-web-content.mjs" "$@"
+        ;;
+    sync-generated)
+        cd "$_WEB"
+        bash "$_RUN_JS" node scripts/sync-project-registry.mjs
+        bash "$_RUN_JS" node scripts/sync-grafana-dashboards.mjs
+        bash "$_RUN_JS" node scripts/sync-wiki-nav.mjs
         ;;
     lint)
         _dir="${1:-web}"; [[ $# -gt 0 ]] && shift
@@ -59,7 +66,7 @@ case "$_task" in
         ;;
     *)
         echo "ERROR: web-tool: unknown task '$_task'" >&2
-        echo "usage: web-tool <sync-content|lint|typecheck|test|check-generated|deps-ci> [args...]" >&2
+        echo "usage: web-tool <sync-content|sync-generated|lint|typecheck|test|check-generated|deps-ci> [args...]" >&2
         exit 2
         ;;
 esac

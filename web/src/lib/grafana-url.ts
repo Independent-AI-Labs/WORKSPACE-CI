@@ -1,20 +1,3 @@
-import projectsRegistry from '@/data/projects-registry.json'
-
-export const DEV_GRAFANA_BASE_URL = 'http://127.0.0.1:3030'
-
-const DEFAULT_GRAFANA_PORT = 3030
-
-interface RegistryProject {
-  slug: string
-  grafanaPort?: number
-}
-
-/** Dev Grafana origin, derived from the publishing project's manifest (grafanaPort). */
-export function getDevGrafanaBaseUrl(): string {
-  const projects = (projectsRegistry as { projects?: RegistryProject[] }).projects ?? []
-  const port = projects.find((p) => p.grafanaPort !== undefined)?.grafanaPort
-  return `http://127.0.0.1:${port ?? DEFAULT_GRAFANA_PORT}`
-}
 export const GRAFANA_HEALTH_API_PATH = '/api/grafana/health'
 
 export interface GrafanaDashboardSource {
@@ -145,14 +128,23 @@ export function resolveGrafanaHealthUrl(base: string): string {
 }
 
 /** Server-side probe URL (container DNS). Browser embeds use resolveGrafanaHealthUrl. */
-export function resolveGrafanaHealthUrlForServerProbe(publicBase: string): string {
+export function resolveGrafanaHealthUrlForServerProbe(publicBase: string): string | null {
   void publicBase
   const internal = process.env.GRAFANA_INTERNAL_HEALTH_URL?.trim()
   if (internal) return internal
   if (process.env.NODE_ENV === 'production') {
     return 'http://gw-grafana:3000/api/health'
   }
-  return `${getDevGrafanaBaseUrl()}/api/health`
+  const devUpstream = getDevGrafanaUpstream()
+  if (devUpstream === null) return null
+  return `${devUpstream}/api/health`
+}
+
+/** Explicit dev Grafana upstream for this application instance (GRAFANA_DEV_UPSTREAM). */
+export function getDevGrafanaUpstream(): string | null {
+  const upstream = process.env.GRAFANA_DEV_UPSTREAM?.trim()
+  if (upstream === undefined || upstream === '') return null
+  return upstream
 }
 
 export async function checkGrafanaHealth(healthUrl: string, timeoutMs = 3000): Promise<boolean> {

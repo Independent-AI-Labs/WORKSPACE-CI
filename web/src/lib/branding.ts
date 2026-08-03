@@ -9,7 +9,6 @@ import {
   resolveGrafanaBaseUrlFromEnv,
   resolveGrafanaBaseUrlSync,
   resolveGrafanaDashboards,
-  DEV_GRAFANA_BASE_URL,
   normalizeGrafanaPublicBase,
 } from '@/lib/grafana-url'
 import { getGrafanaProject } from '@/lib/project-registry'
@@ -123,5 +122,3 @@ export async function getBrandingForRequest(): Promise<Branding> {
     grafana_dashboards: resolveGrafanaDashboards(raw.grafana_dashboards, base),
   }
 }
-
-export { DEV_GRAFANA_BASE_URL }

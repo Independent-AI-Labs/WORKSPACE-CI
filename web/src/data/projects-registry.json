@@ -32,7 +32,7 @@
       "description": "Multi-tenant LLM gateway on Apache APISIX for shared LLM traffic with virtual key sharding, spend limits, PII redaction, and built-in safety and moderation. Ships Grafana dashboards for cost, usage, and operations.",
       "grafanaDashboards": "conf/grafana/dashboards",
       "grafanaSubtitle": "Real-time metrics for the multi-tenant LLM gateway - routing, token accounting, PII redaction, and provider health across all upstream AI models.",
-      "startCommand": "make gateway-start",
+      "startCommand": "make gw-status",
       "grafanaPort": 3030
     },
     {

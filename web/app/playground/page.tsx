@@ -1,6 +1,5 @@
 import { WikiShell } from '@/components/wiki/WikiShell'
 import { PlaygroundShell } from '@/components/wiki/playground/PlaygroundShell'
-import { HeroBanner } from '@/components/wiki/HeroBanner'
 import { getBannedPatterns, getWikiLabels } from '@/lib/yaml-loader'
 import { classifyAll } from '@/lib/patterns'
 
@@ -11,12 +10,14 @@ export default async function PlaygroundPage() {
   const { playground_languages } = getWikiLabels()
 
   return (
-    <WikiShell>
-      <HeroBanner
-        title="Playground"
-        subtitle="Test banned word patterns against live code samples. Select a language, choose pattern categories, and see matches highlighted in real time."
-        dynamic
-      />
+    <WikiShell
+      hero={{
+        title: 'Playground',
+        subtitle:
+          'Test banned word patterns against live code samples. Select a language, choose pattern categories, and see matches highlighted in real time.',
+        dynamic: true,
+      }}
+    >
       <PlaygroundShell patterns={playable} languages={playground_languages} />
     </WikiShell>
   )

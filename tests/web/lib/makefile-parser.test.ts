@@ -70,11 +70,24 @@ describe('parseMakefile', () => {
     expect(targets[0].name).toBe('help')
   })
 
-  it('skips variable assignments', () => {
+  it('skips variable assignment and make function directives', () => {
     const content = [
       'SHELL := /bin/bash',
       'RUFF := .venv/bin/ruff',
       'PYTEST := uv run python -m pytest',
+      'help: ## Show help',
+    ].join('\n')
+    const targets = parseMakefile(content)
+    expect(targets).toHaveLength(1)
+    expect(targets[0].name).toBe('help')
+  })
+
+  it('skips $(error ...) and $(warning ...) directives', () => {
+    const content = [
+      'ifeq ($(wildcard /bin/bash.real),)',
+      '$(error /bin/bash.real missing: reinstall the shell guard)',
+      'endif',
+      '$(warning deprecated target used)',
       'help: ## Show help',
     ].join('\n')
     const targets = parseMakefile(content)

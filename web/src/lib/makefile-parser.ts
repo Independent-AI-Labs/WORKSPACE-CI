@@ -102,6 +102,10 @@ export function parseMakefile(content: string): MakefileTarget[] {
       continue
     }
 
+    if (trimmed.startsWith('$(error') || trimmed.startsWith('$(warning')) {
+      continue
+    }
+
     const parsed = parseTargetLine(trimmed)
     if (!parsed) continue
 

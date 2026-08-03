@@ -1,10 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
-
-const devUpstream = process.env.GRAFANA_DEV_UPSTREAM
-if (devUpstream === undefined || devUpstream.trim() === '') {
-  throw new Error('GRAFANA_DEV_UPSTREAM env var is required (e.g. http://127.0.0.1:3030)')
-}
-const DEV_UPSTREAM = devUpstream
+import { getDevGrafanaUpstream } from '@/lib/grafana-url'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -31,10 +26,21 @@ async function proxyToGrafana(request: NextRequest, pathSegments: string[] | und
     return NextResponse.json({ error: 'Grafana is proxied by nginx in production' }, { status: 404 })
   }
 
+  const devUpstream = getDevGrafanaUpstream()
+  if (devUpstream === null) {
+    return NextResponse.json(
+      {
+        error:
+          'GRAFANA_DEV_UPSTREAM is not set for this application instance. Set it to the Grafana origin the dev proxy should forward to.',
+      },
+      { status: 503 },
+    )
+  }
+
   const incoming = new URL(request.url)
   const suffix = pathSegments === undefined ? '' : pathSegments.join('/')
   const targetPath = suffix ? `/grafana/${suffix}` : '/grafana'
-  const targetUrl = `${DEV_UPSTREAM}${targetPath}${incoming.search}`
+  const targetUrl = `${devUpstream}${targetPath}${incoming.search}`
 
   const headers = new Headers()
   request.headers.forEach((value, key) => {

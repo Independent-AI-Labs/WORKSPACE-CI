@@ -1,6 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import {
-  DEV_GRAFANA_BASE_URL,
   appendGrafanaEmbedParams,
   buildGrafanaDashboardUrl,
   checkGrafanaHealth,
@@ -40,7 +39,7 @@ describe('normalizeGrafanaDashboardSource', () => {
 describe('buildGrafanaDashboardUrl', () => {
   it('joins dev base with dashboard path', () => {
     expect(
-      buildGrafanaDashboardUrl(DEV_GRAFANA_BASE_URL, '/d/gateway-cost-usage/y', 'orgId=1'),
+      buildGrafanaDashboardUrl('http://127.0.0.1:3030', '/d/gateway-cost-usage/y', 'orgId=1'),
     ).toBe('http://127.0.0.1:3030/d/gateway-cost-usage/y?orgId=1')
   })
 
@@ -143,7 +142,7 @@ describe('appendGrafanaEmbedParams', () => {
 
 describe('resolveGrafanaHealthUrl', () => {
   it('appends api/health to dev loopback base', () => {
-    expect(resolveGrafanaHealthUrl(DEV_GRAFANA_BASE_URL)).toBe(
+    expect(resolveGrafanaHealthUrl('http://127.0.0.1:3030')).toBe(
       'http://127.0.0.1:3030/api/health',
     )
   })
@@ -159,6 +158,7 @@ describe('resolveGrafanaHealthUrlForServerProbe', () => {
   afterEach(() => {
     vi.unstubAllEnvs()
     delete process.env.GRAFANA_INTERNAL_HEALTH_URL
+    delete process.env.GRAFANA_DEV_UPSTREAM
   })
 
   it('uses internal env override when set', () => {
@@ -175,11 +175,18 @@ describe('resolveGrafanaHealthUrlForServerProbe', () => {
     )
   })
 
-  it('uses loopback gateway health outside production', () => {
+  it('uses the explicitly configured dev upstream outside production', () => {
     vi.stubEnv('NODE_ENV', 'development')
+    process.env.GRAFANA_DEV_UPSTREAM = 'http://127.0.0.1:3030'
     expect(resolveGrafanaHealthUrlForServerProbe('http://127.0.0.1:4000/grafana')).toBe(
       'http://127.0.0.1:3030/api/health',
     )
+  })
+
+  it('returns null when no dev upstream is configured (no fallback)', () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    delete process.env.GRAFANA_DEV_UPSTREAM
+    expect(resolveGrafanaHealthUrlForServerProbe('http://127.0.0.1:4000/grafana')).toBeNull()
   })
 })
 

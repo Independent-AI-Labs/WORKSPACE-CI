@@ -31,6 +31,8 @@ _WORK_REPO="$(cd "$_SCRIPT_DIR/.." && pwd)"
 _PROJECTS_ROOT="$(cd "$_WORK_REPO/.." && pwd)"
 _DEPLOY_DIR="$_PROJECTS_ROOT/CI"
 _BRANCH="${DEPLOY_CI_BRANCH:-main}"
+_QUARANTINE_ROOT="${CI_QUARANTINE_DIR:-$_PROJECTS_ROOT/CI-quarantine}"
+_DEPLOY_REPLACED=0
 
 # Root-only script: exec helper scripts via the sealed real bash. A plain
 # shebang-exec lands on the shell guard at /usr/bin/bash, which refuses to
@@ -45,6 +47,21 @@ fi
 
 log_info() { printf '\033[0;32m[INFO]\033[0m %s\n' "$*"; }
 log_error() { printf '\033[0;31m[ERROR]\033[0m %s\n' "$*" >&2; }
+
+# The shell guard deliberately resets PATH to the approved minimal command
+# path, which excludes /usr/sbin. Resolve runuser explicitly instead of
+# relying on PATH lookup for the owner-scoped Git operations below.
+_RUNUSER=""
+for _candidate in /usr/sbin/runuser /sbin/runuser; do
+    if [[ -x "$_candidate" ]]; then
+        _RUNUSER="$_candidate"
+        break
+    fi
+done
+if [[ -z "$_RUNUSER" ]]; then
+    log_error "runuser not found at /usr/sbin/runuser or /sbin/runuser"
+    exit 1
+fi
 
 if [[ $EUID -ne 0 ]]; then
     log_error "deploy-ci must run as root: sudo make deploy-ci"
@@ -103,7 +120,7 @@ if [[ -n "$_EXPECTED_OWNER" && "$_REPO_OWNER" != "$_EXPECTED_OWNER" ]]; then
 fi
 log_info "git transport identity: $_REPO_OWNER (home $_OWNER_HOME)"
 git_as_owner() {
-    runuser -u "$_REPO_OWNER" -- env HOME="$_OWNER_HOME" \
+    "$_RUNUSER" -u "$_REPO_OWNER" -- env HOME="$_OWNER_HOME" \
         GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' \
         git "$@"
 }
@@ -173,9 +190,31 @@ if ! _rt_diff="$(git_as_owner -C "$_WORK_REPO" diff "origin/$_BRANCH" HEAD -- \
     exit 1
 fi
 log_info "syncing work repo venv to uv.lock (hash-verified) as $_REPO_OWNER"
-runuser -u "$_REPO_OWNER" -- env HOME="$_OWNER_HOME" \
+"$_RUNUSER" -u "$_REPO_OWNER" -- env HOME="$_OWNER_HOME" \
     PATH="$_BOOT_BIN:/usr/local/bin:/usr/bin:/bin" \
-    uv sync --locked --all-extras --project "$_WORK_REPO"
+uv sync --locked --all-extras --project "$_WORK_REPO"
+
+# A dirty deployment mirror is tamper evidence, not a reason to leave the
+# live CI path in a compromised state. Preserve the entire tree first, then
+# replace it with a fresh clone of the verified upstream branch.
+if [[ -d "$_DEPLOY_DIR/.git" ]]; then
+    _deploy_dirty="$(git_as_root -C "$_DEPLOY_DIR" status --porcelain --untracked-files=all)"
+    if [[ -n "$_deploy_dirty" ]]; then
+        _quarantine_stamp="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+        _quarantine_path="$_QUARANTINE_ROOT/CI-$_quarantine_stamp"
+        mkdir -p "$_QUARANTINE_ROOT"
+        chmod 700 "$_QUARANTINE_ROOT"
+        log_error "dirty deployment detected; quarantining $_DEPLOY_DIR -> $_quarantine_path"
+        printf '%s\n' "$_deploy_dirty" > "$_quarantine_path.status"
+        cp -a -- "$_DEPLOY_DIR" "$_quarantine_path"
+        chmod 700 "$_quarantine_path"
+        "$_REAL_BASH" "$_SCRIPT_DIR/lock-repo" --unseal "$_DEPLOY_DIR"
+        rm -rf -- "$_DEPLOY_DIR"
+        _DEPLOY_REPLACED=1
+        log_info "recloning $_remote -> $_DEPLOY_DIR after quarantine"
+        git_as_owner clone --branch "$_BRANCH" "$_remote" "$_DEPLOY_DIR"
+    fi
+fi
 
 # 3. Fast-forward the deployment clone to the origin ref the work repo
 #    just fetched. Local transport: root never authenticates to SSH
@@ -198,10 +237,14 @@ log_info "syncing $_DEPLOY_DIR to origin/$_BRANCH (via work repo refs)"
 git_as_root -C "$_DEPLOY_DIR" fetch "$_WORK_REPO" \
     "+refs/remotes/origin/$_BRANCH:refs/remotes/origin/$_BRANCH"
 
-if ! _co_out="$(git_as_root -C "$_DEPLOY_DIR" checkout "$_BRANCH" 2>&1)"; then
-    log_error "checkout of $_BRANCH failed in $_DEPLOY_DIR:"
-    printf '  %s\n' "$_co_out" >&2
-    exit 1
+if [[ "$_DEPLOY_REPLACED" -eq 1 ]]; then
+    log_info "fresh deployment clone already checked out on $_BRANCH"
+else
+    if ! _co_out="$(git_as_root -C "$_DEPLOY_DIR" checkout "$_BRANCH" 2>&1)"; then
+        log_error "checkout of $_BRANCH failed in $_DEPLOY_DIR:"
+        printf '  %s\n' "$_co_out" >&2
+        exit 1
+    fi
 fi
 if ! _ff_out="$(git_as_root -C "$_DEPLOY_DIR" merge --ff-only "origin/$_BRANCH" 2>&1)"; then
     printf '  %s\n' "$_ff_out" >&2
@@ -264,7 +307,7 @@ _agent_home="$(getent passwd "$_REPO_OWNER" | cut -d: -f6)"
 log_info "pre-creating agent-owned runtime dirs for $_REPO_OWNER"
 make -C "$_DEPLOY_DIR" runtime-dirs OWNER="$_REPO_OWNER"
 log_info "installing python + web deps as $_REPO_OWNER (agent-owned .venv, node_modules)"
-runuser -u "$_REPO_OWNER" -- env HOME="$_agent_home" \
+"$_RUNUSER" -u "$_REPO_OWNER" -- env HOME="$_agent_home" \
     make -C "$_DEPLOY_DIR" install-python-deps install-web-deps
 
 # 10. Lock the WORK repo's policy catalogs (config/*.yaml) and regenerate
