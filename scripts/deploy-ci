@@ -228,6 +228,9 @@ if [[ -d "$_DEPLOY_DIR/.git" ]]; then
     _deploy_done=0
     trap 'if [[ $_deploy_done -eq 0 ]]; then
         log_error "deploy aborted; re-locking $_DEPLOY_DIR"
+        if ! "$_REAL_BASH" "$_SCRIPT_DIR/lock-repo" --unseal "$_DEPLOY_DIR"; then
+            log_error "UNSEAL FAILED: $_DEPLOY_DIR may remain partially locked"
+        fi
         if ! "$_REAL_BASH" "$_SCRIPT_DIR/lock-repo" --branch "$_BRANCH" "$_DEPLOY_DIR"; then
             log_error "RE-LOCK FAILED: $_DEPLOY_DIR may be mutable; re-run deploy-ci"
         fi
@@ -275,6 +278,11 @@ if [[ -n "$_symlinks" ]]; then
     printf '  %s\n' $_symlinks >&2
     exit 1
 fi
+
+# The deployment root is immutable after lock-repo. Create the untracked boot
+# tool directory before that boundary so bootstrap installers can populate it.
+log_info "pre-creating boot tool directory before immutable lock"
+mkdir -p "$_DEPLOY_DIR/.boot-linux/bin"
 
 # 4-7. Root-lock the deployment: tracked files, tracked parent dirs, .git,
 #     exec bits from the index, and the final integrity gate. Single
