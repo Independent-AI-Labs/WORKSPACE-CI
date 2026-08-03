@@ -213,9 +213,18 @@ main() {
     _log "running rustup-init (toolchain=$RUST_TOOLCHAIN)"
     local ru_out ru_err ru_rc=0
     ru_out="$(mktemp)"; ru_err="$(mktemp)"
-    bash "$tmp/rustup-init.sh" -y --no-modify-path \
-        --default-toolchain "$RUST_TOOLCHAIN" >"$ru_out" 2>"$ru_err" \
-        || ru_rc=$?
+    # rustup publishes a POSIX sh installer, but the host shell guard rejects
+    # alternate-interpreter script bodies. Root bootstrap runs it through the
+    # sealed interpreter; agent-side runs retain the normal bash path.
+    if [[ $EUID -eq 0 && -x /bin/bash.real ]]; then
+        /bin/bash.real "$tmp/rustup-init.sh" -y --no-modify-path \
+            --default-toolchain "$RUST_TOOLCHAIN" >"$ru_out" 2>"$ru_err" \
+            || ru_rc=$?
+    else
+        bash "$tmp/rustup-init.sh" -y --no-modify-path \
+            --default-toolchain "$RUST_TOOLCHAIN" >"$ru_out" 2>"$ru_err" \
+            || ru_rc=$?
+    fi
     if [[ $ru_rc -ne 0 ]]; then
         _log "rustup-init failed (status=$ru_rc):"
         cat "$ru_err" >&2
