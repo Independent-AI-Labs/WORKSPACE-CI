@@ -14,6 +14,7 @@ source "$TESTS_DIR/test_helpers.sh"
 # Run unit test suites
 source "$TESTS_DIR/unit/test_core.sh"
 source "$TESTS_DIR/unit/test_checks.sh"
+source "$TESTS_DIR/unit/test_checks_secrets.sh"
 source "$TESTS_DIR/unit/test_checks_dead_code.sh"
 source "$TESTS_DIR/unit/test_cve_scan.sh"
 source "$TESTS_DIR/unit/test_reinstall_hooks.sh"
