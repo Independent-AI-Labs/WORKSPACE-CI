@@ -186,8 +186,9 @@ install-uv: ## Bootstrap uv into $(BOOT_NAME)/bin/ (idempotent)
 	$(SCRIPT_BASH) scripts/bootstrap-uv
 
 .PHONY: install-boot-tools
-install-boot-tools: install-uv ## Bootstrap uv + rust toolchain into $(BOOT_NAME)/bin/ (idempotent)
+install-boot-tools: install-uv ## Bootstrap uv + rust toolchain + Podman into $(BOOT_NAME)/bin/ (idempotent)
 	$(SCRIPT_BASH) scripts/bootstrap-rust
+	$(SCRIPT_BASH) scripts/bootstrap-podman
 
 .PHONY: install-python-deps
 install-python-deps: install-uv ## uv sync the Python deps (project-level .venv)

@@ -22,21 +22,46 @@ ci_scan_secrets() {
         return 1
     }
 
-    # Dynamic .gitignore respect: git ls-files gives tracked files,
-    # --others --exclude-standard gives untracked non-ignored files.
+    # Enumerate the full repository, not only staged paths. --exclude-standard
+    # removes ordinary untracked ignored files; the explicit check-ignore pass
+    # is also required because git ls-files includes tracked paths even when a
+    # later .gitignore rule matches them.
     local _ss_stderr_tmp _ss_files_tmp
     _ss_stderr_tmp="$(mktemp)"
     _ss_files_tmp="$(mktemp)"
+    local _ss_candidates_tmp
+    _ss_candidates_tmp="$(mktemp)"
     local _ss_git_rc=0
-    { git ls-files -z; git ls-files -z --others --exclude-standard; } \
-        2>"$_ss_stderr_tmp" | sort -zu > "$_ss_files_tmp" || _ss_git_rc=$?
+    git ls-files -co --exclude-standard -z >"$_ss_candidates_tmp" \
+        2>"$_ss_stderr_tmp" || _ss_git_rc=$?
     if [[ $_ss_git_rc -ne 0 ]]; then
         ci_fail "git ls-files failed"
         [[ -s "$_ss_stderr_tmp" ]] && cat "$_ss_stderr_tmp" >&2
-        rm -f "$_ss_stderr_tmp" "$_ss_files_tmp"
+        rm -f "$_ss_stderr_tmp" "$_ss_candidates_tmp" "$_ss_files_tmp"
         return 1
     fi
     rm -f "$_ss_stderr_tmp"
+
+    # --no-index makes ignore rules apply to tracked files as well. This keeps
+    # a tracked file that is now ignored out of the scan, matching the policy
+    # that ignored content is never eligible for secret scanning.
+    local _ss_filtered_tmp
+    _ss_filtered_tmp="$(mktemp)"
+    local _ss_ignore_out _ss_ignore_rc
+    while IFS= read -r -d '' _ss_path; do
+        _ss_ignore_rc=0
+        _ss_ignore_out="$(git check-ignore --no-index -- "$_ss_path" 2>&1)" || _ss_ignore_rc=$?
+        if [[ $_ss_ignore_rc -eq 1 ]]; then
+            printf '%s\0' "$_ss_path"
+        elif [[ $_ss_ignore_rc -ne 0 ]]; then
+            ci_fail "git check-ignore failed for $_ss_path (exit $_ss_ignore_rc)"
+            [[ -n "$_ss_ignore_out" ]] && printf '%s\n' "$_ss_ignore_out" >&2
+            rm -f "$_ss_candidates_tmp" "$_ss_filtered_tmp" "$_ss_files_tmp"
+            return 1
+        fi
+    done <"$_ss_candidates_tmp" >"$_ss_filtered_tmp"
+    sort -zu "$_ss_filtered_tmp" >"$_ss_files_tmp"
+    rm -f "$_ss_candidates_tmp" "$_ss_filtered_tmp"
 
     if [[ ! -s "$_ss_files_tmp" ]]; then
         ci_pass "gitleaks: no files to scan"

@@ -274,7 +274,8 @@ guard_install_git_ssh_wrapper() {
         log_warn "Rebuild: make build-guard"
         return 0
     fi
-    if ! _setcap_path="$(command -v setcap 2>&1)"; then
+    _setcap_path=/usr/sbin/setcap
+    if [[ ! -x "$_setcap_path" ]]; then
         log_error "git-ssh-wrapper requires setcap (libcap2-bin)"
         return 1
     fi
@@ -282,7 +283,7 @@ guard_install_git_ssh_wrapper() {
     install -m 0755 -o root -g root "$src" "$dest"
     local _sc_err _sc_rc=0
     _sc_err="$(mktemp)"
-    setcap cap_dac_override=ep "$dest" 2>"$_sc_err" || _sc_rc=$?
+    "$_setcap_path" cap_dac_override=ep "$dest" 2>"$_sc_err" || _sc_rc=$?
     if [[ $_sc_rc -ne 0 ]]; then
         if [[ -s "$_sc_err" ]]; then
             log_error "Failed to set cap_dac_override on $dest: $(head -1 "$_sc_err")"
@@ -374,19 +375,21 @@ guard_scrub_pam_artifacts() {
 agent_git_works_runuser() {
     local user="${1:?user}"
     local _out _rc=0
-    _out="$(runuser -u "$user" -- git --version 2>&1)" || _rc=$?
+    _out="$(/usr/sbin/runuser -u "$user" -- git --version 2>&1)" || _rc=$?
     [[ $_rc -eq 0 ]] && ! grep -q 'missing workload capabilities' <<<"$_out"
 }
 
 guard_verify_user_run_runuser() {
     local user="$1" cmd="$2" stderr_file="$3"
     local rc=0
-    runuser -u "$user" -- bash -lc "$cmd" 2>"$stderr_file" || rc=$?
+    /usr/sbin/runuser -u "$user" -- bash -lc "$cmd" 2>"$stderr_file" || rc=$?
     return $rc
 }
 
 install_guard_host_exec() {
-    if ! _setcap_path="$(command -v setcap 2>&1)" || ! _getcap_path="$(command -v getcap 2>&1)"; then
+    _setcap_path=/usr/sbin/setcap
+    _getcap_path=/usr/sbin/getcap
+    if [[ ! -x "$_setcap_path" || ! -x "$_getcap_path" ]]; then
         log_error "host-exec requires setcap and getcap (libcap2-bin)"
         return 1
     fi
@@ -402,11 +405,11 @@ install_guard_host_exec() {
     if _chattr_path="$(command -v chattr 2>&1)" && [[ -f /usr/bin/git ]]; then
         _guard_attempt chattr -i /usr/bin/git
     fi
-    _guard_attempt setcap -r /usr/bin/git
+    _guard_attempt "$_setcap_path" -r /usr/bin/git
 
     local _setcap_err
     _setcap_err="$(mktemp)"
-    if ! setcap "$cap_str" /usr/bin/git 2>"$_setcap_err"; then
+    if ! "$_setcap_path" "$cap_str" /usr/bin/git 2>"$_setcap_err"; then
         log_error "Failed to set file capabilities on /usr/bin/git: $cap_str"
         [[ -s "$_setcap_err" ]] && log_error "$(cat "$_setcap_err")"
         rm -f "$_setcap_err"

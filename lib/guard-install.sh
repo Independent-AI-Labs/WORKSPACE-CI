@@ -43,13 +43,13 @@ install_guard_binary() {
         log_error "Invalid build-mode marker '$install_mode' at ${guard_bin}.mode"
         return 1
     fi
-    if [[ "$install_mode" == "capability" ]] && ! _path="$(command -v setcap 2>&1)"; then
+    if [[ "$install_mode" == "capability" ]] && [[ ! -x /usr/sbin/setcap ]]; then
         log_error "Binary is capability-mode but setcap is not installed on this host."
         log_error "Capability mode requires setcap (libcap2-bin) to grant non-root git access."
         log_error "Run 'make init', or rebuild root-only: BUILD_MODE=root-only make build-guard"
         return 1
     fi
-    if [[ "$install_mode" == "root-only" ]] && _path="$(command -v setcap 2>&1)"; then
+    if [[ "$install_mode" == "root-only" ]] && [[ -x /usr/sbin/setcap ]]; then
         log_warn "setcap is available here, but the binary was built root-only."
         log_warn "A capability build would allow non-root users to run git; root-only will NOT."
     fi
@@ -225,7 +225,7 @@ install_guard_binary() {
         chmod 0700 /usr/bin/git.distrib
         chown root:root /usr/bin/git.distrib
 
-        if ! _path="$(command -v setcap 2>&1)"; then
+        if [[ ! -x /usr/sbin/setcap ]]; then
             log_error "setcap not found: run 'make init' to install system dependencies"
             return 1
         fi
@@ -239,7 +239,7 @@ install_guard_binary() {
         cp "$guard_bin" /usr/bin/git
         chown root:root /usr/bin/git
         chmod 0755 /usr/bin/git
-        _guard_attempt setcap -r /usr/bin/git
+        _guard_attempt /usr/sbin/setcap -r /usr/bin/git
         if ! install_guard_host_exec; then
             log_error "host-exec capability delivery failed: rolling back"
             rollback_guard
@@ -328,9 +328,9 @@ EOF
             log_error "deployment-class must be host-exec (got: ${_cls:-missing})"
             structural_errors=1
         fi
-        if _path="$(command -v getcap 2>&1)"; then
+        if [[ -x /usr/sbin/getcap ]]; then
             local _gc
-            _gc="$(_guard_capture_line getcap /usr/bin/git)"
+            _gc="$(_guard_capture_line /usr/sbin/getcap /usr/bin/git)"
             if guard_git_has_required_file_caps; then
                 log_info "Guard binary has host-exec file caps: $_gc"
             else
@@ -368,7 +368,7 @@ EOF
             functional_errors=1
         else
             local _ver_out _ver_rc=0
-            _ver_out="$(runuser -u "$verify_user" -- git --version 2>&1)" || _ver_rc=$?
+        _ver_out="$(/usr/sbin/runuser -u "$verify_user" -- git --version 2>&1)" || _ver_rc=$?
             if [[ $_ver_rc -eq 0 ]]; then
                 log_info "git --version ($verify_user, host-exec): $_ver_out"
             else

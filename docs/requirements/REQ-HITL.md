@@ -33,8 +33,8 @@
 - WORKSPACE-GATEWAY `docs/architecture/KEY-MANAGEMENT.md`: production OpenBao precedent (virtual-key resolution)
 - WORKSPACE-GUARD `README.md` / `docs/specifications/SPEC-GIT-GUARD.md`: capability-locked wrapper surfaces, fail-closed conventions, root-owned state-file trust pattern
 - [IETF draft-hartman-credential-broker-4-agents (CB4A)](https://datatracker.ietf.org/doc/html/draft-hartman-credential-broker-4-agents-00): credential broker architecture, tiered approvals, threat model TM-1..TM-10
-- [RFC 8693](https://www.rfc-editor.org/rfc/rfc8693): OAuth 2.0 Token Exchange (derivative-token minting model)
-- [RFC 9449](https://www.rfc-editor.org/rfc/rfc9449): DPoP - sender-constrained tokens (grant replay mitigation)
+- [RFC 8693](https://datatracker.ietf.org/doc/rfc8693/): OAuth 2.0 Token Exchange (derivative-token minting model)
+- [RFC 9449](https://datatracker.ietf.org/doc/rfc9449/): DPoP - sender-constrained tokens (grant replay mitigation)
 
 ---
 

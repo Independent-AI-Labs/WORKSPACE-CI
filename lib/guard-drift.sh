@@ -71,9 +71,9 @@ guard_login_uids() {
 }
 
 guard_git_file_cap_actual() {
-    _path="$(command -v getcap 2>&1)" || return 1
+    [[ -x /usr/sbin/getcap ]] || return 1
     local line caps
-    line="$(_guard_capture_line getcap /usr/bin/git)"
+    line="$(_guard_capture_line /usr/sbin/getcap /usr/bin/git)"
     [[ -n "$line" ]] || return 1
     # getcap(8) formats vary:
     #   /usr/bin/git cap_foo,cap_bar=ep
@@ -113,7 +113,7 @@ guard_file_cap_normalize() {
 
 guard_git_has_required_file_caps() {
     local actual expected norm_actual norm_expected
-    if ! _path="$(command -v getcap 2>&1)"; then
+    if [[ ! -x /usr/sbin/getcap ]]; then
         return 1
     fi
     actual="$(guard_git_file_cap_actual)"
@@ -134,7 +134,7 @@ agent_no_new_privs_enabled() {
 agent_cap_status_field_runuser() {
     local user="${1:?user}" field="${2:?field}"
     local status rc=0 value=""
-    status="$(runuser -u "$user" -- bash -lc "grep \"^${field}:\" /proc/self/status" 2>&1)" || rc=$?
+    status="$(/usr/sbin/runuser -u "$user" -- bash -lc "grep \"^${field}:\" /proc/self/status" 2>&1)" || rc=$?
     if [ $rc -ne 0 ]; then
         printf 'guard probe: cap status %s for %s failed (rc=%s)\n' "$field" "$user" "$rc" >&2
         return $rc
@@ -190,10 +190,10 @@ _resolve_git_ssh_bin() {
 
 guard_git_ssh_wrapper_cap_actual() {
     local dest line caps
-    _path="$(command -v getcap 2>&1)" || return 1
+    [[ -x /usr/sbin/getcap ]] || return 1
     dest="$(_guard_state_dir)/git-ssh-wrapper"
     [[ -f "$dest" ]] || return 1
-    line="$(_guard_capture_line getcap "$dest")"
+    line="$(_guard_capture_line /usr/sbin/getcap "$dest")"
     [[ -n "$line" ]] || return 1
     caps="${line#*cap_}"
     [[ "$caps" == "$line" ]] && return 1
@@ -202,7 +202,7 @@ guard_git_ssh_wrapper_cap_actual() {
 
 guard_git_ssh_wrapper_has_required_cap() {
     local actual norm_actual norm_expected
-    if ! _path="$(command -v getcap 2>&1)"; then
+    if [[ ! -x /usr/sbin/getcap ]]; then
         return 1
     fi
     actual="$(guard_git_ssh_wrapper_cap_actual)"
@@ -231,7 +231,7 @@ guard_host_exec_aux_drift_reasons() {
         fi
     fi
 
-    if [[ -f "$dest" ]] && _path="$(command -v getcap 2>&1)"; then
+    if [[ -f "$dest" ]] && [[ -x /usr/sbin/getcap ]]; then
         local _gc
         _gc="$(_guard_capture_line guard_git_ssh_wrapper_cap_actual)"
         if ! guard_git_ssh_wrapper_has_required_cap; then
