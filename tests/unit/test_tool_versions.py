@@ -1,5 +1,6 @@
 """Unit tests for CI bootstrap-tool version validation."""
 
+import urllib.error
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -82,3 +83,60 @@ def test_catalog_enforces_feature_floor_without_release_query() -> None:
             "source_kind": "github_release",
         },
     )
+
+
+@patch("ci._tool_versions.urllib.request.urlopen")
+def test_latest_github_release_handles_bad_payload(mock_urlopen) -> None:
+    response = MagicMock()
+    response.read.return_value = b"{}"
+    response.__enter__ = lambda value: value
+    response.__exit__ = MagicMock(return_value=False)
+    mock_urlopen.return_value = response
+
+    assert get_latest_github_release("example/project") is None
+
+
+@patch("ci._tool_versions.urllib.request.urlopen")
+def test_latest_github_release_handles_network_error(mock_urlopen) -> None:
+    mock_urlopen.side_effect = urllib.error.URLError("offline")
+
+    assert get_latest_github_release("example/project") is None
+
+
+@patch("ci._tool_versions.urllib.request.urlopen")
+def test_latest_node_release_handles_empty_major(mock_urlopen) -> None:
+    response = MagicMock()
+    response.read.return_value = b'[{"version":"v25.1.0"}]'
+    response.__enter__ = lambda value: value
+    response.__exit__ = MagicMock(return_value=False)
+    mock_urlopen.return_value = response
+
+    assert get_latest_node_release(24) is None
+
+
+def test_catalog_rejects_invalid_entries(tmp_path: Path) -> None:
+    assert _check_tool_entry("example", "not a mapping")
+    assert _check_tool_entry("example", {"source_kind": "github_release"})
+    assert _check_tool_entry(
+        "example", {"source_kind": "github_release", "version": "bad", "source": "a/b"}
+    )
+    assert _check_tool_entry(
+        "example",
+        {"source_kind": "github_release", "version": "1.0.0", "source": "bad"},
+    )
+    assert _check_tool_entry("rust", {"source_kind": "rust_channel", "channel": "bad"})
+    assert not _check_tool_entry(
+        "rust", {"source_kind": "rust_channel", "channel": "stable"}
+    )
+
+    with patch("ci._tool_versions.find_project_root", return_value=tmp_path):
+        assert check_tool_versions()
+
+
+def test_catalog_rejects_unsupported_schema(tmp_path: Path) -> None:
+    catalog = tmp_path / "res"
+    catalog.mkdir()
+    (catalog / "dependency-pins.yaml").write_text("schema_version: 2\n")
+
+    with patch("ci._tool_versions.find_project_root", return_value=tmp_path):
+        assert check_tool_versions()

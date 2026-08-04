@@ -7,9 +7,9 @@
 # The repository's .gitignore is the sole file-selection filter.
 
 # --- ci_scan_secrets ---
-# Scans the repository for leaked secrets with one Gitleaks process. Git-ignored
-# paths are represented as temporary Gitleaks path allowlist entries so the
-# directory scanner can retain the real repository paths.
+# Scans the repository for leaked secrets with one Gitleaks process. Only the
+# non-ignored candidate files are staged into a temporary tree so Gitleaks
+# never traverses unreadable ignored directories.
 # Redacts secret values in output to prevent re-exposure in CI logs.
 ci_scan_secrets() {
     local _ss_gitleaks_bin _ss_root
@@ -19,87 +19,67 @@ ci_scan_secrets() {
         return 1
     }
 
-    local _ss_candidates_tmp _ss_ignored_tmp _ss_stderr_tmp _ss_config_tmp
+    local _ss_candidates_tmp _ss_stderr_tmp _ss_config_tmp _ss_scan_tmp
     _ss_candidates_tmp="$(mktemp)"
-    _ss_ignored_tmp="$(mktemp)"
     _ss_stderr_tmp="$(mktemp)"
     _ss_config_tmp="$(mktemp "${TMPDIR:-/tmp}/gitleaks-config.XXXXXX.toml")"
-    local _ss_git_rc=0 _ss_ignore_rc _ss_path _ss_ignore_out
+    _ss_scan_tmp="$(mktemp -d "${TMPDIR:-/tmp}/gitleaks-scan.XXXXXX")"
+    local _ss_git_rc=0 _ss_path _ss_dest _ss_dest_dir
     git ls-files -co --exclude-standard -z >"$_ss_candidates_tmp" \
         2>"$_ss_stderr_tmp" || _ss_git_rc=$?
     if [[ $_ss_git_rc -ne 0 ]]; then
         ci_fail "git ls-files failed"
         [[ -s "$_ss_stderr_tmp" ]] && cat "$_ss_stderr_tmp" >&2
-        rm -f "$_ss_candidates_tmp" "$_ss_ignored_tmp" "$_ss_stderr_tmp" "$_ss_config_tmp"
+        rm -f "$_ss_candidates_tmp" "$_ss_stderr_tmp" "$_ss_config_tmp"
+        rm -rf "$_ss_scan_tmp"
         return 1
     fi
 
     local _ss_total
     _ss_total=$(tr -cd '\0' <"$_ss_candidates_tmp" | wc -c)
 
-    # Feed all candidates to one check-ignore process. Its exit status is 1
-    # when none match, which is a successful scan result rather than an error.
-    _ss_ignore_rc=0
-    git check-ignore --no-index --stdin -z <"$_ss_candidates_tmp" >"$_ss_ignored_tmp" \
-        2>"$_ss_stderr_tmp" || _ss_ignore_rc=$?
-    if [[ $_ss_ignore_rc -gt 1 ]]; then
-        ci_fail "git check-ignore failed (exit $_ss_ignore_rc)"
-        [[ -s "$_ss_stderr_tmp" ]] && cat "$_ss_stderr_tmp" >&2
-        rm -f "$_ss_candidates_tmp" "$_ss_ignored_tmp" "$_ss_stderr_tmp" "$_ss_config_tmp"
-        return 1
-    fi
-    rm -f "$_ss_candidates_tmp" "$_ss_stderr_tmp"
-
-    # --exclude-standard omits untracked ignored directories entirely. Add
-    # those directory paths separately so a root scan cannot descend into
-    # generated trees such as .boot-linux or node_modules.
-    local _ss_ignored_dirs_tmp
-    _ss_ignored_dirs_tmp="$(mktemp)"
-    git ls-files -o -i --exclude-standard --directory -z >"$_ss_ignored_dirs_tmp" \
-        2>"$_ss_stderr_tmp" || _ss_git_rc=$?
-    if [[ $_ss_git_rc -ne 0 ]]; then
-        ci_fail "git ls-files ignored-path listing failed"
-        [[ -s "$_ss_stderr_tmp" ]] && cat "$_ss_stderr_tmp" >&2
-        rm -f "$_ss_ignored_dirs_tmp" "$_ss_ignored_tmp" "$_ss_stderr_tmp" "$_ss_config_tmp"
-        return 1
-    fi
-    cat "$_ss_ignored_dirs_tmp" >>"$_ss_ignored_tmp"
-    rm -f "$_ss_ignored_dirs_tmp" "$_ss_stderr_tmp"
-
     if [[ $_ss_total -eq 0 ]]; then
         ci_pass "gitleaks: no files to scan"
-        rm -f "$_ss_ignored_tmp" "$_ss_config_tmp"
+        rm -f "$_ss_candidates_tmp" "$_ss_stderr_tmp" "$_ss_config_tmp"
+        rm -rf "$_ss_scan_tmp"
         return 0
     fi
+
+    # Build a sparse scan tree from Git's candidate list. This keeps one
+    # Gitleaks process while making ignored directories physically absent from
+    # the traversal, including ignored paths outside a nested consumer repo.
+    while IFS= read -r -d '' _ss_path; do
+        _ss_dest="$_ss_scan_tmp/$_ss_path"
+        _ss_dest_dir="${_ss_dest%/*}"
+        mkdir -p "$_ss_dest_dir" || {
+            ci_fail "could not create scan path: $_ss_dest_dir"
+            rm -f "$_ss_candidates_tmp" "$_ss_stderr_tmp" "$_ss_config_tmp"
+            rm -rf "$_ss_scan_tmp"
+            return 1
+        }
+        if ! ln "$_ss_root/$_ss_path" "$_ss_dest" 2>"$_ss_stderr_tmp"; then
+            rm -f "$_ss_stderr_tmp"
+            cp -pP "$_ss_root/$_ss_path" "$_ss_dest" || {
+                ci_fail "could not stage scan file: $_ss_path"
+                rm -f "$_ss_candidates_tmp" "$_ss_stderr_tmp" "$_ss_config_tmp"
+                rm -rf "$_ss_scan_tmp"
+                return 1
+            }
+        fi
+    done <"$_ss_candidates_tmp"
+    rm -f "$_ss_candidates_tmp" "$_ss_stderr_tmp"
 
     if [[ -f "$_ss_root/.gitleaks.toml" ]]; then
         printf "[extend]\npath = '''%s'''\n\n" "$_ss_root/.gitleaks.toml" >"$_ss_config_tmp"
     else
         printf '[extend]\nuseDefault = true\n\n' >"$_ss_config_tmp"
     fi
-    printf '[allowlist]\ndescription = "Git-ignored paths"\npaths = [\n' >>"$_ss_config_tmp"
-    while IFS= read -r -d '' _ss_path; do
-        # Quote every regex metacharacter so only the exact ignored path is
-        # excluded, while the optional leading directory prefix matches the
-        # relative paths reported by Gitleaks.
-        local _ss_suffix=''
-        if [[ "$_ss_path" == */ ]]; then
-            _ss_path="${_ss_path%/}"
-            _ss_suffix='(?:/.*)?'
-        fi
-        _ss_path="$(printf '%s' "$_ss_path" | sed 's/[][\\.^$*+?(){}|]/\\&/g')"
-        printf "  '''(^|/)%s%s$''',\n" "$_ss_path" "$_ss_suffix" >>"$_ss_config_tmp"
-    done <"$_ss_ignored_tmp"
-    printf ']\n' >>"$_ss_config_tmp"
-    rm -f "$_ss_ignored_tmp"
-
     local _ss_rc=0
-    # The directory command owns traversal and detector concurrency. Passing
-    # individual files through xargs creates one process per file.
-    (cd "$_ss_root" && "$_ss_gitleaks_bin" dir . \
+    ("$_ss_gitleaks_bin" dir "$_ss_scan_tmp" \
         --config "$_ss_config_tmp" --no-banner --redact --verbose --log-level=error) \
         || _ss_rc=$?
     rm -f "$_ss_config_tmp"
+    rm -rf "$_ss_scan_tmp"
 
     if [[ $_ss_rc -ne 0 ]]; then
         if [[ $_ss_rc -eq 124 || $_ss_rc -eq 137 ]]; then
