@@ -34,21 +34,20 @@ ci_scan_secrets() {
         return 1
     fi
 
-    local _ss_total=0
-    while IFS= read -r -d '' _ss_path; do
-        _ss_ignore_rc=0
-        _ss_ignore_out="$(git check-ignore --no-index -- "$_ss_path" 2>&1)" || _ss_ignore_rc=$?
-        if [[ $_ss_ignore_rc -eq 0 ]]; then
-            printf '%s\n' "$_ss_path" >>"$_ss_ignored_tmp"
-        elif [[ $_ss_ignore_rc -eq 1 ]]; then
-            _ss_total=$((_ss_total + 1))
-        else
-            ci_fail "git check-ignore failed for $_ss_path (exit $_ss_ignore_rc)"
-            [[ -n "$_ss_ignore_out" ]] && printf '%s\n' "$_ss_ignore_out" >&2
-            rm -f "$_ss_candidates_tmp" "$_ss_ignored_tmp" "$_ss_stderr_tmp" "$_ss_config_tmp"
-            return 1
-        fi
-    done <"$_ss_candidates_tmp"
+    local _ss_total
+    _ss_total=$(tr -cd '\0' <"$_ss_candidates_tmp" | wc -c)
+
+    # Feed all candidates to one check-ignore process. Its exit status is 1
+    # when none match, which is a successful scan result rather than an error.
+    _ss_ignore_rc=0
+    git check-ignore --no-index --stdin -z <"$_ss_candidates_tmp" >"$_ss_ignored_tmp" \
+        2>"$_ss_stderr_tmp" || _ss_ignore_rc=$?
+    if [[ $_ss_ignore_rc -gt 1 ]]; then
+        ci_fail "git check-ignore failed (exit $_ss_ignore_rc)"
+        [[ -s "$_ss_stderr_tmp" ]] && cat "$_ss_stderr_tmp" >&2
+        rm -f "$_ss_candidates_tmp" "$_ss_ignored_tmp" "$_ss_stderr_tmp" "$_ss_config_tmp"
+        return 1
+    fi
     rm -f "$_ss_candidates_tmp" "$_ss_stderr_tmp"
 
     # --exclude-standard omits untracked ignored directories entirely. Add
@@ -64,9 +63,7 @@ ci_scan_secrets() {
         rm -f "$_ss_ignored_dirs_tmp" "$_ss_ignored_tmp" "$_ss_stderr_tmp" "$_ss_config_tmp"
         return 1
     fi
-    while IFS= read -r -d '' _ss_path; do
-        printf '%s\n' "$_ss_path" >>"$_ss_ignored_tmp"
-    done <"$_ss_ignored_dirs_tmp"
+    cat "$_ss_ignored_dirs_tmp" >>"$_ss_ignored_tmp"
     rm -f "$_ss_ignored_dirs_tmp" "$_ss_stderr_tmp"
 
     if [[ $_ss_total -eq 0 ]]; then
@@ -81,7 +78,7 @@ ci_scan_secrets() {
         printf '[extend]\nuseDefault = true\n\n' >"$_ss_config_tmp"
     fi
     printf '[allowlist]\ndescription = "Git-ignored paths"\npaths = [\n' >>"$_ss_config_tmp"
-    while IFS= read -r _ss_path; do
+    while IFS= read -r -d '' _ss_path; do
         # Quote every regex metacharacter so only the exact ignored path is
         # excluded, while the optional leading directory prefix matches the
         # relative paths reported by Gitleaks.
