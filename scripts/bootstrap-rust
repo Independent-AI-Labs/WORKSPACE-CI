@@ -29,7 +29,6 @@
 
 set -euo pipefail
 
-RUST_TOOLCHAIN="${RUST_TOOLCHAIN:-stable}"
 
 _SELF="${BASH_SOURCE[0]:-$0}"
 case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
@@ -39,6 +38,7 @@ if ! source "$_ci_lib/ci.sh"; then
     echo "ERROR: failed to source $_ci_lib/ci.sh" >&2
     exit 2
 fi
+RUST_TOOLCHAIN="$(ci_tool_version rust channel)" || { echo "ERROR: missing rust tool channel" >&2; exit 2; }
 if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
     echo "ERROR: CI_PROJECT_ROOT not set after sourcing ci.sh" >&2
     exit 2

@@ -20,11 +20,11 @@ fi
 VENV_DIR="${CI_BOOT_DIR}"
 
 PODMAN_DIR="${VENV_DIR}/podman"
-PODMAN_VERSION="5.6.2"
-PODMAN_COMPOSE_VERSION="1.5.0"
-CONMON_VERSION="2.1.13"
-NETAVARK_VERSION="1.16.1"
-AARDVARK_DNS_VERSION="1.16.0"
+PODMAN_VERSION="$(ci_tool_version podman)" || exit 2
+PODMAN_COMPOSE_VERSION="$(ci_tool_version podman_compose)" || exit 2
+CONMON_VERSION="$(ci_tool_version conmon)" || exit 2
+NETAVARK_VERSION="$(ci_tool_version netavark)" || exit 2
+AARDVARK_DNS_VERSION="$(ci_tool_version aardvark_dns)" || exit 2
 
 # Color output
 RED='\033[0;31m'

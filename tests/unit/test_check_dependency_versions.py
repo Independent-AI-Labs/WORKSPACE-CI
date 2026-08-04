@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from ci._npm_versions import sync_lockfile_after_upgrade
 from ci.check_dependency_versions import (
     BUILTIN_EXCLUDES,
     check_and_collect,
@@ -328,8 +329,6 @@ class TestSyncLockfileAfterUpgrade:
 
     def test_no_lockfile_is_noop(self, tmp_path: Path) -> None:
         """No package-lock.json anywhere above the manifest: nothing to do."""
-        from ci._npm_versions import sync_lockfile_after_upgrade
-
         manifest = tmp_path / "web" / "package.json"
         manifest.parent.mkdir(parents=True)
         manifest.write_text("{}")
@@ -339,8 +338,6 @@ class TestSyncLockfileAfterUpgrade:
 
     def test_runs_npm_at_lock_root(self, tmp_path: Path) -> None:
         """Lockfile above the manifest triggers npm install --package-lock-only."""
-        from ci._npm_versions import sync_lockfile_after_upgrade
-
         manifest = tmp_path / "web" / "package.json"
         manifest.parent.mkdir(parents=True)
         manifest.write_text("{}")
@@ -358,8 +355,6 @@ class TestSyncLockfileAfterUpgrade:
 
     def test_missing_npm_warns_with_fix_hint(self, tmp_path: Path, capsys) -> None:
         """No npm on PATH: warn and print the manual fix command."""
-        from ci._npm_versions import sync_lockfile_after_upgrade
-
         manifest = tmp_path / "package.json"
         manifest.write_text("{}")
         (tmp_path / "package-lock.json").write_text("{}")
@@ -370,6 +365,13 @@ class TestSyncLockfileAfterUpgrade:
 
 class TestMain:
     """Tests for main function."""
+
+    @pytest.fixture(autouse=True)
+    def _skip_tool_catalog(self):
+        with patch(
+            "ci.check_dependency_versions.check_tool_versions", return_value=False
+        ):
+            yield
 
     @patch("ci.check_dependency_versions.check_and_collect")
     @patch("ci.check_dependency_versions.Path")

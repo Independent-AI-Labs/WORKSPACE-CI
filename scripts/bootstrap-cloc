@@ -34,11 +34,9 @@
 
 set -euo pipefail
 
-CLOC_VERSION="${CLOC_VERSION:-2.02}"
 # SHA256 of cloc-2.02.pl (759966 bytes), fetched from:
 #   https://github.com/AlDanial/cloc/releases/download/v2.02/cloc-2.02.pl
 # Recompute with: sha256sum <(curl -fsSL <url>)  when bumping CLOC_VERSION.
-CLOC_SHA256="373b4424acdf4bfb38e735a85c8a0e5731ee789e2fd95df2618d254cbdb7f355"
 
 _SELF="${BASH_SOURCE[0]:-$0}"
 case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
@@ -52,6 +50,8 @@ if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
     echo "ERROR: CI_PROJECT_ROOT not set after sourcing ci.sh" >&2
     exit 2
 fi
+CLOC_VERSION="$(ci_tool_version cloc)" || { echo "ERROR: missing cloc tool pin" >&2; exit 2; }
+CLOC_SHA256="$(ci_tool_version cloc sha256)" || { echo "ERROR: missing cloc checksum" >&2; exit 2; }
 
 _log() { printf '[bootstrap-cloc] %s\n' "$*" >&2; }
 

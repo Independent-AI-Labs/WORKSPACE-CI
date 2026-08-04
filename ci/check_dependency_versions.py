@@ -27,6 +27,7 @@ from ci._registry_common import (
 from ci._registry_common import (
     is_strictly_pinned_or_bounded as _is_strictly_pinned_or_bounded,
 )
+from ci._tool_versions import check_tool_versions
 from ci.models import (
     DependencyCheckResult,
     LooseDependency,
@@ -349,7 +350,7 @@ def main() -> int:
     npm_excludes = cli_excludes | load_config_excludes("npm_excludes")
     docker_excludes = cli_excludes | load_config_excludes("docker_excludes")
 
-    dep_errors = False
+    dep_errors = check_tool_versions()
     upgrade_count = 0
     found_count = 0
 

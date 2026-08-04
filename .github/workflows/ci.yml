@@ -9,10 +9,6 @@ on:
 permissions:
   contents: read
 
-env:
-  UV_VERSION: '0.11.23'
-  GITLEAKS_VERSION: '8.21.2'
-
 jobs:
   # ─────────────────────────────────────────────────────────────────────
   # Job 1: Security & guard checks (parallel with quality-gate)

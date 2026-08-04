@@ -22,7 +22,6 @@
 
 set -euo pipefail
 
-GITLEAKS_VERSION="${GITLEAKS_VERSION:-8.21.2}"
 #
 # Supply-chain pinning: SHA256 verification is MANDATORY and always on.
 # The checksum is fetched at runtime from the checksums.txt sidecar file
@@ -42,6 +41,7 @@ if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
     echo "ERROR: CI_PROJECT_ROOT not set after sourcing ci.sh" >&2
     exit 2
 fi
+GITLEAKS_VERSION="$(ci_tool_version gitleaks)" || { echo "ERROR: missing gitleaks tool pin" >&2; exit 2; }
 
 _log() { printf '[bootstrap-gitleaks] %s\n' "$*" >&2; }
 

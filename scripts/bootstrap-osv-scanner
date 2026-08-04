@@ -22,7 +22,6 @@
 
 set -euo pipefail
 
-OSV_SCANNER_VERSION="2.4.0"
 
 _SELF="${BASH_SOURCE[0]:-$0}"
 case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
@@ -36,6 +35,7 @@ if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
     echo "ERROR: CI_PROJECT_ROOT not set after sourcing ci.sh" >&2
     exit 2
 fi
+OSV_SCANNER_VERSION="$(ci_tool_version osv_scanner)" || { echo "ERROR: missing osv-scanner tool pin" >&2; exit 2; }
 
 _log() { printf '[bootstrap-osv-scanner] %s\n' "$*" >&2; }
 

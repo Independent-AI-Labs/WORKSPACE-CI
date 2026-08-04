@@ -226,6 +226,16 @@ ci_read_yaml() {
     fi
 }
 
+# ci_tool_version <tool> [field]
+# Bootstrap scripts resolve release pins from the tracked catalog so a single
+# dependency check can audit every bootstrapped tool.
+ci_tool_version() {
+    local tool="$1" field="${2:-version}" value
+    value="$(ci_read_yaml "$CI_PROJECT_ROOT/res/dependency-pins.yaml" "$tool.$field")" || return 1
+    [[ -n "$value" ]] || return 1
+    printf '%s\n' "$value"
+}
+
 # ci_read_yaml_list <file> <key>
 #   Reads a YAML list under a key, one item per line (unquoted).
 #   Supports flat keys (dependsOn) and one-level dotpath (project.inherited_boot_dirs).

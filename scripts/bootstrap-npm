@@ -35,7 +35,6 @@
 
 set -euo pipefail
 
-NODE_VERSION="${NODE_VERSION:-24.15.0}"
 
 _SELF="${BASH_SOURCE[0]:-$0}"
 case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
@@ -49,6 +48,7 @@ if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
     echo "ERROR: CI_PROJECT_ROOT not set after sourcing ci.sh" >&2
     exit 2
 fi
+NODE_VERSION="$(ci_tool_version node)" || { echo "ERROR: missing node tool pin" >&2; exit 2; }
 
 _log() { printf '[bootstrap-npm] %s\n' "$*" >&2; }
 

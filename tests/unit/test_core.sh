@@ -39,6 +39,19 @@ EOF
 }
 _run_test "ci_read_yaml dotpath" test_ci_read_yaml_dotpath
 
+test_ci_tool_version() {
+    _source_lib
+    mkdir -p "$CI_PROJECT_ROOT/res"
+    cat > "$CI_PROJECT_ROOT/res/dependency-pins.yaml" <<'EOF'
+gitleaks:
+  version: "8.30.1"
+  minimum_version: "8.22.0"
+EOF
+    _assert_eq "8.30.1" "$(ci_tool_version gitleaks)" "tool version"
+    _assert_eq "8.22.0" "$(ci_tool_version gitleaks minimum_version)" "tool minimum"
+}
+_run_test "ci_tool_version reads catalog" test_ci_tool_version
+
 test_ci_read_yaml_list() {
     cat > "$TEST_TMP/workspace/projects/WORKSPACE-CI/config/test.yaml" <<'EOF'
 extensions:
