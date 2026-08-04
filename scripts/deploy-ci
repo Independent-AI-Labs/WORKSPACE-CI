@@ -280,9 +280,12 @@ if [[ -n "$_symlinks" ]]; then
 fi
 
 # The deployment root is immutable after lock-repo. Create the untracked boot
-# tool directory before that boundary so bootstrap installers can populate it.
+# and runtime directories before that boundary so bootstrap installers and
+# agent-owned dependency installs can populate them.
 log_info "pre-creating boot tool directory before immutable lock"
 mkdir -p "$_DEPLOY_DIR/.boot-linux/bin"
+log_info "pre-creating agent-owned runtime directories before immutable lock"
+make -C "$_DEPLOY_DIR" runtime-dirs OWNER="$_REPO_OWNER"
 
 # 4-7. Root-lock the deployment: tracked files, tracked parent dirs, .git,
 #     exec bits from the index, and the final integrity gate. Single
@@ -312,8 +315,6 @@ UV_CACHE_DIR="${_root_home:-/root}/.cache/uv" \
 #    (EUID gate at the top).
 _agent_home="$(getent passwd "$_REPO_OWNER" | cut -d: -f6)"
 [[ -n "$_agent_home" ]] || { log_error "no home for $_REPO_OWNER"; exit 1; }
-log_info "pre-creating agent-owned runtime dirs for $_REPO_OWNER"
-make -C "$_DEPLOY_DIR" runtime-dirs OWNER="$_REPO_OWNER"
 log_info "installing python + web deps as $_REPO_OWNER (agent-owned .venv, node_modules)"
 "$_RUNUSER" -u "$_REPO_OWNER" -- env HOME="$_agent_home" \
     make -C "$_DEPLOY_DIR" install-python-deps install-web-deps
