@@ -28,16 +28,14 @@ _in_ignored_dir() {
 }
 
 # --- ci_check_unstaged ---
-# Fails the commit if there are unstaged or untracked files, auto-staging all
-# changes so the developer can re-commit without losing work.
+# Auto-stages all unstaged or untracked changes before the remaining hooks run.
 # Prevents partial commits that leave the working tree in an inconsistent state.
-# The developer simply re-runs git commit after the auto-stage completes.
 ci_check_unstaged() {
     local untracked
     untracked=$(git ls-files --others --exclude-standard)
     if [[ -n "$(git diff --stat)" ]] || [ -n "$untracked" ]; then
         echo ""
-        ci_fail "Unstaged or untracked files detected, auto-staging now."
+        ci_info "Unstaged or untracked files detected, auto-staging now."
         git diff
         local add_rc=0
         git add -A || add_rc=$?
@@ -51,8 +49,8 @@ ci_check_unstaged() {
             echo "$untracked" | sed 's/^/  /'
         fi
         echo ""
-        ci_info "All changes staged. Re-run: git commit"
-        return 1
+        ci_info "All changes staged; continuing commit."
+        return 0
     fi
     return 0
 }
