@@ -46,7 +46,21 @@ mode == "registry" {
     if (/^[[:space:]]+always_run:/)     { always_run = scalar(); next }
     if (/^[[:space:]]+mandatory:/)      { mandatory = scalar(); next }
     if (/^[[:space:]]+safety:/)         { safety = scalar(); next }
-    if (/^[[:space:]]+applicable_to:/)  { applicable_to = inline_list(); next }
+    if (/^[[:space:]]+applicable_to:/) {
+        applicable_to = inline_list()
+        in_applicable = (applicable_to == "")
+        next
+    }
+    if (in_applicable && /^[[:space:]]+- /) {
+        v = $0
+        sub(/^[[:space:]]+- /, "", v)
+        gsub(/["']/, "", v)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
+        if (v != "") {
+            applicable_to = applicable_to (applicable_to == "" ? "" : " ") v
+        }
+        next
+    }
     if (/^[[:space:]]+files:/)          { files = scalar(); next }
     if (/^[[:space:]]+files_types:/)    { files_types = inline_list(); next }
 }
@@ -157,6 +171,7 @@ function flush_hook() {
     pass_filenames = "true"; always_run = "false"
     mandatory = "true"; safety = "false"
     applicable_to = ""; files = ""; files_types = ""
+    in_applicable = 0
     in_hook = 0
 }
 
