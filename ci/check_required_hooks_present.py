@@ -81,13 +81,15 @@ def _find_workspace_root(start: Path) -> Path | None:
       the project directory IS the workspace root)
     """
     cur = start.resolve()
+    boot_candidate: Path | None = None
     while cur != cur.parent:
-        if (cur / ".boot-linux").is_dir() or (cur / ".boot-macos").is_dir():
-            return cur
+        has_boot_dir = (cur / ".boot-linux").is_dir() or (cur / ".boot-macos").is_dir()
+        if has_boot_dir:
+            boot_candidate = cur
         if (cur / "config" / "required_hooks.yaml").is_file():
             return cur
         cur = cur.parent
-    return None
+    return boot_candidate
 
 
 def _project_path_relative(workspace_root: Path, project_dir: Path) -> str:
