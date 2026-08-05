@@ -253,9 +253,9 @@ wrap it via [`lib/guard-build.sh`](lib/guard-build.sh) and
 [`lib/guard-install.sh`](lib/guard-install.sh):
 
 ```bash
-# Operator (requires sudo; preserve SSH agent for git clone if needed):
-sudo --preserve-env=HOME,SSH_AUTH_SOCK make build-guard
-sudo --preserve-env=HOME,SSH_AUTH_SOCK make install-guard
+# Operator (requires sudo; the installed guard supplies Git transport identity):
+sudo make build-guard
+sudo make install-guard-host-exec
 
 # Read-only status check (no sudo):
 make check-guard

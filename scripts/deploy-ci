@@ -63,6 +63,8 @@ if [[ -z "$_RUNUSER" ]]; then
     exit 1
 fi
 
+_GIT_SSH_WRAPPER=/usr/lib/workspace-guard/git-ssh-wrapper
+
 if [[ $EUID -ne 0 ]]; then
     log_error "deploy-ci must run as root: sudo make deploy-ci"
     exit 1
@@ -120,7 +122,11 @@ if [[ -n "$_EXPECTED_OWNER" && "$_REPO_OWNER" != "$_EXPECTED_OWNER" ]]; then
 fi
 log_info "git transport identity: $_REPO_OWNER (home $_OWNER_HOME)"
 git_as_owner() {
-    "$_RUNUSER" -u "$_REPO_OWNER" -- env HOME="$_OWNER_HOME" \
+    local -a _ssh_env=()
+    if [[ -x "$_GIT_SSH_WRAPPER" ]]; then
+        _ssh_env=(GIT_SSH_COMMAND="$_GIT_SSH_WRAPPER" GIT_SSH="$_GIT_SSH_WRAPPER")
+    fi
+    "$_RUNUSER" -u "$_REPO_OWNER" -- env HOME="$_OWNER_HOME" "${_ssh_env[@]}" \
         GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' \
         git "$@"
 }

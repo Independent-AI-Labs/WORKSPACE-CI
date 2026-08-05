@@ -618,21 +618,21 @@ enforce-syslog-limits: ## Enforce system-level log ceilings: logrotate maxsize +
 
 # Operator invocation contract: guard targets depend on `ensure-repos`
 # (upstream `make` chain) which pulls every workspace repo over SSH. The
-# guard re-pins HOME and SSH_AUTH_SOCK from the calling env; it does NOT
-# manufacture SSH credentials. So the operator MUST run:
+# installed guard supplies the provisioned transport identity for owner-
+# scoped Git operations. Use the normal operator commands:
 #   sudo --preserve-env=HOME,SSH_AUTH_SOCK make build-guard
 #   sudo --preserve-env=HOME,SSH_AUTH_SOCK make install-guard
 # build-guard writes only to WORKSPACE-GUARD/target/; bootstrap-workspace-guard
 # chowns that tree back to SUDO_USER when run under sudo, so agent-uid
 # rebuilds stay usable. check-guard is read-only and runs as the agent.
-build-guard: ## Build git-guard binary (operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make build-guard)
+build-guard: ## Build git-guard binary (operator: sudo make build-guard)
 	$(SCRIPT_BASH) scripts/bootstrap-workspace-guard build-only
 
 install-guard: ## REMOVED: use install-guard-host-exec
 	echo "ERROR: make install-guard is removed. Use: make install-guard-host-exec" >&2
 	exit 1
 
-install-guard-host-exec: build-guard ## Install git-guard (host-exec; operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make install-guard-host-exec)
+install-guard-host-exec: build-guard ## Install git-guard (host-exec; operator: sudo make install-guard-host-exec)
 	$(SUDO) $(SCRIPT_BASH) scripts/bootstrap-workspace-guard install-host-exec
 
 uninstall-guard: ## Uninstall git-guard, restore stock git; preserve provision state (operator: sudo make uninstall-guard)
@@ -641,7 +641,7 @@ uninstall-guard: ## Uninstall git-guard, restore stock git; preserve provision s
 purge-guard-state: ## Destroy all guard state (requires GUARD_PURGE_CONFIRM=1)
 	$(SUDO) $(SCRIPT_BASH) scripts/bootstrap-workspace-guard purge-guard-state
 
-reconcile-guard-host-exec: build-guard ## Force rebuild + reinstall git guard and aux artifacts (operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make reconcile-guard-host-exec)
+reconcile-guard-host-exec: build-guard ## Force rebuild + reinstall git guard and aux artifacts (operator: sudo make reconcile-guard-host-exec)
 	GUARD_FORCE_RECONCILE=1 GUARD_SKIP_BUILD=1 $(MAKE) install-guard-host-exec
 
 check-guard: ## REMOVED: use check-guard-host-exec
@@ -651,5 +651,5 @@ check-guard: ## REMOVED: use check-guard-host-exec
 check-guard-host-exec: ## Check host-exec git-guard installation (read-only, runs as agent)
 	$(SCRIPT_BASH) scripts/bootstrap-workspace-guard check-host-exec
 
-deploy-ci: ## Promote WORKSPACE-CI to locked projects/CI (operator: sudo --preserve-env=HOME,SSH_AUTH_SOCK make deploy-ci)
+deploy-ci: ## Promote WORKSPACE-CI to locked projects/CI (operator: sudo make deploy-ci)
 	$(SCRIPT_BASH) scripts/deploy-ci

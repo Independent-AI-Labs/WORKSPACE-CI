@@ -11,6 +11,28 @@ TESTS_DIR="$(cd "$(dirname "$_SELF")" && pwd)"
 # Load framework (resolves LIB_DIR from tests/../lib)
 source "$TESTS_DIR/test_helpers.sh"
 
+_required_unit_tests=(
+    test_core.sh
+    test_checks.sh
+    test_checks_secrets.sh
+    test_checks_dead_code.sh
+    test_cve_scan.sh
+    test_reinstall_hooks.sh
+    test_portable_shell.sh
+    test_resolve_tool_path.sh
+    test_generate_hooks.sh
+    test_scaffold_ci.sh
+    test_scaffold_ci_gen.sh
+    test_scaffold_ci_inspect.sh
+    test_scaffold_ci_force.sh
+)
+for _unit_test in "${_required_unit_tests[@]}"; do
+    if [[ ! -f "$TESTS_DIR/unit/$_unit_test" ]]; then
+        echo "ERROR: missing unit test: $TESTS_DIR/unit/$_unit_test" >&2
+        exit 1
+    fi
+done
+
 # Run unit test suites
 source "$TESTS_DIR/unit/test_core.sh"
 source "$TESTS_DIR/unit/test_checks.sh"
