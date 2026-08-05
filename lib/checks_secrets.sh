@@ -19,7 +19,7 @@ ci_scan_secrets() {
         return 1
     }
 
-    local _ss_candidates_tmp _ss_stderr_tmp _ss_config_tmp _ss_scan_tmp
+    local _ss_candidates_tmp _ss_stderr_tmp _ss_config_tmp _ss_config_arg _ss_scan_tmp
     _ss_candidates_tmp="$(mktemp)"
     _ss_stderr_tmp="$(mktemp)"
     _ss_config_tmp="$(mktemp "${TMPDIR:-/tmp}/gitleaks-config.XXXXXX.toml")"
@@ -70,13 +70,17 @@ ci_scan_secrets() {
     rm -f "$_ss_candidates_tmp" "$_ss_stderr_tmp"
 
     if [[ -f "$_ss_root/.gitleaks.toml" ]]; then
-        printf "[extend]\npath = '''%s'''\n\n" "$_ss_root/.gitleaks.toml" >"$_ss_config_tmp"
+        # Use the repository config directly.  Extending it from a temporary
+        # config preserves default rules but drops repository-local allowlists
+        # in gitleaks, which causes cached reference tokens to fail the hook.
+        _ss_config_arg="$_ss_root/.gitleaks.toml"
     else
         printf '[extend]\nuseDefault = true\n\n' >"$_ss_config_tmp"
+        _ss_config_arg="$_ss_config_tmp"
     fi
     local _ss_rc=0
     ("$_ss_gitleaks_bin" dir "$_ss_scan_tmp" \
-        --config "$_ss_config_tmp" --no-banner --redact --verbose --log-level=error) \
+        --config "$_ss_config_arg" --no-banner --redact --verbose --log-level=error) \
         || _ss_rc=$?
     rm -f "$_ss_config_tmp"
     rm -rf "$_ss_scan_tmp"
