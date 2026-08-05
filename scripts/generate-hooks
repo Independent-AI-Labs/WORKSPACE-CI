@@ -434,15 +434,7 @@ and re-run."
         # EPERM from mv.
         if [[ -f "$_output_dir/$_stage" && ! -w "$_output_dir/$_stage" ]]; then
             rm -f "$_tmp"
-            # -w fails for root too when the file carries chattr +i; tell the
-            # two cases apart so the message names the right fix command.
-            _attrs_rc=0
-            _attrs="$(lsattr "$_output_dir/$_stage")" || _attrs_rc=$?
-            if [[ $_attrs_rc -eq 0 && "${_attrs%% *}" == *i* ]]; then
-                ci_fail "hook $_stage is immutable (chattr +i). Clear it first: sudo chattr -i $_output_dir/$_stage"
-            else
-                ci_fail "hook $_stage is root-owned. Regenerate as root from the consumer: sudo make -C <repo> install-hooks"
-            fi
+            ci_fail "hook $_stage is root-owned. Regenerate as root from the consumer: sudo make -C <repo> install-hooks"
             exit 1
         fi
         mv "$_tmp" "$_output_dir/$_stage"

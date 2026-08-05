@@ -97,10 +97,10 @@ test_compliance_perfect_project() {
     # Native hooks
     _install_fake_hooks "$pdir"
 
-    # Makefile with generate-hooks
+    # Makefile with reinstall-hooks
     cat > "$pdir/Makefile" <<'MK'
 install-hooks:
-	bash generate-hooks
+	bash reinstall-hooks
 MK
 
     # Coverage config

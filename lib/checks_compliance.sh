@@ -344,17 +344,17 @@ ci_compliance_score() {
     # =====================================================================
     ci_info "PROJECT STRUCTURE"
 
-    if [[ -f "$_makefile" ]] && grep -q 'generate-hooks' "$_makefile"; then
-        _cs_pass "S1" "Makefile uses generate-hooks"
+    if [[ -f "$_makefile" ]] && grep -q 'reinstall-hooks' "$_makefile"; then
+        _cs_pass "S1" "Makefile uses reinstall-hooks"
     elif [[ -f "$_makefile" ]] && grep -q 'pre-commit install' "$_makefile"; then
         _cs_fail "S1" "Makefile uses pre-commit install (outdated)" \
-            "Replace 'pre-commit install' with generate-hooks call in Makefile"
+            "Replace 'pre-commit install' with reinstall-hooks call in Makefile"
     elif [[ -f "$_makefile" ]] && grep -q 'install-hooks' "$_makefile"; then
-        _cs_fail "S1" "Makefile has install-hooks but doesn't use generate-hooks" \
-            "Update install-hooks target to call generate-hooks"
+        _cs_fail "S1" "Makefile has install-hooks but doesn't use reinstall-hooks" \
+            "Update install-hooks target to call reinstall-hooks"
     elif [[ -f "$_makefile" ]]; then
         _cs_fail "S1" "Makefile has no install-hooks target" \
-            "Add install-hooks target that calls generate-hooks"
+            "Add install-hooks target that calls reinstall-hooks"
     else
         _cs_fail "S1" "No Makefile" \
             "Create Makefile with install-hooks target"

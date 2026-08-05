@@ -41,7 +41,7 @@ Related contracts:
 
 ```bash
 # From any project that has a .pre-commit-config.yaml:
-../CI/scripts/generate-hooks
+../CI/scripts/reinstall-hooks
 
 # Or via Makefile:
 make install-hooks
@@ -74,7 +74,7 @@ logs and exits 0. Other tiers proceed normally.
 
 1. Keep your `.pre-commit-config.yaml` as-is.
 2. Run `../CI/scripts/cleanup-precommit` to remove the framework.
-3. Run `../CI/scripts/generate-hooks` to install native hooks.
+3. Run `../CI/scripts/reinstall-hooks` to install native hooks.
 4. Remove `pre-commit` from `pyproject.toml` dependencies.
 
 `cleanup-precommit` removes `~/.cache/pre-commit/`, the

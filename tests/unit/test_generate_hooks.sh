@@ -7,10 +7,8 @@
 # header and re-establish PATH inside every emitted `bash -c '...'` body.
 #
 # These tests execute the generator. Under the live workspace shell guard
-# the agent cannot run the generator at all (its operator-facing error
-# text trips the script-body policy scan -- by design hooks are
-# regenerated as root), so they skip on guard-protected hosts and run in
-# CI/QEMU where the guard is absent.
+# the agent cannot run the generator, so they skip on guard-protected hosts
+# and run in CI/QEMU where the guard is absent.
 
 echo ""
 echo "=== generate-hooks emission tests ==="
@@ -99,3 +97,9 @@ test_gh_non_bash_c_entry_unchanged() {
     return 0
 }
 _run_test "generate-hooks: non-bash-c entries pass through unchanged" test_gh_non_bash_c_entry_unchanged
+
+test_gh_has_no_immutable_hook_workaround() {
+    ! grep -q 'chattr -i\|chattr +i\|lsattr' "$_GH_SCRIPT" \
+        || { echo "obsolete immutable-hook handling remains in generator"; return 1; }
+}
+_run_test "generate-hooks: consumer hooks use ownership-only policy" test_gh_has_no_immutable_hook_workaround

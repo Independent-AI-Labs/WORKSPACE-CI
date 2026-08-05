@@ -30,7 +30,7 @@ SHELL := /bin/bash
 endif
 # Interpreter for repo scripts invoked explicitly from recipes. Bare `bash`
 # resolves to the guarded /usr/bin/bash, which fails closed for root
-# (AT_SECURE == 0) and broke sudo make install-hooks -> generate-hooks.
+# (AT_SECURE == 0) and broke sudo make install-hooks -> reinstall-hooks.
 ifeq ($(shell id -u),0)
 ifeq ($(wildcard /bin/bash.real),)
 $(error /bin/bash.real missing: reinstall the shell guard (sudo make guard-refresh in WORKSPACE-GUARD))
@@ -64,7 +64,7 @@ help: ## Show this help
 .PHONY: preflight init install install-ci install-deps install-hooks sync
 preflight: ## Verify environment
 	@test -d "$(CI_DIR)" || { echo "ERROR: CI directory not found at $(CI_DIR)" >&2; exit 1; }
-	@test -f "$(CI_DIR)/scripts/generate-hooks" || { echo "ERROR: generate-hooks missing" >&2; exit 1; }
+	@test -f "$(CI_DIR)/scripts/reinstall-hooks" || { echo "ERROR: reinstall-hooks missing" >&2; exit 1; }
 	@echo "Preflight OK"
 
 init: ## Install system-level dependencies
@@ -82,7 +82,7 @@ install-deps: ## Install project dependencies
 	@:
 
 install-hooks: ## (Re)generate native git hooks
-	$(SCRIPT_BASH) $(CI_DIR)/scripts/generate-hooks
+	$(SCRIPT_BASH) $(CI_DIR)/scripts/reinstall-hooks
 
 sync: install-deps install-hooks ## Sync deps + reinstall hooks
 	@:

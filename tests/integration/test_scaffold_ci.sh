@@ -310,7 +310,7 @@ EOF
 
     grep -q 'makefile_contract.mk' "$consumer/Makefile" || { echo "missing contract include"; return 1; }
     grep -q 'CI_DIR' "$consumer/Makefile" || { echo "missing CI_DIR"; return 1; }
-    grep -q 'generate-hooks' "$consumer/Makefile" || { echo "missing generate-hooks ref"; return 1; }
+    grep -q 'reinstall-hooks' "$consumer/Makefile" || { echo "missing reinstall-hooks ref"; return 1; }
 }
 _run_test "scaffold_makefile: contract targets present" test_scaffold_makefile_contract
 

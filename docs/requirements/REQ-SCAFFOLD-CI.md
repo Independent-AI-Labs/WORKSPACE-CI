@@ -207,7 +207,7 @@ are independent and rerunnable. `scaffold-ci` does NOT call
 | FR-SC-7.1 | The generated `Makefile` MUST define all 10 mandatory targets from `lib/makefile_contract.mk`: `init`, `install`, `install-ci`, `install-hooks`, `sync`, `check`, `lint`, `type-check`, `test`, `clean`, `preflight`. |
 | FR-SC-7.2 | The generated `Makefile` MUST `-include $(CI_DIR)/lib/makefile_contract.mk` where `CI_DIR := $(abspath $(REPO_ROOT)/<REL_CI>)`. This provides `make contract-check` and validates the 10 targets' presence via `make -n`. |
 | FR-SC-7.3 | The language-specific targets (`lint`, `type-check`, `test`, `check-push`) MUST be vacuous pass targets with `@:` recipe bodies and `TODO` echo diagnostics. They MUST exit 0 so `make check` passes out-of-the-box on a brand-new project. |
-| FR-SC-7.4 | The `install-hooks` target MUST call `bash $(CI_DIR)/scripts/generate-hooks`. |
+| FR-SC-7.4 | The `install-hooks` target MUST call `$(SCRIPT_BASH) $(CI_DIR)/scripts/reinstall-hooks` so root-owned hooks are regenerated through the operator-safe path. |
 | FR-SC-7.5 | The `clean-precommit` target MUST call `bash $(CI_DIR)/scripts/cleanup-precommit`. |
 | FR-SC-7.6 | The generator MUST NOT generate `moon.yml` (per SPEC §1.3 -- out of scope). |
 | FR-SC-7.7 | The generated `Makefile` MUST include a `help` target that greps `## ` annotations and prints them, mirroring CI's own Makefile. |
