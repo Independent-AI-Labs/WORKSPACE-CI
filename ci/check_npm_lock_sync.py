@@ -25,6 +25,9 @@ from __future__ import annotations
 import argparse
 import glob
 import json
+import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Literal, NamedTuple, cast
@@ -83,6 +86,60 @@ class _SectionCtx(NamedTuple):
     key: str
     section: _Section
     packages: dict[str, LockEntry]
+
+
+def _validate_with_npm(root: Path, lock_path: Path) -> LockDrift | None:
+    """Use npm's resolver to catch transitive and resolved-version drift."""
+    npm = shutil.which("npm")
+    if npm is None:
+        boot_dir = os.environ.get("CI_BOOT_DIR", "")
+        if boot_dir:
+            for candidate in (
+                Path(boot_dir) / "bin/npm",
+                Path(boot_dir) / "node-env/bin/npm",
+            ):
+                if candidate.is_file() and os.access(candidate, os.X_OK):
+                    npm = str(candidate)
+                    break
+    if npm is None:
+        return LockDrift(str(lock_path), "npm executable not found for lock validation")
+
+    env = os.environ.copy()
+    boot_dir = os.environ.get("CI_BOOT_DIR", "")
+    if boot_dir:
+        boot_paths = (
+            str(Path(boot_dir) / "node-env/bin"),
+            str(Path(boot_dir) / "bin"),
+        )
+        env["PATH"] = os.pathsep.join((*boot_paths, env.get("PATH", "")))
+
+    try:
+        subprocess.run(
+            [
+                npm,
+                "ci",
+                "--dry-run",
+                "--ignore-scripts",
+                "--no-audit",
+                "--no-fund",
+            ],
+            cwd=root,
+            check=True,
+            timeout=120,
+            env=env,
+        )
+    except subprocess.CalledProcessError as exc:
+        return LockDrift(
+            str(lock_path),
+            f"npm ci --dry-run failed (exit {exc.returncode}); "
+            "see npm diagnostics above",
+        )
+    except OSError as exc:
+        return LockDrift(str(lock_path), f"npm lock validation could not run: {exc}")
+    except subprocess.TimeoutExpired:
+        return LockDrift(str(lock_path), "npm lock validation timed out")
+
+    return None
 
 
 def _load_json_dict(path: Path) -> object:
@@ -242,8 +299,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"No package-lock.json under {root}; nothing to check.")
         return 0
 
+    lock_path = root / "package-lock.json"
     print(f"Checking npm lockfile sync under {root}...")
     drift = find_drift(root)
+    if not drift:
+        npm_drift = _validate_with_npm(root, lock_path)
+        if npm_drift is not None:
+            drift.append(npm_drift)
     if drift:
         print(f"\n!!! PACKAGE LOCK DRIFT under {root} !!!")
         for issue in drift:

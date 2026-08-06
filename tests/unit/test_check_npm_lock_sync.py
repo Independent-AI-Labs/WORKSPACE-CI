@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+import ci.check_npm_lock_sync as npm_lock_sync
 from ci.check_npm_lock_sync import find_drift, find_workspace_dirs, main
 
 
@@ -31,7 +32,9 @@ def _make_repo(
     packages: dict = {"": root_entry}
     if resolved:
         packages["node_modules/@vitejs/plugin-react"] = {"version": lock_spec}
-    _write_json(tmp_path / "package-lock.json", {"lockfileVersion": 3, "packages": packages})
+    _write_json(
+        tmp_path / "package-lock.json", {"lockfileVersion": 3, "packages": packages}
+    )
     return tmp_path
 
 
@@ -45,7 +48,9 @@ class TestFindDrift:
 
     def test_lock_without_manifest_is_drift(self, tmp_path: Path) -> None:
         """A lockfile with no package.json is reported."""
-        _write_json(tmp_path / "package-lock.json", {"lockfileVersion": 3, "packages": {}})
+        _write_json(
+            tmp_path / "package-lock.json", {"lockfileVersion": 3, "packages": {}}
+        )
         drift = find_drift(tmp_path)
         assert len(drift) == 1
         assert "no package.json" in drift[0].message
@@ -54,7 +59,9 @@ class TestFindDrift:
         assert find_drift(_make_repo(tmp_path)) == []
 
     def test_spec_mismatch_detected(self, tmp_path: Path) -> None:
-        drift = find_drift(_make_repo(tmp_path, manifest_spec="6.0.5", lock_spec="6.0.4"))
+        drift = find_drift(
+            _make_repo(tmp_path, manifest_spec="6.0.5", lock_spec="6.0.4")
+        )
         assert any("6.0.5" in d.message and "6.0.4" in d.message for d in drift)
 
     def test_missing_resolved_entry_detected(self, tmp_path: Path) -> None:
@@ -79,7 +86,10 @@ class TestFindDrift:
 
     def test_workspace_manifest_checked(self, tmp_path: Path) -> None:
         root = _make_repo(tmp_path, workspaces=["web"])
-        _write_json(root / "web" / "package.json", {"name": "web", "devDependencies": {"vite": "8.0.0"}})
+        _write_json(
+            root / "web" / "package.json",
+            {"name": "web", "devDependencies": {"vite": "8.0.0"}},
+        )
         lock = json.loads((root / "package-lock.json").read_text())
         lock["packages"]["web"] = {"devDependencies": {"vite": "7.0.0"}}
         lock["packages"]["node_modules/vite"] = {"version": "7.0.0"}
@@ -94,7 +104,12 @@ class TestFindDrift:
         assert any("no entry in package-lock.json" in d.message for d in drift)
 
     def test_file_protocol_dep_skips_resolution(self, tmp_path: Path) -> None:
-        root = _make_repo(tmp_path, manifest_spec="file:../vendor/pkg", lock_spec="file:../vendor/pkg", resolved=False)
+        root = _make_repo(
+            tmp_path,
+            manifest_spec="file:../vendor/pkg",
+            lock_spec="file:../vendor/pkg",
+            resolved=False,
+        )
         assert find_drift(root) == []
 
     def test_no_packages_map_detected(self, tmp_path: Path) -> None:
@@ -130,8 +145,27 @@ class TestMain:
         assert main([str(tmp_path)]) == 0
         assert "nothing to check" in capsys.readouterr().out
 
-    def test_in_sync_exits_zero(self, tmp_path: Path) -> None:
+    def test_in_sync_exits_zero(self, tmp_path: Path, monkeypatch) -> None:
+        monkeypatch.setattr(
+            npm_lock_sync,
+            "_validate_with_npm",
+            lambda root, lock: None,
+        )
         assert main([str(_make_repo(tmp_path))]) == 0
+
+    def test_npm_resolver_drift_exits_one(
+        self, tmp_path: Path, monkeypatch, capsys
+    ) -> None:
+        monkeypatch.setattr(
+            npm_lock_sync,
+            "_validate_with_npm",
+            lambda root, lock: npm_lock_sync.LockDrift(
+                str(lock),
+                "npm ci --dry-run failed (exit 1): Invalid: lock file package drift",
+            ),
+        )
+        assert main([str(_make_repo(tmp_path))]) == 1
+        assert "npm ci --dry-run failed" in capsys.readouterr().out
 
     def test_drift_exits_one_with_fix_hint(self, tmp_path: Path, capsys) -> None:
         root = _make_repo(tmp_path, manifest_spec="6.0.5", lock_spec="6.0.4")
