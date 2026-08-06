@@ -346,8 +346,8 @@ check-push: ## Single-pass pre-push gate running ruff lint, mypy, shell unit tes
 # their BASH_SOURCE-relative suite loading and runs zero tests without
 # any error.
 _test-push-impl:
-	cd tests && $(SCRIPT_BASH) -c 'source ./run_tests_unit.sh'
-	cd tests && $(SCRIPT_BASH) -c 'source ./run_tests_integration.sh'
+	cd tests && source ./run_tests_unit.sh
+	cd tests && source ./run_tests_integration.sh
 	$(PYTEST) tests/unit --cov=ci --cov-report=term-missing --cov-fail-under=90 --tb=short
 	$(PYTEST) tests/integration --cov=ci --cov-report=term-missing --cov-fail-under=5 --tb=short
 	$(MAKE) -C web lint type-check test
