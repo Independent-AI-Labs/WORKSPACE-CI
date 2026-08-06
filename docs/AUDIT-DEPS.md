@@ -27,15 +27,13 @@ duplicate bootstrap release values.
 ## Secret-Scan Finding
 
 The umbrella VM hook can scan a parent Git root containing sibling consumer
-trees. A generated allowlist based on a nested consumer root cannot protect
-those sibling paths, and a permission failure can occur before the scanner can
-report a finding. The secret wrapper therefore stages only
-`git ls-files -co --exclude-standard` candidates into a temporary sparse tree
-and runs one Gitleaks process against that tree. Ignored directories are absent
-from the traversal regardless of Gitleaks path-allowlist behavior.
+trees. The secret wrapper must resolve Gitleaks from the CI owner root, generate
+its global allowlist from the actual scan root, and use Gitleaks' directory
+allowlist pruning before opening ignored paths. This keeps the scan as one
+direct `gitleaks dir .` process without copying or staging files.
 
-Gitleaks `8.22.0` or newer remains the minimum catalog floor for the deployed
-scanner, but version upgrades alone are not the traversal fix.
+Gitleaks `8.22.0` or newer is required for directory allowlist pruning. Version
+and tool-root resolution must both be correct for umbrella-root hooks.
 
 ## Dependency Checker Finding
 
@@ -56,5 +54,5 @@ checksums remain verified by the corresponding bootstrap scripts.
 scripts resolve pins from it and the dependency checker audits release
 freshness and feature floors. Entries declare their source kind, source, and
 version or channel; artifact checksums are retained where bootstrap downloads
-require them. Secret scanning uses a candidate-only temporary tree so ignored
-filesystem permissions cannot break an umbrella-root scan.
+require them. Secret scanning uses the actual scan root and a generated global
+allowlist; it does not copy or stage files.

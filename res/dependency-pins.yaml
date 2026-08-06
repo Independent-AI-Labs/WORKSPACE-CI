@@ -1,7 +1,7 @@
 # Canonical third-party artifact pins for CI bootstrap scripts.
 schema_version: 1
 uv:
-  version: "0.12.1"
+  version: 0.12.2
   source: "astral-sh/uv"
   source_kind: github_release
 rust:

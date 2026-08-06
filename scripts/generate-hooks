@@ -64,7 +64,22 @@ fi
 [[ -d "$_output_dir" ]] || mkdir -p "$_output_dir"
 
 _repo_root="$(git rev-parse --show-toplevel)"
-_ci_rel="$(ci_relative_path "$_repo_root" "$_CI_ROOT")"
+if [[ "$_repo_root" == "$_CI_ROOT" ]]; then
+    if [[ "$(basename "$_CI_ROOT")" == 'CI' ]]; then
+        _ci_rel='.'
+    elif [[ -f "$_CI_ROOT/../CI/lib/ci.sh" ]]; then
+        _ci_rel='../CI'
+    else
+        ci_fail "deployed CI missing: expected $_CI_ROOT/../CI"
+        exit 1
+    fi
+else
+    _ci_rel="$(ci_relative_path "$_repo_root" "$_CI_ROOT")"
+    if [[ ! -f "$_repo_root/$_ci_rel/lib/ci.sh" ]]; then
+        ci_fail "deployed CI missing: expected $_repo_root/$_ci_rel"
+        exit 1
+    fi
+fi
 
 # ── Tier resolution ───────────────────────────────────────────────────────
 # Resolve the workspace root by walking up from the CI dir. Then resolve
@@ -382,6 +397,12 @@ and re-run."
         w "ci_info \"Running: ${h_name}...\""
 
         # ── Execute ──────────────────────────────────────────────────────
+        # The CI repository's own config uses `source lib/checks.sh` as a
+        # template-friendly shorthand. Resolve that shorthand to the deployed
+        # CI copy so the development tree never validates itself with mutable
+        # check code. Consumer configs that already name ../CI are unchanged.
+        h_cmd="${h_cmd//source lib\/checks.sh/source \"\$PWD\/${_ci_rel}\/lib\/checks.sh\"}"
+
         if [[ "$_stage" == "commit-msg" ]]; then
             w "${h_cmd} \"\$1\" || { ci_fail \"$h_name\"; exit 1; }"
 

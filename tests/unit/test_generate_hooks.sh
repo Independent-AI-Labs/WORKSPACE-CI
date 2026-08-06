@@ -35,7 +35,7 @@ repos:
     hooks:
       - id: check-unstaged
         name: check-unstaged
-        entry: "bash -c 'source ../CI/lib/checks.sh && ci_check_unstaged'"
+        entry: "bash -c 'source lib/checks.sh && ci_check_unstaged'"
         language: system
         stages: [pre-commit]
         pass_filenames: false
@@ -74,7 +74,7 @@ test_gh_injects_path_bootstrap_into_bash_c_body() {
     local _out
     _out="$(bash "$_GH_SCRIPT" --dry-run 2>&1)"
 
-    grep -qF '"$BASH" -c '\''PATH="$_CI_HOOK_BOOT_PATH"; export PATH; source ../CI/lib/checks.sh && ci_check_unstaged'\''' <<< "$_out" \
+    grep -qF '"$BASH" -c '\''PATH="$_CI_HOOK_BOOT_PATH"; export PATH; source "$PWD/../CI/lib/checks.sh" && ci_check_unstaged'\''' <<< "$_out" \
         || { echo "missing PATH bootstrap in emitted -c body"; return 1; }
     return 0
 }
