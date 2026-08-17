@@ -7,6 +7,7 @@ readonly CANDIDATE=/opt/.workspace-ci.candidate
 readonly DEPLOYED=/opt/workspace-ci
 readonly LOCK=/run/lock/workspace-ci-deploy.lock
 readonly BRANCH=main
+readonly ATTRS="$SOURCE_ROOT/ci/deploy_immutability.py"
 published=0
 
 die() { printf 'deploy-ci: %s\n' "$*" >&2; exit 1; }
@@ -16,23 +17,19 @@ immutable() {
     /usr/bin/lsattr -d -- "$1" | awk '{print $1}' | grep -q i
 }
 
-unseal_tree() {
-    [[ -e "$1" ]] || return 0
-    /usr/bin/chattr -R -i -- "$1"
-}
-
 remove_candidate() {
     [[ -e "$CANDIDATE" ]] || return 0
     [[ ! -L "$CANDIDATE" && -d "$CANDIDATE" ]] || die "unsafe candidate object: $CANDIDATE"
     [[ $(stat -c %u "$CANDIDATE") -eq 0 ]] || die "candidate is not root-owned"
-    unseal_tree "$CANDIDATE"
+    /usr/bin/python3 "$ATTRS" unseal-candidate
     find "$CANDIDATE" -xdev -depth -delete
 }
 
 cleanup() {
-    local rc=$?
+    local status=$?
+    trap - EXIT INT TERM
     if [[ -d "$DEPLOYED" && ! -L "$DEPLOYED" ]] && ! immutable "$DEPLOYED"; then
-        if ! /usr/bin/chattr +i -- "$DEPLOYED"; then
+        if ! /usr/bin/python3 "$ATTRS" seal-deployed; then
             printf 'deploy-ci: failed to reseal %s during cleanup\n' "$DEPLOYED" >&2
         fi
     fi
@@ -41,7 +38,7 @@ cleanup() {
             printf 'deploy-ci: failed to remove candidate during cleanup\n' >&2
         fi
     fi
-    exit "$rc"
+    exit "$status"
 }
 trap cleanup EXIT INT TERM
 
@@ -62,16 +59,17 @@ owner=$(stat -c %U "$SOURCE_ROOT")
 [[ $owner != root ]] || die "source checkout must have a non-root owner"
 home=$(getent passwd "$owner" | cut -d: -f6)
 [[ -n "$home" ]] || die "cannot resolve source owner home"
-runuser=(/usr/sbin/runuser -u "$owner" -- env HOME="$home" GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' git)
+owner_env=(/usr/sbin/runuser -u "$owner" -- env HOME="$home")
+owner_git=("${owner_env[@]}" GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' git)
 
-[[ $("${runuser[@]}" -C "$SOURCE_ROOT" rev-parse --abbrev-ref HEAD) == "$BRANCH" ]] || die "source must be on main"
-[[ -z $("${runuser[@]}" -C "$SOURCE_ROOT" status --porcelain --untracked-files=all) ]] || die "source worktree is dirty"
-"${runuser[@]}" -C "$SOURCE_ROOT" fetch origin "$BRANCH"
-head=$("${runuser[@]}" -C "$SOURCE_ROOT" rev-parse HEAD)
-upstream=$("${runuser[@]}" -C "$SOURCE_ROOT" rev-parse "origin/$BRANCH")
+[[ $("${owner_git[@]}" -C "$SOURCE_ROOT" rev-parse --abbrev-ref HEAD) == "$BRANCH" ]] || die "source must be on main"
+[[ -z $("${owner_git[@]}" -C "$SOURCE_ROOT" status --porcelain --untracked-files=all) ]] || die "source worktree is dirty"
+"${owner_git[@]}" -C "$SOURCE_ROOT" fetch origin "$BRANCH"
+head=$("${owner_git[@]}" -C "$SOURCE_ROOT" rev-parse HEAD)
+upstream=$("${owner_git[@]}" -C "$SOURCE_ROOT" rev-parse "origin/$BRANCH")
 [[ "$head" == "$upstream" ]] || die "source HEAD must equal origin/main"
-tree=$("${runuser[@]}" -C "$SOURCE_ROOT" rev-parse 'HEAD^{tree}')
-remote=$("${runuser[@]}" -C "$SOURCE_ROOT" remote get-url origin)
+tree=$("${owner_git[@]}" -C "$SOURCE_ROOT" rev-parse 'HEAD^{tree}')
+remote=$("${owner_git[@]}" -C "$SOURCE_ROOT" remote get-url origin)
 
 # Clone Git objects, never writable worktree files. The fetched origin ref is
 # the reviewed upstream identity and root owns candidate construction.
@@ -81,16 +79,17 @@ git_root -C "$CANDIDATE" checkout --detach "$head"
 [[ $(git_root -C "$CANDIDATE" rev-parse 'HEAD^{tree}') == "$tree" ]] || die "candidate tree mismatch"
 [[ -z $(git_root -C "$CANDIDATE" ls-files -s | awk '$1 == "120000"') ]] || die "tracked symlinks are forbidden"
 
-make -C "$CANDIDATE" bootstrap
-make -C "$CANDIDATE" install-ci
-make -C "$CANDIDATE" check-push
+chown -R "$owner" "$CANDIDATE"
+"${owner_env[@]}" make -C "$CANDIDATE" bootstrap
+"${owner_env[@]}" make -C "$CANDIDATE" install-ci
+"${owner_env[@]}" make -C "$CANDIDATE" check-push
 
 chown -R root:root "$CANDIDATE"
 find "$CANDIDATE" -type d -exec chmod go-w {} +
 find "$CANDIDATE" -type f -exec chmod go-w {} +
 [[ -z $(find "$CANDIDATE" -xdev \( ! -user root -o -perm /022 \) -print -quit) ]] || die "candidate ownership or mode verification failed"
-/usr/bin/chattr -R +i -- "$CANDIDATE"
-/usr/bin/chattr -i -- "$CANDIDATE"
+/usr/bin/python3 "$ATTRS" seal-candidate
+/usr/bin/python3 "$ATTRS" unseal-candidate-root
 inventory=$(mktemp)
 find "$CANDIDATE" -xdev -mindepth 1 -print > "$inventory"
 while IFS= read -r path; do immutable "$path" || die "candidate descendant is mutable: $path"; done < "$inventory"
@@ -101,11 +100,11 @@ if [[ ! -e "$DEPLOYED" ]]; then
 else
     [[ ! -L "$DEPLOYED" && -d "$DEPLOYED" ]] || die "deployed path is not a real directory"
     [[ $(stat -c %u "$DEPLOYED") -eq 0 ]] || die "deployed path is not root-owned"
-    /usr/bin/chattr -i -- "$DEPLOYED"
+    /usr/bin/python3 "$ATTRS" unseal-deployed
     /usr/bin/python3 "$CANDIDATE/ci/atomic_exchange.py" "$CANDIDATE" "$DEPLOYED"
 fi
 published=1
-/usr/bin/chattr +i -- "$DEPLOYED"
+/usr/bin/python3 "$ATTRS" seal-deployed
 immutable "$DEPLOYED" || die "deployed root sealing failed"
 [[ $(git_root -C "$DEPLOYED" rev-parse HEAD) == "$head" ]] || die "final commit mismatch"
 [[ $(git_root -C "$DEPLOYED" rev-parse 'HEAD^{tree}') == "$tree" ]] || die "final tree mismatch"

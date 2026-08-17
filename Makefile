@@ -15,21 +15,6 @@ _OS := $(shell uname -s)
 # silicon, /usr/local on Intel. No probing: the mapping is authoritative.
 _HB_PREFIX := $(if $(filter arm64,$(shell uname -m)),/opt/homebrew,/usr/local)
 
-# Root detection MUST happen before the SHELL assignment below:
-# make's $(shell) honors the makefile's SHELL variable, so once SHELL
-# points at the guarded bash, every $(shell) probe fails closed for
-# root (AT_SECURE == 0) and returns empty. While SHELL is still the
-# stock /bin/sh, `id -u` answers truthfully for every caller.
-# Root recipes run through the sealed /bin/bash.real instead of the
-# guarded bash (root execs of the fcap guard fail closed by design).
-ifeq ($(shell id -u),0)
-# /bin/bash.real is REQUIRED for root recipes: the guarded bash fails
-# closed for root (AT_SECURE == 0). Missing file = broken host install.
-ifeq ($(wildcard /bin/bash.real),)
-$(error /bin/bash.real missing: reinstall the shell guard (sudo make guard-refresh in WORKSPACE-GUARD))
-endif
-SHELL := /bin/bash.real
-else
 # Homebrew bash 5.x preferred on macOS for nameref support; /bin/bash
 # otherwise. Two explicit branches, no chain.
 ifneq ($(wildcard $(_HB_PREFIX)/bin/bash),)
@@ -37,18 +22,7 @@ SHELL := $(_HB_PREFIX)/bin/bash
 else
 SHELL := /bin/bash
 endif
-endif
-# Interpreter for repo scripts invoked explicitly from recipes. Bare `bash`
-# resolves to the guarded /usr/bin/bash, which fails closed for root
-# (AT_SECURE == 0) and broke sudo make install-hooks -> cleanup-precommit.
-ifeq ($(shell id -u),0)
-ifeq ($(wildcard /bin/bash.real),)
-$(error /bin/bash.real missing: reinstall the shell guard (sudo make guard-refresh in WORKSPACE-GUARD))
-endif
-SCRIPT_BASH := /bin/bash.real
-else
 SCRIPT_BASH := bash
-endif
 
 export PATH := $(_HB_PREFIX)/opt/coreutils/libexec/gnubin:$(_HB_PREFIX)/opt/gnu-sed/libexec/gnubin:$(_HB_PREFIX)/opt/findutils/libexec/gnubin:$(_HB_PREFIX)/bin:$(PATH)
 

@@ -1,0 +1,13 @@
+from pathlib import Path
+
+
+def test_cleanup_disables_traps_before_mutating_paths() -> None:
+    script = (Path(__file__).parents[2] / "scripts/deploy-ci").read_text()
+    cleanup = script.split("cleanup() {", 1)[1].split("}\ntrap cleanup", 1)[0]
+    assert cleanup.index("trap - EXIT INT TERM") < cleanup.index('if [[ -d "$DEPLOYED"')
+
+
+def test_candidate_build_runs_as_source_owner() -> None:
+    script = (Path(__file__).parents[2] / "scripts/deploy-ci").read_text()
+    for target in ("bootstrap", "install-ci", "check-push"):
+        assert f'"${{owner_env[@]}}" make -C "$CANDIDATE" {target}' in script

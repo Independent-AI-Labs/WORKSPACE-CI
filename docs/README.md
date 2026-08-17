@@ -64,6 +64,7 @@ verify and seal the artifact, then install protected hooks as a separate step.
 | Document                                                                                                     | Scope                                     |
 | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
 | [`audits/SECURITY-AUDIT-2026-07-04.md`](audits/SECURITY-AUDIT-2026-07-04.md)                                 | Full-repo security audit (2026-07-04)     |
+| [`audits/AUDIT-BASH-REAL-EXECUTION-BOUNDARY-2026-08.md`](audits/AUDIT-BASH-REAL-EXECUTION-BOUNDARY-2026-08.md) | Diverted shell execution boundary audit   |
 | [`audits/WIKI-UX-AUDIT.md`](audits/WIKI-UX-AUDIT.md)                                                         | Wiki UX audit                             |
 | [`audits/AUDIT-card-unification-and-ast-extraction.md`](audits/AUDIT-card-unification-and-ast-extraction.md) | Card unification and AST extraction audit |
 

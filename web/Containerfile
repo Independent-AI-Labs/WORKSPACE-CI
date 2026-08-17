@@ -46,7 +46,6 @@ RUN set -eux \
     && echo "[wiki-extract] uv sync" \
     && uv sync --frozen \
     && echo "[wiki-extract] extract wiki data via make targets" \
-    && ln -s /bin/bash /bin/bash.real \
     && make extract-hook-sources extract-script-sources extract-swallow-source \
     && echo "[wiki-extract] done"
 

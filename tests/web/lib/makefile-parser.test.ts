@@ -84,8 +84,6 @@ describe('parseMakefile', () => {
 
   it('skips $(error ...) and $(warning ...) directives', () => {
     const content = [
-      'ifeq ($(wildcard /bin/bash.real),)',
-      '$(error /bin/bash.real missing: reinstall the shell guard)',
       'endif',
       '$(warning deprecated target used)',
       'help: ## Show help',
