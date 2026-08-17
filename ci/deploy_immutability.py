@@ -4,11 +4,11 @@ import subprocess
 import sys
 
 PATHS = {
-    "seal-candidate": ("-R", "+i", "/opt/.workspace-ci.candidate"),
-    "unseal-candidate": ("-R", "-i", "/opt/.workspace-ci.candidate"),
-    "unseal-candidate-root": ("-i", "/opt/.workspace-ci.candidate"),
-    "seal-deployed": ("+i", "/opt/workspace-ci"),
-    "unseal-deployed": ("-i", "/opt/workspace-ci"),
+    "seal-candidate": ("+i", "/opt/.workspace-ci.candidate", True),
+    "unseal-candidate": ("-i", "/opt/.workspace-ci.candidate", True),
+    "unseal-candidate-root": ("-i", "/opt/.workspace-ci.candidate", False),
+    "seal-deployed": ("+i", "/opt/workspace-ci", False),
+    "unseal-deployed": ("-i", "/opt/workspace-ci", False),
 }
 EXIT_USAGE = 2
 
@@ -17,7 +17,26 @@ def main() -> int:
     if os.geteuid() != 0 or len(sys.argv) != EXIT_USAGE or sys.argv[1] not in PATHS:
         print(f"usage: {sys.argv[0]} {'|'.join(PATHS)}", file=sys.stderr)
         return EXIT_USAGE
-    subprocess.run(("/usr/bin/chattr", *PATHS[sys.argv[1]]), check=True)
+    flag, path, recursive = PATHS[sys.argv[1]]
+    command = (
+        (
+            "/usr/bin/find",
+            path,
+            "-xdev",
+            "!",
+            "-type",
+            "l",
+            "-exec",
+            "/usr/bin/chattr",
+            flag,
+            "--",
+            "{}",
+            "+",
+        )
+        if recursive
+        else ("/usr/bin/chattr", flag, path)
+    )
+    subprocess.run(command, check=True)
     return 0
 
 

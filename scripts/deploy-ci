@@ -52,6 +52,7 @@ trap cleanup EXIT INT TERM
 owner=$(stat -c %U "$SOURCE_ROOT")
 [[ $owner != root ]] || die "source checkout must have a non-root owner"
 candidate_uid=$(id -u "$owner")
+owner_group=$(id -gn "$owner")
 home=$(getent passwd "$owner" | cut -d: -f6)
 [[ -n "$home" ]] || die "cannot resolve source owner home"
 owner_env=(/usr/sbin/runuser -u "$owner" -- env HOME="$home")
@@ -84,7 +85,19 @@ git_root -C "$CANDIDATE" checkout --detach "$head"
 [[ $(git_root -C "$CANDIDATE" rev-parse 'HEAD^{tree}') == "$tree" ]] || die "candidate tree mismatch"
 [[ -z $(git_root -C "$CANDIDATE" ls-files -s | awk '$1 == "120000"') ]] || die "tracked symlinks are forbidden"
 
-chown -R "$owner" "$CANDIDATE"
+install -d -o "$owner" -g "$owner_group" \
+    "$CANDIDATE/.boot-linux" \
+    "$CANDIDATE/.venv" \
+    "$CANDIDATE/.pytest_cache" \
+    "$CANDIDATE/.mypy_cache" \
+    "$CANDIDATE/.ruff_cache" \
+    "$CANDIDATE/node_modules" \
+    "$CANDIDATE/web/node_modules" \
+    "$CANDIDATE/web-components/node_modules" \
+    "$CANDIDATE/hitl/web/node_modules" \
+    "$CANDIDATE/target" \
+    "$CANDIDATE/hitl/backend/target" \
+    "$CANDIDATE/workspace_ci.egg-info"
 "${owner_env[@]}" make -C "$CANDIDATE" bootstrap
 "${owner_env[@]}" make -C "$CANDIDATE" install-ci
 "${owner_env[@]}" make -C "$CANDIDATE" check-push

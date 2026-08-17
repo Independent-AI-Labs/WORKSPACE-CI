@@ -47,63 +47,6 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $*"
 }
 
-# =============================================================================
-# Reset function - cleans corrupted Podman state while preserving volumes
-# =============================================================================
-reset_podman_state() {
-    log_warn "Resetting corrupted Podman state (volumes will be preserved)..."
-
-    # Kill any stuck container processes
-    pkill -9 conmon || test $? -eq 1
-    pkill -9 catatonit || test $? -eq 1
-    pkill -9 -f podman || test $? -eq 1
-
-    # Remove corrupted state files (but NOT volumes!)
-    rm -rf ~/.local/share/containers/storage/libpod
-    rm -rf ~/.local/share/containers/storage/overlay-containers
-    rm -rf ~/.local/share/containers/storage/db.sql
-
-    # Clear runtime state (stale netns and pause files cause "reexec: Permission denied")
-    rm -rf "/run/user/$(id -u)/containers"
-    rm -rf "/run/user/$(id -u)/libpod"
-    rm -rf "/run/user/$(id -u)/netns"
-    mkdir -p "/run/user/$(id -u)/containers"
-
-    log_info "Reset complete. Volumes at ~/.local/share/containers/storage/volumes/ preserved."
-}
-
-# =============================================================================
-# CLI argument parsing
-# =============================================================================
-DO_RESET=false
-
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --reset|-r)
-            DO_RESET=true
-            shift
-            ;;
-        --help|-h)
-            echo "Usage: $0 [OPTIONS]"
-            echo ""
-            echo "Options:"
-            echo "  --reset, -r    Reset corrupted Podman state before install (preserves volumes)"
-            echo "  --help, -h     Show this help message"
-            exit 0
-            ;;
-        *)
-            log_error "Unknown option: $1"
-            exit 1
-            ;;
-    esac
-done
-
-# Run reset if requested
-if [[ "$DO_RESET" == "true" ]]; then
-    reset_podman_state
-fi
-[[ "$(ci_sha256 "$PODMAN_TARBALL")" == "$PODMAN_SHA256" ]] || { log_error "Podman checksum mismatch"; exit 1; }
-
 # macOS: Homebrew podman + workspace podman-guard wrapper
 if [[ "$(uname -s)" == "Darwin" ]]; then
     log_info "Bootstrapping Podman on macOS via Homebrew..."

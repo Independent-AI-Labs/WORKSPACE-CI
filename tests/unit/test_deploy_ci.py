@@ -9,6 +9,8 @@ def test_cleanup_disables_traps_before_mutating_paths() -> None:
 
 def test_candidate_build_runs_as_source_owner() -> None:
     script = (Path(__file__).parents[2] / "scripts/deploy-ci").read_text()
+    assert 'chown -R "$owner" "$CANDIDATE"' not in script
+    assert 'install -d -o "$owner" -g "$owner_group"' in script
     for target in ("bootstrap", "install-ci", "check-push"):
         assert f'"${{owner_env[@]}}" make -C "$CANDIDATE" {target}' in script
 
