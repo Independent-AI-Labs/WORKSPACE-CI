@@ -207,7 +207,10 @@ class TestNormalizeConfigStem:
 
 class TestConfigPathEnvVar:
     def test_ci_prefix(self) -> None:
-        assert ci_paths.config_path_env_var("banned-words") == "CI_CONFIG_PATH_BANNED_WORDS"
+        assert (
+            ci_paths.config_path_env_var("banned-words")
+            == "CI_CONFIG_PATH_BANNED_WORDS"
+        )
 
     def test_guard_prefix(self) -> None:
         assert (

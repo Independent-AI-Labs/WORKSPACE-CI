@@ -1,82 +1,94 @@
-import { z } from 'zod'
+import { z } from "zod";
 
 const FeedItemSchema = z.object({
   id: z.string(),
   principal: z.string(),
   host: z.string(),
-  action: z.object({ display: z.string() }),
+  action: z.object({ display: z.string(), cwd: z.string() }),
   scope: z.string(),
-  tier: z.union([z.literal(1), z.literal(2)]),
   justification: z.string(),
   requestHash: z.string(),
   createdAt: z.string(),
   expiresAt: z.string(),
-})
+  state: z.enum(["pending", "approved", "denied", "expired", "cancelled"]),
+});
 
-const FeedSchema = z.object({ items: z.array(FeedItemSchema) })
+const FeedSchema = z.object({ items: z.array(FeedItemSchema) });
 
-export const RequestSummarySchema = FeedItemSchema
+export const RequestSummarySchema = FeedItemSchema;
 
-export type RequestSummary = z.infer<typeof FeedItemSchema>
+export type RequestSummary = z.infer<typeof FeedItemSchema>;
 
 export interface RelayClient {
-  getFeed(): Promise<RequestSummary[]>
-  getRequest(id: string): Promise<RequestSummary | null>
+  getFeed(): Promise<RequestSummary[]>;
+  getRequest(id: string): Promise<RequestSummary | null>;
   submitDecision(
     requestId: string,
-    decision: 'approve' | 'deny',
-  ): Promise<{ outcome: string }>
-  mintWsTicket(): Promise<{ ticket: string }>
+    requestHash: string,
+    decision: "approve" | "deny",
+  ): Promise<{ outcome: string }>;
+  mintWsTicket(): Promise<{ ticket: string }>;
 }
 
-/**
- * Typed relay client (NFR-3.2).
- *
- * When RELAY_BASE_URL is unset the client returns safe static defaults so the
- * scaffold builds and tests without a live relay. In production the
- * base URL is configured and all responses are validated against the
- * hitl-protocol schema.
- */
+function relayBaseUrl(): string {
+  const baseUrl = process.env.RELAY_BASE_URL;
+  if (!baseUrl) throw new Error("HITL relay is not configured");
+  return baseUrl;
+}
+
+async function relayJson(url: string, init?: RequestInit): Promise<unknown> {
+  const response = await fetch(url, { ...init, cache: "no-store" });
+  if (!response.ok)
+    throw new Error(`HITL relay request failed: ${response.status}`);
+  return response.json();
+}
+
 export function createRelayClient(): RelayClient {
   return {
     async getFeed() {
-      const baseUrl = process.env.RELAY_BASE_URL
-      if (!baseUrl) return []
-      const res = await fetch(`${baseUrl}/api/v1/feed`)
-      const json = await res.json()
-      const parsed = FeedSchema.parse(json)
-      return parsed.items
+      const json = await relayJson(`${relayBaseUrl()}/api/v1/feed`);
+      const parsed = FeedSchema.parse(json);
+      return parsed.items;
     },
 
     async getRequest(id) {
-      const baseUrl = process.env.RELAY_BASE_URL
-      if (!baseUrl) return null
-      const res = await fetch(`${baseUrl}/api/v1/requests/${encodeURIComponent(id)}`)
-      const json = await res.json()
-      return RequestSummarySchema.parse(json)
+      const json = await relayJson(
+        `${relayBaseUrl()}/api/v1/requests/${encodeURIComponent(id)}`,
+      );
+      return RequestSummarySchema.parse(json);
     },
 
-    async submitDecision(requestId, decision) {
-      const baseUrl = process.env.RELAY_BASE_URL
-      if (!baseUrl) return { outcome: decision }
-      const res = await fetch(
-        `${baseUrl}/api/v1/requests/${encodeURIComponent(requestId)}/decision`,
+    async submitDecision(requestId, requestHash, decision) {
+      const json = await relayJson(
+        `${relayBaseUrl()}/api/v1/requests/${encodeURIComponent(requestId)}/decision`,
         {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ decision }),
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ decision, request_hash: requestHash }),
         },
-      )
-      const json = await res.json()
-      return { outcome: String(json.outcome ?? decision) }
+      );
+      if (
+        !json ||
+        typeof json !== "object" ||
+        typeof (json as { outcome?: unknown }).outcome !== "string"
+      ) {
+        throw new Error("HITL relay returned an invalid decision outcome");
+      }
+      return { outcome: (json as { outcome: string }).outcome };
     },
 
     async mintWsTicket() {
-      const baseUrl = process.env.RELAY_BASE_URL
-      if (!baseUrl) return { ticket: 'dev-ticket' }
-      const res = await fetch(`${baseUrl}/api/v1/ws-ticket`, { method: 'POST' })
-      const json = await res.json()
-      return { ticket: String(json.ticket) }
+      const json = await relayJson(`${relayBaseUrl()}/api/v1/ws-ticket`, {
+        method: "POST",
+      });
+      if (
+        !json ||
+        typeof json !== "object" ||
+        typeof (json as { ticket?: unknown }).ticket !== "string"
+      ) {
+        throw new Error("HITL relay returned an invalid websocket ticket");
+      }
+      return { ticket: (json as { ticket: string }).ticket };
     },
-  }
+  };
 }

@@ -4,21 +4,21 @@ Team workflow for creating and reviewing Mermaid architecture diagrams in
 any repo README or docs. Not a user-facing tutorial: a checklist for
 contributors and agents.
 
-Canonical path: `projects/CI/workflows/WORKFLOW-CREATING-DIAGRAMS.md`
+Canonical path: `/opt/workspace-ci/workflows/WORKFLOW-CREATING-DIAGRAMS.md`
 
 ## When to diagram
 
 **One diagram = one message.** Stop when a second concern appears:
 
-| Concern | Diagram type | Typical doc section |
-|---------|--------------|---------------------|
-| Who talks to whom at system scope | System context | Architecture / overview |
-| How one unit of work flows through components | Request or processing path | Components, plugins, pipeline |
-| Where logs or events land after processing | Telemetry and logging | Persistence, observability |
-| Metrics export and dashboard read paths | Metrics and dashboards | Operations, monitoring |
-| Config render, seed, and live state | Control plane | Configuration, deployment |
-| Auth or policy decision logic | Decision flow | Security, key management |
-| Which variants ship in this repo | Sample deployments table | Architecture (table, not diagram) |
+| Concern                                       | Diagram type               | Typical doc section               |
+| --------------------------------------------- | -------------------------- | --------------------------------- |
+| Who talks to whom at system scope             | System context             | Architecture / overview           |
+| How one unit of work flows through components | Request or processing path | Components, plugins, pipeline     |
+| Where logs or events land after processing    | Telemetry and logging      | Persistence, observability        |
+| Metrics export and dashboard read paths       | Metrics and dashboards     | Operations, monitoring            |
+| Config render, seed, and live state           | Deployment                 | Configuration, deployment         |
+| Auth or policy decision logic                 | Decision flow              | Security, key management          |
+| Which variants ship in this repo              | Sample deployments table   | Architecture (table, not diagram) |
 
 If you need two messages, use two diagrams (or diagram + table). Do not merge
 context, deployment, data flow, and observability on one canvas.
@@ -29,12 +29,12 @@ Diagrams belong in the **section that owns the concern**, immediately before or
 after the prose/tables they illustrate. Readers should encounter the diagram
 while reading about that topic, not in a single "diagram gallery" block.
 
-| Do | Don't |
-|----|-------|
-| Put the path diagram in the section that owns the pipeline | Stack numbered diagrams 1-5 under Architecture |
-| Put the telemetry diagram above the table it explains | Repeat every flow in a single "How it works" essay |
-| Put the metrics diagram in the monitoring section | Number diagrams globally across the doc |
-| One document-wide legend at the first diagram | Repeat the legend before every diagram |
+| Do                                                         | Don't                                              |
+| ---------------------------------------------------------- | -------------------------------------------------- |
+| Put the path diagram in the section that owns the pipeline | Stack numbered diagrams 1-5 under Architecture     |
+| Put the telemetry diagram above the table it explains      | Repeat every flow in a single "How it works" essay |
+| Put the metrics diagram in the monitoring section          | Number diagrams globally across the doc            |
+| One document-wide legend at the first diagram              | Repeat the legend before every diagram             |
 
 Cross-link from overview sections with short pointer lists to section anchors,
 not a diagram inventory.
@@ -48,7 +48,7 @@ Mapped to [C4](https://c4model.com/) and
 
 - **Audience:** anyone opening the repo
 - **Nodes:** clients, the documented system, external dependencies
-- **Exclude:** internal plugin/module names, control-plane stores, observability sinks
+- **Exclude:** internal plugin/module names and observability sinks
 - **Budget:** ≤7 nodes
 
 ### Request or processing path
@@ -76,7 +76,7 @@ Mapped to [C4](https://c4model.com/) and
 - **Budget:** ≤6 nodes
 - **Dashboard to datastore:** dashed, labeled `queries` or `SQL queries`; not a solid write
 
-### Control plane
+### Deployment
 
 - **Audience:** deployers and config editors
 - **Message:** template or source to seed to live runtime config
@@ -125,10 +125,10 @@ flowchart TB
 
 ## Arrow semantics
 
-| Style | Meaning |
-|-------|---------|
-| Solid `-->` | Runtime request/response or data **write** path |
-| Dashed `-.->` | Config, lookup, control plane, **read-only** queries |
+| Style         | Meaning                                           |
+| ------------- | ------------------------------------------------- |
+| Solid `-->`   | Runtime request/response or data **write** path   |
+| Dashed `-.->` | Config, lookup, deployment, **read-only** queries |
 
 Rules:
 
@@ -142,14 +142,14 @@ first diagram in the document.
 
 ## Mermaid and markdown hygiene
 
-| Issue | Fix |
-|-------|-----|
-| Empty diagram in preview | Verify opening ` ```mermaid ` and closing ` ``` ` are on **their own lines** with no extra backticks inside the block |
-| Nested backticks in assistant/chat citations | Never wrap a mermaid block inside another fenced code block when editing |
-| Unicode em-dash (U+2014) or en-dash (U+2013) | CI `check-banned-words` rejects them; use `:`, `,`, or ASCII `-` |
-| Request path + telemetry on one canvas | Split: request spine ends at upstream; telemetry starts at upstream response |
-| Metrics only in prose | Add a metrics diagram in the monitoring section |
-| Control plane only in prose | Add a control-plane diagram in the configuration section |
+| Issue                                        | Fix                                                                                                                   |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Empty diagram in preview                     | Verify opening ` ```mermaid ` and closing ` ``` ` are on **their own lines** with no extra backticks inside the block |
+| Nested backticks in assistant/chat citations | Never wrap a mermaid block inside another fenced code block when editing                                              |
+| Unicode em-dash (U+2014) or en-dash (U+2013) | CI `check-banned-words` rejects them; use `:`, `,`, or ASCII `-`                                                      |
+| Request path + telemetry on one canvas       | Split: request spine ends at upstream; telemetry starts at upstream response                                          |
+| Metrics only in prose                        | Add a metrics diagram in the monitoring section                                                                       |
+| Implementation only in prose                 | Add an implementation diagram in the configuration section                                                            |
 
 Validate fence pairing after edits: count ` ```mermaid ` open/close pairs in
 the edited file (each block must end with a lone ` ``` ` line on its own).
@@ -188,20 +188,20 @@ When asked to create or edit architecture diagrams:
 
 ## Worked example: WORKSPACE-GATEWAY
 
-*Illustrates the rules above. Do not treat Gateway section names or components
-as requirements for other repos.*
+_Illustrates the rules above. Do not treat Gateway section names or components
+as requirements for other repos._
 
 ### How that repo mapped concerns to sections
 
-| Concern | Section in WORKSPACE-GATEWAY README |
-|---------|-------------------------------------|
-| System context | Architecture |
-| Request path (one federated route) | Plugins |
-| Telemetry (ClickHouse ingest) | Configuration / ClickHouse Tables |
-| Metrics (Prometheus, Grafana queries) | Configuration / Grafana Dashboards |
-| Control plane (etcd, Admin API) | Configuration / Routes and config |
-| Key resolution | Key Management |
-| Sample routes | Architecture table |
+| Concern                               | Section in WORKSPACE-GATEWAY README |
+| ------------------------------------- | ----------------------------------- |
+| System context                        | Architecture                        |
+| Request path (one federated route)    | Plugins                             |
+| Telemetry (ClickHouse ingest)         | Configuration / ClickHouse Tables   |
+| Metrics (Prometheus, Grafana queries) | Configuration / Grafana Dashboards  |
+| Deployment (etcd, Admin API)          | Configuration / Routes and config   |
+| Key resolution                        | Key Management                      |
+| Sample routes                         | Architecture table                  |
 
 ### Product-specific diagram habits (Gateway only)
 
@@ -217,14 +217,14 @@ Further reading in that repo:
 
 ### Anti-patterns from past Gateway README edits
 
-| Anti-pattern | Fix |
-|--------------|-----|
-| All flow diagrams under Architecture | Distribute to Plugins, Configuration, Key Management |
-| Numbered diagram gallery (Diagram 1-5) | Descriptive headings in owning sections |
-| One canvas with routes + plugins + etcd + Vector + Grafana | Split into context + request + telemetry + metrics + control plane |
-| Request path diagram includes ClickHouse/Vector branches | Request path in Plugins; telemetry in Configuration |
-| Naming one vendor as headline upstream in a multi-provider doc | Generic "Cloud LLM APIs" node; vendor in sample table |
-| `### Current deployment (this repo)` | `### Sample deployments in this repo` |
-| `Upstream today` column | `Sample upstream` |
-| `Grafana --> ClickHouse` solid arrow | Dashed `-.->|SQL queries|` |
-| Three route nodes fanning from Clients | One route in request-path diagram; others in table |
+| Anti-pattern                                                   | Fix                                                             |
+| -------------------------------------------------------------- | --------------------------------------------------------------- |
+| All flow diagrams under Architecture                           | Distribute to Plugins, Configuration, Key Management            |
+| Numbered diagram gallery (Diagram 1-5)                         | Descriptive headings in owning sections                         |
+| One canvas with routes + plugins + etcd + Vector + Grafana     | Split into context + request + telemetry + metrics + deployment |
+| Request path diagram includes ClickHouse/Vector branches       | Request path in Plugins; telemetry in Configuration             |
+| Naming one vendor as headline upstream in a multi-provider doc | Generic "Cloud LLM APIs" node; vendor in sample table           |
+| `### Current deployment (this repo)`                           | `### Sample deployments in this repo`                           |
+| `Upstream today` column                                        | `Sample upstream`                                               |
+| `Grafana --> ClickHouse` solid arrow                           | Dashed `-.->                                                    | SQL queries | `   |
+| Three route nodes fanning from Clients                         | One route in request-path diagram; others in table              |

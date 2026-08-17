@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 # generate-hooks: Generate native git hooks from .pre-commit-config.yaml.
-# Replaces the pre-commit Python package with zero-dependency bash hooks.
-#
-# Usage: generate-hooks [--config PATH] [--output-dir PATH] [--dry-run]
 set -euo pipefail
 
 _SELF="${BASH_SOURCE[0]:-$0}"
@@ -10,461 +7,61 @@ case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
 _SCRIPT_DIR="$(cd "$(dirname "$_SELF")" && pwd)"
 _CI_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
 if ! source "$_CI_ROOT/lib/ci.sh"; then
-    echo "ERROR: failed to source $_CI_ROOT/lib/ci.sh" >&2
-    exit 2
+    printf 'generate-hooks: failed to load lib/ci.sh\n' >&2
+    exit 1
 fi
-# checks_quality.sh provides ci_resolve_tier and ci_autocreate_project_enforcement.
-# Sourced here (not via checks.sh) so generate-hooks can run without the full
-# check-function surface: keeps the bootstrap minimal.
 if ! source "$_CI_ROOT/lib/checks_quality.sh"; then
-    echo "ERROR: failed to source $_CI_ROOT/lib/checks_quality.sh" >&2
-    exit 2
+    printf 'generate-hooks: failed to load lib/checks_quality.sh\n' >&2
+    exit 1
 fi
 
-# ── Defaults ──────────────────────────────────────────────────────────────
 _config=".pre-commit-config.yaml"
 _output_dir=""
 _dry_run=0
-
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --config)     _config="$2"; shift 2 ;;
+        --config) _config="$2"; shift 2 ;;
         --output-dir) _output_dir="$2"; shift 2 ;;
-        --dry-run)    _dry_run=1; shift ;;
-        -h|--help)
-            echo "Usage: generate-hooks [--config PATH] [--output-dir PATH] [--dry-run]"
-            echo ""
-            echo "Generate native git hooks from .pre-commit-config.yaml."
-            echo "Only repo:local / language:system hooks are supported."
-            exit 0
-            ;;
+        --dry-run) _dry_run=1; shift ;;
         *) ci_fail "Unknown option: $1"; exit 1 ;;
     esac
 done
-
 [[ -f "$_config" ]] || { ci_fail "Config not found: $_config"; exit 1; }
+[[ -n "$_output_dir" ]] || _output_dir="$(git rev-parse --git-dir)/hooks"
+mkdir -p "$_output_dir"
 
-# ── Best bash shebang ─────────────────────────────────────────────────────
-# Generated hooks source lib/ci.sh which uses `local -n` namerefs (bash 4.3+).
-# macOS ships bash 3.2 at /bin/bash, so prefer Homebrew bash 5.x when present.
-# Check /opt/homebrew (Apple Silicon) then /usr/local (Intel); else env bash.
-_ci_best_bash="#!/usr/bin/env bash"
-for _hb in /opt/homebrew/bin/bash /usr/local/bin/bash; do
-    if [[ -x "$_hb" ]] && "$_hb" --version | grep -qE 'bash, version [5-9]\.'; then
-        _ci_best_bash="#!$_hb"
-        break
-    fi
-done
-
-# ── Paths ─────────────────────────────────────────────────────────────────
-if [[ -z "$_output_dir" ]]; then
-    _git_dir="$(git rev-parse --git-dir)" || { ci_fail "Not a git repo"; exit 1; }
-    _output_dir="$_git_dir/hooks"
-fi
-[[ -d "$_output_dir" ]] || mkdir -p "$_output_dir"
-
-_repo_root="$(git rev-parse --show-toplevel)"
-if [[ "$_repo_root" == "$_CI_ROOT" ]]; then
-    if [[ "$(basename "$_CI_ROOT")" == 'CI' ]]; then
-        _ci_rel='.'
-    elif [[ -f "$_CI_ROOT/../CI/lib/ci.sh" ]]; then
-        _ci_rel='../CI'
-    else
-        ci_fail "deployed CI missing: expected $_CI_ROOT/../CI"
-        exit 1
-    fi
-else
-    _ci_rel="$(ci_relative_path "$_repo_root" "$_CI_ROOT")"
-    if [[ ! -f "$_repo_root/$_ci_rel/lib/ci.sh" ]]; then
-        ci_fail "deployed CI missing: expected $_repo_root/$_ci_rel"
-        exit 1
-    fi
-fi
-
-# ── Tier resolution ───────────────────────────────────────────────────────
-# Resolve the workspace root by walking up from the CI dir. Then resolve
-# this consumer's tier via
-# the project_enforcement.yaml registry (autocreated from template if
-# missing).
-_workspace_root="$(cd "$_CI_ROOT/../.." && pwd)"
-_registry=""
-if [[ -d "$_workspace_root/$CI_BOOT_NAME" ]]; then
-    _reg_rc=0
-    _registry="$(ci_autocreate_project_enforcement "$_workspace_root")" || _reg_rc=$?
-fi
-_repo_rel=""
-if [[ "$_repo_root" == "$_workspace_root"* ]]; then
-    _repo_rel="${_repo_root#"$_workspace_root"/}"
-    [[ "$_repo_rel" == "$_repo_root" ]] && _repo_rel="."
-fi
-_tier="$(ci_resolve_tier "$_repo_rel" "$_registry")"
-
-if [[ "$_tier" == "vendored" ]]; then
-    ci_info "Project tier=vendored: skipping hook installation."
-    exit 0
-fi
-
-ci_info "Project tier=$_tier"
-
-# ── Parse config ──────────────────────────────────────────────────────────
 _hooks="$(awk -f "$_CI_ROOT/lib/parse_precommit_config.awk" "$_config")"
-if [[ -z "$_hooks" ]]; then
-    ci_warn "No hooks found in $_config"
-    exit 0
-fi
+[[ -n "$_hooks" ]] || exit 0
 
-# ── Helper: append line to temp file ──────────────────────────────────────
-_tmp=""
-w() { printf '%s\n' "$1" >> "$_tmp"; }
-
-# ── Generate each stage ──────────────────────────────────────────────────
 for _stage in pre-commit commit-msg pre-push; do
-    _awk_rc=0
-    _stage_hooks="$(printf '%s\n' "$_hooks" | awk -F'\034' -v s="$_stage" '$4 == s')" || _awk_rc=$?
-    [[ -z "$_stage_hooks" ]] && continue
-
+    _stage_hooks="$(printf '%s\n' "$_hooks" | awk -F'\034' -v s="$_stage" '$4 == s')"
+    [[ -n "$_stage_hooks" ]] || continue
     _tmp="$(mktemp)"
-
-    # ── Header ────────────────────────────────────────────────────────────
-    cat > "$_tmp" << EOF
-${_ci_best_bash}
-# AUTO-GENERATED by ${_ci_rel}/scripts/generate-hooks: do not edit.
-# Source: $_config | $(date -u +%Y-%m-%dT%H:%M:%SZ)
-# Re-generate: ${_ci_rel}/scripts/generate-hooks
-set -euo pipefail
-
-# Capability scrub (audit C5): the workspace guard loans ambient and
-# inheritable capabilities (CAP_DAC_OVERRIDE et al.) to git so it can
-# write root-owned .git trees. Without this scrub those caps propagate
-# into everything this hook spawns (pytest, node, repo scripts), letting
-# agent code rewrite root-owned hooks, projects/CI, and exemption files.
-# Re-exec once with inheritable and ambient caps cleared; git commands
-# run later re-acquire their own loan from the guard wrapper per call.
-if [[ -z "\${_CI_CAPS_SCRUBBED:-}" ]]; then
-    if _setpriv="\$(command -v setpriv)"; then
-        export _CI_CAPS_SCRUBBED=1
-        exec setpriv --inh-caps=-all --ambient-caps=-all bash "\$0" "\$@"
-    fi
-fi
-
-# PATH sanitize (hook-git resolution): git exports GIT_EXEC_PATH and prepends
-# its exec dir (/usr/lib/git-core) to PATH for hook children. That dir holds
-# the VANILLA distro git with no file capabilities: any 'git' resolved from
-# there bypasses the workspace guard, never receives the CAP_DAC_OVERRIDE
-# loan, and fails writing the root-owned .git tree (EACCES on
-# .git/index.lock) -- this broke check-unstaged's 'git add -A'. Filter the
-# exec-path entry out so every hook-spawned git resolves to the guard
-# wrapper (/usr/bin/git) and re-acquires the loan per call, at any depth.
-_git_exec_path="\$(command git --exec-path)"
-if [[ -n "\$_git_exec_path" ]]; then
-    _sanitized_path=""
-    _saved_ifs="\$IFS"
-    IFS=':'
-    for _p in \$PATH; do
-        [[ "\$_p" == "\$_git_exec_path" ]] && continue
-        _sanitized_path="\${_sanitized_path:+\$_sanitized_path:}\$_p"
-    done
-    IFS="\$_saved_ifs"
-    export PATH="\$_sanitized_path"
-fi
-
-_ROOT="\$(git rev-parse --show-toplevel)"
-cd "\$_ROOT"
-if ! source "\${_ROOT}/${_ci_rel}/lib/ci.sh"; then
-    echo "ERROR: failed to source \${_ROOT}/${_ci_rel}/lib/ci.sh" >&2
-    exit 2
-fi
-# Prepend boot dirs discovered by the boot-path resolver.
-# ci_resolve_boot_path walks up from \$_ROOT, finds each \$CI_BOOT_NAME
-# dir (python-env/bin and bin), and accumulates them with
-# moon.yml::project.inherited_boot_dirs entries. The result is
-# prepended to \$PATH so hooks resolve tools from the nearest boot dir
-# first, walking up to workspace root.
-_boot_path="\$(ci_resolve_boot_path "\$_ROOT")"
-[[ -n "\$_boot_path" ]] && export PATH="\${_boot_path}:\$PATH"
-# Export the post-prepend PATH under the guard-preserved _CI_ prefix.
-# The workspace shell guard resets PATH on EVERY exec -- including the
-# "\$BASH" -c check invocations below -- which would drop the boot-dir
-# prepend and leave boot-provided tools (gitleaks, cargo) unresolvable
-# inside child checks. Child -c bodies re-establish PATH from this var
-# (see the PATH bootstrap injected by the generator per entry).
-_CI_HOOK_BOOT_PATH="\$PATH"
-export _CI_HOOK_BOOT_PATH
-EOF
-
-    # quality_exceptions.yaml preflight: ALWAYS enforced, all tiers.
-    # Hard-fails the hook chain if the file is missing: the contract says
-    # every project must have this file at its root, even if
-    # exceptions: [] is empty. Runs at the very top of every hook so the
-    # error is the first thing the user sees.
-        w ''
-    w '# === quality_exceptions.yaml preflight (mandatory) ==='
-        w 'if [[ ! -f "$_ROOT/quality_exceptions.yaml" ]]; then'
-        w '    ci_fail "quality_exceptions.yaml missing at $_ROOT"'
-        w "    echo \"  Fix: copy \${_ROOT}/${_ci_rel}/templates/quality_exceptions.template.yaml\""
-        w '    echo "       to $_ROOT/quality_exceptions.yaml and replace __PROJECT_NAME__."'
-        w '    exit 1'
-        w 'fi'
-
-    # Exemption-file compliance: ALWAYS enforced, all tiers, every stage.
-    # Hard-fails if any file listed in the CI canonical manifest
-    # (config/exemption_files.yaml) is missing or not root-owned. The
-    # marker comment lets check-required-hooks-present
-    # verify this built-in block survived rendering.
-        w ''
-        w '# === exemption-file compliance (mandatory) ==='
-        w '# CI-BUILTIN-EXEMPTION-COMPLIANCE'
-        w '_exemptions_lib="$_ROOT/'"${_ci_rel}"'/lib/ci_exemptions.sh"'
-        w '_exemptions_manifest="$_ROOT/'"${_ci_rel}"'/config/exemption_files.yaml"'
-        w 'if [[ ! -f "$_exemptions_lib" || ! -f "$_exemptions_manifest" ]]; then'
-        w '    ci_fail "CI exemption infrastructure missing (lib/ci_exemptions.sh or config/exemption_files.yaml)"'
-        w '    exit 1'
-        w 'fi'
-        w 'if ! source "$_exemptions_lib"; then'
-        w '    ci_fail "failed to source $_exemptions_lib"'
-        w '    exit 1'
-        w 'fi'
-        w '_exemption_fail=0'
-        w 'for _rel in $(sed -n "s/^  - path: //p" "$_exemptions_manifest"); do'
-        w '    _exemption_state="$(ci_exemption_file_state "$_ROOT/$_rel")"'
-        w '    if [[ "$_exemption_state" != "ok" ]]; then'
-        w '        ci_fail "exemption file not compliant: $_rel (state: $_exemption_state)"'
-        w '        _exemption_fail=1'
-        w '    fi'
-        w 'done'
-        w 'if [[ "$_exemption_fail" -eq 1 ]]; then'
-        w "    echo \"  Fix: files must be root-owned regular files; edit via 'sudo workspace-yaml-edit'\""
-        w '    exit 1'
-        w 'fi'
-
-    # CI-repo catalog provenance: in the CI work repo itself (detected by
-    # scripts/generate-hooks at the project root), EVERY config/*.yaml is
-    # policy: catalogs and schemas included. Agent-owned catalogs are a
-    # self-gate-weakening hole, so all of them must be root-owned regular
-    # files, edited only via the root-gated yaml editor.
-        w ''
-        w '# === CI catalog provenance (CI repo only, mandatory) ==='
-        w '# CI-BUILTIN-CATALOG-PROVENANCE'
-        w 'if [[ -f "$_ROOT/scripts/generate-hooks" && -d "$_ROOT/config" ]]; then'
-        w '    _catalog_fail=0'
-        w '    for _catalog in "$_ROOT"/config/*.yaml; do'
-        w '        [[ -e "$_catalog" ]] || continue'
-        w '        _catalog_state="$(ci_exemption_file_state "$_catalog")"'
-        w '        if [[ "$_catalog_state" != "ok" ]]; then'
-        w '            ci_fail "CI catalog not compliant: ${_catalog#$_ROOT/} (state: $_catalog_state)"'
-        w '            _catalog_fail=1'
-        w '        fi'
-        w '    done'
-        w '    if [[ "$_catalog_fail" -eq 1 ]]; then'
-        w "        echo \"  Fix: chown root:root config/*.yaml; edit via 'sudo workspace-yaml-edit'\""
-        w '        exit 1'
-        w '    fi'
-        w 'fi'
-
-    # Compliance-report preamble (pre-commit only, non-blocking).
-    # Always runs the compliance audit at the top of every commit
-    # so the developer sees the current tier/violations before the hook
-    # chain proceeds. Never blocks: the report is advisory.
-    if [[ "$_stage" == "pre-commit" ]]; then
-        w ''
-        w '# === CI compliance report (advisory, non-blocking) ==='
-        w "_compliance_script=\"\${_ROOT}/${_ci_rel}/scripts/compliance-report\""
-        w 'if [[ -x "$_compliance_script" ]]; then'
-        w '    _compliance_rc=0'
-        w '    _compliance_output="$("$_compliance_script" "$_ROOT" 2>&1)" || _compliance_rc=$?'
-        w '    if echo "$_compliance_output" | grep -qE "^FAILED|violation\\(s\\)"; then'
-        w '        printf "\\n\\033[0;31m═══ CI COMPLIANCE (advisory, does not block commit) ═══\\033[0m\\n"'
-        w '        printf "\\033[0;31m%s\\033[0m\\n" "$_compliance_output"'
-        w '        printf "\\033[0;31m═══════════════════════════════════════════════════════════\\033[0m\\n\\n"'
-        w '    else'
-        w '        printf "\\n\\033[0;32m═══ CI COMPLIANCE ═══\\033[0m\\n"'
-        w '        printf "%s\\n\\n" "$_compliance_output"'
-        w '    fi'
-        w 'fi'
-    fi
-
-    # Staged files list (pre-commit only)
-    if [[ "$_stage" == "pre-commit" ]]; then
-        w ''
-        w '_STAGED="$(git diff --cached --name-only --diff-filter=ACMR)"'
-    fi
-
-    # ── Emit each hook ────────────────────────────────────────────────────
-    while IFS=$'\034' read -r h_id h_name h_entry h_stage h_pass_fn h_always h_files h_exclude h_args h_types_or; do
-        [[ -z "$h_id" ]] && continue
-        h_vid="${h_id//-/_}"
-
-        # Full command = entry + args
-        # Replace `bash -c` with `"$BASH" -c` so child shells use the same
-        # bash as the hook's shebang (Homebrew bash 5.x on macOS), not the
-        # system /bin/bash 3.2 which lacks nameref support.
-        # Inject a PATH bootstrap inside the -c body: the workspace shell
-        # guard resets PATH on every exec (including these "$BASH" -c
-        # invocations), so without this the header's boot-dir prepend is
-        # lost and boot-provided tools (gitleaks, cargo) are unresolvable
-        # inside the check. The bootstrap must live inside the -c text:
-        # an env-prefix assignment on the invocation would be scrubbed by
-        # the guard before the child ever reads it. _CI_HOOK_BOOT_PATH is
-        # exported by the hook header and survives the guard's env scrub
-        # (_CI_ allow-list prefix).
-        _bc_pfx="bash -c '"
-        if [[ "$h_entry" == "$_bc_pfx"* ]]; then
-            h_cmd="${_bc_pfx}PATH=\"\$_CI_HOOK_BOOT_PATH\"; export PATH; ${h_entry#"$_bc_pfx"}"
-        else
-            h_cmd="$h_entry"
-        fi
-        h_cmd="${h_cmd//bash -c/\"\$BASH\" -c}"
-        [[ -n "$h_args" ]] && h_cmd="$h_cmd $h_args"
-
-        # If a hook has an empty entry (e.g. when .pre-commit-config.yaml
-        # references an upstream pre-commit-hooks repo whose entries
-        # this generator does not resolve), refuse to emit the hook.
-        if [[ -z "${h_entry// /}" ]]; then
-            ci_fail "Hook '$h_id' has empty entry: cannot generate. \
-Possible causes: (a) the .pre-commit-config.yaml references an upstream \
-pre-commit-hooks repo this generator does not resolve; \
-(b) a YAML parse glitch dropped the entry. \
-Fix the config (move to a local 'repo: local' entry with a real entry: command) \
-and re-run."
-            exit 1
-        fi
-
-        # Convert types_or to a files regex (extension-based matching)
-        if [[ -n "$h_types_or" ]]; then
-            _type_exts=()
-            for _type in $h_types_or; do
-                case "$_type" in
-                    javascript) _type_exts+=('\.(js|mjs|cjs)$') ;;
-                    jsx)        _type_exts+=('\.jsx$') ;;
-                    ts)         _type_exts+=('\.(ts|mts|cts)$') ;;
-                    tsx)        _type_exts+=('\.tsx$') ;;
-                    css)        _type_exts+=('\.css$') ;;
-                    json)       _type_exts+=('\.json$') ;;
-                    markdown)   _type_exts+=('\.md$') ;;
-                    yaml)       _type_exts+=('\.ya?ml$') ;;
-                    python)     _type_exts+=('\.py$') ;;
-                    rust)       _type_exts+=('\.rs$') ;;
-                    toml)       _type_exts+=('\.toml$') ;;
-                    *)          ci_warn "Hook $h_id: unknown type '$_type', skipping" ;;
-                esac
-            done
-            # Merge into a single alternation pattern
-            if [[ ${#_type_exts[@]} -gt 0 ]]; then
-                _types_pattern="$(IFS='|'; echo "${_type_exts[*]}")"
-                # If files is already set, combine with types (both must match)
-                if [[ -n "$h_files" ]]; then
-                    h_files="(${h_files}).*(${_types_pattern})"
-                else
-                    h_files="$_types_pattern"
-                fi
-            fi
-        fi
-
-        # Validate: regex patterns must not contain single quotes (breaks generated grep)
-        if [[ "$h_files" == *"'"* || "$h_exclude" == *"'"* ]]; then
-            ci_fail "Hook $h_id: files/exclude patterns must not contain single quotes"
-            exit 1
-        fi
-
-        # Classify
-        _is_formatter=0
-        [[ "$h_id" == "ruff-format" || "$h_id" == "ruff" || "$h_id" == "ci-lint" ]] && _is_formatter=1
-
-        _need_gate=0  # skip hook if no staged files match
-        [[ -n "$h_files" && "$h_always" != "true" && "$_stage" == "pre-commit" ]] && _need_gate=1
-
-        _need_pass=0  # pass staged filenames as arguments
-        [[ "$h_pass_fn" == "true" && "$_stage" == "pre-commit" ]] && _need_pass=1
-
-        w ''
-        w "# === Hook: $h_id ==="
-
-        # ── File matching (pre-commit only) ───────────────────────────────
-        if [[ $_need_gate -eq 1 || $_need_pass -eq 1 ]]; then
-            if [[ -n "$h_files" ]]; then
-                w "_rc_${h_vid}=0"
-                w "_match=\"\$(echo \"\$_STAGED\" | grep -E '${h_files}')\" || _rc_${h_vid}=\$?"
+    {
+        printf '%s\n' '#!/usr/bin/env bash' 'set -euo pipefail'
+        printf '%s\n' '# AUTO-GENERATED by /opt/workspace-ci/scripts/generate-hooks'
+        printf '_ROOT="$(git rev-parse --show-toplevel)"\ncd "$_ROOT"\n'
+        printf '%s\n' '[[ -f /opt/workspace-ci/lib/ci.sh ]] || { printf "WORKSPACE-CI deployment unavailable\\n" >&2; exit 1; }'
+        printf '%s\n' 'source /opt/workspace-ci/lib/ci.sh'
+        while IFS=$'\034' read -r h_id h_name h_entry h_stage h_pass h_always h_files h_exclude h_args h_types; do
+            [[ -n "$h_id" ]] || continue
+            [[ -n "$h_entry" ]] || { ci_fail "Hook '$h_id' has empty entry"; exit 1; }
+            h_cmd="${h_entry//bash -c/\"\$BASH\" -c}"
+            h_cmd="${h_cmd//uv run python -m ci./\/opt\/workspace-ci\/.venv\/bin\/python -m ci.}"
+            [[ -n "$h_args" ]] && h_cmd="$h_cmd $h_args"
+            printf 'ci_info "Running: %s..."\n' "$h_name"
+            if [[ "$_stage" == commit-msg ]]; then
+                printf '%s "$1" || { ci_fail "%s"; exit 1; }\n' "$h_cmd" "$h_name"
             else
-                w '_match="$_STAGED"'
+                printf '%s || { ci_fail "%s"; exit 1; }\n' "$h_cmd" "$h_name"
             fi
-            if [[ -n "$h_exclude" ]]; then
-                w "_rc_ex_${h_vid}=0"
-                w "_match=\"\$(echo \"\$_match\" | grep -vE '${h_exclude}')\" || _rc_ex_${h_vid}=\$?"
-            fi
-            w 'if [[ -n "$_match" ]]; then'
-        fi
-
-        w "ci_info \"Running: ${h_name}...\""
-
-        # ── Execute ──────────────────────────────────────────────────────
-        # The CI repository's own config uses `source lib/checks.sh` as a
-        # template-friendly shorthand. Resolve that shorthand to the deployed
-        # CI copy so the development tree never validates itself with mutable
-        # check code. Consumer configs that already name ../CI are unchanged.
-        h_cmd="${h_cmd//source lib\/checks.sh/source \"\$PWD\/${_ci_rel}\/lib\/checks.sh\"}"
-
-        if [[ "$_stage" == "commit-msg" ]]; then
-            w "${h_cmd} \"\$1\" || { ci_fail \"$h_name\"; exit 1; }"
-
-        elif [[ $_is_formatter -eq 1 ]]; then
-            w '_rc=0'
-            w "${h_cmd} || _rc=\$?"
-            w 'if [[ -n "$(git diff --stat)" ]]; then'
-            w '    git add -A'
-            w "    ci_fail \"${h_name} modified files. Re-run: git commit\""
-            w '    exit 1'
-            w 'fi'
-            w "[[ \$_rc -ne 0 ]] && { ci_fail \"$h_name\"; exit 1; }"
-
-        elif [[ $_need_pass -eq 1 ]]; then
-            # shellcheck disable=SC2086
-            w "${h_cmd} \$_match || { ci_fail \"$h_name\"; exit 1; }"
-
-        elif [[ "$h_id" == "check-boot-venv-layout" || "$h_id" == "check-dead-code" ]]; then
-            # Non-blocking advisory checks: exit-code capture pattern.
-            # Failures are surfaced as warnings, never hard-fail.
-            w '_bl_rc=0'
-            w "${h_cmd} || _bl_rc=\$?"
-            w 'if [[ $_bl_rc -ne 0 ]]; then'
-            w "    ci_warn \"${h_name} failed (exit \$_bl_rc): non-blocking, continuing\""
-            w 'fi'
-
-        else
-            w "${h_cmd} || { ci_fail \"$h_name\"; exit 1; }"
-        fi
-
-        # Close file gate
-        if [[ $_need_gate -eq 1 || $_need_pass -eq 1 ]]; then
-            w 'fi'
-        fi
-
-    done <<< "$_stage_hooks"
-
-    w ''
-    w "ci_pass \"All $_stage hooks passed.\""
-
-    # ── Output ────────────────────────────────────────────────────────────
-    if [[ $_dry_run -eq 1 ]]; then
-        echo ""
-        ci_info "=== $_output_dir/$_stage ==="
+        done <<< "$_stage_hooks"
+    } > "$_tmp"
+    if [[ "$_dry_run" -eq 1 ]]; then
         cat "$_tmp"
         rm -f "$_tmp"
     else
-        # Hooks are root-owned by design: only root ever rewrites them.
-        # Refuse with the root regeneration path instead of dying on the
-        # EPERM from mv.
-        if [[ -f "$_output_dir/$_stage" && ! -w "$_output_dir/$_stage" ]]; then
-            rm -f "$_tmp"
-            ci_fail "hook $_stage is root-owned. Regenerate as root from the consumer: sudo make -C <repo> install-hooks"
-            exit 1
-        fi
         mv "$_tmp" "$_output_dir/$_stage"
-        chmod +x "$_output_dir/$_stage"
-        ci_pass "Generated $_output_dir/$_stage"
+        chmod 0755 "$_output_dir/$_stage"
     fi
 done
-
-if [[ $_dry_run -eq 0 ]]; then
-    echo ""
-    ci_pass "All hooks generated from $_config"
-fi

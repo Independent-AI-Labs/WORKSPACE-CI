@@ -11,3 +11,7 @@ extensions:
   - ".rs"
   - ".css"
   - ".lua"
+max_file_bytes: 262144
+max_source_files_per_module: 48
+max_submodules_per_module: 8
+max_module_depth: 8

@@ -21,10 +21,13 @@ VENV_DIR="${CI_BOOT_DIR}"
 
 PODMAN_DIR="${VENV_DIR}/podman"
 PODMAN_VERSION="$(ci_tool_version podman)" || exit 2
-PODMAN_COMPOSE_VERSION="$(ci_tool_version podman_compose)" || exit 2
 CONMON_VERSION="$(ci_tool_version conmon)" || exit 2
 NETAVARK_VERSION="$(ci_tool_version netavark)" || exit 2
 AARDVARK_DNS_VERSION="$(ci_tool_version aardvark_dns)" || exit 2
+PODMAN_SHA256="$(ci_tool_artifact podman sha256)" || exit 2
+CONMON_SHA256="$(ci_tool_artifact conmon sha256)" || exit 2
+NETAVARK_SHA256="$(ci_tool_artifact netavark sha256)" || exit 2
+AARDVARK_SHA256="$(ci_tool_artifact aardvark_dns sha256)" || exit 2
 
 # Color output
 RED='\033[0;31m'
@@ -99,6 +102,7 @@ done
 if [[ "$DO_RESET" == "true" ]]; then
     reset_podman_state
 fi
+[[ "$(ci_sha256 "$PODMAN_TARBALL")" == "$PODMAN_SHA256" ]] || { log_error "Podman checksum mismatch"; exit 1; }
 
 # macOS: Homebrew podman + workspace podman-guard wrapper
 if [[ "$(uname -s)" == "Darwin" ]]; then
@@ -299,32 +303,31 @@ if ci_has_cmd curl; then
 elif ci_has_cmd wget; then
     wget -O "${CONMON_BIN}" "${CONMON_URL}"
 fi
+[[ "$(ci_sha256 "$CONMON_BIN")" == "$CONMON_SHA256" ]] || { log_error "conmon checksum mismatch"; exit 1; }
 chmod +x "${CONMON_BIN}"
 
 # Download netavark (networking)
 NETAVARK_URL="https://github.com/containers/netavark/releases/download/v${NETAVARK_VERSION}/netavark.gz"
 NETAVARK_BIN="${PODMAN_DIR}/bin/netavark"
+NETAVARK_ARCHIVE="${PODMAN_DIR}/netavark.gz"
 
 log_info "Downloading netavark from ${NETAVARK_URL}"
 rm -f "${NETAVARK_BIN}"
-if ci_has_cmd curl; then
-    curl -L "${NETAVARK_URL}" | gunzip > "${NETAVARK_BIN}"
-elif ci_has_cmd wget; then
-    wget -O - "${NETAVARK_URL}" | gunzip > "${NETAVARK_BIN}"
-fi
+if ci_has_cmd curl; then curl -L -o "$NETAVARK_ARCHIVE" "${NETAVARK_URL}"; else wget -O "$NETAVARK_ARCHIVE" "${NETAVARK_URL}"; fi
+[[ "$(ci_sha256 "$NETAVARK_ARCHIVE")" == "$NETAVARK_SHA256" ]] || { log_error "netavark checksum mismatch"; exit 1; }
+gunzip -c "$NETAVARK_ARCHIVE" > "$NETAVARK_BIN"
 chmod +x "${NETAVARK_BIN}"
 
 # Download aardvark-dns (DNS for netavark)
 AARDVARK_URL="https://github.com/containers/aardvark-dns/releases/download/v${AARDVARK_DNS_VERSION}/aardvark-dns.gz"
 AARDVARK_BIN="${PODMAN_DIR}/bin/aardvark-dns"
+AARDVARK_ARCHIVE="${PODMAN_DIR}/aardvark-dns.gz"
 
 log_info "Downloading aardvark-dns from ${AARDVARK_URL}"
 rm -f "${AARDVARK_BIN}"
-if ci_has_cmd curl; then
-    curl -L "${AARDVARK_URL}" | gunzip > "${AARDVARK_BIN}"
-elif ci_has_cmd wget; then
-    wget -O - "${AARDVARK_URL}" | gunzip > "${AARDVARK_BIN}"
-fi
+if ci_has_cmd curl; then curl -L -o "$AARDVARK_ARCHIVE" "${AARDVARK_URL}"; else wget -O "$AARDVARK_ARCHIVE" "${AARDVARK_URL}"; fi
+[[ "$(ci_sha256 "$AARDVARK_ARCHIVE")" == "$AARDVARK_SHA256" ]] || { log_error "aardvark-dns checksum mismatch"; exit 1; }
+gunzip -c "$AARDVARK_ARCHIVE" > "$AARDVARK_BIN"
 chmod +x "${AARDVARK_BIN}"
 
 # Create symlinks in venv/bin (with guard for podman)

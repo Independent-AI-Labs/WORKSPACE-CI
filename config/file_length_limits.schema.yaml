@@ -18,3 +18,32 @@ fields:
     type: list<string>
     required: true
     description: "File extensions subject to the line-count limit. Only files matching these extensions are checked."
+  - path: max_file_bytes
+    type: integer
+    required: true
+    default: 262144
+    description: Maximum physical source-file size in bytes
+  - path: max_source_files_per_module
+    type: integer
+    required: true
+    default: 48
+    description: Maximum direct source files in one module
+  - path: max_submodules_per_module
+    type: integer
+    required: true
+    default: 8
+    description: Maximum direct source submodules in one module
+  - path: module_overrides
+    type: list
+    required: false
+    description: Optional repository-relative module structural overrides
+  - path: max_module_depth
+    type: integer
+    required: true
+    default: 8
+    description: Maximum source-module depth relative to the repository root
+  - path: max_total_source_bytes
+    type: integer
+    required: true
+    default: 16777216
+    description: Maximum total physical bytes across the source tree

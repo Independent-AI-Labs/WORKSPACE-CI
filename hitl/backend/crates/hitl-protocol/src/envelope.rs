@@ -18,8 +18,6 @@ pub enum EnvelopeKind {
     RequestStatus,
     #[serde(rename = "decision.result")]
     DecisionResult,
-    #[serde(rename = "grant.deliver")]
-    GrantDeliver,
     #[serde(rename = "feed.update")]
     FeedUpdate,
     #[serde(rename = "session.hello")]

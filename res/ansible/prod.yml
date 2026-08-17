@@ -11,7 +11,7 @@
     web_dir: '{{ project_root }}/web'
     compose_file: compose.prod.yaml
     prod_unit: wiki-prod-compose.service
-    systemd_dir: '{{ ansible_env.HOME }}/.config/systemd/user'
+    systemd_dir: '{{ ansible_facts["env"]["HOME"] }}/.config/systemd/user'
     wiki_http_port: "{{ lookup('env', 'WIKI_HTTP_PORT') | default('8080', true) }}"
     wiki_https_port: "{{ lookup('env', 'WIKI_HTTPS_PORT') | default('8443', true) }}"
     allowed_origins: "{{ lookup('env', 'ALLOWED_ORIGINS') | default('https://localhost,https://127.0.0.1', true) }}"
@@ -39,22 +39,28 @@
                  (resolved_root.stdout + '/cloudflare/certs/' +
                   (wiki_tunnel_hostname if wiki_tunnel_hostname | length > 0 else wiki_tls_cn)) }}
 
-    - name: Detect podman and podman-compose
+    - name: Resolve Podman and podman-compose
       tags: [always, deploy, start, restart]
       block:
-        - name: Find podman
-          ansible.builtin.command: which podman
+        - name: Set Podman path from immutable CI deployment
+          ansible.builtin.set_fact:
+            podman_path: '/opt/workspace-ci/{{ ".boot-macos" if ansible_facts["system"] == "Darwin" else ".boot-linux" }}/bin/podman'
+
+        - name: Verify Podman guard
+          ansible.builtin.command:
+            argv:
+              - '{{ podman_path }}'
+              - --version
           register: podman_check
           changed_when: false
 
+        - name: Show Podman guard result
+          ansible.builtin.debug:
+            var: podman_check.stdout
+
         - name: Show podman path
           ansible.builtin.debug:
-            msg: '{{ podman_check.stdout | default("") | trim }}'
-
-        - name: Fail if podman missing
-          ansible.builtin.fail:
-            msg: 'podman not on PATH'
-          when: podman_check.rc != 0
+            msg: '{{ podman_path }}'
 
         - name: Find podman-compose
           ansible.builtin.command: which podman-compose
@@ -72,10 +78,9 @@
 
         - name: Set runtime facts
           ansible.builtin.set_fact:
-            podman_path: '{{ podman_check.stdout }}'
-            podman_bin_dir: '{{ podman_check.stdout | dirname }}'
             compose_cmd: '{{ compose_check.stdout }}'
             compose_bin_dir: '{{ compose_check.stdout | dirname }}'
+            podman_bin_dir: '{{ podman_path | dirname }}'
 
     - name: Deploy wiki prod stack
       tags: [deploy, start, restart]
@@ -111,7 +116,7 @@
               - podman
               - image
               - exists
-              - localhost/workspace-ci-wiki:prod
+              - localhost/workspace-ci-wiki:0.1.0
           register: prod_image
           changed_when: false
 
@@ -138,7 +143,11 @@
 
         - name: Enable systemd user linger
           tags: [deploy]
-          ansible.builtin.command: loginctl enable-linger {{ ansible_user_id }}
+          ansible.builtin.command:
+            argv:
+              - loginctl
+              - enable-linger
+              - '{{ ansible_facts["user_id"] }}'
           register: linger_result
           changed_when: linger_result.rc == 0
           failed_when: linger_result.rc != 0

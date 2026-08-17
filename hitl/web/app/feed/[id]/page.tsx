@@ -24,7 +24,9 @@ export default async function RequestDetailPage({
     <main className="hitl-feed">
       <h1 className="text-2xl font-semibold mb-4">Request {id}</h1>
       <EvidencePack request={request} />
-      <DecisionPanel requestId={request.id} tier={request.tier} />
+      {request.state === 'pending' && (
+        <DecisionPanel requestId={request.id} requestHash={request.requestHash} />
+      )}
     </main>
   )
 }

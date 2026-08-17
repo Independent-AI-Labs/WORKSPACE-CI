@@ -44,14 +44,18 @@ BLOCKED_CASES: list[SwallowCase] = [
     SwallowCase(
         "prod_podman_build_no_plain",
         "web/scripts/prod.sh",
-        ['"${PODMAN}" build -f "${WEB_DIR}/Containerfile" -t "${PROD_IMAGE}" "${PROJECTS_ROOT}"'],
+        [
+            '"${PODMAN}" build -f "${WEB_DIR}/Containerfile" -t "${PROD_IMAGE}" "${PROJECTS_ROOT}"'
+        ],
         _SHOULD_BLOCK,
         "sh-podman-build-no-plain",
     ),
     SwallowCase(
         "prod_curl_silent_discard",
         "web/scripts/prod.sh",
-        ['http_code="$(curl -s -o /dev/null -w \'%{http_code}\' --max-time 5 "http://127.0.0.1:8080/")"'],
+        [
+            'http_code="$(curl -s -o /dev/null -w \'%{http_code}\' --max-time 5 "http://127.0.0.1:8080/")"'
+        ],
         _SHOULD_BLOCK,
         "sh-curl-silent-discard",
     ),
@@ -126,7 +130,9 @@ BLOCKED_CASES: list[SwallowCase] = [
     SwallowCase(
         "grafana_curl_silent",
         "web/scripts/verify-grafana-embed.sh",
-        ['health_code="$(curl -sk -o /dev/null -w \'%{http_code}\' "${BASE}/grafana/api/health")"'],
+        [
+            'health_code="$(curl -sk -o /dev/null -w \'%{http_code}\' "${BASE}/grafana/api/health")"'
+        ],
         _SHOULD_BLOCK,
         "sh-curl-s-without-S",
     ),

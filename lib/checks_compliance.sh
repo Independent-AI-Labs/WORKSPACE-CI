@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CI Compliance Scoring: deep project audit with tier classification.
+# CI Compliance Scoring: deep project audit with letter-grade classification.
 # Sourced by checks.sh. Requires ci.sh and checks_core.sh to be loaded first.
 
 # --- ci_compliance_score [PROJECT_DIR] ---
@@ -178,7 +178,7 @@ ci_compliance_score() {
             _cs_skip "R5" "ci-check-push (no test directory)"
         fi
 
-        # R6: check-markdown-docs must be wired with --check-remote (all tiers)
+        # R6: check-markdown-docs must be wired with --check-remote.
         if grep -q 'check-markdown-docs' "$_precommit"; then
             local _md_entry
             _md_entry="$(grep -A2 'check-markdown-docs' "$_precommit")"
@@ -307,7 +307,7 @@ ci_compliance_score() {
             _cs_pass "Q1" "History clean (no blocked patterns)"
         else
             _cs_fail "Q1" "History has $_hist_violations blocked pattern(s)" \
-                "Run: projects/CI/scripts/rewrite-history"
+                "Run: /opt/workspace-ci/scripts/rewrite-history"
         fi
     elif [[ -z "$_gitdir" ]]; then
         _cs_skip "Q1" "History clean (not a git repo)"
@@ -372,39 +372,9 @@ ci_compliance_score() {
     # =====================================================================
     # CATEGORY 6: Auto-Enforcement (manifest-driven)
     # =====================================================================
-    # Tier-aware: strict-tier projects must have quality_exceptions.yaml
-    # and the rendered hooks must include every applicable mandatory hook.
-    # POC and vendored tiers skip these checks (they don't apply).
     ci_info "AUTO-ENFORCEMENT"
 
-    # Resolve tier via the workspace registry (autocreated from template
-    # if missing). Fall back to the CI template if registry is absent.
-    local _ws_root="" _registry="" _rel="" _tier="strict"
-    local _cur_dir="$project_dir"
-    while [[ "$_cur_dir" != "/" ]]; do
-        if [[ (-d "$_cur_dir/.boot-linux" || -d "$_cur_dir/.boot-macos") && -d "$_cur_dir/projects/CI" ]]; then
-            _ws_root="$_cur_dir"
-            break
-        fi
-        _cur_dir="$(dirname "$_cur_dir")"
-    done
-    if [[ -n "$_ws_root" ]]; then
-        _registry="$_ws_root/ci/config/project_enforcement.yaml"
-        [[ ! -f "$_registry" ]] && _registry=""
-        _rel="${project_dir#"$_ws_root"/}"
-        [[ "$_rel" == "$project_dir" ]] && _rel="."
-        local _tier_rc=0
-        _tier="$(ci_resolve_tier "$_rel" "$_registry")" || _tier_rc=$?
-        if [[ $_tier_rc -ne 0 ]]; then
-            _tier="strict"
-        fi
-    fi
-
-    if [[ "$_tier" == "vendored" ]]; then
-        _cs_skip "Q3" "vendored tier: no contract"
-    elif [[ "$_tier" == "poc" ]]; then
-        _cs_skip "Q3" "poc tier: quality_exceptions not required"
-    elif [[ -f "$project_dir/quality_exceptions.yaml" ]]; then
+    if [[ -f "$project_dir/quality_exceptions.yaml" ]]; then
         _cs_pass "Q3" "quality_exceptions.yaml present"
     else
         _cs_fail "Q3" "quality_exceptions.yaml missing at project root" \
@@ -421,17 +391,17 @@ ci_compliance_score() {
         _pct=$(( (_passed * 100) / _total ))
     fi
 
-    local _tier="Tier F"
-    [[ $_pct -ge 40 ]] && _tier="Tier D"
-    [[ $_pct -ge 60 ]] && _tier="Tier C"
-    [[ $_pct -ge 80 ]] && _tier="Tier B"
-    [[ $_pct -eq 100 ]] && _tier="Tier A"
+    local _grade="Grade F"
+    [[ $_pct -ge 40 ]] && _grade="Grade D"
+    [[ $_pct -ge 60 ]] && _grade="Grade C"
+    [[ $_pct -ge 80 ]] && _grade="Grade B"
+    [[ $_pct -eq 100 ]] && _grade="Grade A"
 
     echo "==========================================="
     if [[ $_violations -eq 0 ]]; then
-        ci_pass "COMPLIANCE: ${_pct}% (${_passed}/${_total}) -- $_tier"
+        ci_pass "COMPLIANCE: ${_pct}% (${_passed}/${_total}) -- $_grade"
     else
-        ci_fail "COMPLIANCE: ${_pct}% (${_passed}/${_total}) -- $_tier -- $_violations violation(s)"
+        ci_fail "COMPLIANCE: ${_pct}% (${_passed}/${_total}) -- $_grade -- $_violations violation(s)"
     fi
     echo "==========================================="
 

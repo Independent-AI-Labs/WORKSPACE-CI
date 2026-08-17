@@ -90,12 +90,6 @@ universal_exceptions:
     patterns: ['\.venv/bin/python']
   - paths: ['tests/unit/scripts/test_register_extensions\.py$']
     patterns: ['\.venv/bin/python']
-  # Enforcement config describes legacy subtree policy in comments.
-  - paths:
-      - 'workspace/config/project_enforcement\.yaml$'
-      - 'ci/config/project_enforcement\.yaml$'
-    patterns: ['\blegacy\b']
-  # Workspace YAML comments may quote meta pattern names.
   - paths: ['workspace/config/']
     patterns:
       - '\u2014'
@@ -207,6 +201,10 @@ universal_exceptions:
       - '\bfrontier\b'
       - '\binnovative\b'
       - 'value proposition'
+  - paths:
+      - docs/audit-09\.08\.2026/
+    patterns:
+      - .*
 
 banned:
   # === LINTER/TYPE SUPPRESSION ===

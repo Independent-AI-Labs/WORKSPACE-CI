@@ -49,6 +49,7 @@ if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
     exit 2
 fi
 NODE_VERSION="$(ci_tool_version node)" || { echo "ERROR: missing node tool pin" >&2; exit 2; }
+NODE_SHA256="$(ci_tool_artifact node sha256)" || { echo "ERROR: missing node checksum" >&2; exit 2; }
 
 _log() { printf '[bootstrap-npm] %s\n' "$*" >&2; }
 
@@ -142,11 +143,11 @@ main() {
 
     local actual_sha
     actual_sha="$(ci_sha256 "${tmp}/${tarball}")"
-    if [[ "$actual_sha" != "$expected_sha" ]]; then
-        _log "checksum mismatch: expected $expected_sha, got $actual_sha"
+    if [[ "$actual_sha" != "$NODE_SHA256" ]]; then
+        _log "checksum mismatch: expected $NODE_SHA256, got $actual_sha"
         return 1
     fi
-    _log "checksum OK ($expected_sha)"
+    _log "checksum OK ($NODE_SHA256)"
 
     # Extract into a clean node-env/ directory inside the boot dir.
     if [[ -d "$node_env" ]]; then

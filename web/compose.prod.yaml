@@ -5,7 +5,7 @@
 
 services:
   wiki-app:
-    image: localhost/workspace-ci-wiki:prod
+    image: localhost/workspace-ci-wiki:0.1.0
     pull_policy: never
     container_name: wiki-ci-app
     environment:
@@ -16,6 +16,7 @@ services:
       # Unset = auto-derive https://<request-host>/grafana per request (same-origin iframes).
       GRAFANA_BASE_URL: ${GRAFANA_BASE_URL:-}
       WIKI_HOME_LANDING_ENABLED: ${WIKI_HOME_LANDING_ENABLED:-true}
+      WIKI_DEV_PORT: ${WIKI_DEV_PORT:-4000}
       WORKSPACE_WEB_CONTENT_ROOT: /workspace/WORKSPACE-WEB-CONTENT
       CI_WEB_DATA_DIR: ${CI_WEB_DATA_DIR:-/workspace/CI/web/src/data}
       WIKI_FEEDBACK_DIR: ${WIKI_FEEDBACK_DIR:-/workspace/CI/web/data/feedback}
@@ -29,7 +30,7 @@ services:
     restart: unless-stopped
 
   wiki-nginx:
-    image: docker.io/library/nginx:1.27.4-bookworm
+    image: docker.io/library/nginx:1.27.4
     container_name: wiki-ci-nginx
     depends_on:
       - wiki-app

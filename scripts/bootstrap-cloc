@@ -15,11 +15,9 @@
 #
 # Override the version with $CLOC_VERSION (default below).
 #
-# Supply-chain pinning: SHA256 verification is MANDATORY and always on.
-# Unlike gitleaks, cloc does NOT publish a checksums sidecar file alongside
-# its release assets (verified via the GitHub releases API). The hash below
-# is therefore hardcoded against the pinned CLOC_VERSION. Bumping the
-# version requires recomputing the hash (sha256sum of the .pl asset).
+# Supply-chain pinning: SHA256 verification is MANDATORY and always on. The
+# selected artifact and its checksum come from res/dependency-pins.yaml.
+# Bumping the version requires recomputing the hash of the selected .pl asset.
 #
 # cloc is a Perl script; a working `perl` is a runtime dependency and is
 # declared in config/system-deps.yaml. This script verifies perl presence
@@ -34,10 +32,6 @@
 
 set -euo pipefail
 
-# SHA256 of cloc-2.02.pl (759966 bytes), fetched from:
-#   https://github.com/AlDanial/cloc/releases/download/v2.02/cloc-2.02.pl
-# Recompute with: sha256sum <(curl -fsSL <url>)  when bumping CLOC_VERSION.
-
 _SELF="${BASH_SOURCE[0]:-$0}"
 case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
 _ci_lib="$(cd "$(dirname "$_SELF")/../lib" && pwd)"
@@ -51,7 +45,8 @@ if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
     exit 2
 fi
 CLOC_VERSION="$(ci_tool_version cloc)" || { echo "ERROR: missing cloc tool pin" >&2; exit 2; }
-CLOC_SHA256="$(ci_tool_version cloc sha256)" || { echo "ERROR: missing cloc checksum" >&2; exit 2; }
+CLOC_ASSET="$(ci_cloc_artifact asset)" || { echo "ERROR: missing cloc artifact" >&2; exit 2; }
+CLOC_SHA256="$(ci_cloc_artifact sha256)" || { echo "ERROR: missing cloc checksum" >&2; exit 2; }
 
 _log() { printf '[bootstrap-cloc] %s\n' "$*" >&2; }
 
@@ -93,8 +88,7 @@ main() {
         fi
     fi
 
-    local asset="cloc-${CLOC_VERSION}.pl"
-    local url="https://github.com/AlDanial/cloc/releases/download/v${CLOC_VERSION}/${asset}"
+    local url="https://github.com/AlDanial/cloc/releases/download/v${CLOC_VERSION}/${CLOC_ASSET}"
 
     local tmp
     tmp="$(mktemp -d)"
@@ -102,14 +96,14 @@ main() {
     trap "rm -rf \"\${tmp:-$tmp}\"" EXIT
 
     _log "fetching ${url}"
-    if ! curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/${asset}" "$url"; then
+    if ! curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/${CLOC_ASSET}" "$url"; then
         _log "curl failed for $url"
         return 1
     fi
 
     # Mandatory SHA256 verification against the pinned hash.
     local actual_sha
-    actual_sha="$(ci_sha256 "${tmp}/${asset}")"
+    actual_sha="$(ci_sha256 "${tmp}/${CLOC_ASSET}")"
     if [[ "$actual_sha" != "$CLOC_SHA256" ]]; then
         _log "checksum mismatch: expected $CLOC_SHA256, got $actual_sha"
         _log "if you bumped CLOC_VERSION, recompute the hash (see script header)"
@@ -118,7 +112,7 @@ main() {
     _log "checksum OK ($CLOC_SHA256)"
 
     _log "installing cloc to ${target}"
-    if ! install -m 0755 "${tmp}/${asset}" "$target"; then
+    if ! install -m 0755 "${tmp}/${CLOC_ASSET}" "$target"; then
         _log "install (copy) failed to $target"
         return 1
     fi

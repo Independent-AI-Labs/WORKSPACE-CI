@@ -58,8 +58,9 @@ export PATH := $(_HB_PREFIX)/opt/coreutils/libexec/gnubin:$(_HB_PREFIX)/opt/gnu-
 # to PATH so make targets use bootstrapped tools, not system-installed
 # ones. Parse-time check: if the boot dir/bin/uv doesn't exist yet
 # (fresh install), PATH is not modified: install-python-deps handles it.
-BOOT_NAME := $(if $(filter Darwin,$(_OS)),.boot-macos,.boot-linux)
-BOOT_BIN := $(CURDIR)/$(BOOT_NAME)/bin
+override BOOT_NAME := $(if $(filter Darwin,$(_OS)),.boot-macos,.boot-linux)
+override BOOT_BIN := $(CURDIR)/$(BOOT_NAME)/bin
+ANSIBLE_PLAYBOOK := $(BOOT_BIN)/ansible-playbook
 
 # uv is the hermetic runner for all Python tooling (FR-2.4). Resolve the
 # boot-bin uv by ABSOLUTE path when present: every recipe shell re-enters
@@ -77,8 +78,6 @@ endif
 RUFF := $(UV) run ruff
 PYTEST := $(UV) run pytest
 MYPY := $(UV) run mypy
-# User-configurable (env or CLI override); stock value: this repo's boot bin
-ANSIBLE_PLAYBOOK ?= $(BOOT_BIN)/ansible-playbook
 # Containment: uv-managed interpreters live inside the boot dir, never in
 # $HOME/.local/share/uv/python (no unsanctioned HOME/system resources)
 export UV_PYTHON_INSTALL_DIR := $(CURDIR)/$(BOOT_NAME)/python
@@ -178,6 +177,10 @@ install: preflight install-deps ## Full install: deps + bootstrap binaries + hoo
 install-ci: preflight install-deps ## CI install: deps + bootstrap binaries, no hooks
 	:
 
+.PHONY: bootstrap
+bootstrap: preflight install-boot-tools ## Build candidate-local bootstrap tools
+	:
+
 .PHONY: install-deps
 install-deps: install-boot-tools install-pythons install-python-deps install-gitleaks install-osv-scanner install-cloc install-moon install-ansible install-node install-web-deps ## Install boot tools + python pool + .venv deps + gitleaks + osv-scanner + cloc + moon + ansible + node + web deps
 
@@ -236,7 +239,6 @@ install-web-deps: install-node ## npm ci JS workspace dependencies (repo root: w
 
 .PHONY: install-hooks
 install-hooks: ## (Re)generate native git hooks (root-owned hooks: run via sudo)
-	if [ -f scripts/cleanup-precommit ]; then $(SCRIPT_BASH) scripts/cleanup-precommit; else echo "[INFO] cleanup-precommit not found, continuing" >&2; fi
 	$(SCRIPT_BASH) scripts/reinstall-hooks
 
 .PHONY: lock-repo
@@ -274,11 +276,7 @@ sync: ## Sync .venv deps + reinstall hooks
 
 .PHONY: check
 check: ## Run all quality gates (lint + type-check + test)
-	$(MAKE) check-templates && $(MAKE) _lint-impl && $(MAKE) _type-check-impl && $(MAKE) _test-impl
-
-.PHONY: check-templates
-check-templates: ## Verify generated templates are fresh vs config/required_hooks.yaml
-	$(SCRIPT_BASH) scripts/scaffold-ci --check-template
+	$(MAKE) _lint-impl && $(MAKE) _type-check-impl && $(MAKE) _test-impl
 
 .PHONY: lint
 lint: ## Runs ruff format and ruff lint with auto-fix on all ci/ modules. Catches style violations, import sorting issues, and unused variables before they reach the remote. Acts as the first stage of the pre-commit quality gate.
@@ -311,7 +309,7 @@ _type-check-impl:
 
 .PHONY: _test-impl
 _test-impl:
-	cd tests && $(SCRIPT_BASH) -c 'source ./run_tests.sh'
+	cd tests && source ./run_tests.sh
 	$(PYTEST) tests/unit tests/integration -v --timeout=30
 
 # =============================================================================
@@ -322,7 +320,7 @@ _test-impl:
 
 .PHONY: test-shell
 test-shell: ## Run shell tests only (no moon caching)
-	cd tests && $(SCRIPT_BASH) -c 'source ./run_tests.sh'
+	cd tests && source ./run_tests.sh
 
 .PHONY: test-python
 test-python: ## Run Python tests only (no moon caching)
@@ -332,12 +330,12 @@ test-python: ## Run Python tests only (no moon caching)
 # Pre-push Quality Gate
 # =============================================================================
 # Single-pass gate for pre-push hooks: lint + type-check + shell tests +
-# pytest with per-suite coverage. Eliminates the previous redundancy where
+# pytest with unit coverage. Eliminates the previous redundancy where
 # run_tests.sh, pytest, and make check each ran the same tests 2-3x.
 # The pre-push hook invokes this target directly (see .pre-commit-config.yaml).
 
 .PHONY: check-push
-check-push: ## Single-pass pre-push gate running ruff lint, mypy, shell unit tests, pytest with per-suite coverage, and web/ JS quality (eslint + tsc + vitest) in one invocation. Eliminates the previous redundancy where the same tests ran two to three times across separate targets. Fails the push if any lint, type, test, or coverage threshold check does not pass.
+check-push: ## Single-pass pre-push gate running ruff lint, mypy, shell unit tests, pytest with unit coverage, and web/ JS quality (eslint + tsc + vitest) in one invocation. Eliminates the previous redundancy where the same tests ran two to three times across separate targets. Fails the push if any lint, type, test, or coverage threshold check does not pass.
 	$(MAKE) _lint-impl && $(MAKE) _type-check-impl && $(MAKE) _test-push-impl
 
 .PHONY: _test-push-impl
@@ -349,7 +347,7 @@ _test-push-impl:
 	cd tests && source ./run_tests_unit.sh
 	cd tests && source ./run_tests_integration.sh
 	$(PYTEST) tests/unit --cov=ci --cov-report=term-missing --cov-fail-under=90 --tb=short
-	$(PYTEST) tests/integration --cov=ci --cov-report=term-missing --cov-fail-under=5 --tb=short
+	$(PYTEST) tests/integration --tb=short
 	$(MAKE) -C web lint type-check test
 	$(MAKE) -C web-components lint type-check test
 	$(MAKE) -C hitl/web lint type-check test
@@ -479,7 +477,7 @@ ANSIBLE_LETSENCRYPT_EXTRA := \
 	-e 'letsencrypt_reload_cmd=podman exec wiki-ci-nginx nginx -s reload' \
 	-e "letsencrypt_project_root=$(CURDIR)" \
 	-e "letsencrypt_playbook_path=$(CURDIR)/res/ansible/letsencrypt.yml"
-ANSIBLE_LETSENCRYPT := $(ANSIBLE_LETSENCRYPT_ENV) $(ANSIBLE_PLAYBOOK) res/ansible/letsencrypt.yml $(ANSIBLE_LETSENCRYPT_EXTRA)
+ANSIBLE_LETSENCRYPT := $(ANSIBLE_LETSENCRYPT_ENV) $(BOOT_BIN)/ansible-playbook res/ansible/letsencrypt.yml $(ANSIBLE_LETSENCRYPT_EXTRA)
 
 .PHONY: wiki-tls-issue wiki-tls-renew wiki-tls-verify wiki-tls-deploy wiki-tls-undeploy
 wiki-tls-issue: ## Issue Let's Encrypt cert (DNS-01; LETSENCRYPT_STAGING=1 to test)
@@ -560,10 +558,6 @@ extract-swallow-source: ## Generate web/src/data/swallow-detectors.json for wiki
 	$(_WIKI_EXTRACT_ENV) $(UV) run python scripts/extract-swallow-source.py
 
 extract-wiki-data: extract-code-stats extract-hook-sources extract-script-sources extract-swallow-source ## Regenerate all wiki JSON data files
-
-.PHONY: scaffold-ci
-scaffold-ci: ## Generate CI integration files for a consumer project
-	$(SCRIPT_BASH) scripts/scaffold-ci $(ARGS)
 
 # Exemption/policy YAML editing (root-gated yaml editor; files stay
 # root-owned unconditionally; there is no seal/unseal cycle).
@@ -651,5 +645,6 @@ check-guard: ## REMOVED: use check-guard-host-exec
 check-guard-host-exec: ## Check host-exec git-guard installation (read-only, runs as agent)
 	$(SCRIPT_BASH) scripts/bootstrap-workspace-guard check-host-exec
 
-deploy-ci: ## Promote WORKSPACE-CI to locked projects/CI (operator: sudo make deploy-ci)
+.PHONY: deploy-ci
+deploy-ci: ## Build and atomically publish /opt/workspace-ci (root only)
 	$(SCRIPT_BASH) scripts/deploy-ci

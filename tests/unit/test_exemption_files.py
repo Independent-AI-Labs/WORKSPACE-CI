@@ -20,7 +20,9 @@ MANIFEST_ENTRIES = [
 ]
 
 
-def _patch_manifest(monkeypatch: pytest.MonkeyPatch, entries: list[dict[str, str]]) -> None:
+def _patch_manifest(
+    monkeypatch: pytest.MonkeyPatch, entries: list[dict[str, str]]
+) -> None:
     monkeypatch.setattr(exemption_files, "load_manifest", lambda: entries)
 
 
@@ -41,9 +43,16 @@ def test_ensure_creates_missing_files_with_defaults(
 ) -> None:
     _patch_manifest(monkeypatch, MANIFEST_ENTRIES)
     created = ensure_exemption_files(tmp_path)
-    assert set(created) == {tmp_path / "alpha_exceptions.yaml", tmp_path / "sub/dir/beta.yaml"}
-    assert (tmp_path / "alpha_exceptions.yaml").read_text(encoding="utf-8") == "exceptions: []\n"
-    assert (tmp_path / "sub/dir/beta.yaml").read_text(encoding="utf-8") == f"name: {tmp_path.name}\n"
+    assert set(created) == {
+        tmp_path / "alpha_exceptions.yaml",
+        tmp_path / "sub/dir/beta.yaml",
+    }
+    assert (tmp_path / "alpha_exceptions.yaml").read_text(
+        encoding="utf-8"
+    ) == "exceptions: []\n"
+    assert (tmp_path / "sub/dir/beta.yaml").read_text(
+        encoding="utf-8"
+    ) == f"name: {tmp_path.name}\n"
 
 
 def test_ensure_never_overwrites_existing(
@@ -70,7 +79,9 @@ def test_ensure_default_source_reads_project_file(
     source = tmp_path / "templates/tpl.yaml"
     source.parent.mkdir(parents=True)
     source.write_text("from: source\n", encoding="utf-8")
-    _patch_manifest(monkeypatch, [{"path": "out.yaml", "default_source": "templates/tpl.yaml"}])
+    _patch_manifest(
+        monkeypatch, [{"path": "out.yaml", "default_source": "templates/tpl.yaml"}]
+    )
     monkeypatch.setattr(exemption_files, "find_project_root", lambda: tmp_path)
     created = ensure_exemption_files(tmp_path)
     assert created == [tmp_path / "out.yaml"]
@@ -106,21 +117,27 @@ def test_state_report_reports_state_per_entry(
 # CLI
 
 
-def test_main_ensure_prints_created(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_main_ensure_prints_created(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     _patch_manifest(monkeypatch, MANIFEST_ENTRIES[:1])
     assert main(["ensure", str(tmp_path)]) == 0
     out = capsys.readouterr().out
     assert f"created: {tmp_path / 'alpha_exceptions.yaml'}" in out
 
 
-def test_main_report_prints_states(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_main_report_prints_states(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     _patch_manifest(monkeypatch, MANIFEST_ENTRIES[:1])
     assert main(["report", str(tmp_path)]) == 0
     out = capsys.readouterr().out
     assert f"missing\t{tmp_path / 'alpha_exceptions.yaml'}" in out
 
 
-def test_main_report_rejects_unsafe_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_report_rejects_unsafe_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     evil = tmp_path / "evil\tname.yaml"
     _patch_manifest(monkeypatch, [{"path": str(evil), "description": "evil"}])
     with pytest.raises(ValueError, match="TAB/newline"):

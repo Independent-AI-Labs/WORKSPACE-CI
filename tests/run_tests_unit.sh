@@ -21,10 +21,6 @@ _required_unit_tests=(
     test_portable_shell.sh
     test_resolve_tool_path.sh
     test_generate_hooks.sh
-    test_scaffold_ci.sh
-    test_scaffold_ci_gen.sh
-    test_scaffold_ci_inspect.sh
-    test_scaffold_ci_force.sh
 )
 for _unit_test in "${_required_unit_tests[@]}"; do
     if [[ ! -f "$TESTS_DIR/unit/$_unit_test" ]]; then
@@ -43,10 +39,6 @@ source "$TESTS_DIR/unit/test_reinstall_hooks.sh"
 source "$TESTS_DIR/unit/test_portable_shell.sh"
 source "$TESTS_DIR/unit/test_resolve_tool_path.sh"
 source "$TESTS_DIR/unit/test_generate_hooks.sh"
-source "$TESTS_DIR/unit/test_scaffold_ci.sh"
-source "$TESTS_DIR/unit/test_scaffold_ci_gen.sh"
-source "$TESTS_DIR/unit/test_scaffold_ci_inspect.sh"
-source "$TESTS_DIR/unit/test_scaffold_ci_force.sh"
 
 # Summary
 echo ""

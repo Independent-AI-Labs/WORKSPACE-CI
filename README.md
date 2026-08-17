@@ -1,5 +1,9 @@
 # Practical Guardrails for Coding Agents
 
+> **Deployment status:** `WORKSPACE-CI` is the writable source tree.
+> `make deploy-ci` builds `/opt/.workspace-ci.candidate`, then atomically
+> publishes and seals the verified artifact at `/opt/workspace-ci`.
+
 AI coding agents ship code fast and cut every corner doing it: skipped
 tests, ignored lint failures, `--no-verify` to bypass hooks, amended history
 to hide the mess.
@@ -26,11 +30,11 @@ repos to clone.
 
 The execution model is three stages with non-redundant responsibility:
 
-| Stage | What runs | Why it belongs there |
-|-------|-----------|---------------------|
-| pre-commit | Format, lint, secrets, banned patterns, error-swallow, dependency freshness, file length, coverage no-devolution | Fast, content-focused gates that must pass before a commit is recorded |
-| commit-msg | Message format compliance, agent-attribution blocking | Checks only the commit message file, not the working tree |
-| pre-push | Full test suite + coverage thresholds, web/JS quality, co-authored history scan, advisory dead-code report | Expensive gates that run only when code leaves the developer's machine |
+| Stage      | What runs                                                                                                                       | Why it belongs there                                                   |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| pre-commit | Format, lint, secrets, banned patterns, error-swallow, deterministic dependency validation, file length, coverage no-devolution | Fast, content-focused gates that must pass before a commit is recorded |
+| commit-msg | Message format compliance, agent-attribution blocking                                                                           | Checks only the commit message file, not the working tree              |
+| pre-push   | Full test suite + coverage thresholds, web/JS quality, co-authored history scan, advisory dead-code report                      | Expensive gates that run only when code leaves the developer's machine |
 
 A separate capability-based binary (WORKSPACE-GUARD) wraps `git` via dpkg-divert
 and enforces guardrails at the syscall boundary: blocks `--no-verify`, `--force`
@@ -46,39 +50,45 @@ analysis via the `dangle` binary (`cargo install dangle`). Python
 handles what shell can't: multi-file regex at scale and network requests
 (dependency freshness, markdown link probing).
 
-
 ---
 
 ## Quick Start
 
+Choose the procedure for the trust domain you are working in.
+
+### Source development and portable local hooks
+
 ```bash
-# 1. Clone or copy workspace-ci into your monorepo (e.g. projects/CI/)
-cd projects/CI
+# Work only in the writable source checkout.
+cd projects/WORKSPACE-CI
 
-# 2. Bootstrap system deps (macOS Homebrew + apt on Linux) and toolchain
+# Bootstrap a developer toolchain in this checkout.
 make init          # once per machine: Homebrew/apt, Rust if missing
-make install       # bootstrap uv, gitleaks, cloc, moon, ansible, node;
-                   # uv sync (.venv), npm install (web/), generate hooks
+make install       # bootstrap tools and project dependencies
 
-# 3. Regenerate hooks after config changes
+# Optional: generate user-owned, unprotected hooks for development/testing.
 make install-hooks
 
-# 4. Run the full pre-push gate locally before pushing
+# Run the full pre-push gate locally before pushing.
 make check-push
 ```
 
-For monorepo setups with shared config, see
-[`docs/runbooks/RUNBOOK-HOOKS.md`](docs/runbooks/RUNBOOK-HOOKS.md) and
-[`docs/requirements/REQ-BOOT-LAYOUT.md`](docs/requirements/REQ-BOOT-LAYOUT.md):
-covers the Makefile contract, platform-aware `$(BOOT_NAME)` boot directories,
-`ci_resolve_boot_path` walk-up, `moon.yml::project.inherited_boot_dirs`, and
-tier configuration.
+This local mode is portable across Linux and macOS. Its hooks and lock are
+developer-owned and provide test coverage, not protected deployment authority.
 
-Consumer projects that only need hooks (no full CI install):
+### Deployment
 
-```bash
-bash projects/CI/scripts/generate-hooks
-```
+On the target Linux machine, the operator runs `make deploy-ci` as root. It
+constructs and verifies a complete candidate under `/opt`, atomically publishes
+the candidate at `/opt/workspace-ci`, verifies and seals the artifact, then
+installs protected hooks as a separate operation.
+
+For the deployment and hook contracts, see
+[`docs/requirements/REQ-DEPLOYMENT.md`](docs/requirements/REQ-DEPLOYMENT.md),
+[`docs/requirements/REQ-BOOT-LAYOUT.md`](docs/requirements/REQ-BOOT-LAYOUT.md),
+and [`docs/runbooks/RUNBOOK-HOOKS.md`](docs/runbooks/RUNBOOK-HOOKS.md).
+
+Protected hooks resolve `/opt/workspace-ci` directly.
 
 ---
 
@@ -89,34 +99,33 @@ freely. The table below shows the default wiring for the workspace root config.
 Scope describes which files the check scans when triggered. Checks marked
 **advisory** print warnings but do not block the commit or push.
 
-| Check | Default stage | Scope |
-|-------|--------------|-------|
-| Secret scanning (gitleaks, 160+ patterns, all non-gitignored files) | pre-commit | all files |
-| Sensitive filename blocking (`.env`, `*.pem`, `credentials.json`, ...) | pre-commit | all files |
-| Banned patterns (200+ including type suppressions, unsafe code, AI slop) | pre-commit | all files |
-| Silent-error swallow (Python `except: pass`, JS `catch {}`, Shell `\|\| true`, Ansible `ignore_errors`, Cron no-log) | pre-commit | all tracked files |
-| Dependency freshness (PyPI / npm / Docker Hub) | pre-commit | lockfiles |
-| Duplicate / redundant dependency warning | pre-commit | `pyproject.toml` |
-| Code formatting (`ruff format`, auto-stage + re-run) | pre-commit | Python files |
-| Linting (`ruff check`, 900+ rules) | pre-commit | Python files |
-| Type checking (`mypy`) | pre-commit | Python files |
-| File length (max 512 lines, configurable per-file) | pre-commit | source files |
-| `__init__.py` must be empty | pre-commit | `__init__.py` files |
-| `+x` bit forbidden on `.py` modules | pre-commit | tracked `.py` files |
-| Coverage thresholds not lowered | pre-commit | `coverage_thresholds.yaml` |
-| Deleted `.py` still imported elsewhere | pre-commit | staged deletions |
-| Unstaged/untracked files auto-stage guard | pre-commit | full tree |
-| Process substitution banned in shell scripts | pre-commit | shell scripts |
-| Markdown link integrity (internal anchors + external URLs) | pre-commit | doc files |
-| Hook manifest completeness (self-check) | pre-commit | `.pre-commit-config.yaml` |
-| Compliance report (17-dimension A-F audit, **advisory**) | pre-commit preamble | project config |
-| Boot layout audit (`.boot-linux/`/`.boot-macos/` + `.venv/` alignment, **advisory**) | pre-commit | layout config |
-| Commit message format (`type: description`, body required) | commit-msg | message body |
-| Agent attribution / `Co-authored-by` pattern blocking | commit-msg | message body |
-| Full test suite + coverage enforcement (Python + shell + JS packages) | pre-push | whole project |
-| Web/JS quality (eslint, tsc, vitest via `make check-push`) | pre-push | `web/`, `web-components/`, `hitl/web/` |
-| Co-authored / agent attribution in push range | pre-push | git history |
-| Dead code candidates (`dangle`, 13 languages, **advisory**) | pre-push | git-tracked sources per `dead_code.yaml` `scan_paths` |
+| Check                                                                                                                | Default stage       | Scope                                                 |
+| -------------------------------------------------------------------------------------------------------------------- | ------------------- | ----------------------------------------------------- |
+| Secret scanning (gitleaks, 160+ patterns, all non-gitignored files)                                                  | pre-commit          | all files                                             |
+| Sensitive filename blocking (`.env`, `*.pem`, `credentials.json`, ...)                                               | pre-commit          | all files                                             |
+| Banned patterns (200+ including type suppressions, unsafe code, AI slop)                                             | pre-commit          | all files                                             |
+| Silent-error swallow (Python `except: pass`, JS `catch {}`, Shell `\|\| true`, Ansible `ignore_errors`, Cron no-log) | pre-commit          | all tracked files                                     |
+| Duplicate / redundant dependency warning                                                                             | pre-commit          | `pyproject.toml`                                      |
+| Code formatting (`ruff format`, auto-stage + re-run)                                                                 | pre-commit          | Python files                                          |
+| Linting (`ruff check`, 900+ rules)                                                                                   | pre-commit          | Python files                                          |
+| Type checking (`mypy`)                                                                                               | pre-commit          | Python files                                          |
+| File and module size (max 512 lines, 256 KiB, 48 files/module, 8 direct submodules, depth 8)                         | pre-commit          | source files and source directories                   |
+| `__init__.py` must be empty                                                                                          | pre-commit          | `__init__.py` files                                   |
+| `+x` bit forbidden on `.py` modules                                                                                  | pre-commit          | tracked `.py` files                                   |
+| Coverage thresholds not lowered                                                                                      | pre-commit          | `coverage_thresholds.yaml`                            |
+| Deleted `.py` still imported elsewhere                                                                               | pre-commit          | staged deletions                                      |
+| Unstaged/untracked files auto-stage guard                                                                            | pre-commit          | full tree                                             |
+| Process substitution banned in shell scripts                                                                         | pre-commit          | shell scripts                                         |
+| Markdown link integrity (internal anchors + external URLs)                                                           | pre-commit          | doc files                                             |
+| Hook manifest completeness (self-check)                                                                              | pre-commit          | `.pre-commit-config.yaml`                             |
+| Compliance report (17-dimension A-F audit, **advisory**)                                                             | pre-commit preamble | project config                                        |
+| Boot layout audit (`.boot-linux/`/`.boot-macos/` + `.venv/` alignment, **advisory**)                                 | pre-commit          | layout config                                         |
+| Commit message format (`type: description`, body required)                                                           | commit-msg          | message body                                          |
+| Agent attribution / `Co-authored-by` pattern blocking                                                                | commit-msg          | message body                                          |
+| Full test suite + coverage enforcement (Python + shell + JS packages)                                                | pre-push            | whole project                                         |
+| Web/JS quality (eslint, tsc, vitest via `make check-push`)                                                           | pre-push            | `web/`, `web-components/`, `hitl/web/`                |
+| Co-authored / agent attribution in push range                                                                        | pre-push            | git history                                           |
+| Dead code candidates (`dangle`, 13 languages, **advisory**)                                                          | pre-push            | git-tracked sources per `dead_code.yaml` `scan_paths` |
 
 Every check has configurable `always_run` / `files:` / `stages:` / `types_or:`
 gates in `.pre-commit-config.yaml` and an enforcement tier (`strict` / `poc` /
@@ -137,6 +146,20 @@ blocked commit patterns in [`config/blocked_commit_patterns.yaml`](config/blocke
 and dependency excludes in [`config/dependency_excludes.yaml`](config/dependency_excludes.yaml).
 Add a pattern, tune a threshold, exclude a path: no code changes needed.
 
+### Module Size Guardrails
+
+In addition to the existing 512-line per-file limit, strict-tier hooks enforce
+structural source limits: 256 KiB per source file, 48 direct source files per
+module, 8 direct submodules per module, and module depth 8. These defaults are
+practical maintainability guardrails rather than universal industry standards;
+they are configurable in [`config/file_length_limits.yaml`](config/file_length_limits.yaml)
+with explicit path-scoped module overrides. Ignored, generated, dependency,
+vendored, and build directories are excluded.
+
+The policy and counting definitions are specified in
+[`docs/requirements/REQ-MODULE-SIZE.md`](docs/requirements/REQ-MODULE-SIZE.md)
+and [`docs/specifications/SPEC-MODULE-SIZE.md`](docs/specifications/SPEC-MODULE-SIZE.md).
+
 ### Runtime config overrides
 
 Any `config/<stem>.yaml` file can be redirected at runtime without copying the
@@ -144,14 +167,14 @@ whole `config/` tree. Resolution is unified across bash hooks, Python checkers,
 and the wiki (`ci/paths.py`, `ci_config_path` in `lib/ci_config_paths.sh`,
 `web/src/lib/config-paths.ts`).
 
-| Variable | Purpose |
-|----------|---------|
-| `CI_CONFIG_DIR` | Config directory (canonical) |
-| `WORKSPACE_CI_CONFIG_ROOT` | Wiki alias for `CI_CONFIG_DIR` |
-| `CI_CONFIG_OVERRIDES` | YAML manifest mapping config stems to file paths |
-| `CI_CONFIG_PATH_{STEM}` | Per-file override (highest precedence) |
-| `CI_GUARD_CONFIG_DIR` / `WORKSPACE_GUARD_CONFIG_ROOT` | Guard policy config directory |
-| `CI_GUARD_CONFIG_OVERRIDES` / `CI_GUARD_CONFIG_PATH_{STEM}` | Guard equivalents |
+| Variable                                                    | Purpose                                          |
+| ----------------------------------------------------------- | ------------------------------------------------ |
+| `CI_CONFIG_DIR`                                             | Config directory (canonical)                     |
+| `WORKSPACE_CI_CONFIG_ROOT`                                  | Wiki alias for `CI_CONFIG_DIR`                   |
+| `CI_CONFIG_OVERRIDES`                                       | YAML manifest mapping config stems to file paths |
+| `CI_CONFIG_PATH_{STEM}`                                     | Per-file override (highest precedence)           |
+| `CI_GUARD_CONFIG_DIR` / `WORKSPACE_GUARD_CONFIG_ROOT`       | Guard policy config directory                    |
+| `CI_GUARD_CONFIG_OVERRIDES` / `CI_GUARD_CONFIG_PATH_{STEM}` | Guard equivalents                                |
 
 Example manifest (`CI_CONFIG_OVERRIDES=/path/to/overrides.yaml`):
 
@@ -164,11 +187,11 @@ required_hooks: ./my-required_hooks.yaml
 
 ## Tiers
 
-| Tier | Behavior |
-|------|----------|
-| **strict** | Full enforcement. Default for first-party code. |
-| **poc** | Safety subset only: gitleaks, sensitive files, banned words, blocked history, commit message. |
-| **vendored** | No hooks installed. For frozen or mirrored code. |
+| Tier         | Behavior                                                                                      |
+| ------------ | --------------------------------------------------------------------------------------------- |
+| **strict**   | Full enforcement. Default for first-party code.                                               |
+| **poc**      | Safety subset only: gitleaks, sensitive files, banned words, blocked history, commit message. |
+| **vendored** | No hooks installed. For frozen or mirrored code.                                              |
 
 `enforcement_mode: warn` during rollout: see violations without breaking flow.
 Flip to `enforce` when gates are clean.
@@ -190,18 +213,18 @@ admission for pre-commit's hook scheduling.
 
 ### The ceiling: what workspace-ci adds on top of those same tools
 
-| What is added | Why no off-the-shelf tool does this |
-| ------------- | ----------------------------------- |
-| Banned patterns (200+ semantic prohibitions) | No linter encodes the repo's architectural policy list from `banned_words.yaml`. These are policy decisions, not style rules. |
-| Error-swallow detection (Python, JS, Shell, Ansible, Cron) | No tool spans five languages looking for swallowed-error patterns in unified diffs. Each language's linter only sees its own syntax. |
-| Coverage no-devolution | Thresholds can only raise, never lower. No linter or test runner tracks config history. |
-| Dead imports on deletion (`check-no-dead-imports`) | Detects imports of deleted `.py` modules before the commit lands. Pre-commit has no cross-file deletion awareness. |
-| Dead code candidates (`check-dead-code`, advisory) | `dangle` cross-references unreferenced functions, classes, and modules across 13 languages; post-filtered via `dead_code.yaml`. Warns on push, does not block. |
-| Dependency freshness | Flags stale pinned versions, not just unpinned ones. `pip-audit` checks vulnerabilities; this checks rot. |
-| Co-authored history scan on push | Catches agent-attribution lines snuck in via rebase or amend that slipped past commit-msg. Scans the actual push range. |
-| Enforcement tiers (strict / poc / vendored) | Per-project gate profiles. Pre-commit has no tier concept; every repo gets the same hooks or none. |
-| Escape-hatch blocking | [WORKSPACE-GUARD](https://github.com/Independent-AI-Labs/WORKSPACE-GUARD) intercepts `--no-verify`, force-push, `git reset`, and `git commit --amend` at the syscall level. No hook framework can do this; hooks are bypassable by definition. |
-| Native bash execution | No Python runtime for hooks, no tree stashing, no remote repo cloning. Hooks are generated bash scripts in `.git/hooks/*`. |
+| What is added                                              | Why no off-the-shelf tool does this                                                                                                                                                                                                            |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Banned patterns (200+ semantic prohibitions)               | No linter encodes the repo's architectural policy list from `banned_words.yaml`. These are policy decisions, not style rules.                                                                                                                  |
+| Error-swallow detection (Python, JS, Shell, Ansible, Cron) | No tool spans five languages looking for swallowed-error patterns in unified diffs. Each language's linter only sees its own syntax.                                                                                                           |
+| Coverage no-devolution                                     | Thresholds can only raise, never lower. No linter or test runner tracks config history.                                                                                                                                                        |
+| Dead imports on deletion (`check-no-dead-imports`)         | Detects imports of deleted `.py` modules before the commit lands. Pre-commit has no cross-file deletion awareness.                                                                                                                             |
+| Dead code candidates (`check-dead-code`, advisory)         | `dangle` cross-references unreferenced functions, classes, and modules across 13 languages; post-filtered via `dead_code.yaml`. Warns on push, does not block.                                                                                 |
+| Dependency freshness                                       | Flags stale pinned versions, not just unpinned ones. `pip-audit` checks vulnerabilities; this checks rot.                                                                                                                                      |
+| Co-authored history scan on push                           | Catches agent-attribution lines snuck in via rebase or amend that slipped past commit-msg. Scans the actual push range.                                                                                                                        |
+| Enforcement tiers (strict / poc / vendored)                | Per-project gate profiles. Pre-commit has no tier concept; every repo gets the same hooks or none.                                                                                                                                             |
+| Escape-hatch blocking                                      | [WORKSPACE-GUARD](https://github.com/Independent-AI-Labs/WORKSPACE-GUARD) intercepts `--no-verify`, force-push, `git reset`, and `git commit --amend` at the syscall level. No hook framework can do this; hooks are bypassable by definition. |
+| Native bash execution                                      | No Python runtime for hooks, no tree stashing, no remote repo cloning. Hooks are generated bash scripts in `.git/hooks/*`.                                                                                                                     |
 
 The tools workspace-ci wraps are the floor, not the ceiling. The value is
 the enforcement layer above them.
@@ -212,15 +235,15 @@ the enforcement layer above them.
 
 The interactive documentation wiki lives in [`web/`](web/) (Next.js).
 
-| Target | Purpose |
-|--------|---------|
-| `make start` / `make wiki-dev-start` | Dev server with HMR on `:4000` |
-| `make wiki-dev-stop/restart/status/logs` | Dev server lifecycle |
-| `make extract-wiki-data` | Regenerate wiki JSON from CI sources (hooks, scripts, code-stats) |
-| `make wiki-prod-build` | Build production Podman image (`web/Containerfile`) |
-| `make wiki-prod-start/stop/restart/status/logs` | Prod stack: nginx TLS proxy on `:8080`/`:8443` + app container (no root) |
-| `make wiki-prod-deploy/undeploy` | Install wiki prod as a boot-persistent systemd user unit |
-| `make wiki-tunnel-deploy/start/stop/route-dns/...` | Cloudflare tunnel via Ansible systemd user unit |
+| Target                                             | Purpose                                                                  |
+| -------------------------------------------------- | ------------------------------------------------------------------------ |
+| `make start` / `make wiki-dev-start`               | Dev server with HMR on `:4000`                                           |
+| `make wiki-dev-stop/restart/status/logs`           | Dev server lifecycle                                                     |
+| `make extract-wiki-data`                           | Regenerate wiki JSON from CI sources (hooks, scripts, code-stats)        |
+| `make wiki-prod-build`                             | Build production Podman image (`web/Containerfile`)                      |
+| `make wiki-prod-start/stop/restart/status/logs`    | Prod stack: nginx TLS proxy on `:8080`/`:8443` + app container (no root) |
+| `make wiki-prod-deploy/undeploy`                   | Install wiki prod as a boot-persistent systemd user unit                 |
+| `make wiki-tunnel-deploy/start/stop/route-dns/...` | Cloudflare tunnel via Ansible systemd user unit                          |
 
 Production deploy (boot-persistent): copy [`.env.example`](.env.example) to `.env`
 (gitignored), then in order:
@@ -257,8 +280,8 @@ wrap it via [`lib/guard-build.sh`](lib/guard-build.sh) and
 sudo make build-guard
 sudo make install-guard-host-exec
 
-# Read-only status check (no sudo):
-make check-guard
+# Read-only host-execution status check (no sudo):
+make check-guard-host-exec
 ```
 
 `make rewrite-history` strips blocked patterns from git history and requires
@@ -268,24 +291,22 @@ make check-guard
 
 ## Documentation
 
-| Doc | What's in it |
-|-----|-------------|
-| [`workflows/README.md`](workflows/README.md) | Agent/contributor workflows: website copy, architecture diagrams |
-| [`docs/README.md`](docs/README.md) | Documentation hub (requirements, specifications, runbooks, audits) |
-| [`docs/runbooks/RUNBOOK-HOOKS.md`](docs/runbooks/RUNBOOK-HOOKS.md) | Hook generation, configuration, migration from pre-commit |
-| [`docs/requirements/REQ-PORTABILITY.md`](docs/requirements/REQ-PORTABILITY.md) | Shell portability contract: process-substitution ban, temp-file capture helpers |
-| [`docs/specifications/SPEC-PORTABILITY.md`](docs/specifications/SPEC-PORTABILITY.md) | Portability implementation: capture helper API, enforcement |
-| [`docs/requirements/REQ-BOOT-LAYOUT.md`](docs/requirements/REQ-BOOT-LAYOUT.md) | Platform-aware boot directory layout (`.boot-linux/`/`.boot-macos/`) and `.venv/` toolchain requirements |
-| [`docs/specifications/SPEC-BOOT-LAYOUT.md`](docs/specifications/SPEC-BOOT-LAYOUT.md) | Boot layout implementation: walk-up PATH resolution, config schema, compliance check |
-| [`docs/requirements/REQ-WIKI.md`](docs/requirements/REQ-WIKI.md) | Interactive wiki UI requirements |
-| [`docs/specifications/SPEC-WIKI.md`](docs/specifications/SPEC-WIKI.md) | Wiki implementation specification |
-| [`docs/requirements/REQ-WIKI-RESPONSIVE.md`](docs/requirements/REQ-WIKI-RESPONSIVE.md) | Wiki responsive layout requirements |
-| [`docs/specifications/SPEC-WIKI-RESPONSIVE.md`](docs/specifications/SPEC-WIKI-RESPONSIVE.md) | Wiki responsive layout specification |
-| [`docs/requirements/REQ-SCAFFOLD-CI.md`](docs/requirements/REQ-SCAFFOLD-CI.md) | scaffold-ci feature requirements (FR/NFR/TR acceptance criteria) |
-| [`docs/specifications/SPEC-SCAFFOLD-CI.md`](docs/specifications/SPEC-SCAFFOLD-CI.md) | scaffold-ci implementation: 5-phase validation, generation pipeline, awk parser |
-| [`docs/audits/SECURITY-AUDIT-2026-07-04.md`](docs/audits/SECURITY-AUDIT-2026-07-04.md) | Full-repo security audit |
-| [`lib/`](lib/) | Shell check functions: core, files, commit, coverage, compliance, quality, dead code |
-| [`ci/`](ci/) | Python checks: dependency versions, markdown refs, required hooks manifest, boot layout |
+| Doc                                                                                          | What's in it                                                                                             |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| [`workflows/README.md`](workflows/README.md)                                                 | Agent/contributor workflows: website copy, architecture diagrams                                         |
+| [`docs/README.md`](docs/README.md)                                                           | Documentation hub (requirements, specifications, runbooks, audits)                                       |
+| [`docs/runbooks/RUNBOOK-HOOKS.md`](docs/runbooks/RUNBOOK-HOOKS.md)                           | Clean hook generation and protected installation                                                         |
+| [`docs/requirements/REQ-PORTABILITY.md`](docs/requirements/REQ-PORTABILITY.md)               | Shell portability contract: process-substitution ban, temp-file capture helpers                          |
+| [`docs/specifications/SPEC-PORTABILITY.md`](docs/specifications/SPEC-PORTABILITY.md)         | Portability implementation: capture helper API, enforcement                                              |
+| [`docs/requirements/REQ-BOOT-LAYOUT.md`](docs/requirements/REQ-BOOT-LAYOUT.md)               | Platform-aware boot directory layout (`.boot-linux/`/`.boot-macos/`) and `.venv/` toolchain requirements |
+| [`docs/specifications/SPEC-BOOT-LAYOUT.md`](docs/specifications/SPEC-BOOT-LAYOUT.md)         | Boot layout implementation: walk-up PATH resolution, config schema, compliance check                     |
+| [`docs/requirements/REQ-WIKI.md`](docs/requirements/REQ-WIKI.md)                             | Interactive wiki UI requirements                                                                         |
+| [`docs/specifications/SPEC-WIKI.md`](docs/specifications/SPEC-WIKI.md)                       | Wiki implementation specification                                                                        |
+| [`docs/requirements/REQ-WIKI-RESPONSIVE.md`](docs/requirements/REQ-WIKI-RESPONSIVE.md)       | Wiki responsive layout requirements                                                                      |
+| [`docs/specifications/SPEC-WIKI-RESPONSIVE.md`](docs/specifications/SPEC-WIKI-RESPONSIVE.md) | Wiki responsive layout specification                                                                     |
+| [`docs/audits/SECURITY-AUDIT-2026-07-04.md`](docs/audits/SECURITY-AUDIT-2026-07-04.md)       | Full-repo security audit                                                                                 |
+| [`lib/`](lib/)                                                                               | Shell check functions: core, files, commit, coverage, compliance, quality, dead code                     |
+| [`ci/`](ci/)                                                                                 | Python checks: dependency versions, markdown refs, required hooks manifest, boot layout                  |
 
 ---
 

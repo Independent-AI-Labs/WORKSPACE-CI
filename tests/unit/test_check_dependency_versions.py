@@ -1,477 +1,79 @@
-"""Unit tests for ci/check_dependency_versions module."""
+"""Tests for the dependency-validation dispatcher envelope."""
 
-import urllib.error
+import runpy
+import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from ci._npm_versions import sync_lockfile_after_upgrade
-from ci.check_dependency_versions import (
-    BUILTIN_EXCLUDES,
-    check_and_collect,
-    get_latest_pypi_version,
-    main,
-    parse_dependency,
-    upgrade_pyproject,
-)
-from ci.models import LooseDependency, OutdatedDependency
+from ci.check_dependency_versions import _mode, _normalize_transition_arguments
+
+USAGE_ERROR = 2
 
 
-@pytest.fixture(autouse=True)
-def _skip_exemption_validation():
-    with patch(
-        "ci.check_dependency_versions.validate_exemption_file", lambda *a, **k: None
+def test_module_entrypoint_dispatches_validate(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["check_dependency_versions", "validate", "--consumer-root", "/tmp"],
+    )
+    monkeypatch.delitem(sys.modules, "ci.check_dependency_versions")
+    with (
+        patch("ci.dependency_policy.main", return_value=7) as validate,
+        pytest.raises(SystemExit, match="7"),
     ):
-        yield
-
-
-class TestConstants:
-    """Tests for module constants."""
-
-    def test_builtin_excludes_contains_torch(self) -> None:
-        """Test BUILTIN_EXCLUDES contains torch-related packages."""
-        assert "torch" in BUILTIN_EXCLUDES
-        assert "torchvision" in BUILTIN_EXCLUDES
-        assert "torchaudio" in BUILTIN_EXCLUDES
-
-
-class TestGetLatestPypiVersion:
-    """Tests for get_latest_pypi_version function."""
-
-    @patch("ci.check_dependency_versions.urllib.request.urlopen")
-    def test_returns_version_on_success(self, mock_urlopen) -> None:
-        """Test returns version when PyPI API succeeds."""
-        mock_response = MagicMock()
-        mock_response.read.return_value = b'{"info": {"version": "8.0.0"}}'
-        mock_response.__enter__ = lambda s: s
-        mock_response.__exit__ = MagicMock(return_value=False)
-        mock_urlopen.return_value = mock_response
-
-        version = get_latest_pypi_version("pytest")
-
-        assert version == "8.0.0"
-
-    @patch("ci.check_dependency_versions.urllib.request.urlopen")
-    def test_returns_none_on_url_error(self, mock_urlopen) -> None:
-        """Test returns None when URL request fails."""
-        mock_urlopen.side_effect = urllib.error.URLError("Connection failed")
-
-        version = get_latest_pypi_version("nonexistent-package")
-
-        assert version is None
-
-    @patch("ci.check_dependency_versions.urllib.request.urlopen")
-    def test_returns_none_on_json_error(self, mock_urlopen) -> None:
-        """Test returns None when JSON parsing fails."""
-        mock_response = MagicMock()
-        mock_response.read.return_value = b"invalid json"
-        mock_response.__enter__ = lambda s: s
-        mock_response.__exit__ = MagicMock(return_value=False)
-        mock_urlopen.return_value = mock_response
-
-        version = get_latest_pypi_version("pytest")
-
-        assert version is None
-
-    @patch("ci.check_dependency_versions.urllib.request.urlopen")
-    def test_returns_none_when_version_missing(self, mock_urlopen) -> None:
-        """Test returns None when version key missing in response."""
-        mock_response = MagicMock()
-        mock_response.read.return_value = b'{"info": {}}'
-        mock_response.__enter__ = lambda s: s
-        mock_response.__exit__ = MagicMock(return_value=False)
-        mock_urlopen.return_value = mock_response
-
-        version = get_latest_pypi_version("pytest")
-
-        assert version is None
-
-
-class TestParseDependency:
-    """Tests for parse_dependency function."""
-
-    def test_parses_strict_pin(self) -> None:
-        """Test parsing dependency with strict pin."""
-        name, extras, op, version = parse_dependency("pytest==8.0.0")
-
-        assert name == "pytest"
-        assert extras is None
-        assert op == "=="
-        assert version == "8.0.0"
-
-    def test_parses_loose_constraint_gte(self) -> None:
-        """Test parsing dependency with >= constraint."""
-        name, _extras, op, version = parse_dependency("requests>=2.25.0")
-
-        assert name == "requests"
-        assert op == ">="
-        assert version == "2.25.0"
-
-    def test_parses_loose_constraint_tilde(self) -> None:
-        """Test parsing dependency with ~= constraint."""
-        name, _extras, op, version = parse_dependency("flask~=2.0")
-
-        assert name == "flask"
-        assert op == "~="
-        assert version == "2.0"
-
-    def test_parses_unpinned(self) -> None:
-        """Test parsing unpinned dependency."""
-        name, extras, op, version = parse_dependency("numpy")
-
-        assert name == "numpy"
-        assert extras is None
-        assert op is None
-        assert version is None
-
-    def test_parses_with_extras(self) -> None:
-        """Test parsing dependency with extras."""
-        name, extras, op, version = parse_dependency("uvicorn[standard]==0.29.0")
-
-        assert name == "uvicorn"
-        assert extras == "[standard]"
-        assert op == "=="
-        assert version == "0.29.0"
-
-    def test_parses_with_environment_marker(self) -> None:
-        """Test parsing dependency with environment marker."""
-        name, _extras, op, version = parse_dependency(
-            'colorama==0.4.6; sys_platform=="win32"'
-        )
-
-        assert name == "colorama"
-        assert op == "=="
-        assert version == "0.4.6"
-
-    def test_handles_whitespace(self) -> None:
-        """Test handles whitespace in dependency string."""
-        name, _extras, op, version = parse_dependency("  pytest==8.0.0  ")
-
-        assert name == "pytest"
-        assert op == "=="
-        assert version == "8.0.0"
-
-
-class TestCheckAndCollect:
-    """Tests for check_and_collect function."""
-
-    @patch("ci.check_dependency_versions.get_latest_pypi_version")
-    def test_detects_loose_constraint(self, mock_pypi, tmp_path: Path) -> None:
-        """Test detects loose constraint."""
-        mock_pypi.return_value = "2.0.0"
-        pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text("""
-[project]
-dependencies = ["numpy>=1.20.0"]
-""")
-
-        loose, _outdated, _data = check_and_collect(pyproject, set())
-
-        assert len(loose) == 1
-        assert loose[0][0] == "numpy"
-
-    @patch("ci.check_dependency_versions.get_latest_pypi_version")
-    def test_detects_outdated_dependency(self, mock_pypi, tmp_path: Path) -> None:
-        """Test detects outdated dependency."""
-        mock_pypi.return_value = "2.0.0"
-        pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text("""
-[project]
-dependencies = ["numpy==1.20.0"]
-""")
-
-        loose, outdated, _data = check_and_collect(pyproject, set())
-
-        assert loose == []
-        assert len(outdated) == 1
-        assert outdated[0][0] == "numpy"
-        assert outdated[0][2] == "1.20.0"
-        assert outdated[0][3] == "2.0.0"
-
-    @patch("ci.check_dependency_versions.get_latest_pypi_version")
-    def test_skips_builtin_excludes(self, mock_pypi, tmp_path: Path) -> None:
-        """Test skips builtin excluded packages."""
-        mock_pypi.return_value = "2.0.0"
-        pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text("""
-[project]
-dependencies = ["torch>=1.0.0", "torchvision"]
-""")
-
-        loose, outdated, _data = check_and_collect(pyproject, set())
-
-        assert loose == []
-        assert outdated == []
-        mock_pypi.assert_not_called()
-
-    @patch("ci.check_dependency_versions.get_latest_pypi_version")
-    def test_checks_optional_dependencies(self, mock_pypi, tmp_path: Path) -> None:
-        """Test checks optional dependencies."""
-        mock_pypi.return_value = "8.0.0"
-        pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text("""
-[project]
-dependencies = []
-
-[project.optional-dependencies]
-dev = ["pytest>=7.0.0"]
-""")
-
-        loose, _outdated, _data = check_and_collect(pyproject, set())
-
-        assert len(loose) == 1
-        assert "pytest" in loose[0][0]
-
-    @patch("ci.check_dependency_versions.get_latest_pypi_version")
-    def test_skips_duplicate_packages(self, mock_pypi, tmp_path: Path) -> None:
-        """Test skips duplicate packages."""
-        mock_pypi.return_value = "2.0.0"
-        pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text("""
-[project]
-dependencies = ["numpy==1.20.0"]
-
-[project.optional-dependencies]
-dev = ["numpy==1.20.0"]
-""")
-
-        _loose, _outdated, _data = check_and_collect(pyproject, set())
-
-        # Should only check numpy once
-        assert mock_pypi.call_count == 1
-
-    @patch("ci.check_dependency_versions.get_latest_pypi_version")
-    def test_respects_custom_excludes(self, mock_pypi, tmp_path: Path) -> None:
-        """Test respects custom exclusion list."""
-        mock_pypi.return_value = "2.0.0"
-        pyproject = tmp_path / "pyproject.toml"
-        # Use requests instead of pandas - pandas is in BUILTIN_EXCLUDES
-        pyproject.write_text("""
-[project]
-dependencies = ["numpy>=1.0.0", "requests>=1.0.0"]
-""")
-
-        loose, _outdated, _data = check_and_collect(pyproject, {"numpy"})
-
-        # Only requests should be checked (pandas is in BUILTIN_EXCLUDES)
-        assert len(loose) == 1
-        assert loose[0][0] == "requests"
-
-    @patch("ci.check_dependency_versions.get_latest_pypi_version")
-    def test_skips_when_pypi_returns_none(self, mock_pypi, tmp_path: Path) -> None:
-        """Test skips when PyPI lookup fails."""
-        mock_pypi.return_value = None
-        pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text("""
-[project]
-dependencies = ["custom-pkg==1.0.0"]
-""")
-
-        loose, outdated, _data = check_and_collect(pyproject, set())
-
-        assert loose == []
-        assert outdated == []
-
-
-class TestUpgradePyproject:
-    """Tests for upgrade_pyproject function."""
-
-    def test_upgrades_loose_constraints(self, tmp_path: Path) -> None:
-        """Test upgrades loose constraints to strict pins."""
-        pyproject = tmp_path / "pyproject.toml"
-        # Use multi-line array format (regex requires lines starting with whitespace)
-        pyproject.write_text("""[project]
-dependencies = [
-    "numpy>=1.0.0",
-]
-""")
-
-        loose = [LooseDependency("numpy", "numpy>=1.0.0", "2.0.0")]
-        upgrade_pyproject(pyproject, loose, [])
-
-        content = pyproject.read_text()
-        assert "numpy==2.0.0" in content
-
-    def test_upgrades_outdated_versions(self, tmp_path: Path) -> None:
-        """Test upgrades outdated versions."""
-        pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text("""[project]
-dependencies = [
-    "numpy==1.0.0",
-]
-""")
-
-        outdated = [OutdatedDependency("numpy", None, "1.0.0", "2.0.0")]
-        upgrade_pyproject(pyproject, [], outdated)
-
-        content = pyproject.read_text()
-        assert "numpy==2.0.0" in content
-
-    def test_upgrades_with_extras(self, tmp_path: Path) -> None:
-        """Test upgrades packages with extras."""
-        pyproject = tmp_path / "pyproject.toml"
-        pyproject.write_text("""[project]
-dependencies = [
-    "uvicorn[standard]==0.29.0",
-]
-""")
-
-        outdated = [OutdatedDependency("uvicorn", "[standard]", "0.29.0", "0.30.0")]
-        upgrade_pyproject(pyproject, [], outdated)
-
-        content = pyproject.read_text()
-        assert "uvicorn[standard]==0.30.0" in content
-
-
-class TestSyncLockfileAfterUpgrade:
-    """Tests for ci._npm_versions.sync_lockfile_after_upgrade."""
-
-    def test_no_lockfile_is_noop(self, tmp_path: Path) -> None:
-        """No package-lock.json anywhere above the manifest: nothing to do."""
-        manifest = tmp_path / "web" / "package.json"
-        manifest.parent.mkdir(parents=True)
-        manifest.write_text("{}")
-        with patch("ci._npm_versions.subprocess.run") as mock_run:
-            sync_lockfile_after_upgrade(manifest)
-        mock_run.assert_not_called()
-
-    def test_runs_npm_at_lock_root(self, tmp_path: Path) -> None:
-        """Lockfile above the manifest triggers npm install --package-lock-only."""
-        manifest = tmp_path / "web" / "package.json"
-        manifest.parent.mkdir(parents=True)
-        manifest.write_text("{}")
-        (tmp_path / "package-lock.json").write_text("{}")
-        ok = MagicMock(returncode=0)
-        with (
-            patch("ci._npm_versions.shutil.which", return_value="/bin/npm"),
-            patch("ci._npm_versions.subprocess.run", return_value=ok) as mock_run,
-        ):
-            sync_lockfile_after_upgrade(manifest)
-        mock_run.assert_called_once()
-        args, kwargs = mock_run.call_args
-        assert args[0] == ["/bin/npm", "install", "--package-lock-only"]
-        assert kwargs["cwd"] == tmp_path
-
-    def test_missing_npm_warns_with_fix_hint(self, tmp_path: Path, capsys) -> None:
-        """No npm on PATH: warn and print the manual fix command."""
-        manifest = tmp_path / "package.json"
-        manifest.write_text("{}")
-        (tmp_path / "package-lock.json").write_text("{}")
-        with patch("ci._npm_versions.shutil.which", return_value=None):
-            sync_lockfile_after_upgrade(manifest)
-        assert "npm install --package-lock-only" in capsys.readouterr().out
-
-
-class TestMain:
-    """Tests for main function."""
-
-    @pytest.fixture(autouse=True)
-    def _skip_tool_catalog(self):
-        with patch(
-            "ci.check_dependency_versions.check_tool_versions", return_value=False
-        ):
-            yield
-
-    @patch("ci.check_dependency_versions.check_and_collect")
-    @patch("ci.check_dependency_versions.Path")
-    def test_returns_zero_when_all_pass(self, mock_path_class, mock_check) -> None:
-        """Test returns 0 when all dependencies pass."""
-        mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_path_class.return_value = mock_path
-        mock_check.return_value = ([], [], {})
-
-        with patch("sys.argv", ["check_dependency_versions.py"]):
-            result = main()
-
-        assert result == 0
-
-    @patch("ci.check_dependency_versions.check_and_collect")
-    @patch("ci.check_dependency_versions.Path")
-    def test_returns_one_for_loose_constraints(
-        self, mock_path_class, mock_check
-    ) -> None:
-        """Test returns 1 when loose constraints found."""
-        mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_path_class.return_value = mock_path
-        mock_check.return_value = (
-            [LooseDependency("numpy", "numpy>=1.0", "2.0")],
-            [],
-            {},
-        )
-
-        with patch("sys.argv", ["check_dependency_versions.py"]):
-            result = main()
-
-        assert result == 1
-
-    @patch("ci.check_dependency_versions.check_and_collect")
-    @patch("ci.check_dependency_versions.Path")
-    def test_returns_one_for_outdated(self, mock_path_class, mock_check) -> None:
-        """Test returns 1 when outdated dependencies found."""
-        mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_path_class.return_value = mock_path
-        mock_check.return_value = (
-            [],
-            [OutdatedDependency("numpy", None, "1.0", "2.0")],
-            {},
-        )
-
-        with patch("sys.argv", ["check_dependency_versions.py"]):
-            result = main()
-
-        assert result == 1
-
-    @patch("ci.check_dependency_versions.Path")
-    def test_returns_zero_for_missing_default_paths(self, mock_path_class) -> None:
-        """Test returns 0 when implicit default paths are missing.
-
-        Consumer repos without dependency manifests must pass cleanly:
-        their generated hook runs the checker with no explicit paths.
-        """
-        mock_path = MagicMock()
-        mock_path.exists.return_value = False
-        mock_path_class.return_value = mock_path
-
-        with patch("sys.argv", ["check_dependency_versions.py"]):
-            result = main()
-
-        assert result == 0
-
-    @patch("ci.check_dependency_versions.Path")
-    def test_returns_one_for_missing_explicit_path(self, mock_path_class) -> None:
-        """Test returns 1 when an explicitly requested path is missing."""
-        mock_path = MagicMock()
-        mock_path.exists.return_value = False
-        mock_path_class.return_value = mock_path
-
-        with patch("sys.argv", ["check_dependency_versions.py", "foo/package.json"]):
-            result = main()
-
-        assert result == 1
-
-    @patch("ci.check_dependency_versions.upgrade_pyproject")
-    @patch("ci.check_dependency_versions.check_and_collect")
-    @patch("ci.check_dependency_versions.Path")
-    def test_upgrade_mode(self, mock_path_class, mock_check, mock_upgrade) -> None:
-        """Test upgrade mode calls upgrade_pyproject."""
-        mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_path_class.return_value = mock_path
-        mock_check.return_value = (
-            [LooseDependency("numpy", "numpy>=1.0", "2.0")],
-            [],
-            {},
-        )
-
-        with patch(
-            "sys.argv",
-            ["check_dependency_versions.py", "--upgrade", "pyproject.toml"],
-        ):
-            result = main()
-
-        mock_upgrade.assert_called_once()
-        assert result == 0
+        runpy.run_module("ci.check_dependency_versions", run_name="__main__")
+    validate.assert_called_once_with(["--consumer-root", "/tmp"])
+
+
+def test_validate_mode_is_accepted_without_importing_its_implementation() -> None:
+    assert _mode(["validate", "--catalog", "catalog.yaml"]) == "validate"
+
+
+def test_predecessor_hook_invocation_maps_to_offline_validation() -> None:
+    arguments = _normalize_transition_arguments(
+        ["--deterministic-only", "--catalog", "res/dependency-pins.yaml"]
+    )
+    assert arguments[:5] == [
+        "validate",
+        "--consumer-root",
+        str(Path.cwd()),
+        "--exclusions",
+        "config/dependency_excludes.yaml",
+    ]
+    assert arguments[-3:] == [
+        "--compose",
+        "web/compose.prod.yaml",
+        "pyproject.toml",
+    ]
+
+
+def test_rejects_missing_or_unknown_mode(capsys) -> None:
+    assert _mode([]) is None
+    assert "usage:" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["--upgrade"],
+        ["validate", "--upgrade"],
+        ["validate", "--upgrade=true"],
+        ["validate", "--unknown"],
+        ["validate", "--network"],
+        ["validate", "--freshness"],
+        ["validate", "--fix"],
+    ],
+)
+def test_rejects_mutation_network_unknown_and_ambiguous_requests(
+    arguments: list[str], capsys
+) -> None:
+    assert _mode(arguments) is None
+    assert "usage:" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("mode", ["freshness", "upgrade"])
+def test_unavailable_modes_are_not_public(capsys, mode: str) -> None:
+    assert _mode([mode]) is None
+    assert "usage: check_dependency_versions.py validate ..." in capsys.readouterr().err

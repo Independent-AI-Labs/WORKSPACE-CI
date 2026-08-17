@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools==80.10.2", "wheel"]
+requires = ["setuptools==80.10.2", "wheel==0.46.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -22,25 +22,10 @@ dev = [
     "pytest-cov==7.1.0",
     "pytest-timeout==2.4.0",
     "pytest-xdist==3.8.0",
+    "ruff==0.16.2",
     "black==26.5.1",
-    "ruff==0.16.1",
     "mypy==2.3.0",
     "types-PyYAML==6.0.12.20260724",
-]
-lint = [
-    "ruff==0.16.1",
-    "black==26.5.1",
-]
-type-check = [
-    "mypy==2.3.0",
-    "pydantic==2.13.4",
-]
-test = [
-    "pytest==9.1.1",
-    "pytest-asyncio==1.4.0",
-    "pytest-cov==7.1.0",
-    "pytest-timeout==2.4.0",
-    "pytest-xdist==3.8.0",
 ]
 
 [tool.setuptools.packages.find]

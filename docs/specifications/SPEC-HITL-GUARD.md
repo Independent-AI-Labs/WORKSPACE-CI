@@ -1,4 +1,4 @@
-# SPEC-HITL-GUARD: WORKSPACE-GUARD HITL Elevation Integration Contract
+# SPEC-HITL-GUARD: `escalate` Execution Contract
 
 **Date:** 2026-07-25
 **Status:** Draft
@@ -6,214 +6,174 @@
 **Requirements:** [REQ-HITL-GUARD](../requirements/REQ-HITL-GUARD.md)
 **Parent:** [SPEC-HITL](SPEC-HITL.md)
 
-> Contract-level implementation detail for the GUARD HITL elevation
-> integration: exact hook points in the existing guard code, the new
-> bash wrapper surface, the ELEVATE verdict data flow, elevation-token
-> redemption pseudocode, policy schema extensions, and the exit-code
-> allocation. File paths below refer to the WORKSPACE-GUARD repository;
-> the implementation itself lands there under its own REQ/SPEC pair
-> derived from this contract.
+## 1. Process Boundary
 
----
+`escalate` is the only new executable and the only local HITL client:
 
-**Cross-references:**
-
-- [REQ-HITL-GUARD](../requirements/REQ-HITL-GUARD.md): owning requirements contract
-- [SPEC-HITL](SPEC-HITL.md): system flows §3.1, threat map §5
-- [SPEC-HITL-RELAY](SPEC-HITL-RELAY.md): protocol v1 (§2), elevation token format (§5.1)
-- WORKSPACE-GUARD `src/block.rs`, `src/binary_guard.rs`, `src/binary_policy_types.rs`, `src/exec.rs`, `src/log.rs`, `build.rs`: hook points (GUARD repo)
-
----
-
-## 1. Hook Points (GUARD repo)
-
-| Existing code | Current behaviour | HITL insertion |
-|---------------|-------------------|----------------|
-| `src/block.rs` - sudo-gated subcommand branch | non-root → block with "run with sudo" hint | consult `hitl_policy`: opted-in class → ELEVATE path; otherwise unchanged |
-| `src/binary_policy_types.rs` - `PolicyKind` enum | `DenyNonRoot`, `DenyAllNonRoot`, `ArgValidate`, `PassThrough` | add `RequireApproval` (compiled from policy YAML) |
-| `src/binary_guard.rs` - `decide()` | per-basename policy decision | `RequireApproval` → build request, call agent client, await verdict |
-| `src/exec.rs` - pre-exec gate | lock → contract check → execve | token redemption + argv-hash verify inserted after lock acquisition, immediately before exec |
-| `src/log.rs` - `block()`/`warn()` | tty + file audit | new `elevate()` audit variant (request ID, state, outcome) |
-| `build.rs` codegen | YAML → const literals | new `config/hitl_policy.yaml` → `const HITL_POLICY` |
-| `config/guard_environment.yaml` | closed child env allowlist | add only: relay endpoint var name + state-file path constant; nothing secret-bearing |
-
-## 2. Bash Wrapper Surface (FR-1)
-
-Deployment model mirrors the binary-lock program:
-
-```
-/usr/bin/bash                  → capability-locked wrapper (new surface)
-/usr/bin/bash.real             → root:root 0700 real bash
-/usr/lib/workspace-guard/
-    hitl-policy.yaml.hash      # integrity anchor (deploy-time)
-    grant-pubkey.pem           # root-owned relay grant public key (NFR-1.3)
-/var/lib/workspace-guard/hitl/
-    state/                     # root-owned grant state dir (FR-2.3)
+```text
+agent
+  -> escalate sudo <argv...>
+       -> PDP over one mTLS connection
+       -> human approval
+       -> guarded /bin/bash -c <quoted command>
+       -> guarded /usr/bin/sudo <argv...>
+       -> command
 ```
 
-Invocation classification:
+The Bash and sudo guards receive no HITL code, state, protocol, or policy.
+`escalate` contains no copy of their rules.
 
-1. Non-interactive script/exec (`bash -c ...`): the command line is
-   classified against `hitl_policy.yaml` command classes (§5).
-   - `deny` class → existing block path (exit 1).
-   - `elevate` class → ELEVATE flow (§3).
-   - no match → pass through to `bash.real` with the existing
-     closed-env discipline.
-2. Interactive shells: pass through; gated commands inside the session
-   are caught by the *binary* wrappers (sudo, systemctl, ...) which carry
-   their own `RequireApproval` policy - the bash wrapper does not
-   attempt in-session interception.
+## 2. Startup
 
-Rationale: bash argv classification alone is insufficient for
-interactive use; the per-binary guards remain the enforcement layer,
-and the bash wrapper covers the agent's primary automation surface
-(`bash -c`).
+`escalate` is installed root-owned and SUID with execution restricted to the
+root-managed provisioned-agent group. Startup proceeds in this order:
 
-## 3. ELEVATE Data Flow (FR-2)
+1. Capture real UID, primary GID, and supplementary groups from kernel APIs.
+2. Reject callers outside the provisioned-agent group.
+3. Require argv to begin with the literal `sudo` and contain a command.
+4. Reject invalid UTF-8. Kernel argv cannot contain NUL; construction APIs also
+   reject any interior NUL.
+5. Open `.` as a directory with `O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW`; record
+   its canonical path, device, and inode.
+6. Open the root-owned mTLS certificate/key and Ed25519 signing key with
+   `O_RDONLY | O_CLOEXEC | O_NOFOLLOW`; require regular files owned by UID 0
+   with no group/world write bits.
+7. Load both identities, close the source descriptors, disable core dumps, and
+   set the process non-dumpable.
+8. Drop effective UID to the real caller while retaining only the saved root UID
+   needed for the final transition.
 
-```
-wrapper decide() → ELEVATE
-  ├─ build request payload { display, argv_sha256, host, agent_id,
-  │    justification, ttl, idempotency_key }
-  ├─ hitl-agent (helper, §4): AppRole login → ws-ticket → wss submit
-  │    → await decision (bounded: min(request TTL, wait_cap))
-  │     ├─ approved → elevation token → write grant state file
-  │     │             (root-owned dir, O_NOFOLLOW, symlink_metadata
-  │     │              verified, mode 0600) → return APPROVED
-  │     ├─ denied/expired/timeout/error → return DENIED(+reason)
-  ├─ on APPROVED: re-hash argv → redemption verify (§4.2) →
-  │    mark jti used → exec gated command → report outcome
-  └─ audit elevate() at each transition
-```
+No environment value selects identity paths or changes these checks.
 
-Wait semantics (FR-1.4, NFR-2.1): the wrapper prints one status line
-(`HITL: request <id> pending (ttl Ns)`) and blocks up to the wait cap
-(default 300 s, ≤ TTL). This matches agent loop semantics (the caller
-is a program, not a tty user). No GUARD locks are held while waiting;
-lock acquisition happens after redemption, in the existing pre-exec
-position.
+## 3. Request and Decision
 
-## 4. Agent Client & Redemption
+The submitted request contains:
 
-### 4.1 `hitl-agent` helper
-
-- Separate small Rust binary (GUARD repo, `src/bin/hitl-agent.rs` or a
-  mode of the guard binary), `#![forbid(unsafe_code)]`, deps limited
-  to: tokio, tokio-tungstenite (rustls), ed25519-dalek, jsonwebtoken,
-  serde, sha2, zeroize.
-- Session key: Ed25519 generated per process invocation
-  (FR-3.4); its thumbprint is sent in the request envelope; the relay
-  binds it into the grant's `cnf` (SPEC-HITL-RELAY §5.1).
-- AppRole bootstrap: `/etc/workspace-guard/hitl/approle` (root-owned,
-  symlink-verified): role_id + wrapped secret_id; unwrap at first use
-  per provisioning runbook; token TTL ≤ 300 s, refreshed per session.
-- TLS: system roots; relay hostname pinned in policy config; invalid
-  certs hard-fail (FR-3.2).
-
-### 4.2 Redemption verification (FR-2.4) - pseudocode
-
-```rust
-fn redeem(token: &str, pending: &PendingRequest, pubkey: &VerifyingKey)
-    -> Result<Grant, DenyReason>
-{
-    let claims = jwt::decode::<GrantClaims>(token, pubkey, &validation(EdDSA))?;
-    require!(claims.exp <= claims.iat + 300);            // hard cap
-    require!(claims.request_id  == pending.request_id);
-    require!(claims.request_hash == sha256_canonical(pending.argv));
-    require!(claims.cnf.thumbprint == pending.session_thumbprint);
-    require!(jit_registry_insert_if_absent(&claims.jti)); // atomic, FR-2.5
-    Ok(Grant { jti: claims.jti })
-}
+```text
+request_id
+argv: ordered UTF-8 strings
+cwd: { canonical_path, device, inode }
+caller: { uid, gid, supplementary_groups, agent_id }
+host_id
+server_nonce
+expires_at
 ```
 
-All comparisons constant-time; any `require!` failure → denial +
-`elevate()` audit with reason class; no partial state.
+The canonical request hash covers every field and the protocol version.
+`escalate` signs that request with Ed25519. The PDP derives approver scope from
+policy and returns a decision on the same mTLS connection.
+An approval response covers the request hash, server nonce, connection binding,
+decision, and expiry.
 
-### 4.3 Grant state file (FR-2.3)
+`escalate` does not accept a portable token. A closed connection cannot be
+resumed. Any transport failure exits `5`; retry requires a fresh invocation,
+nonce, request, and human approval.
 
-The state file carries **no token bytes**: only
-`{ request_id, request_hash, jti, exp, session_thumbprint }` - the
-values the exec-side wrapper re-checks against the pending context and
-its own recomputed argv hash. The token itself lives only in the
-helper's memory. This keeps V10 (no grant bytes at rest) achievable
-while preserving the root-owned, symlink-verified, fail-closed trust
-pattern of the guard's root-gated policy files.
+## 4. Wait and Cancellation
 
-## 5. Policy Schema (FR-1.3, OQ-4)
+The process remains attached to the caller and waits until the earlier of the
+request expiry or configured wait limit. It may print request ID and state to
+stderr, but no private identity or reusable authorization material.
 
-`config/hitl_policy.yaml` (GUARD repo; schema-validated; baked via
-build.rs):
+On an interrupt, it sends cancellation over the live connection, closes the
+connection, and exits `5`. Since root is regained only after final
+approval verification, interrupted or failed waits cannot execute.
 
-```yaml
-version: 1
-relay:
-  endpoint: "wss://hitl.example.local"
-  pubkey_path: /usr/lib/workspace-guard/grant-pubkey.pem
-defaults:
-  ttl_seconds: 600
-  wait_cap_seconds: 300
-bash_surface:
-  classes:
-    - id: svc-restart
-      match: { argv_glob: "systemctl restart *" }
-      verdict: elevate
-      tier_hint: 1
-      exec_mechanism: policy_drop        # OQ-1 option (a): gate was policy-only
-    - id: pkg-install
-      match: { argv_glob: "apt-get install *" }
-      verdict: elevate
-      tier_hint: 1
-      exec_mechanism: policy_drop
-git_surface:                          # first opt-ins (OQ-4)
-  - { subcommand: submodule, verdict: elevate }
-  # checkout/switch/restore stay legacy-gated until burn-in
-binary_surface:
-  - { basename: systemctl, policy: require-approval, classes: [svc-restart] }
+## 5. Final Verification and UID Transition
+
+Before regaining root, `escalate` verifies:
+
+1. the response belongs to the current authenticated connection;
+2. request hash, nonce, decision, and expiry match;
+3. argv and captured caller identity are unchanged;
+4. `fstat()` on the open cwd descriptor still matches the approved device and
+   inode;
+5. the canonical cwd path still resolves to that device and inode.
+
+It then uses the platform UID API to set real, effective, and saved UID to 0.
+Failure is terminal. After all UIDs are root, the process immediately performs
+the guarded Bash exec described below and cannot return to caller privilege.
+
+## 6. Deterministic Shell Quoting
+
+Every UTF-8 argv element is encoded as one POSIX shell word:
+
+1. Start the word with a single quote.
+2. Copy every byte other than `'` unchanged.
+3. Encode each `'` as `'"'"'`.
+4. End the word with a single quote.
+5. Join encoded words with one ASCII space.
+
+Examples:
+
+| Argument          | Encoded word        |
+| ----------------- | ------------------- |
+| `sudo`            | `'sudo'`            |
+| empty string      | `''`                |
+| `a b`             | `'a b'`             |
+| `don't`           | `'don'"'"'t'`       |
+| `$(id); rm -rf /` | `'$(id); rm -rf /'` |
+
+The resulting command starts with the encoded literal `sudo`. This encoding is
+injective for accepted argv: parsing it as shell words recovers exactly the
+original argument sequence, and metacharacters inside arguments remain data.
+
+## 7. Guarded Execution
+
+The final call is equivalent to:
+
+```text
+execve("/bin/bash", ["bash", "-c", quoted_command], caller_environment)
 ```
 
-`exec_mechanism: policy_drop` (OQ-1): for v1 only policy-only gates
-opt in - the wrapper simply refrains from blocking and execs under the
-caller's identity. Capability-loaning mechanisms (option b/c) require a
-separate hardening review before any class uses them.
+`/bin/bash` is the existing shell guard, not `/bin/bash.real`. It scans the full
+quoted command with its existing policy. If accepted, the real shell parses the
+quoted words and invokes `/usr/bin/sudo`, which is the existing sudo guard, not
+`/usr/bin/sudo.real`. Because `escalate` set all UIDs to root before the Bash
+exec, the sudo guard applies its existing root behavior and all existing argument
+checks.
 
-## 6. Exit Codes (FR-1.4, C-6)
+Neither guard receives a special flag, environment variable, file descriptor,
+approval token, or bypass. The caller environment is forwarded to guarded Bash;
+the existing Bash and sudo sanitization remains authoritative.
 
-Proposal for GUARD repo sign-off (extends the existing 0/1/2/4
-contract):
+## 8. Direct Sudo
 
-| Code | Meaning |
-|------|---------|
-| 0 | pass / elevation approved + executed (child exit code propagated where applicable) |
-| 1 | policy block (unchanged) |
-| 2 | infrastructure failure incl. relay unreachable (unchanged class; log signature distinguishes) |
-| 3 | elevation denied / expired / timed out (NEW - was unused in README contract) |
-| 4 | contract failure (unchanged) |
+The existing non-root sudo rejection remains a rejection. Its diagnostic adds:
 
-## 7. Audit Mapping (FR-4)
+```text
+Use human approval: escalate sudo <command> [args...]
+```
 
-| Event | Channel | Fields |
-|-------|---------|--------|
-| request submitted | `log::elevate()` → file + tty notice | request_id, class, display, ttl |
-| decision received | same | request_id, outcome, latency |
-| redemption | same | request_id, jti prefix, argv_hash match=true |
-| exec outcome | same + relay report | exit class |
-| tamper (state file/pubkey/symlink) | RED tier (existing audit tiers) | path, expected vs actual |
+The sudo guard does not invoke `escalate`.
 
-## 8. Testing Strategy (GUARD repo, per its harness conventions)
+## 9. Exit and I/O
 
-- Unit: policy compile tests (YAML → const), redemption verify
-  table-tests over forged-token corpus (V4), state-file adversarial
-  tests (V5).
-- Integration: mock relay (axum test server speaking protocol v1)
-  driving V1-V3, V9; QEMU/podman E2E harness precedent for the full
-  wrapper surface (V6-V8).
-- Regression: full existing `guard_policy_matrix.yaml` MUST pass
-  unchanged with HITL config absent (NFR-3.1) and present (NFR-1.1).
+Before execution, denial, expiry, cancellation, disconnection, malformed data,
+identity mismatch, or internal failure exits `5`. After the final `execve`, stdin,
+stdout, stderr, terminal state, signals, and exit status follow normal Bash/sudo
+behavior. `escalate` does not proxy or persist command output.
 
-## 9. Implementation Status
+## 10. Tests
 
-| Item | Status | Evidence |
-|------|--------|----------|
-| §1-§7 contract | Specified | - |
-| GUARD repo REQ/SPEC pair | Not started | derived from this contract |
-| Code | Not started | - |
+The WORKSPACE-GUARD implementation requires focused tests for:
+
+- caller-group rejection before machine-identity access;
+- privilege drop during network parsing and bounded waiting;
+- decision binding and fail-closed disconnect behavior;
+- cwd device/inode/path verification;
+- shell-quote round trips for empty strings, whitespace, quotes, substitutions,
+  separators, newlines, Unicode, and leading dashes;
+- end-to-end guarded Bash and guarded sudo invocation without direct `.real`
+  execution;
+- unchanged existing Bash and sudo policy results;
+- direct-sudo denial guidance;
+- status `5` for every HITL non-execution outcome.
+
+## 11. Implementation Status
+
+| Item                    | Status      |
+| ----------------------- | ----------- |
+| Contract                | Specified   |
+| `escalate` binary       | Not started |
+| GUARD diagnostic change | Not started |

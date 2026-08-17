@@ -22,7 +22,7 @@
     "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
-    "@workspace-ci/web-components": "*",
+    "@workspace-ci/web-components": "0.1.0",
     "@chenglou/pretext": "0.0.8",
     "@codemirror/commands": "6.10.4",
     "@codemirror/lang-javascript": "6.2.5",

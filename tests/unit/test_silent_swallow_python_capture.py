@@ -141,7 +141,7 @@ PASSING_CASES: list[SwallowCase] = [
             "        )",
             "    except subprocess.CalledProcessError as exc:",
             "        if exc.stderr:",
-            '            sys.stderr.write(exc.stderr)',
+            "            sys.stderr.write(exc.stderr)",
         ],
         _SHOULD_PASS,
         None,

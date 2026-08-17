@@ -11,9 +11,8 @@ pub enum ErrorCode {
     InvalidEnvelope,
     AlreadyDecided,
     Expired,
-    TierRequired,
     RateLimited,
-    FulfilmentFailed,
+    Cancelled,
 }
 
 impl ErrorCode {
@@ -23,9 +22,8 @@ impl ErrorCode {
             Self::InvalidEnvelope => "invalid_envelope",
             Self::AlreadyDecided => "already_decided",
             Self::Expired => "expired",
-            Self::TierRequired => "tier_required",
             Self::RateLimited => "rate_limited",
-            Self::FulfilmentFailed => "fulfilment_failed",
+            Self::Cancelled => "cancelled",
         }
     }
 }
@@ -62,9 +60,8 @@ mod tests {
         assert_eq!(ErrorCode::InvalidEnvelope.as_str(), "invalid_envelope");
         assert_eq!(ErrorCode::AlreadyDecided.as_str(), "already_decided");
         assert_eq!(ErrorCode::Expired.as_str(), "expired");
-        assert_eq!(ErrorCode::TierRequired.as_str(), "tier_required");
         assert_eq!(ErrorCode::RateLimited.as_str(), "rate_limited");
-        assert_eq!(ErrorCode::FulfilmentFailed.as_str(), "fulfilment_failed");
+        assert_eq!(ErrorCode::Cancelled.as_str(), "cancelled");
     }
 
     #[test]

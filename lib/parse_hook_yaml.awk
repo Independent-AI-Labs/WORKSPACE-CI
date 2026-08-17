@@ -10,7 +10,7 @@
 #
 # Mode "profile": Parse ci-profile.yaml.
 #   Output: Structured records prefixed by type tag:
-#     S\034<key>\034<value>          scalars: version, project, tier
+#     S\034<key>\034<value>          scalars: version, project
 #     L\034<language>                language entries (one per line)
 #     H\034<stage>\034<hook_id>      hooks (in declared order)
 #     O\034<hook_id>\034<field>\034<value>  override entries
@@ -69,7 +69,6 @@ mode == "registry" {
 mode == "profile" {
     if (/^version:/) { printf "S%sversion%s%s\n", sep, sep, scalar_top(); next }
     if (/^project:/) { printf "S%sproject%s%s\n", sep, sep, scalar_top(); next }
-    if (/^tier:/)    { printf "S%stier%s%s\n", sep, sep, scalar_top(); next }
 
     if (/^languages:/) {
         in_languages = 1

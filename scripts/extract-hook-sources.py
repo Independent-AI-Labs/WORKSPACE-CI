@@ -33,6 +33,8 @@ from pathlib import Path
 
 import yaml
 
+from ci.paths import resolve_config_path
+
 _SCRIPTS_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _SCRIPTS_DIR.parent
 _LIB_DIR = Path(os.environ.get("CI_LIB_DIR") or str(_REPO_ROOT / "lib"))
@@ -40,8 +42,6 @@ _CI_DIR = Path(os.environ.get("CI_CI_DIR") or str(_REPO_ROOT / "ci"))
 _OUTPUT_DIR = Path(
     os.environ.get("CI_WEB_DATA_DIR") or str(_REPO_ROOT / "web" / "src" / "data")
 )
-
-from ci.paths import resolve_config_path
 
 CONFIG_PATH = resolve_config_path("required_hooks")
 MAKEFILE_PATH = _REPO_ROOT / "Makefile"
@@ -98,6 +98,7 @@ def extract_shell_function(entry: str) -> dict[str, str | None] | None:
     func_re = re.compile(r"^(\s*)" + re.escape(entry) + r"\s*\(\)\s*\{")
 
     sh_files = sorted(_LIB_DIR.glob("checks*.sh"))
+    sh_files.extend(sorted(_LIB_DIR.glob("check_*.sh")))
     sh_files.extend(sorted(_LIB_DIR.glob("ci.sh")))
 
     for sh_file in sh_files:
@@ -231,6 +232,7 @@ def extract_shell_description(entry: str) -> str:
     marker_re = re.compile(r"^#\s*---\s*" + re.escape(entry) + r"\b")
 
     sh_files = sorted(_LIB_DIR.glob("checks*.sh"))
+    sh_files.extend(sorted(_LIB_DIR.glob("check_*.sh")))
     for sh_file in sh_files:
         lines = sh_file.read_text(encoding="utf-8").splitlines()
         for i, line in enumerate(lines):

@@ -2,14 +2,15 @@
 
 import { useState } from 'react'
 import { Button } from '@workspace-ci/web-components/components/Button'
-import { TierBadge } from './TierBadge'
 
 export function DecisionPanel({
   requestId,
-  tier,
+  requestHash,
+  disabled = false,
 }: {
   requestId: string
-  tier: 1 | 2
+  requestHash: string
+  disabled?: boolean
 }) {
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<string | null>(null)
@@ -20,7 +21,7 @@ export function DecisionPanel({
       const response = await fetch('/api/hitl/decisions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ request_id: requestId, decision }),
+        body: JSON.stringify({ request_id: requestId, request_hash: requestHash, decision }),
       })
       const data = (await response.json()) as { outcome?: string }
       if (typeof data.outcome !== 'string' || data.outcome.length === 0) {
@@ -37,11 +38,10 @@ export function DecisionPanel({
 
   return (
     <div className="decision-panel">
-      {tier === 2 && <TierBadge tier={2} />}
       <Button
         onClick={() => submit('approve')}
         loading={busy}
-        disabled={busy}
+        disabled={busy || disabled}
       >
         Approve
       </Button>
@@ -49,7 +49,7 @@ export function DecisionPanel({
         variant="danger"
         onClick={() => submit('deny')}
         loading={busy}
-        disabled={busy}
+        disabled={busy || disabled}
       >
         Deny
       </Button>

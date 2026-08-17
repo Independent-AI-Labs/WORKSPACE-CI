@@ -5,7 +5,7 @@ set -euo pipefail
 _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _REPO_ROOT="$(cd "$_SCRIPT_DIR/../.." && pwd)"
 # shellcheck source=../test_helpers.sh
-source "$_SCRIPT_DIR/../test_helpers.sh"
+declare -F _run_test >/dev/null || source "$_SCRIPT_DIR/../test_helpers.sh"
 
 _source_ci() {
     # shellcheck source=/dev/null

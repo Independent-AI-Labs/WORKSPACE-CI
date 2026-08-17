@@ -13,7 +13,4 @@ pub mod types;
 pub use envelope::{Envelope, EnvelopeKind, PROTOCOL_VERSION};
 pub use error::{ErrorCode, ProtocolError};
 pub use state::{can_transition, is_terminal, State, TRANSITIONS};
-pub use types::{
-    ActionSpec, AgentBound, ApproverBound, CredentialSpec, RequestClass, RequestSummary,
-    SubmitRequest, TargetSpec, Tier,
-};
+pub use types::{ActionSpec, AgentBound, ApproverBound, RequestSummary, SubmitRequest, TargetSpec};

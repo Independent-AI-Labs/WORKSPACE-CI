@@ -2,8 +2,7 @@
 """Self-check that validates the CI hook infrastructure of the invoking
 project across three invariants. Ensures every check_*.py module is
 registered in required_hooks.yaml, quality_exceptions.yaml is schema-valid,
-and all applicable mandatory hooks are rendered in .git/hooks. Tier-aware
-so POC tier checks only the safety subset while vendored tier passes trivially.
+and all applicable mandatory hooks are rendered in .git/hooks.
 
 Exit codes: 0 = all invariants hold, 1 = violation, 2 = infrastructure error.
 """
@@ -40,7 +39,6 @@ class HookEntry(BaseModel):
     entry: str
     stage: str
     mandatory: bool = False
-    safety: bool = False
     applicable_to: list[str] = Field(default_factory=lambda: ["any"])
 
 
@@ -92,107 +90,9 @@ def _find_workspace_root(start: Path) -> Path | None:
     return boot_candidate
 
 
-def _project_path_relative(workspace_root: Path, project_dir: Path) -> str:
-    try:
-        return str(project_dir.resolve().relative_to(workspace_root))
-    except ValueError:
-        return ""
-
-
-def _registry_source(workspace_root: Path) -> Path | None:
-    """Return path to the live registry, or the template if no live file."""
-    live = workspace_root / "workspace" / "config" / "project_enforcement.yaml"
-    if live.is_file():
-        return live
-    candidates = [
-        workspace_root
-        / "projects"
-        / "CI"
-        / "templates"
-        / "project_enforcement.template.yaml",
-        workspace_root / "templates" / "project_enforcement.template.yaml",
-    ]
-    return next((p for p in candidates if p.is_file()), None)
-
-
-def _load_registry(src: Path) -> dict[str, RegistryValue] | None:
-    try:
-        loaded = yaml.safe_load(src.read_text(encoding="utf-8"))
-    except yaml.YAMLError:
-        sys.stderr.write(
-            f"Warning: malformed YAML in {src}, using default resolution\n"
-        )
-        return None
-    return loaded if isinstance(loaded, dict) else None
-
-
-RegistryValue = (
-    str | int | float | bool | None | list["RegistryValue"] | dict[str, "RegistryValue"]
-)
-
-
-def _longest_prefix_tier(rel: str, exemptions: RegistryValue) -> str:
-    if not isinstance(exemptions, list):
-        return ""
-    best_path = ""
-    best_tier = ""
-    for entry in exemptions:
-        if not isinstance(entry, dict):
-            continue
-        ep = str(entry.get("path", "")).rstrip("/")
-        if ep and (rel == ep or rel.startswith(ep + "/")) and len(ep) > len(best_path):
-            best_path = ep
-            best_tier = str(entry.get("tier", ""))
-    return best_tier
-
-
-_VALID_ENFORCEMENT_MODES = frozenset({"warn", "enforce"})
-
-
-def _resolve_enforcement_mode(workspace_root: Path) -> str:
-    """Mirror of lib/checks_quality.sh::ci_resolve_enforcement_mode in Python.
-
-    Returns 'warn' or 'enforce'. Default 'warn' when registry/template
-    is missing or the field is absent.
-    """
-    src = _registry_source(workspace_root)
-    if src is None:
-        return "warn"
-    loaded = _load_registry(src)
-    if loaded is None:
-        return "warn"
-    raw = loaded.get("enforcement_mode")
-    if not isinstance(raw, str):
-        return "warn"
-    mode = raw.strip()
-    return mode if mode in _VALID_ENFORCEMENT_MODES else "warn"
-
-
-def _resolve_tier(workspace_root: Path, project_rel: str) -> str:
-    """Mirror of lib/checks_quality.sh::ci_resolve_tier in Python."""
-    src = _registry_source(workspace_root)
-    if src is None:
-        return "strict"
-    loaded = _load_registry(src)
-    if loaded is None:
-        return "strict"
-    rel = project_rel.rstrip("/")
-    matched = _longest_prefix_tier(rel, loaded.get("exemptions"))
-    if matched:
-        return matched
-    defaults = loaded.get("defaults")
-    if isinstance(defaults, dict):
-        return str(defaults.get("tier", "strict"))
-    return "strict"
-
-
 def _load_manifest(workspace_root: Path) -> HooksManifest | None:
-    candidates = [
-        workspace_root / "projects" / "CI" / "config" / "required_hooks.yaml",
-        workspace_root / "config" / "required_hooks.yaml",
-    ]
-    path = next((p for p in candidates if p.is_file()), None)
-    if path is None:
+    path = workspace_root / "config" / "required_hooks.yaml"
+    if not path.is_file():
         return None
     loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     if not isinstance(loaded, dict):
@@ -218,12 +118,8 @@ def _check_manifest_completeness(
     manifest: HooksManifest,
 ) -> list[str]:
     """Every check_*.py in ci/ must be registered in the manifest."""
-    candidates = [
-        workspace_root / "projects" / "CI" / "ci",
-        workspace_root / "ci",
-    ]
-    ci_dir = next((p for p in candidates if p.is_dir()), None)
-    if ci_dir is None:
+    ci_dir = workspace_root / "ci"
+    if not ci_dir.is_dir():
         return [f"ci/ directory not found under {workspace_root}"]
 
     expected_modules = {f"ci.{p.stem}" for p in ci_dir.glob("check_*.py")}
@@ -304,10 +200,8 @@ def _detect_languages(project_dir: Path) -> set[str]:
     return langs
 
 
-def _hook_applies(hook: HookEntry, tier: str, languages: set[str]) -> bool:
+def _hook_applies(hook: HookEntry, languages: set[str]) -> bool:
     if not hook.mandatory:
-        return False
-    if tier == "poc" and not hook.safety:
         return False
     if "any" in hook.applicable_to:
         return True
@@ -317,21 +211,22 @@ def _hook_applies(hook: HookEntry, tier: str, languages: set[str]) -> bool:
 def _check_hooks_rendered(
     project_dir: Path,
     manifest: HooksManifest,
-    tier: str,
 ) -> list[str]:
     """Check applicable mandatory hooks are present in rendered .git/hooks/."""
-    if tier == "vendored":
-        return []
     hooks_dir = _resolve_gitdir(project_dir) / "hooks"
     if not hooks_dir.is_dir():
         return [f".git/hooks not found at {hooks_dir}"]
     rendered = _read_rendered_hooks(hooks_dir)
-    required_markers = [
-        "CI-BUILTIN-EXEMPTION-COMPLIANCE",
-        "quality_exceptions.yaml preflight",
-    ]
-    if (project_dir / "scripts" / "generate-hooks").is_file():
-        required_markers.append("CI-BUILTIN-CATALOG-PROVENANCE")
+    predecessor = "AUTO-GENERATED by ../CI/scripts/generate-hooks"
+    if not Path("/opt/workspace-ci").exists() and all(
+        predecessor in content for content in rendered.values()
+    ):
+        required_markers = [predecessor, 'source "${_ROOT}/../CI/lib/ci.sh"']
+    else:
+        required_markers = [
+            "AUTO-GENERATED by /opt/workspace-ci/scripts/generate-hooks",
+            "source /opt/workspace-ci/lib/ci.sh",
+        ]
     issues = [
         f"built-in block '{marker}' missing from .git/hooks/{stage}"
         for stage, content in rendered.items()
@@ -342,7 +237,7 @@ def _check_hooks_rendered(
     issues += [
         f"hook '{hook.id}' (stage={hook.stage}) not present in .git/hooks/{hook.stage}"
         for hook in manifest.hooks
-        if _hook_applies(hook, tier, languages)
+        if _hook_applies(hook, languages)
         and _hook_marker(hook.id) not in rendered.get(hook.stage, "")
     ]
     return issues
@@ -376,7 +271,7 @@ def _run_invariant_1_manifest(
     *,
     quiet: bool,
 ) -> list[str]:
-    if project_name != "CI":
+    if not (workspace_root / "scripts" / "generate-hooks").is_file():
         return []
     issues = _check_manifest_completeness(workspace_root, manifest)
     if not issues and not quiet:
@@ -386,13 +281,10 @@ def _run_invariant_1_manifest(
 
 def _run_invariant_2_exceptions(
     project_dir: Path,
-    tier: str,
     manifest: HooksManifest,
     *,
     quiet: bool,
 ) -> list[str]:
-    if tier != "strict":
-        return []
     excs = _load_quality_exceptions(project_dir)
     if excs is None:
         return ["quality_exceptions.yaml missing at project root"]
@@ -421,15 +313,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{RED}error:{RESET} required_hooks.yaml not found in workspace")
         return EXIT_INFRA_ERROR
 
-    rel = _project_path_relative(workspace_root, project_dir) or "."
-    tier = "strict" if rel == "." else _resolve_tier(workspace_root, rel)
     project_name = project_dir.name
 
-    print(f"Self-check: {project_name} (tier={tier})")
-    if tier == "vendored":
-        if not args.quiet:
-            _emit("OK", "vendored tier: wrapper passthrough, no contract")
-        return EXIT_OK
+    print(f"Self-check: {project_name}")
 
     issues: list[str] = []
     issues.extend(
@@ -443,17 +329,16 @@ def main(argv: list[str] | None = None) -> int:
     issues.extend(
         _run_invariant_2_exceptions(
             project_dir,
-            tier,
             manifest,
             quiet=args.quiet,
         ),
     )
 
-    hook_issues = _check_hooks_rendered(project_dir, manifest, tier)
+    hook_issues = _check_hooks_rendered(project_dir, manifest)
     if hook_issues:
         issues.extend(hook_issues)
     elif not args.quiet:
-        _emit("OK", f"all applicable mandatory hooks rendered ({tier} tier)")
+        _emit("OK", "all applicable mandatory hooks rendered")
 
     if issues:
         print()

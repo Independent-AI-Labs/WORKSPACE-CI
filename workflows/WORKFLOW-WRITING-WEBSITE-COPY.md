@@ -4,7 +4,7 @@ Team workflow for visitor-facing prose in workspace repos and the WORKSPACE-CI
 wiki. Not a style guide for technical README bodies or API docs: a checklist for
 heroes, footers, branding strings, and README catalogue blurbs.
 
-Canonical path: `projects/CI/workflows/WORKFLOW-WRITING-WEBSITE-COPY.md`
+Canonical path: `/opt/workspace-ci/workflows/WORKFLOW-WRITING-WEBSITE-COPY.md`
 
 Sources: [HubSpot blink test](https://blog.hubspot.com/blog/tabid/6307/bid/34061/how-to-make-sure-your-website-passes-the-dreaded-blink-test.aspx),
 [Blend B2B homepage hero practices](https://www.blendb2b.com/websites-decoded/homepage-hero-best-practices),
@@ -12,16 +12,16 @@ plain-language guidance from [plainlanguage.gov](https://www.plainlanguage.gov/g
 
 ## When this workflow applies
 
-| Copy type | Where it lives | This workflow |
-|-----------|----------------|---------------|
-| Home hero title + subtitle | WORKSPACE-CI `web/app/page.tsx`, `web/branding.yaml` | Yes |
-| Footer tagline, product name | WORKSPACE-CI `web/branding.yaml` | Yes |
-| Page intros, modal strings | WORKSPACE-CI `web/branding.yaml`, page components | Yes |
-| **Project catalogue card blurbs** | Any sibling repo `README.md` intro (first ~2 sentences) | **Yes (full pass)** |
-| Grafana subtitles, dashboard titles | `web/branding.yaml` | Light pass (clarity, no slogans) |
-| README overview structure (what/why/where) | `README.md` intro | No ([WORKFLOW-WRITING-README.md](WORKFLOW-WRITING-README.md) owns structure) |
-| README architecture, hook docs | `README.md` body, `docs/` | No (technical docs, not marketing) |
-| Commit messages, CI output | hooks, Makefiles | No |
+| Copy type                                  | Where it lives                                          | This workflow                                                                |
+| ------------------------------------------ | ------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Home hero title + subtitle                 | WORKSPACE-CI `web/app/page.tsx`, `web/branding.yaml`    | Yes                                                                          |
+| Footer tagline, product name               | WORKSPACE-CI `web/branding.yaml`                        | Yes                                                                          |
+| Page intros, modal strings                 | WORKSPACE-CI `web/branding.yaml`, page components       | Yes                                                                          |
+| **Project catalogue card blurbs**          | Any sibling repo `README.md` intro (first ~2 sentences) | **Yes (full pass)**                                                          |
+| Grafana subtitles, dashboard titles        | `web/branding.yaml`                                     | Light pass (clarity, no slogans)                                             |
+| README overview structure (what/why/where) | `README.md` intro                                       | No ([WORKFLOW-WRITING-README.md](WORKFLOW-WRITING-README.md) owns structure) |
+| README architecture, hook docs             | `README.md` body, `docs/`                               | No (technical docs, not marketing)                                           |
+| Commit messages, CI output                 | hooks, Makefiles                                        | No                                                                           |
 
 ### How catalogue blurbs surface (WORKSPACE-CI wiki)
 
@@ -83,33 +83,33 @@ Do not invent feature or provider lists. Read the target repo first:
 
 Do not ship these in visitor-facing copy:
 
-| Pattern | Why |
-|---------|-----|
-| Em dash as a punchline connector | Reads like AI slide deck; use a period, semicolon, or rewrite as one sentence |
-| Closing taglines (`side by side`, `all in one place`, `every guardrail`) | Adds nothing after the list; sounds like stock marketing |
-| `The unified wiki for…` leading article + stacked features | Weak opener; prefer direct `Unified wiki for…` or `A single wiki for…` |
-| Triple adjectives in a hero | Save precision for the page that owns the feature |
-| Inside-baseball jargon without context on home hero | OK on dedicated pages; home/catalogue uses shorter labels |
-| Exclamation marks | Never on heroes or footers |
-| Passive openings (`It is designed to…`) | Use active: `Browse…`, `Read…`, `Open…` |
-| Feature-inventory lists (`THING has X, Y, Z… THING also does A, B, C`) | Reads like a spec sheet; fold into two purposeful sentences |
-| Parallel pipeline verbs (`present / pass / continue / leave`) | Same rhythm in both sentences; vary structure |
-| False dichotomy paired clauses (`Cloud X use… local Y use…`) | State mechanisms once if needed; do not mirror structure |
-| Implementation bragging in intro (`pure Lua`, `no sidecar`, hot-path) | Belongs in architecture docs, not catalogue card |
-| Colon/comma feature dumps after the product name | `Product: A, B, C, D, …` |
-| Shorthand that understates supported backends | Match README/config tables, not one vendor label |
-| Too telegraphic | Catalogue blurbs need UVP depth, not tagline length |
+| Pattern                                                                  | Why                                                                           |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| Em dash as a punchline connector                                         | Reads like AI slide deck; use a period, semicolon, or rewrite as one sentence |
+| Closing taglines (`side by side`, `all in one place`, `every guardrail`) | Adds nothing after the list; sounds like stock marketing                      |
+| `The unified wiki for…` leading article + stacked features               | Weak opener; prefer direct `Unified wiki for…` or `A single wiki for…`        |
+| Triple adjectives in a hero                                              | Save precision for the page that owns the feature                             |
+| Inside-baseball jargon without context on home hero                      | OK on dedicated pages; home/catalogue uses shorter labels                     |
+| Exclamation marks                                                        | Never on heroes or footers                                                    |
+| Passive openings (`It is designed to…`)                                  | Use active: `Browse…`, `Read…`, `Open…`                                       |
+| Feature-inventory lists (`THING has X, Y, Z… THING also does A, B, C`)   | Reads like a spec sheet; fold into two purposeful sentences                   |
+| Parallel pipeline verbs (`present / pass / continue / leave`)            | Same rhythm in both sentences; vary structure                                 |
+| False dichotomy paired clauses (`Cloud X use… local Y use…`)             | State mechanisms once if needed; do not mirror structure                      |
+| Implementation bragging in intro (`pure Lua`, `no sidecar`, hot-path)    | Belongs in architecture docs, not catalogue card                              |
+| Colon/comma feature dumps after the product name                         | `Product: A, B, C, D, …`                                                      |
+| Shorthand that understates supported backends                            | Match README/config tables, not one vendor label                              |
+| Too telegraphic                                                          | Catalogue blurbs need UVP depth, not tagline length                           |
 
 ## Word choice (WORKSPACE-CI wiki hero)
 
-| Prefer | Avoid in heroes |
-|--------|-----------------|
-| git hooks | native git hooks (redundant on a technical wiki) |
-| static checks | static anti-pattern analysis (too long for hero) |
-| guard policies | policy enforcement (vague) |
-| runtime blocks | escape-hatch blocking (inside baseball on home) |
-| LLM gateway operations | multi-tenant LLM gateway (feature dump) |
-| catalogue / wiki | platform, solution, ecosystem |
+| Prefer                 | Avoid in heroes                                  |
+| ---------------------- | ------------------------------------------------ |
+| git hooks              | native git hooks (redundant on a technical wiki) |
+| static checks          | static anti-pattern analysis (too long for hero) |
+| guard policies         | policy enforcement (vague)                       |
+| runtime blocks         | escape-hatch blocking (inside baseball on home)  |
+| LLM gateway operations | multi-tenant LLM gateway (feature dump)          |
+| catalogue / wiki       | platform, solution, ecosystem                    |
 
 Match depth to page: home hero is shorthand; dedicated pages carry exact terms
 from code and config.
@@ -127,7 +127,7 @@ from code and config.
 6. **Paste into source.** `web/branding.yaml` for reusable strings;
    `web/app/page.tsx` only when the string is home-only.
 7. **Rebuild prod wiki** after hero/branding changes:
-   `make wiki-prod-build && make wiki-prod-redeploy` from `projects/CI`.
+   `make wiki-prod-build && make wiki-prod-redeploy` from `/opt/workspace-ci`.
 
 ### Project catalogue README intro (any repo)
 
@@ -171,7 +171,7 @@ from code and config.
 
 When asked to rewrite wiki marketing copy or README catalogue intros:
 
-1. Load this file first (`projects/CI/workflows/WORKFLOW-WRITING-WEBSITE-COPY.md`).
+1. Load this file first (`/opt/workspace-ci/workflows/WORKFLOW-WRITING-WEBSITE-COPY.md`).
 2. **Research the target repo** (README, features, config, recent commits)
    before proposing copy.
 3. Propose **at most two sentences** for heroes and catalogue blurbs.
@@ -185,7 +185,7 @@ When asked to rewrite wiki marketing copy or README catalogue intros:
 
 ## Worked examples
 
-*Illustrative only. Do not copy product names or backends into unrelated repos.*
+_Illustrative only. Do not copy product names or backends into unrelated repos._
 
 ### WORKSPACE-CI wiki: home hero subtitle
 

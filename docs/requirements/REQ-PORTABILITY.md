@@ -44,7 +44,7 @@ systems.
 
 **This document DOES NOT:**
 - Cover Python (`ci/`, `lib/*.py`) or TypeScript (`web/`) portability
-- Define hook generation semantics (see [RUNBOOK-HOOKS](../runbooks/RUNBOOK-HOOKS.md))
+- Define hook installation semantics (see [RUNBOOK-HOOKS](../runbooks/RUNBOOK-HOOKS.md))
 - Define boot-directory layout (see [REQ-BOOT-LAYOUT](REQ-BOOT-LAYOUT.md))
 
 ### 1.3 Terminology

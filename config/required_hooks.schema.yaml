@@ -51,10 +51,6 @@ fields:
     type: boolean
     description: "true: cannot be exempted via quality_exceptions.yaml. false: exemptable per-path because the check is heuristic."
 
-  - path: hooks[].safety
-    type: boolean
-    description: "true: included even at POC tier (basic-safety subset). false: strict-tier only."
-
   - path: hooks[].applicable_to
     type: list<string>
     required: true

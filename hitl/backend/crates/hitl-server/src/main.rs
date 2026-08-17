@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 //! hitl-server: HITL relay binary (scaffold, SPEC-HITL-RELAY §1).
 //! Health and readiness endpoints plus the protocol version route only;
-//! the REST control API, WS channel, queue, PDP, and CDP land with the
+//! the REST control API, live channel, persistence, and PDP land with the
 //! hitl-queue / hitl-pdp / hitl-cdp crates.
 
 use axum::{http::StatusCode, routing::get, Json, Router};
@@ -19,7 +19,7 @@ async fn healthz() -> &'static str {
 }
 
 /// Readiness fails closed (NFR-2.2): until queue, Keycloak JWKS,
-/// OpenBao, and the audit sink are wired, the service reports not-ready.
+/// persistence, identity verification, and the audit sink are wired, the service reports not-ready.
 async fn readyz() -> (StatusCode, Json<Value>) {
     (
         StatusCode::SERVICE_UNAVAILABLE,

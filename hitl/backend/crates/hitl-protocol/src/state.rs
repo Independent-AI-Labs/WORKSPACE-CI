@@ -9,43 +9,29 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum State {
-    Submitted,
-    Queued,
-    Presented,
+    Pending,
     Approved,
     Denied,
     Expired,
-    Fulfilled,
-    Rejected,
+    Cancelled,
 }
 
 impl State {
     /// All states, for exhaustive enumeration in tests and sweepers.
-    pub const ALL: [State; 8] = [
-        State::Submitted,
-        State::Queued,
-        State::Presented,
+    pub const ALL: [State; 5] = [
+        State::Pending,
         State::Approved,
         State::Denied,
         State::Expired,
-        State::Fulfilled,
-        State::Rejected,
+        State::Cancelled,
     ];
 }
 
-/// Immutable legal-transition table (FR-2.1). Terminal states have no
-/// outgoing edges. `Approved` is non-terminal until fulfilment resolves
-/// to `Fulfilled` or fails closed to `Rejected` (FR-4.7).
 pub const TRANSITIONS: &[(State, State)] = &[
-    (State::Submitted, State::Queued),
-    (State::Submitted, State::Expired),
-    (State::Queued, State::Presented),
-    (State::Queued, State::Expired),
-    (State::Presented, State::Approved),
-    (State::Presented, State::Denied),
-    (State::Presented, State::Expired),
-    (State::Approved, State::Fulfilled),
-    (State::Approved, State::Rejected),
+    (State::Pending, State::Approved),
+    (State::Pending, State::Denied),
+    (State::Pending, State::Expired),
+    (State::Pending, State::Cancelled),
 ];
 
 /// Whether `from -> to` is a legal lifecycle transition.
@@ -57,10 +43,7 @@ pub fn can_transition(from: State, to: State) -> bool {
 /// Terminal states: no further transitions may occur.
 #[must_use]
 pub fn is_terminal(state: State) -> bool {
-    matches!(
-        state,
-        State::Denied | State::Expired | State::Fulfilled | State::Rejected
-    )
+    state != State::Pending
 }
 
 #[cfg(test)]
@@ -107,14 +90,11 @@ mod tests {
     #[test]
     fn serde_names_match_queue_schema() {
         let expected = [
-            (State::Submitted, "submitted"),
-            (State::Queued, "queued"),
-            (State::Presented, "presented"),
+            (State::Pending, "pending"),
             (State::Approved, "approved"),
             (State::Denied, "denied"),
             (State::Expired, "expired"),
-            (State::Fulfilled, "fulfilled"),
-            (State::Rejected, "rejected"),
+            (State::Cancelled, "cancelled"),
         ];
         for (state, name) in expected {
             assert_eq!(

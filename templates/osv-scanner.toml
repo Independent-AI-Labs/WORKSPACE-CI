@@ -2,7 +2,7 @@
 #
 # Suppressions are socially audited via PR review (same model as
 # quality_exceptions.yaml). Every entry MUST have a non-empty reason.
-# Advisories without a fixed version MUST set ignoreUntil (expiry).
+# Every entry MUST set ignoreUntil (expiry).
 #
 # Schema reference: OSV-Scanner config file (IgnoredVulns).
 #

@@ -26,8 +26,6 @@
 #   files       : optional path pattern that scopes the hook (pass-through).
 #   mandatory   : true: cannot be exempted via quality_exceptions.yaml.
 #                  false: exemptable per-path because the check is heuristic.
-#   safety      : true: included even at POC tier (basic-safety subset).
-#                  false: strict-tier only.
 #   applicable_to: list of language hints the check applies to.
 #                  [any] runs for every project. [python] | [node] | [rust]
 #                  scopes by language (detected by language-marker files).
@@ -35,9 +33,6 @@
 version: 1
 
 hooks:
-  # ─────────────────────────────────────────────────────────────────────
-  # Safety-tier hooks (installed even at POC tier, mandatory always)
-  # ─────────────────────────────────────────────────────────────────────
 
   - id: check-unstaged
     kind: shell
@@ -46,7 +41,6 @@ hooks:
     pass_filenames: false
     always_run: true
     mandatory: true
-    safety: true
     applicable_to: [any]
 
   - id: block-sensitive-files
@@ -56,7 +50,6 @@ hooks:
     pass_filenames: true
     always_run: false
     mandatory: true
-    safety: true
     applicable_to: [any]
 
   - id: gitleaks
@@ -66,7 +59,6 @@ hooks:
     pass_filenames: false
     always_run: true
     mandatory: true
-    safety: true
     applicable_to: [any]
 
   - id: ci-check-error-swallow
@@ -76,7 +68,6 @@ hooks:
     pass_filenames: false
     always_run: true
     mandatory: true
-    safety: true
     applicable_to: [any]
 
   - id: check-coverage-no-devolution
@@ -86,7 +77,6 @@ hooks:
     pass_filenames: false
     always_run: true
     mandatory: true
-    safety: true
     applicable_to: [any]
 
   - id: check-banned-words
@@ -96,7 +86,6 @@ hooks:
     pass_filenames: false
     always_run: false
     mandatory: true
-    safety: true
     applicable_to: [any]
 
   - id: check-commit-message
@@ -106,7 +95,6 @@ hooks:
     pass_filenames: false
     always_run: true
     mandatory: true
-    safety: true
     applicable_to: [any]
 
   - id: block-coauthored
@@ -116,7 +104,6 @@ hooks:
     pass_filenames: false
     always_run: true
     mandatory: true
-    safety: true
     applicable_to: [any]
 
   - id: block-coauthored-history
@@ -126,7 +113,6 @@ hooks:
     pass_filenames: false
     always_run: true
     mandatory: true
-    safety: true
     applicable_to: [any]
 
   - id: check-portable-shell
@@ -136,12 +122,7 @@ hooks:
     pass_filenames: false
     always_run: true
     mandatory: true
-    safety: true
     applicable_to: [any]
-
-  # ─────────────────────────────────────────────────────────────────────
-  # Strict-tier mandatory hooks (not in safety subset)
-  # ─────────────────────────────────────────────────────────────────────
 
   - id: check-file-length
     kind: shell
@@ -150,7 +131,6 @@ hooks:
     pass_filenames: false
     always_run: true
     mandatory: true
-    safety: false
     applicable_to: [any]
 
   - id: check-required-hooks-present
@@ -160,7 +140,6 @@ hooks:
     pass_filenames: false
     always_run: true
     mandatory: true
-    safety: false
     applicable_to: [any]
 
   - id: check-boot-venv-layout
@@ -170,10 +149,7 @@ hooks:
     pass_filenames: false
     always_run: true
     # Advisory + non-blocking (always exits 0). mandatory=false allows per-path
-    # exemption via quality_exceptions.yaml; safety=true runs it even at POC tier
-    # since it never blocks (per FR-BL-7.7).
     mandatory: false
-    safety: true
     applicable_to: [any]
 
   - id: ci-lint
@@ -183,7 +159,6 @@ hooks:
     pass_filenames: false
     always_run: true
     mandatory: true
-    safety: false
     applicable_to: [any]
 
   - id: ci-type-check
@@ -193,7 +168,6 @@ hooks:
     pass_filenames: false
     always_run: true
     mandatory: true
-    safety: false
     applicable_to: [any]
 
   - id: ci-check-push
@@ -203,13 +177,7 @@ hooks:
     pass_filenames: false
     always_run: true
     mandatory: true
-    safety: false
     applicable_to: [any]
-
-  # ─────────────────────────────────────────────────────────────────────
-  # Strict-tier exemptable hooks (heuristic: false positives possible,
-  # path-scoped exemption allowed via quality_exceptions.yaml)
-  # ─────────────────────────────────────────────────────────────────────
 
   - id: check-dead-code
     kind: shell
@@ -218,7 +186,6 @@ hooks:
     pass_filenames: false
     always_run: true
     mandatory: false
-    safety: false
     applicable_to: [any]
 
   - id: osv-scan
@@ -227,11 +194,7 @@ hooks:
     stage: pre-push
     pass_filenames: false
     always_run: true
-    # Advisory during rollout (REQ-CVE-SCAN FR-3.3): exemptable via
-    # quality_exceptions.yaml while the fleet stabilizes. Strict tier only:
-    # network-bound, not part of the POC safety subset. Fail-open offline.
     mandatory: false
-    safety: false
     applicable_to: [any]
 
   - id: check-dependency-versions
@@ -241,21 +204,7 @@ hooks:
     pass_filenames: false
     always_run: true
     mandatory: true
-    safety: false
     applicable_to: [any]
-
-  - id: check-npm-lock-sync
-    kind: python_module
-    entry: ci.check_npm_lock_sync
-    stage: pre-commit
-    pass_filenames: false
-    always_run: true
-    # Fails package.json <-> package-lock.json drift at commit time instead
-    # of letting npm ci explode later in deploy pipelines. Pure JSON parsing,
-    # offline-safe; repos without a lockfile pass trivially.
-    mandatory: true
-    safety: false
-    applicable_to: [node]
 
   - id: check-duplicate-dependencies
     kind: python_module
@@ -264,7 +213,6 @@ hooks:
     pass_filenames: false
     always_run: true
     mandatory: false
-    safety: false
     applicable_to: [python]
 
   - id: check-markdown-docs
@@ -275,7 +223,6 @@ hooks:
     always_run: false
     files_types: [markdown]
     mandatory: true
-    safety: true
     applicable_to: [any]
   - id: check-resolution-shapes
     kind: shell
@@ -284,6 +231,23 @@ hooks:
     pass_filenames: false
     always_run: false
     mandatory: true
-    safety: true
+    applicable_to:
+      - any
+  - id: check-module-size
+    kind: shell
+    entry: ci_check_module_size
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    applicable_to:
+      - any
+  - id: check-npm-lock-sync
+    kind: python_module
+    entry: ci.check_npm_lock_sync
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
     applicable_to:
       - any

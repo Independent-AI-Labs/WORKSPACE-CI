@@ -1,19 +1,13 @@
 # workspace-ci Pre-commit Configuration
 # This file serves as both the CI project's own hooks AND a reference template.
 #
-# Path patterns for sourcing checks.sh from different project depths:
-#   Root workspace:          projects/CI/lib/checks.sh
-#   projects/<project>/:     ../CI/lib/checks.sh
-#   projects/<group>/<sub>/: ../../CI/lib/checks.sh
-#
-# For CI itself (self-referencing):
-#   lib/checks.sh
+# Generated hooks always resolve the protected deployment directly.
 repos:
   - repo: local
     hooks:
       - id: check-unstaged
         name: Block Unstaged Changes
-        entry: "bash -c 'source lib/checks.sh && ci_check_unstaged'"
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_unstaged'"
         language: system
         pass_filenames: false
         always_run: true
@@ -27,28 +21,28 @@ repos:
 
       - id: block-sensitive-files
         name: Block Sensitive Files
-        entry: "bash -c 'source lib/checks.sh && ci_block_sensitive_files'"
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_block_sensitive_files'"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: gitleaks
         name: Block secrets in all files (gitleaks)
-        entry: "bash -c 'source lib/checks.sh && ci_scan_secrets'"
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_scan_secrets'"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: ci-check-error-swallow
         name: Block error-swallow patterns
-        entry: "bash -c 'source lib/checks.sh && ci_check_silent_swallow'"
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_silent_swallow'"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-dependency-versions
-        name: Check Dependency Versions (strict pinning + latest)
-        entry: "uv run python -m ci.check_dependency_versions"
+        name: Validate dependency declarations and npm workspace lock
+        entry: "uv run python -m ci.check_dependency_versions validate --consumer-root \"$PWD\" --exclusions config/dependency_excludes.yaml --catalog res/dependency-pins.yaml --npm-workspace-lock package.json package-lock.json --uv-lock pyproject.toml uv.lock --dockerfile web/Containerfile --compose web/compose.prod.yaml pyproject.toml"
         language: system
         pass_filenames: false
         always_run: true
@@ -69,56 +63,63 @@ repos:
 
       - id: check-banned-words
         name: Check Banned Words
-        entry: "bash -c 'source lib/checks.sh && ci_check_banned_words'"
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_banned_words'"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-resolution-shapes
         name: Check Resolution Shapes
-        entry: "bash -c 'source lib/checks.sh && ci_check_fallback_resolution'"
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_fallback_resolution'"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-coverage-no-devolution
         name: Block Coverage Threshold De-Evolution
-        entry: "bash -c 'source lib/checks.sh && ci_check_coverage_thresholds_no_devolution'"
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_coverage_thresholds_no_devolution'"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-file-length
         name: Check File Length (max 512 lines)
-        entry: "bash -c 'source lib/checks.sh && ci_check_file_length'"
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_file_length'"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-module-size
+        name: Check Source File and Module Size
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_module_size'"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-init-files
         name: Enforce Empty __init__.py Files
-        entry: "bash -c 'source lib/checks.sh && ci_check_init_files'"
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_init_files'"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-py-not-executable
         name: Forbid +x bit on .py modules
-        entry: "bash -c 'source lib/checks.sh && ci_check_py_not_executable'"
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_py_not_executable'"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-portable-shell
         name: Block Process Substitution (not portable across virtualization)
-        entry: "bash -c 'source lib/checks.sh && ci_check_portable_shell'"
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_portable_shell'"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-no-dead-imports
         name: Forbid deleting .py modules that are still imported
-        entry: "bash -c 'source lib/checks.sh && ci_check_no_dead_imports'"
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_no_dead_imports'"
         language: system
         pass_filenames: false
         always_run: true
@@ -153,13 +154,13 @@ repos:
 
       - id: check-commit-message
         name: Check Commit Message Format
-        entry: "bash -c 'source lib/checks.sh && ci_check_commit_message \"$1\"' --"
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_commit_message \"$1\"' --"
         language: system
         stages: [commit-msg]
 
       - id: block-coauthored
         name: Block Co-authored Commits
-        entry: "bash -c 'source lib/checks.sh && ci_block_coauthored \"$1\"' --"
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_block_coauthored \"$1\"' --"
         language: system
         stages: [commit-msg]
 
@@ -175,7 +176,7 @@ repos:
 
       - id: block-coauthored-history
         name: Block Commits with Blocked Patterns (full history scan)
-        entry: "bash -c 'source lib/checks.sh && ci_block_coauthored_history'"
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_block_coauthored_history'"
         language: system
         stages: [pre-push]
         pass_filenames: false
@@ -183,15 +184,15 @@ repos:
 
       - id: check-dead-code
         name: Dead Code Analysis (non-blocking)
-        entry: "bash -c 'source lib/checks.sh && ci_check_dead_code'"
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_dead_code'"
         language: system
         stages: [pre-push]
         pass_filenames: false
         always_run: true
 
       - id: osv-scan
-        name: Dependency Vulnerability Scan (osv-scanner, fail-open offline)
-        entry: "bash -c 'source lib/checks.sh && ci_scan_vulnerabilities'"
+        name: Dependency Vulnerability Scan (bounded offline validation)
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_scan_vulnerabilities'"
         language: system
         stages: [pre-push]
         pass_filenames: false

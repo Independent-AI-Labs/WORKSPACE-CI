@@ -120,7 +120,7 @@ BLOCKED_CASES: list[SwallowCase] = [
     SwallowCase(
         "cat5_sh_devnull_redirect",
         "tests/integration/test_stack_up.sh",
-        ['podman network create dataops_default 2>/dev/null'],
+        ["podman network create dataops_default 2>/dev/null"],
         _SHOULD_BLOCK,
         "sh-devnull-silent",
     ),
@@ -275,8 +275,7 @@ def test_silent_swallow_catalog_pattern(
     diff_text = _diff(case.path, case.lines)
     rc, output = _run_main(monkeypatch, diff_text)
     assert rc == case.expect_rc, (
-        f"[{case.test_id}] expected rc={case.expect_rc}, got rc={rc}; "
-        f"output={output!r}"
+        f"[{case.test_id}] expected rc={case.expect_rc}, got rc={rc}; output={output!r}"
     )
     if case.grep_pattern is not None:
         assert case.grep_pattern in output, (

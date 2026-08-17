@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-28T19:46:09.587341+00:00",
+  "generated_at": "2026-08-17T15:35:54.307982+00:00",
   "source_version": "",
   "detectors": [
     {
@@ -163,6 +163,12 @@
       "source_file": "lib/check_silent_swallow_container.py",
       "docstring": null,
       "source": "def _check_run_step_missing_echo(text: str) -> str | None:\n    if not _RUN_RE.match(text):\n        return None\n    if not _SET_TRACE_RE.search(text):\n        return None\n    if \"&&\" not in text:\n        return None\n    segments = re.split(r\"\\s*&&\\s*\", text)\n    for idx, segment in enumerate(segments):\n        seg = segment.strip()\n        if not _STEP_CMD_RE.match(seg):\n            continue\n        has_echo = bool(_ECHO_STEP_RE.search(seg))\n        if idx > 0 and _ECHO_STEP_RE.search(segments[idx - 1]):\n            has_echo = True\n        if not has_echo:\n            return \"container-run-step-missing-echo\"\n    return None"
+    },
+    {
+      "name": "_check_catch_debug_only",
+      "source_file": "lib/check_silent_swallow_js.py",
+      "docstring": "Catch block whose only handling is console.debug/log/info.\n\nReturns \"js-catch-debug-only\" when the catch body contains nothing but\nlow-severity logging (no console.error/warn, no throw, no other logic).",
+      "source": "def _check_catch_debug_only(\n    lines: dict[int, AddedLine],\n    lineno: int,\n    header_indent: int,\n) -> str | None:\n    \"\"\"Catch block whose only handling is console.debug/log/info.\n\n    Returns \"js-catch-debug-only\" when the catch body contains nothing but\n    low-severity logging (no console.error/warn, no throw, no other logic).\n    \"\"\"\n    saw_low_log = False\n    for offset in range(1, 6):\n        body = lines.get(lineno + offset)\n        if body is None:\n            continue\n        text = body.text.strip()\n        if text == \"}\":\n            break\n        if JS_CONSOLE_HIGH.search(body.text) or JS_THROW.search(body.text):\n            return None\n        if JS_CONSOLE_LOW.search(body.text):\n            saw_low_log = True\n            continue\n        if text and not text.startswith(\"//\"):\n            return None\n    return \"js-catch-debug-only\" if saw_low_log else None"
     }
   ]
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { GET } from '../../../../../web/app/api/project-asset/route'
+import { GET } from '../../../../../web/app/(api)/api/project-asset/route'
 
 function makeRequest(project: string | null, path: string | null): import('next/server').NextRequest {
   const params = new URLSearchParams()

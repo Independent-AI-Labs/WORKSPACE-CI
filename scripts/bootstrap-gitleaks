@@ -42,6 +42,7 @@ if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
     exit 2
 fi
 GITLEAKS_VERSION="$(ci_tool_version gitleaks)" || { echo "ERROR: missing gitleaks tool pin" >&2; exit 2; }
+GITLEAKS_SHA256="$(ci_tool_artifact gitleaks sha256)" || { echo "ERROR: missing gitleaks checksum" >&2; exit 2; }
 
 _log() { printf '[bootstrap-gitleaks] %s\n' "$*" >&2; }
 
@@ -130,11 +131,11 @@ main() {
 
     local actual_sha
     actual_sha="$(ci_sha256 "${tmp}/${tarball}")"
-    if [[ "$actual_sha" != "$expected_sha" ]]; then
-        _log "checksum mismatch: expected $expected_sha, got $actual_sha"
+    if [[ "$actual_sha" != "$GITLEAKS_SHA256" ]]; then
+        _log "checksum mismatch: expected $GITLEAKS_SHA256, got $actual_sha"
         return 1
     fi
-    _log "checksum OK ($expected_sha)"
+    _log "checksum OK ($GITLEAKS_SHA256)"
 
     _log "extracting ${tarball} to ${tmp}"
     if ! tar -xzf "${tmp}/${tarball}" -C "$tmp" gitleaks; then

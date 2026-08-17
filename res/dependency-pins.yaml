@@ -4,49 +4,115 @@ uv:
   version: 0.12.2
   source: "astral-sh/uv"
   source_kind: github_release
+  artifacts:
+    - asset: "uv-x86_64-unknown-linux-gnu.tar.gz"
+      os: linux
+      architecture: x86_64
+      sha256: "d66e96b5f1ca3b99806eee283a8125d33a0bd669e6e6d9bc4ab7ffda63c41bf4"
+      archive:
+        format: tar.gz
+        member: "uv-x86_64-unknown-linux-gnu/uv"
 rust:
-  channel: "stable"
-  source: "rust-lang/rust"
-  source_kind: rust_channel
+  channel: "1.89.0"
+  version: "1.89.0"
+  source: "https://static.rust-lang.org/dist"
+  source_kind: rust_toolchain
+  artifacts:
+    - asset: "channel-rust-1.89.0.toml"
+      os: any
+      architecture: any
+      sha256: "fbd1662e100e7b305908ece23b441cb7534eadfa6336c5f173ff08d1cec174a1"
 gitleaks:
   version: "8.30.1"
   minimum_version: "8.22.0"
   source: "gitleaks/gitleaks"
   source_kind: github_release
+  artifacts:
+    - asset: "gitleaks_8.30.1_linux_x64.tar.gz"
+      os: linux
+      architecture: x86_64
+      sha256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+      archive:
+        format: tar.gz
+        member: gitleaks
 osv_scanner:
-  version: "2.4.0"
+  version: "2.5.0"
   source: "google/osv-scanner"
   source_kind: github_release
+  artifacts:
+    - asset: "osv-scanner_linux_amd64"
+      os: linux
+      architecture: x86_64
+      sha256: "edcfc41d257db36148f065055655fe3fcfc434b0b423ea67468a84c207524e0c"
 node:
   version: "24.19.0"
   source: "https://nodejs.org/dist"
   source_kind: node_release
-cloc:
-  version: "2.10"
-  sha256: "bf59272455172108072a0a106379f7509fd4349bdcfd85203bac038ccd286d83"
-  source: "AlDanial/cloc"
-  source_kind: github_release
+  artifacts:
+    - asset: "node-v24.19.0-linux-x64.tar.gz"
+      os: linux
+      architecture: x86_64
+      sha256: "f625d97cd707df4ff96254916fbc5ff014f09c09effe5a1e0ca8f6d41a8789d4"
+      archive:
+        format: tar.gz
+        member: "node-v24.19.0-linux-x64/bin/node"
 moon:
   version: "2.4.6"
   source: "moonrepo/moon"
   source_kind: github_release
+  artifacts:
+    - asset: "moon_cli-x86_64-unknown-linux-gnu.tar.xz"
+      os: linux
+      architecture: x86_64
+      sha256: "106a4b18ddd93e9485a396c14b3a7e287586a006ea201e6a0b37e9e221f51d97"
+      archive:
+        format: tar.xz
+        member: "moon_cli-x86_64-unknown-linux-gnu/moon"
 podman:
   version: "5.8.4"
   source: "mgoltzsche/podman-static"
   source_kind: github_release
-podman_compose:
-  version: "1.6.0"
-  source: "containers/podman-compose"
-  source_kind: github_release
+  artifacts:
+    - asset: "podman-linux-amd64.tar.gz"
+      os: linux
+      architecture: x86_64
+      sha256: "a58765fe8be6ab3fb79f892f1a027b4ce4a7e8eb589df1ef960c167cbde08d69"
+      archive:
+        format: tar.gz
+        member: "podman-linux-amd64/usr/local/bin/podman"
 conmon:
   version: "2.2.1"
   source: "containers/conmon"
   source_kind: github_release
+  artifacts:
+    - asset: "conmon.amd64"
+      os: linux
+      architecture: x86_64
+      sha256: "1d97294c14c43d477e0a0826e9cd0f2a2af373ddfafe6f10252e8a3c43f32be6"
 netavark:
   version: "2.0.0"
   source: "containers/netavark"
   source_kind: github_release
+  artifacts:
+    - asset: "netavark.gz"
+      os: linux
+      architecture: x86_64
+      sha256: "d8bc342c38382029e7e12256120ac0f7676dcc063aa1e7259189bb69cc869563"
 aardvark_dns:
   version: "2.0.0"
   source: "containers/aardvark-dns"
   source_kind: github_release
+  artifacts:
+    - asset: "aardvark-dns.gz"
+      os: linux
+      architecture: x86_64
+      sha256: "fdaa3665ce58337fe597e0822e24de97528529d1a39fa6b655aa656c8ad33086"
+cloc:
+  version: "2.10"
+  source: "AlDanial/cloc"
+  source_kind: github_release
+  artifacts:
+    - asset: "cloc-2.10.pl"
+      os: any
+      architecture: any
+      sha256: "bf59272455172108072a0a106379f7509fd4349bdcfd85203bac038ccd286d83"

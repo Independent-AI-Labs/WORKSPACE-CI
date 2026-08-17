@@ -1,6 +1,7 @@
 """Unit tests for ci/check_npm_lock_sync module."""
 
 import json
+import subprocess
 from pathlib import Path
 
 import ci.check_npm_lock_sync as npm_lock_sync
@@ -10,6 +11,29 @@ from ci.check_npm_lock_sync import find_drift, find_workspace_dirs, main
 def _write_json(path: Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2) + "\n")
+
+
+def test_npm_validation_requires_an_executable(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("CI_BOOT_DIR", raising=False)
+    monkeypatch.setattr("shutil.which", lambda _name: None)
+    drift = npm_lock_sync._validate_with_npm(tmp_path, tmp_path / "package-lock.json")
+    assert drift is not None
+    assert "not found" in drift.message
+
+
+def test_npm_validation_runs_dry_run(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr("shutil.which", lambda _name: "/usr/bin/npm")
+    calls: list[object] = []
+
+    def run(*args, **kwargs) -> None:
+        calls.extend((args, kwargs))
+
+    monkeypatch.setattr(subprocess, "run", run)
+    assert (
+        npm_lock_sync._validate_with_npm(tmp_path, tmp_path / "package-lock.json")
+        is None
+    )
+    assert calls
 
 
 def _make_repo(

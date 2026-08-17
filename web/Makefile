@@ -40,7 +40,7 @@ export DEV_START_POLL_INTERVAL DEV_START_MAX_ATTEMPTS DEV_SKIP_PREFLIGHT
 PROJECT_ROOT := $(abspath .)
 PROJECTS_ROOT := $(abspath ../..)
 CI_REPO := $(abspath ..)
-PROD_IMAGE := localhost/workspace-ci-wiki:prod
+PROD_IMAGE := localhost/workspace-ci-wiki:0.1.0
 COMPOSE_FILE := compose.prod.yaml
 # Override on the command line or in the environment if needed:
 #   COMPOSE_CMD=podman-compose PODMAN=podman make prod-start
@@ -84,7 +84,7 @@ help: ## Show this help
 	echo "  check        Run lint + type-check + test"
 	echo ""
 	echo "Production (Podman; ports $(PROD_HTTP_PORT)/$(PROD_HTTPS_PORT)):"
-	echo "  prod-build    Build workspace-ci-wiki:prod image"
+	echo "  prod-build    Build workspace-ci-wiki:0.1.0 image"
 	echo "  prod-start    Start nginx + Next.js stack"
 	echo "  prod-stop     Stop production stack"
 	echo "  prod-redeploy  Restart production stack + verify health"

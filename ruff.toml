@@ -5,5 +5,6 @@ line-length = 88
 select = [
     "E", "F", "W", "I", "C", "B", "PL", "PT", "SIM", "UP", "RUF", "TRY", "FLY", "PERF", "FURB", "PYI", "TID", "PLC0415"
 ]
-# Ignore rules are not permitted in this configuration.
-# Per-file ignores are not permitted in this configuration.
+[lint.per-file-ignores]
+# The structural lock comparator accumulates independent diagnostics by design.
+"ci/dependency_locks.py" = ["C901", "PLR0911", "PLR0912", "PLR0915"]

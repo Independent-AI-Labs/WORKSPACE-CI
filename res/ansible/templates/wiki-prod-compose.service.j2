@@ -2,6 +2,8 @@
 Description=workspace-ci Wiki production stack (Podman Compose)
 After=network-online.target gateway-compose.service
 Wants=network-online.target gateway-compose.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
 
 [Service]
 EnvironmentFile=-{{ project_root }}/.env
@@ -17,7 +19,7 @@ Environment=WIKI_TLS_CN={{ wiki_tls_cn }}
 Environment=WIKI_HOME_LANDING_ENABLED={{ wiki_home_landing_enabled | default('true') }}
 ExecStart={{ compose_cmd }} --podman-path {{ podman_path }} -f {{ compose_file }} up --remove-orphans
 ExecStop={{ compose_cmd }} --podman-path {{ podman_path }} -f {{ compose_file }} down
-Restart=always
+Restart=on-failure
 RestartSec=15
 TimeoutStartSec=120
 TimeoutStopSec=60

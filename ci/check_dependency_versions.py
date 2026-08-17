@@ -1,416 +1,96 @@
 #!/usr/bin/env python3
-"""Dependency version checker (PyPI, npm, Docker). Enforces strict pinning
-(==X.Y.Z or >=X.Y,<A.B) and verifies every pin is the latest from its
-registry. Supports --upgrade mode to auto-fix outdated dependencies."""
+"""Command entry point for dependency validation modes."""
 
 from __future__ import annotations
 
-import argparse
-import json
-import re
 import sys
-import urllib.error
-import urllib.parse
-import urllib.request
 from pathlib import Path
-from typing import NamedTuple
 
-import tomllib
-import yaml
-from packaging.version import InvalidVersion, Version
-
-from ci import _docker_versions as docker
-from ci._npm_versions import check_npm_and_collect, upgrade_package_json
-from ci._registry_common import (
-    QUERY_RESULTS as _QUERY_RESULTS,
+MODES = frozenset({"validate"})
+REJECTED_MODE_FLAGS = frozenset({"--upgrade"})
+VALIDATE_FLAGS = frozenset(
+    {
+        "--consumer-root",
+        "--catalog",
+        "--catalog-if-present",
+        "--npm-lock",
+        "--npm-workspace-lock",
+        "--uv-lock",
+        "--npm-workspaces",
+        "--dockerfile",
+        "--compose",
+        "--exclusions",
+        "--json-result",
+    }
 )
-from ci._registry_common import (
-    is_strictly_pinned_or_bounded as _is_strictly_pinned_or_bounded,
-)
-from ci._tool_versions import check_tool_versions
-from ci.models import (
-    DependencyCheckResult,
-    LooseDependency,
-    OutdatedDependency,
-    ParsedDependency,
-    PathCheckResult,
-)
-from ci.paths import resolve_config_path, validate_exemption_file
-
-BUILTIN_EXCLUDES = {
-    "torch",
-    "torchvision",
-    "torchaudio",
-    "workspace",
-    "ci",
-    "dataops",
-    "pytorch-triton-rocm",
-    "pandas",
-    "pandas-" + "st" + "ubs",
-}
 
 
-def load_config_excludes(key: str = "excludes") -> set[str]:
-    """Load exclusions from the main CI config only (no per-project overrides)."""
-    result: set[str] = set()
-    config_path = resolve_config_path("dependency_excludes", required=False)
-
-    if config_path.is_file():
-        validate_exemption_file(config_path, "dependency_excludes.yaml")
-        try:
-            with open(config_path) as f:
-                data = yaml.safe_load(f)
-            if data is not None:
-                result |= {x.strip().lower() for x in data.get(key, []) if x.strip()}
-        except (yaml.YAMLError, OSError, ValueError) as e:
-            print(
-                f"Warning: Failed to load config excludes from {config_path}: {e}",
-                file=sys.stderr,
-            )
-
-    return result
-
-
-def _version_has_linux_wheel(releases: object, version: str) -> bool:
-    """Return True if *version* has a source dist or a manylinux/linux wheel."""
-    if not isinstance(releases, dict):
-        return False
-    file_list = releases.get(version, [])
-    if not isinstance(file_list, list):
-        return False
-    for file_info in file_list:
-        if not isinstance(file_info, dict):
-            continue
-        filename = file_info.get("filename", "")
-        pkg_type = file_info.get("packagetype", "")
-        if pkg_type == "sdist":
-            return True
-        if "linux" in filename or "manylinux" in filename:
-            return True
-    return False
+def _normalize_transition_arguments(arguments: list[str]) -> list[str]:
+    """Translate the exact invocation installed by the predecessor hook."""
+    match arguments:
+        case ["--deterministic-only", "--catalog", _]:
+            return [
+                "validate",
+                "--consumer-root",
+                str(Path.cwd()),
+                "--exclusions",
+                "config/dependency_excludes.yaml",
+                "--catalog",
+                "res/dependency-pins.yaml",
+                "--npm-workspace-lock",
+                "package.json",
+                "package-lock.json",
+                "--uv-lock",
+                "pyproject.toml",
+                "uv.lock",
+                "--dockerfile",
+                "web/Containerfile",
+                "--compose",
+                "web/compose.prod.yaml",
+                "pyproject.toml",
+            ]
+    return arguments
 
 
-class _VersionCandidate(NamedTuple):
-    sort_key: object  # packaging.version.Version
-    version_str: str
+def _usage() -> int:
+    print(
+        "usage: check_dependency_versions.py validate ...",
+        file=sys.stderr,
+    )
+    return 2
 
 
-def _try_version_candidate(ver_str: str) -> _VersionCandidate | None:
-    try:
-        return _VersionCandidate(Version(ver_str), ver_str)
-    except InvalidVersion:
-        print(f"  Skipping unparseable version: {ver_str}")
+def _mode(arguments: list[str]) -> str | None:
+    """Validate the entire dispatcher envelope before implementation import."""
+    if not arguments or arguments[0] not in MODES:
+        _usage()
         return None
-
-
-def get_latest_pypi_version(package_name: str) -> str | None:
-    """Query PyPI JSON API for the latest version of a package.
-
-    If the very latest release has no Linux-compatible wheel or sdist,
-    select the newest release that does.
-    """
-    normalized = re.sub(r"[-_.]+", "-", package_name).lower()
-    url = f"https://pypi.org/pypi/{normalized}/json"
-    try:
-        with urllib.request.urlopen(url, timeout=10) as response:
-            data = json.loads(response.read().decode("utf-8"))
-    except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as exc:
-        _QUERY_RESULTS["failures"] += 1
-        print(f"  WARNING: Failed to query PyPI for {package_name}: {exc}")
+    if any(
+        argument.split("=", maxsplit=1)[0] in REJECTED_MODE_FLAGS
+        for argument in arguments[1:]
+    ):
+        _usage()
         return None
-    _QUERY_RESULTS["successes"] += 1
-
-    latest: str | None = data.get("info", {}).get("version")
-    releases = data.get("releases", {})
-
-    # If the latest version is installable on Linux, use it.
-    if latest and _version_has_linux_wheel(releases, latest):
-        return latest
-
-    # Otherwise walk releases newest-first and pick the first one
-    # that has a Linux-compatible artifact.
-    candidates: list[_VersionCandidate] = []
-    for ver_str in releases if isinstance(releases, dict) else []:
-        candidate = _try_version_candidate(ver_str)
-        if candidate is not None:
-            candidates.append(candidate)
-    candidates.sort(reverse=True)
-
-    for candidate in candidates:
-        if _version_has_linux_wheel(releases, candidate.version_str):
-            return candidate.version_str
-
-    # Nothing compatible found: return the nominal latest anyway.
-    return latest
+    if any(
+        argument.startswith("--")
+        and argument.split("=", maxsplit=1)[0] not in VALIDATE_FLAGS
+        for argument in arguments[1:]
+    ):
+        _usage()
+        return None
+    return arguments[0]
 
 
-def parse_dependency(dep: str) -> ParsedDependency:
-    """Parse dep string → (name, extras, operator, version). Version may be None."""
-    dep = dep.strip()
-    extras_match = re.match(r"^([a-zA-Z0-9_-]+)(\[[^\]]+\])?(.*)$", dep)
-    if not extras_match:
-        return ParsedDependency(dep, None, None, None)
-
-    name = extras_match.group(1)
-    extras = extras_match.group(2)
-    remainder = extras_match.group(3).strip()
-
-    if not remainder:
-        return ParsedDependency(name, extras, None, None)
-
-    for op in ["==", ">=", "<=", "~=", ">", "<"]:
-        if remainder.startswith(op):
-            version = remainder[len(op) :].strip()
-            if ";" in version:
-                version = version.split(";")[0].strip()
-            return ParsedDependency(name, extras, op, version)
-
-    return ParsedDependency(name, extras, None, None)
-
-
-def check_and_collect(path: Path, excludes: set[str]) -> DependencyCheckResult:
-    """Check pyproject.toml: returns (loose, outdated, toml_data)."""
-    with open(path, "rb") as f:
-        data = tomllib.load(f)
-
-    deps = data.get("project", {}).get("dependencies", [])
-    optional_deps = data.get("project", {}).get("optional-dependencies", {})
-
-    all_deps = list(deps)
-    for extra_deps in optional_deps.values():
-        all_deps.extend(extra_deps)
-
-    loose_deps: list[LooseDependency] = []
-    outdated_deps: list[OutdatedDependency] = []
-    checked: set[str] = set()
-
-    for dep in all_deps:
-        parsed = parse_dependency(dep)
-        name_lower = parsed.name.lower()
-
-        if name_lower in excludes or name_lower in BUILTIN_EXCLUDES:
-            continue
-        if name_lower in checked:
-            continue
-        checked.add(name_lower)
-
-        latest = get_latest_pypi_version(parsed.name)
-        if latest is None:
-            continue
-
-        if not _is_strictly_pinned_or_bounded(dep):
-            extras = parsed.extras or ""
-            op = parsed.operator or ""
-            ver = parsed.version or ""
-            current_spec = f"{parsed.name}{extras}{op}{ver}"
-            loose_deps.append(LooseDependency(parsed.name, current_spec, latest))
-        elif parsed.version != latest:
-            outdated_deps.append(
-                OutdatedDependency(parsed.name, parsed.extras, parsed.version, latest)
-            )
-
-    return DependencyCheckResult(loose_deps, outdated_deps, data)
-
-
-def upgrade_pyproject(
-    path: Path,
-    loose: list[LooseDependency],
-    outdated: list[OutdatedDependency],
-) -> None:
-    """Upgrade versions in pyproject.toml."""
-    content = path.read_text()
-
-    # Only match deps inside arrays (lines starting with whitespace + quote)
-    for loose_dep in loose:
-        pattern = (
-            rf'(^\s+)"{re.escape(loose_dep.name)}(\[[^\]]*\])?(>=|<=|~=|>|<)?[^"]*"'
-        )
-        replacement = rf'\1"{loose_dep.name}\2=={loose_dep.latest_version}"'
-        content = re.sub(
-            pattern, replacement, content, flags=re.IGNORECASE | re.MULTILINE
-        )
-
-    for outdated_dep in outdated:
-        extras_pat = re.escape(outdated_dep.extras) if outdated_dep.extras else ""
-        pattern = rf'(^\s+)"{re.escape(outdated_dep.name)}{extras_pat}==[^"]*"'
-        extras = outdated_dep.extras or ""
-        new_ver = outdated_dep.new_version
-        replacement = rf'\1"{outdated_dep.name}{extras}=={new_ver}"'
-        content = re.sub(
-            pattern, replacement, content, flags=re.IGNORECASE | re.MULTILINE
-        )
-
-    path.write_text(content)
-
-
-def _collect_issues(path: Path, excludes: set[str]) -> DependencyCheckResult:
-    """Route to the correct checker based on file type."""
-    if docker.is_compose_file(path):
-        return docker.check_compose(path, excludes)
-    if docker.is_dockerfile(path):
-        return docker.check_dockerfile(path, excludes)
-    if path.name == "package.json":
-        return check_npm_and_collect(path, excludes)
-    elif docker.is_compose_file(path):
-        return docker.check_compose(path, excludes)
-    return check_and_collect(path, excludes)
-
-
-def _try_upgrade(
-    path: Path,
-    loose: list[LooseDependency],
-    outdated: list[OutdatedDependency],
-) -> int:
-    """Attempt auto-upgrade, return count of upgraded deps."""
-    if docker.is_compose_file(path):
-        print(f"Upgrading {path.name}...")
-        docker.upgrade_compose(path, loose, outdated)
-    elif path.name == "package.json":
-        print("Upgrading package.json...")
-        upgrade_package_json(path, loose, outdated)
-    elif not docker.is_dockerfile(path):
-        print("Upgrading pyproject.toml...")
-        upgrade_pyproject(path, loose, outdated)
-    return len(loose) + len(outdated)
-
-
-def _report_issues(
-    path: Path,
-    loose: list[LooseDependency],
-    outdated: list[OutdatedDependency],
-) -> bool:
-    """Print issues and return True if any found."""
-    is_docker_file = docker.is_compose_file(path) or docker.is_dockerfile(path)
-    has_errors = False
-    if loose:
-        has_errors = True
-        if is_docker_file:
-            print(f"\n!!! UNPINNED DOCKER IMAGES in {path} !!!")
-            print("All images must use exact version tags")
-        else:
-            print(f"\n!!! UNPINNED DEPENDENCIES in {path} !!!")
-            print(
-                "All deps must be either exactly pinned (==X.Y) or have "
-                "both min+max bounds (>=X.Y,<A.B)"
-            )
-        for loose_dep in loose:
-            print(f"  - {loose_dep.current_spec} -> {loose_dep.latest_version}")
-    if outdated:
-        has_errors = True
-        label = "DOCKER IMAGES" if is_docker_file else "DEPENDENCIES"
-        print(f"\n!!! OUTDATED {label} in {path} !!!")
-        for outdated_dep in outdated:
-            extras = outdated_dep.extras or ""
-            old = outdated_dep.old_version
-            new = outdated_dep.new_version
-            print(f"  - {outdated_dep.name}{extras} {old} -> {new}")
-    return has_errors
-
-
-def _check_path(path: Path, excludes: set[str], *, upgrade: bool) -> PathCheckResult:
-    """Check a single file for dependency issues."""
-    print(f"Checking {path}...")
-    loose, outdated, _ = _collect_issues(path, excludes)
-
-    if upgrade and (loose or outdated):
-        return PathCheckResult(False, _try_upgrade(path, loose, outdated))
-
-    return PathCheckResult(_report_issues(path, loose, outdated), 0)
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Check and optionally upgrade dependency versions"
-    )
-    parser.add_argument(
-        "--upgrade",
-        action="store_true",
-        help="Automatically upgrade outdated/loose deps to latest versions",
-    )
-    parser.add_argument(
-        "--exclude",
-        type=str,
-        default="",
-        help="Comma-separated list of packages to exclude from checking",
-    )
-    default_paths = ["pyproject.toml", "web/package.json"]
-    parser.add_argument(
-        "paths",
-        nargs="*",
-        default=default_paths,
-        help="Paths to check (pyproject.toml, package.json, "
-        "docker-compose.yml, Dockerfile)",
-    )
-    args = parser.parse_args()
-    paths_explicit = bool(args.paths) and args.paths is not default_paths
-    paths = args.paths
-
-    cli_excludes = {x.strip().lower() for x in args.exclude.split(",") if x.strip()}
-    pypi_excludes = cli_excludes | load_config_excludes()
-    npm_excludes = cli_excludes | load_config_excludes("npm_excludes")
-    docker_excludes = cli_excludes | load_config_excludes("docker_excludes")
-
-    dep_errors = check_tool_versions()
-    upgrade_count = 0
-    found_count = 0
-
-    for path_str in paths:
-        path = Path(path_str)
-        if not path.exists():
-            print(f"Warning: {path} not found, skipping")
-            continue
-        found_count += 1
-        if path.name == "package.json":
-            excludes = npm_excludes
-        elif docker.is_compose_file(path) or docker.is_dockerfile(path):
-            excludes = docker_excludes
-        else:
-            excludes = pypi_excludes
-        errors, upgraded = _check_path(path, excludes, upgrade=args.upgrade)
-        dep_errors = dep_errors or errors
-        upgrade_count += upgraded
-
-    if args.upgrade and upgrade_count > 0:
-        print(f"Updated {upgrade_count} dependencies.")
-        return 0
-
-    return _report_result(
-        dep_errors=dep_errors,
-        found_count=found_count,
-        paths_explicit=paths_explicit,
-    )
-
-
-def _report_result(
-    *,
-    dep_errors: bool,
-    found_count: int,
-    paths_explicit: bool,
-) -> int:
-    """Exit-code logic for the non-upgrade path."""
-    if dep_errors:
-        print("\nRun with --upgrade to auto-fix.")
-        return 1
-    if found_count == 0:
-        if not paths_explicit:
-            print("No dependency manifests found; nothing to check.")
-            return 0
-        print("ERROR: No dependency files found to check.")
-        return 1
-
-    f = _QUERY_RESULTS["failures"]
-    s = _QUERY_RESULTS["successes"]
-    if f > 0 and s == 0:
-        print("ERROR: All registry queries failed: network may be offline.")
-        print("Fix by running with a working internet connection.")
-        return 1
-    if f > s:
-        msg = f"WARNING: {f} query failures vs {s} successes"
-        print(msg + ": check may be incomplete.")
-
-    print("All dependencies are strictly pinned and up to date.")
-    return 0
+def _validation_arguments(arguments: list[str]) -> list[str]:
+    return arguments[1:]
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    arguments = _normalize_transition_arguments(sys.argv[1:])
+    mode = _mode(arguments)
+    if mode is None:
+        sys.exit(2)
+    if mode == "validate":
+        from ci.dependency_policy import main as validate_dependencies
+
+        sys.exit(validate_dependencies(_validation_arguments(arguments)))

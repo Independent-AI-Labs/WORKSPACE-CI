@@ -7,18 +7,18 @@ diagrams and tables fit together. Not marketing copy (see
 diagram syntax alone (see
 [WORKFLOW-CREATING-DIAGRAMS.md](WORKFLOW-CREATING-DIAGRAMS.md)).
 
-Canonical path: `projects/CI/workflows/WORKFLOW-WRITING-README.md`
+Canonical path: `/opt/workspace-ci/workflows/WORKFLOW-WRITING-README.md`
 
 ## When this workflow applies
 
-| Content | Where | This workflow |
-|---------|-------|---------------|
-| README body (sections 2+) | Any repo `README.md` | Yes |
-| Overview / intro (under `#` title) | `README.md` opening prose | Yes (this file); catalogue **card** polish in [WORKFLOW-WRITING-WEBSITE-COPY.md](WORKFLOW-WRITING-WEBSITE-COPY.md) |
-| Architecture Mermaid in README | Owning subsystem section | Yes + [WORKFLOW-CREATING-DIAGRAMS.md](WORKFLOW-CREATING-DIAGRAMS.md) |
-| REQ/SPEC/TRACK deep docs | `docs/`, `projects/*/docs/` | Cross-link from README; do not paste specs into README |
-| Runbooks, incident postmortems | `docs/`, wiki, issue tracker | No (link out; do not dump into README) |
-| Commit messages, hook output | hooks, Makefiles | No |
+| Content                            | Where                        | This workflow                                                                                                      |
+| ---------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| README body (sections 2+)          | Any repo `README.md`         | Yes                                                                                                                |
+| Overview / intro (under `#` title) | `README.md` opening prose    | Yes (this file); catalogue **card** polish in [WORKFLOW-WRITING-WEBSITE-COPY.md](WORKFLOW-WRITING-WEBSITE-COPY.md) |
+| Architecture Mermaid in README     | Owning subsystem section     | Yes + [WORKFLOW-CREATING-DIAGRAMS.md](WORKFLOW-CREATING-DIAGRAMS.md)                                               |
+| REQ/SPEC/TRACK deep docs           | `docs/`, `projects/*/docs/`  | Cross-link from README; do not paste specs into README                                                             |
+| Runbooks, incident postmortems     | `docs/`, wiki, issue tracker | No (link out; do not dump into README)                                                                             |
+| Commit messages, hook output       | hooks, Makefiles             | No                                                                                                                 |
 
 ## What a README is for
 
@@ -40,19 +40,19 @@ spec** and leave a pointer in README.
 
 Order sections by reader journey, not by repo directory tree.
 
-| Section | Purpose | Typical contents |
-|---------|---------|------------------|
-| Title + overview | Blink test + scope | What + why (+ optional where-with-link); see **Overview** below |
-| Host install / Getting Started | Prereqs + install catalog | OS, sudo, boot dirs; **one** mention per setup command |
-| Subsystems | How each major feature works | Prose + diagram + table + spec links per subsystem |
-| Philosophy / design principles | Why constraints exist | Bullets, not diagrams; link to CI/guard docs |
-| Navigation map | Where code and docs live | Markdown table of paths |
-| Contribution contract | PR gates | `make check`, hooks, commit format; link to `projects/CI/` |
+| Section                        | Purpose                      | Typical contents                                                 |
+| ------------------------------ | ---------------------------- | ---------------------------------------------------------------- |
+| Title + overview               | Blink test + scope           | What + why (+ optional where-with-link); see **Overview** below  |
+| Host install / Getting Started | Prereqs + install catalog    | OS, sudo, boot dirs; **one** mention per setup command           |
+| Subsystems                     | How each major feature works | Prose + diagram + table + spec links per subsystem               |
+| Philosophy / design principles | Why constraints exist        | Bullets, not diagrams; link to CI/guard docs                     |
+| Navigation map                 | Where code and docs live     | Markdown table of paths                                          |
+| Contribution contract          | PR gates                     | `make check`, hooks, commit format; link to `/opt/workspace-ci/` |
 
 Rules:
 
 - **Number sections** only when the doc is long and cross-referenced (`Section 2
-  covers subsystems`). Do not number every subsection.
+covers subsystems`). Do not number every subsection.
 - **One default quick start.** Optional paths live in an installation catalog,
   not competing quick-start essays.
 - **Subsystem sections are peers.** Do not bury QEMU under Podman in a single
@@ -70,12 +70,12 @@ beats brevity when the product cannot be honest in two lines.
 
 Answer in order (inverted pyramid: most important first):
 
-| Order | Question | Belongs in overview |
-|-------|----------|---------------------|
-| 1 | **What** is this? | One sentence: noun + what it does for the reader |
-| 2 | **Why** does it exist? | One sentence: problem solved, outcome, constraint enforced |
-| 3 | **Where** does it live? | Optional one clause + link (parent repo, federated workspace) |
-| 4 | **What next?** | Optional forward link (`See Host install`, `Getting Started`) |
+| Order | Question                | Belongs in overview                                           |
+| ----- | ----------------------- | ------------------------------------------------------------- |
+| 1     | **What** is this?       | One sentence: noun + what it does for the reader              |
+| 2     | **Why** does it exist?  | One sentence: problem solved, outcome, constraint enforced    |
+| 3     | **Where** does it live? | Optional one clause + link (parent repo, federated workspace) |
+| 4     | **What next?**          | Optional forward link (`See Host install`, `Getting Started`) |
 
 Install commands, deployment-class tables, program inventories, Mermaid, and
 hook lists belong in **later sections**, not the overview.
@@ -109,29 +109,29 @@ Match [WORKSPACE-VM](../../../README.md) second-paragraph shape.>
 ```
 
 Federated sub-projects (GUARD, GATEWAY): intro names **this repo only**. Parent
-and sibling repos mention GUARD/CI in *their* intros; do not reciprocate in
+and sibling repos mention GUARD/CI in _their_ intros; do not reciprocate in
 the sub-project catalogue blurb.
 
 ### Forbidden in the overview
 
-| Do not open with | Why |
-|------------------|-----|
-| Repo topology (`Federated sub-project of...`) | Reader does not know what the tool **does** yet |
-| Implementation (`Compiled in Rust`, `SUID`, `setcap`) | How, not why; belongs in specs or subsystem prose |
-| Program or module inventory (`Four programs cover...`) | Use Architecture section + table below |
-| Deployment mechanics (host-exec, PAM, class tables) | Use Host install / Role in framework section |
-| Apology or incident narrative (`we fixed`, `regression`, `our mistake`) | README is current truth, not postmortem |
-| `production deployment` for WORKSPACE-VM framework components | Framework dev hosts are the primary surface; secured VMs are a tier, not the README hook |
-| Internal hostnames in public README prose | Use role names (`agent dev host`) in docs; bind hostnames only in config YAML |
-| Repeated install commands | Document each `make` target once under Getting Started / Host install |
+| Do not open with                                                        | Why                                                                                      |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Repo topology (`Federated sub-project of...`)                           | Reader does not know what the tool **does** yet                                          |
+| Implementation (`Compiled in Rust`, `SUID`, `setcap`)                   | How, not why; belongs in specs or subsystem prose                                        |
+| Program or module inventory (`Four programs cover...`)                  | Use Architecture section + table below                                                   |
+| Deployment mechanics (host-exec, PAM, class tables)                     | Use Host install / Role in framework section                                             |
+| Apology or incident narrative (`we fixed`, `regression`, `our mistake`) | README is current truth, not postmortem                                                  |
+| `production deployment` for WORKSPACE-VM framework components           | Framework dev hosts are the primary surface; secured VMs are a tier, not the README hook |
+| Internal hostnames in public README prose                               | Use role names (`agent dev host`) in docs; bind hostnames only in config YAML            |
+| Repeated install commands                                               | Document each `make` target once under Getting Started / Host install                    |
 
 ### Overview vs catalogue blurb
 
-| Concern | Owner workflow |
-|---------|----------------|
-| What/why/where structure, no architecture dump | This file |
-| Wiki card length, blink test, marketing tone for sentence 1 | WORKFLOW-WRITING-WEBSITE-COPY |
-| Architecture, install, diagrams | This file (sections after overview) |
+| Concern                                                     | Owner workflow                      |
+| ----------------------------------------------------------- | ----------------------------------- |
+| What/why/where structure, no architecture dump              | This file                           |
+| Wiki card length, blink test, marketing tone for sentence 1 | WORKFLOW-WRITING-WEBSITE-COPY       |
+| Architecture, install, diagrams                             | This file (sections after overview) |
 
 When both apply, draft the overview with **this file**, then trim or sharpen
 sentence 1-2 for the catalogue per WEBSITE-COPY without moving install or
@@ -168,12 +168,12 @@ Use a **bullet list of parallel paths**, each with:
 - One line on what is **excluded** from other paths (e.g. GPU stack not in
   general bootstrap).
 
-| Do | Don't |
-|----|-------|
-| State once that installers auto-run shared prereq checks | Repeat `init-check` / `sudo make init` under every bullet |
-| Link config YAML for component lists | Paste YAML into README |
-| Separate interactive vs CI non-interactive variants | Hide CI entry points |
-| Note sudo-only steps in a dedicated Post-install subsection | Scatter sudo commands without context |
+| Do                                                          | Don't                                                     |
+| ----------------------------------------------------------- | --------------------------------------------------------- |
+| State once that installers auto-run shared prereq checks    | Repeat `init-check` / `sudo make init` under every bullet |
+| Link config YAML for component lists                        | Paste YAML into README                                    |
+| Separate interactive vs CI non-interactive variants         | Hide CI entry points                                      |
+| Note sudo-only steps in a dedicated Post-install subsection | Scatter sudo commands without context                     |
 
 ### Quick start
 
@@ -206,13 +206,13 @@ equivalent) section.
 
 ### What belongs in README vs specs
 
-| Keep in README | Move to spec / nested README |
-|----------------|------------------------------|
-| Default command and config path | Module maps, every env var |
-| Profile ID + deploy unit + port table | Full wizard phase tables |
-| One architecture diagram per concern | VPN packet diagrams, full hook lists |
-| Benchmark one-liner + link to `benchmarks/.../README.md` | Benchmark methodology, datasets |
-| Contribution commands | Every pre-commit hook name |
+| Keep in README                                           | Move to spec / nested README         |
+| -------------------------------------------------------- | ------------------------------------ |
+| Default command and config path                          | Module maps, every env var           |
+| Profile ID + deploy unit + port table                    | Full wizard phase tables             |
+| One architecture diagram per concern                     | VPN packet diagrams, full hook lists |
+| Benchmark one-liner + link to `benchmarks/.../README.md` | Benchmark methodology, datasets      |
+| Contribution commands                                    | Every pre-commit hook name           |
 
 ### Multi-path subsystems (Podman vs QEMU, llamafile vs llama.cpp)
 
@@ -309,15 +309,15 @@ flowchart TB
 
 Adapt labels to the product; **keep the logic**:
 
-| Element | Role |
-|---------|------|
-| Trigger (stadium) | Human or CI starts the flow |
-| Input (parallelogram) | YAML, settings file, profile registry |
-| Decision (diamond) | Picks one mutually exclusive path |
-| Action (rectangle) | Build, deploy, boot steps inside subgraphs |
-| Persisted (cylinder) | Disk state both paths write (or shared weights) |
-| Ongoing (rounded) | Running server, day-2 commands, clients |
-| Dashed edge | Shared read-only inputs **into build steps**, not into the diamond |
+| Element               | Role                                                               |
+| --------------------- | ------------------------------------------------------------------ |
+| Trigger (stadium)     | Human or CI starts the flow                                        |
+| Input (parallelogram) | YAML, settings file, profile registry                              |
+| Decision (diamond)    | Picks one mutually exclusive path                                  |
+| Action (rectangle)    | Build, deploy, boot steps inside subgraphs                         |
+| Persisted (cylinder)  | Disk state both paths write (or shared weights)                    |
+| Ongoing (rounded)     | Running server, day-2 commands, clients                            |
+| Dashed edge           | Shared read-only inputs **into build steps**, not into the diamond |
 
 Edge labels on branches: `one profile`, `Podman default`, `QEMU`, not vendor
 jargon alone.
@@ -333,30 +333,30 @@ share the decision-spine pattern.
 
 ### Node labels
 
-| Do | Don't |
-|----|-------|
+| Do                                       | Don't                                          |
+| ---------------------------------------- | ---------------------------------------------- |
 | "Build portable .llamafile from models/" | `Makefile.llamafile`, `llama_setup_install.py` |
-| "Stack profiles in llama-setup.yaml" | Bare filename as the only label |
-| "Per-VM folder under .vms on host" | `vm_manager`, `persisted_state` |
+| "Stack profiles in llama-setup.yaml"     | Bare filename as the only label                |
+| "Per-VM folder under .vms on host"       | `vm_manager`, `persisted_state`                |
 
 File paths are OK **inside** a label when they are the actual operator surface
 (e.g. `models/`), but pair them with a verb phrase.
 
 ### Editing discipline
 
-| Situation | Rule |
-|-----------|------|
-| User asks to fix only the legend | Touch the `subgraph legend` block only; do not shorten main diagram labels |
-| Diagram is wrong | Fix logic first; do not delete **all** diagrams because one is bad |
+| Situation                                | Rule                                                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------- |
+| User asks to fix only the legend         | Touch the `subgraph legend` block only; do not shorten main diagram labels                  |
+| Diagram is wrong                         | Fix logic first; do not delete **all** diagrams because one is bad                          |
 | Copying a diagram from another subsystem | Rebuild the fork and convergence for **that** product's logic; templates are not copy-paste |
-| Two parallel serve nodes to clients | Merge to **one** outcome node when only one runs |
+| Two parallel serve nodes to clients      | Merge to **one** outcome node when only one runs                                            |
 
 ## Prose style (technical body)
 
 - Complete sentences; prefer short paragraphs over bullet dumps.
 - Link specs with descriptive markdown links, not bare paths.
 - Use **sample** framing for repo-specific routes or deployments (`In this
-  sample, ...`), not "production-only" claims.
+sample, ...`), not "production-only" claims.
 - No Unicode em-dash or en-dash in markdown (CI `check-banned-words`); use
   comma, colon, or ASCII hyphen.
 - Do not paste troubleshooting encyclopedias. One-line failure hints belong in
@@ -376,7 +376,7 @@ Last section (or linked prominently). Must be **concrete**:
 1. Commands that mirror CI (`make contract-check`, `make check`, `make check-push`).
 2. Hook install command and that hooks are mandatory.
 3. Short list of hook **stages** (pre-commit, commit-msg, pre-push) with link
-   to `projects/CI/README.md` for the full check list.
+   to `/opt/workspace-ci/README.md` for the full check list.
 4. History rules (no amend on pushed commits) when git-guard applies.
 5. Where new specs go.
 
@@ -384,12 +384,12 @@ Do not restate every hook name in README; the CI README is the source of truth.
 
 ## Cross-linking workflow docs
 
-| Task | Load |
-|------|------|
-| Overview structure (what / why / where) | This file |
-| Catalogue card trim / wiki hero blink test | WORKFLOW-WRITING-WEBSITE-COPY.md |
-| Mermaid types, arrow rules, node budgets | WORKFLOW-CREATING-DIAGRAMS.md |
-| README section structure, install catalog, subsystem template | This file |
+| Task                                                          | Load                             |
+| ------------------------------------------------------------- | -------------------------------- |
+| Overview structure (what / why / where)                       | This file                        |
+| Catalogue card trim / wiki hero blink test                    | WORKFLOW-WRITING-WEBSITE-COPY.md |
+| Mermaid types, arrow rules, node budgets                      | WORKFLOW-CREATING-DIAGRAMS.md    |
+| README section structure, install catalog, subsystem template | This file                        |
 
 Do not reference workflow files inside user-facing README prose unless the repo
 documents contributor workflows explicitly. Agents load workflows by default.
@@ -408,7 +408,7 @@ documents contributor workflows explicitly. Agents load workflows by default.
 - [ ] Node labels are operator-facing phrases, not internal module names
 - [ ] Benchmarks are pointers, not diagrammed pipelines
 - [ ] No troubleshooting dump; no incident citations in operator steps
-- [ ] Contribution contract lists real `make` targets and links `projects/CI/`
+- [ ] Contribution contract lists real `make` targets and links `/opt/workspace-ci/`
 - [ ] Navigation map matches repo layout
 - [ ] Diagrams render (mermaid.live or GitHub preview); fences paired correctly
 - [ ] No em-dash or en-dash in edited markdown
@@ -440,21 +440,21 @@ When asked to create or edit a technical README:
 
 ## Worked example: WORKSPACE-VM
 
-*Illustrates the rules above. Do not treat WORKSPACE-VM section names as
-requirements for other repos.*
+_Illustrates the rules above. Do not treat WORKSPACE-VM section names as
+requirements for other repos._
 
 ### Section map
 
-| README section | Concern |
-|----------------|---------|
-| Getting Started | Prerequisites, install catalog, one quick start, post-install |
-| LLM inference | Decision spine: profiles YAML, llamafile vs llama.cpp, one HTTP server |
-| Agent VMs | Decision spine: settings YAML, Podman vs QEMU, one `.vms` folder |
-| Host VPN | Commands + spec link only (no redundant diagram) |
-| Benchmarks | Prose + command + nested README link |
-| Workspace Philosophy | Bullets + link to `projects/CI/README.md` |
-| Navigation map | Path table |
-| Contribution contract | `make contract-check`, `make check`, hook stages |
+| README section        | Concern                                                                |
+| --------------------- | ---------------------------------------------------------------------- |
+| Getting Started       | Prerequisites, install catalog, one quick start, post-install          |
+| LLM inference         | Decision spine: profiles YAML, llamafile vs llama.cpp, one HTTP server |
+| Agent VMs             | Decision spine: settings YAML, Podman vs QEMU, one `.vms` folder       |
+| Host VPN              | Commands + spec link only (no redundant diagram)                       |
+| Benchmarks            | Prose + command + nested README link                                   |
+| Workspace Philosophy  | Bullets + link to `/opt/workspace-ci/README.md`                        |
+| Navigation map        | Path table                                                             |
+| Contribution contract | `make contract-check`, `make check`, hook stages                       |
 
 ### Approved patterns from that README
 
@@ -472,21 +472,21 @@ requirements for other repos.*
 
 ### Anti-patterns from past WORKSPACE-VM README edits
 
-| Anti-pattern | Fix |
-|--------------|-----|
-| Linear `operator -> make setup -> bundle -> serve` chains | Decision spine with labeled mutually exclusive subgraphs |
-| Many diagrams (QEMU, Podman, VPN, hooks) in one section | One diagram per subsystem concern; VPN stays spec link |
-| Markdown table as diagram legend | `subgraph legend [Legend]` with sample shapes |
-| Copy VM diagram onto LLM without changing fork logic | Same shape vocabulary, different decision and convergence |
-| `models/` and config both solid into decision diamond | Config on spine; shared inputs dashed into build steps only |
-| Two serve nodes both solid to clients | Single outcome node (one server on host) |
-| Removing all Mermaid when one diagram fails | Fix or replace the failing diagram only |
-| Repeated `init-check` under every installer bullet | Once in Prerequisites; note auto-run on installers |
-| Common Failure Modes encyclopedia section | Delete or move to docs; link from spec |
-| Incident references in `enforce-syslog-limits` | Plain explanation of what the step prevents |
-| Benchmark architecture diagram | Prose + command + link to benchmark README |
-| Internal module names as diagram nodes | Verb phrases for operator-visible steps |
-| Shortened diagram labels when only legend was wrong | Edit legend subgraph only |
+| Anti-pattern                                              | Fix                                                         |
+| --------------------------------------------------------- | ----------------------------------------------------------- |
+| Linear `operator -> make setup -> bundle -> serve` chains | Decision spine with labeled mutually exclusive subgraphs    |
+| Many diagrams (QEMU, Podman, VPN, hooks) in one section   | One diagram per subsystem concern; VPN stays spec link      |
+| Markdown table as diagram legend                          | `subgraph legend [Legend]` with sample shapes               |
+| Copy VM diagram onto LLM without changing fork logic      | Same shape vocabulary, different decision and convergence   |
+| `models/` and config both solid into decision diamond     | Config on spine; shared inputs dashed into build steps only |
+| Two serve nodes both solid to clients                     | Single outcome node (one server on host)                    |
+| Removing all Mermaid when one diagram fails               | Fix or replace the failing diagram only                     |
+| Repeated `init-check` under every installer bullet        | Once in Prerequisites; note auto-run on installers          |
+| Common Failure Modes encyclopedia section                 | Delete or move to docs; link from spec                      |
+| Incident references in `enforce-syslog-limits`            | Plain explanation of what the step prevents                 |
+| Benchmark architecture diagram                            | Prose + command + link to benchmark README                  |
+| Internal module names as diagram nodes                    | Verb phrases for operator-visible steps                     |
+| Shortened diagram labels when only legend was wrong       | Edit legend subgraph only                                   |
 
 ### Research before editing WORKSPACE-VM README
 
@@ -495,23 +495,23 @@ Verify against:
 - `workspace/config/llama-setup.yaml` (stack profiles, deploy kinds)
 - `workspace/config/bootstrap-components.yaml` (what general install excludes)
 - `docs/SPEC-LLAMA-SETUP-TUI.md`, `docs/SPEC-VM-HYPERVISOR.md` (depth lives here)
-- `projects/CI/README.md` (hook stages for contribution section)
+- `/opt/workspace-ci/README.md` (hook stages for contribution section)
 
 ## Worked example: WORKSPACE-GUARD (federated enforcement repo)
 
-*Illustrates overview + early install for a sub-project. Section names are not
-requirements for other repos.*
+_Illustrates overview + early install for a sub-project. Section names are not
+requirements for other repos._
 
 ### Section map
 
-| README section | Concern |
-|----------------|---------|
-| Overview | What guard does on `/usr/bin/git`; why agents need it on dev hosts |
-| Role in framework | Deployment-surface table (dev host, sandbox, CI); no hostnames |
-| Host install | `install-guard-host-exec`, check, hooks; removed targets hard-fail |
-| Architecture | Mermaid + program table (inventory belongs here, not overview) |
-| Program I / II / III | Policy and subsystem depth + spec links |
-| Building and testing | Crate/harness only (not host install) |
+| README section       | Concern                                                            |
+| -------------------- | ------------------------------------------------------------------ |
+| Overview             | What guard does on `/usr/bin/git`; why agents need it on dev hosts |
+| Role in framework    | Deployment-surface table (dev host, sandbox, CI); no hostnames     |
+| Host install         | `install-guard-host-exec`, check, hooks; removed targets hard-fail |
+| Architecture         | Mermaid + program table (inventory belongs here, not overview)     |
+| Program I / II / III | Policy and subsystem depth + spec links                            |
+| Building and testing | Crate/harness only (not host install)                              |
 
 ### Approved patterns
 
@@ -528,17 +528,17 @@ requirements for other repos.*
 
 ### Anti-patterns from past WORKSPACE-GUARD README edits
 
-| Anti-pattern | Fix |
-|--------------|-----|
-| Opening with `Federated sub-project of...` | Descriptive title + **WORKSPACE-GUARD** + concrete programs |
-| Naming WORKSPACE-VM or WORKSPACE-CI in the intro | Intro is about this repo only; siblings link here, not vice versa |
-| `Compiled enforcement layer paired with WORKSPACE-CI` as sentence 1 | Syscall boundary, dpkg-divert, three program names |
-| Four programs listed in overview | Move to Architecture table |
-| `## Production deployment` for framework host install | `## Host install` or `## Getting Started` |
-| `## Development` for `cargo test` / Podman harness | `## Building and testing` + disambiguate from host install |
-| `bare-metal`, `production`, internal hostnames in README | Role-based language; hostnames only in `config/*.yaml` |
-| Incident/apology framing in operator docs | Factual placement only |
-| Deployment-class / PAM / host-exec rationale in overview | Role in framework section + link to deployment spec |
+| Anti-pattern                                                        | Fix                                                               |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Opening with `Federated sub-project of...`                          | Descriptive title + **WORKSPACE-GUARD** + concrete programs       |
+| Naming WORKSPACE-VM or WORKSPACE-CI in the intro                    | Intro is about this repo only; siblings link here, not vice versa |
+| `Compiled enforcement layer paired with WORKSPACE-CI` as sentence 1 | Syscall boundary, dpkg-divert, three program names                |
+| Four programs listed in overview                                    | Move to Architecture table                                        |
+| `## Production deployment` for framework host install               | `## Host install` or `## Getting Started`                         |
+| `## Development` for `cargo test` / Podman harness                  | `## Building and testing` + disambiguate from host install        |
+| `bare-metal`, `production`, internal hostnames in README            | Role-based language; hostnames only in `config/*.yaml`            |
+| Incident/apology framing in operator docs                           | Factual placement only                                            |
+| Deployment-class / PAM / host-exec rationale in overview            | Role in framework section + link to deployment spec               |
 
 ### Research before editing WORKSPACE-GUARD README
 
@@ -547,7 +547,7 @@ Verify against:
 - [WORKSPACE-VM/README.md](../../../README.md) (framework placement)
 - `docs/specifications/SPEC-GIT-GUARD-DEPLOYMENT.md` (install classes)
 - `config/guard-host-profiles.yaml` (host binding; do not paste hostnames into README)
-- `Makefile` / `projects/CI/scripts/bootstrap-workspace-guard` (real install targets)
+- `Makefile` / `/opt/workspace-ci/scripts/bootstrap-workspace-guard` (real install targets)
 
 ## References
 

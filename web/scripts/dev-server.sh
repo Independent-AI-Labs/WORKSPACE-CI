@@ -87,6 +87,7 @@ do_start() {
         -e "s|__DEV_PORT__|$DEV_PORT|g" \
         -e "s|__SKIP_PREFLIGHT_ENV__|$_skip_env|g" \
         "$_WEB_ROOT/res/wiki-ci-dev.service.tmpl" > "$SYSTEMD_DIR/$SYSTEMD_UNIT"
+    chmod 0644 "$SYSTEMD_DIR/$SYSTEMD_UNIT"
     systemctl --user daemon-reload
     _reset_failed_if_needed dev-start
     echo "[dev-start] systemctl --user restart $SYSTEMD_UNIT"

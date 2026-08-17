@@ -1,13 +1,13 @@
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const webRoot = path.dirname(fileURLToPath(import.meta.url))
+const webRoot = path.dirname(fileURLToPath(import.meta.url));
 
-const repoRoot = path.resolve(webRoot, '../..')
+const repoRoot = path.resolve(webRoot, "../..");
 
 const csp = [
   "default-src 'self'",
-  "script-src 'self'",
+  "script-src 'self' 'sha256-PiH80fffLremQiYbHUWZlAu6dBp7KH/CfJEy26uvylw='",
   "style-src 'self' 'unsafe-inline'",
   "connect-src 'self'",
   "img-src 'self' data:",
@@ -15,42 +15,42 @@ const csp = [
   "frame-ancestors 'none'",
   "base-uri 'none'",
   "form-action 'self'",
-].join('; ')
+].join("; ");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: repoRoot,
-  transpilePackages: ['@workspace-ci/web-components'],
-  output: 'standalone',
+  transpilePackages: ["@workspace-ci/web-components"],
+  output: "standalone",
   reactStrictMode: true,
-  images: { formats: ['image/avif', 'image/webp'] },
+  images: { formats: ["image/avif", "image/webp"] },
   turbopack: {
     root: repoRoot,
   },
   async headers() {
     return [
       {
-        source: '/:path*',
+        source: "/:path*",
         headers: [
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "no-referrer" },
           {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
           },
-          { key: 'Content-Security-Policy', value: csp },
+          { key: "Content-Security-Policy", value: csp },
         ],
       },
       {
-        source: '/api/hitl/:path*',
-        headers: [{ key: 'Cache-Control', value: 'no-store' }],
+        source: "/api/hitl/:path*",
+        headers: [{ key: "Cache-Control", value: "no-store" }],
       },
       {
-        source: '/feed/:path*',
-        headers: [{ key: 'Cache-Control', value: 'no-store' }],
+        source: "/feed/:path*",
+        headers: [{ key: "Cache-Control", value: "no-store" }],
       },
-    ]
+    ];
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;

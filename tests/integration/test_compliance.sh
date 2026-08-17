@@ -121,7 +121,7 @@ YAML
     # pyproject.toml (language detection)
     echo '[project]' > "$pdir/pyproject.toml"
 
-    # quality_exceptions.yaml (Q3: strict-tier mandatory)
+    # quality_exceptions.yaml (Q3 mandatory)
     cat > "$pdir/quality_exceptions.yaml" <<'YAML'
 version: 1
 project: perfect
@@ -230,74 +230,13 @@ test_compliance_score_in_output() {
 }
 _run_test "compliance: score percentage in output" test_compliance_score_in_output
 
-test_compliance_tier_in_output() {
+test_compliance_grade_in_output() {
     _source_lib
     local pdir
-    pdir="$(_setup_project tiercheck)"
+    pdir="$(_setup_project gradecheck)"
 
     local _rc=0
     ci_compliance_score "$pdir" >"$TEST_TMP/score_out" 2>"$TEST_TMP/score_err" || _rc=$?
-    grep -qE 'Tier [A-F]' "$TEST_TMP/score_out" "$TEST_TMP/score_err"
+    grep -qE 'Grade [A-F]' "$TEST_TMP/score_out" "$TEST_TMP/score_err"
 }
-_run_test "compliance: tier in output" test_compliance_tier_in_output
-
-# ── enforcement_mode resolution (shell mirror of Python tests) ─────────────
-
-test_enforcement_mode_default_warn_when_missing() {
-    _source_lib
-    local _out
-    _out="$(ci_resolve_enforcement_mode /tmp/no-such-registry-$$)"
-    [[ "$_out" == "warn" ]]
-}
-_run_test "enforcement_mode: default 'warn' when registry missing" test_enforcement_mode_default_warn_when_missing
-
-test_enforcement_mode_reads_warn() {
-    _source_lib
-    local _f
-    _f="$(mktemp)"
-    cat > "$_f" <<'YAML'
-version: 1
-enforcement_mode: warn
-defaults:
-  tier: strict
-YAML
-    local _out
-    _out="$(ci_resolve_enforcement_mode "$_f")"
-    rm -f "$_f"
-    [[ "$_out" == "warn" ]]
-}
-_run_test "enforcement_mode: reads 'warn' from registry" test_enforcement_mode_reads_warn
-
-test_enforcement_mode_reads_enforce() {
-    _source_lib
-    local _f
-    _f="$(mktemp)"
-    cat > "$_f" <<'YAML'
-version: 1
-enforcement_mode: enforce
-defaults:
-  tier: strict
-YAML
-    local _out
-    _out="$(ci_resolve_enforcement_mode "$_f")"
-    rm -f "$_f"
-    [[ "$_out" == "enforce" ]]
-}
-_run_test "enforcement_mode: reads 'enforce' from registry" test_enforcement_mode_reads_enforce
-
-test_enforcement_mode_unknown_falls_back_to_warn() {
-    _source_lib
-    local _f
-    _f="$(mktemp)"
-    cat > "$_f" <<'YAML'
-version: 1
-enforcement_mode: bogus
-defaults:
-  tier: strict
-YAML
-    local _out
-    _out="$(ci_resolve_enforcement_mode "$_f")"
-    rm -f "$_f"
-    [[ "$_out" == "warn" ]]
-}
-_run_test "enforcement_mode: unknown value falls back to warn" test_enforcement_mode_unknown_falls_back_to_warn
+_run_test "compliance: grade in output" test_compliance_grade_in_output

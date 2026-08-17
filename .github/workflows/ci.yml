@@ -10,9 +10,6 @@ permissions:
   contents: read
 
 jobs:
-  # ─────────────────────────────────────────────────────────────────────
-  # Job 1: Security & guard checks (parallel with quality-gate)
-  # ─────────────────────────────────────────────────────────────────────
   security-guards:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -37,13 +34,15 @@ jobs:
           path: ~/.cache/uv
           key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
 
+      - name: Validate Python dependency lock
+        run: uv lock --locked
+
       - name: Sync Python deps
-        run: uv sync --extra dev
+        run: uv sync --locked --extra dev
 
       - name: Install git hooks
         run: make install-hooks
 
-      # ── Security checks ────────────────────────────────────────────
       - name: Block sensitive files
         run: bash -c 'source lib/checks.sh && ci_block_sensitive_files'
 
@@ -71,9 +70,8 @@ jobs:
       - name: No dead imports check
         run: bash -c 'source lib/checks.sh && ci_check_no_dead_imports'
 
-      # ── Dependency & config checks ─────────────────────────────────
       - name: Dependency version check
-        run: uv run python -m ci.check_dependency_versions pyproject.toml web/package.json
+        run: uv run python -m ci.check_dependency_versions validate --consumer-root "$GITHUB_WORKSPACE" --exclusions config/dependency_excludes.yaml --catalog res/dependency-pins.yaml --npm-workspace-lock package.json package-lock.json --uv-lock pyproject.toml uv.lock --dockerfile web/Containerfile --compose web/compose.prod.yaml pyproject.toml
 
       - name: Duplicate dependencies check
         run: uv run python -m ci.check_duplicate_dependencies
@@ -95,9 +93,6 @@ jobs:
         run: bash -c 'source lib/checks.sh && ci_check_dead_code'
         continue-on-error: true
 
-  # ─────────────────────────────────────────────────────────────────────
-  # Job 2: Quality gate (lint + type + tests + coverage + web)
-  # ─────────────────────────────────────────────────────────────────────
   quality-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -119,8 +114,11 @@ jobs:
           path: ~/.cache/uv
           key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
 
+      - name: Validate Python dependency lock
+        run: uv lock --locked
+
       - name: Sync Python deps
-        run: uv sync --extra dev
+        run: uv sync --locked --extra dev
 
       - name: Install git hooks
         run: make install-hooks
@@ -131,8 +129,12 @@ jobs:
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
 
+      - name: Validate web dependency lock
+        run: npm ci --dry-run
+        working-directory: web
+
       - name: Install web deps
-        run: npm install
+        run: npm ci
         working-directory: web
 
       - name: Configure git identity for integration tests

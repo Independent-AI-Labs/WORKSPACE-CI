@@ -1,4 +1,3 @@
-# System dependencies for projects/CI.
 #
 # Checked and installed by: make init (via scripts/install-system-deps)
 #
@@ -98,12 +97,10 @@ requires:
     description: iptables (required by netavark for podman networking)
     platforms: [linux]
 
-  - check_cmd: realpath
-    apt_package: coreutils               # Linux (apt)
-    brew_package: coreutils              # macOS (Homebrew)
-    description: coreutils (realpath --relative-to used by generate-hooks, scaffold-ci, checks_compliance)
-
-  # --- cloc runtime dependency (cloc is a Perl script, bootstrapped hermetically) ---
   - check_cmd: perl
     apt_package: perl
     description: perl (runtime for the hermetically-bootstrapped cloc)
+  - check_cmd: realpath
+    apt_package: coreutils
+    brew_package: coreutils
+    description: coreutils (realpath --relative-to used by generate-hooks and checks_compliance)

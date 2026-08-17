@@ -19,8 +19,10 @@
   vars:
     project_root: '{{ playbook_dir | dirname | dirname }}'
     tunnel_unit: wiki-ci-tunnel.service
-    systemd_dir: '{{ ansible_env.HOME }}/.config/systemd/user'
-    boot_name: "{{ '.boot-macos' if ansible_system == 'Darwin' else '.boot-linux' }}"
+    systemd_dir: '{{ ansible_facts["env"]["HOME"] }}/.config/systemd/user'
+    tunnel_token_dir: '{{ ansible_facts["env"]["HOME"] }}/.config/workspace-ci'
+    tunnel_token_file: '{{ tunnel_token_dir }}/tunnel-token'
+    boot_name: "{{ '.boot-macos' if ansible_facts['system'] == 'Darwin' else '.boot-linux' }}"
     tunnel_config_default: '{{ project_root }}/cloudflare/config.yml'
     cloudflared_bin: "{{ lookup('env', 'CLOUDFLARED_BIN') | default('', true) }}"
     tunnel_config: "{{ lookup('env', 'TUNNEL_CONFIG') | default(tunnel_config_default, true) }}"
@@ -203,6 +205,28 @@
                     make wiki-prod-start
                   Detail: {{ ansible_failed_result.msg | default('no response') }}
 
+        - name: Install tunnel token
+          when: tunnel_token | length > 0
+          block:
+            - name: Ensure tunnel token directory exists
+              ansible.builtin.file:
+                path: '{{ tunnel_token_dir }}'
+                state: directory
+                mode: '0700'
+
+            - name: Install tunnel token file
+              ansible.builtin.copy:
+                content: '{{ tunnel_token }}'
+                dest: '{{ tunnel_token_file }}'
+                mode: '0600'
+              no_log: true
+
+        - name: Remove unused tunnel token file
+          ansible.builtin.file:
+            path: '{{ tunnel_token_file }}'
+            state: absent
+          when: tunnel_token | length == 0
+
         - name: Install tunnel systemd unit
           ansible.builtin.template:
             src: templates/wiki-ci-tunnel.service.j2
@@ -211,7 +235,11 @@
 
         - name: Enable systemd user linger
           tags: [deploy]
-          ansible.builtin.command: loginctl enable-linger {{ ansible_user_id }}
+          ansible.builtin.command:
+            argv:
+              - loginctl
+              - enable-linger
+              - '{{ ansible_facts["user_id"] }}'
           register: linger_result
           failed_when: linger_result.rc != 0
           changed_when: linger_result.rc == 0
@@ -353,6 +381,11 @@
         - name: Remove tunnel unit file
           ansible.builtin.file:
             path: '{{ systemd_dir }}/{{ tunnel_unit }}'
+            state: absent
+
+        - name: Remove tunnel token file
+          ansible.builtin.file:
+            path: '{{ tunnel_token_file }}'
             state: absent
 
         - name: Reload systemd user daemon

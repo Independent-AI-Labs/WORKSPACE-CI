@@ -5,24 +5,11 @@ import urllib.error
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from ci._npm_versions import (
     check_npm_and_collect,
     get_latest_npm_version,
     parse_npm_dependency,
-    upgrade_package_json,
 )
-from ci.check_dependency_versions import main
-from ci.models import LooseDependency, OutdatedDependency
-
-
-@pytest.fixture(autouse=True)
-def _skip_exemption_validation():
-    with patch(
-        "ci.check_dependency_versions.validate_exemption_file", lambda *a, **k: None
-    ):
-        yield
 
 
 class TestGetLatestNpmVersion:
@@ -239,43 +226,6 @@ class TestCheckNpmAndCollect:
         assert outdated == []
 
 
-class TestUpgradePackageJson:
-    """Tests for upgrade_package_json function."""
-
-    def test_upgrades_loose_to_strict(self, tmp_path: Path) -> None:
-        """Test upgrades loose constraints to strict pins."""
-        pkg = tmp_path / "package.json"
-        pkg.write_text(json.dumps({"dependencies": {"react": "^18.0.0"}}, indent=2))
-
-        loose = [LooseDependency("react", "react@^18.0.0", "19.1.1")]
-        upgrade_package_json(pkg, loose, [])
-
-        data = json.loads(pkg.read_text())
-        assert data["dependencies"]["react"] == "19.1.1"
-
-    def test_upgrades_outdated(self, tmp_path: Path) -> None:
-        """Test upgrades outdated strict pins."""
-        pkg = tmp_path / "package.json"
-        pkg.write_text(json.dumps({"dependencies": {"react": "18.0.0"}}, indent=2))
-
-        outdated = [OutdatedDependency("react", None, "18.0.0", "19.1.1")]
-        upgrade_package_json(pkg, [], outdated)
-
-        data = json.loads(pkg.read_text())
-        assert data["dependencies"]["react"] == "19.1.1"
-
-    def test_upgrades_dev_dependencies(self, tmp_path: Path) -> None:
-        """Test upgrades devDependencies."""
-        pkg = tmp_path / "package.json"
-        pkg.write_text(json.dumps({"devDependencies": {"eslint": "^8.0.0"}}, indent=2))
-
-        loose = [LooseDependency("eslint", "eslint@^8.0.0", "9.36.0")]
-        upgrade_package_json(pkg, loose, [])
-
-        data = json.loads(pkg.read_text())
-        assert data["devDependencies"]["eslint"] == "9.36.0"
-
-
 class TestIsNpmFile:
     """Tests for npm file detection (path.name == 'package.json')."""
 
@@ -287,77 +237,3 @@ class TestIsNpmFile:
     def test_pyproject_toml(self) -> None:
         """Test rejects pyproject.toml."""
         assert Path("pyproject.toml").name != "package.json"
-
-
-class TestMainNpm:
-    """Tests for main function with npm paths."""
-
-    @patch("ci.check_dependency_versions.check_npm_and_collect")
-    @patch("ci.check_dependency_versions.Path")
-    def test_npm_all_pass(self, mock_path_class, mock_check) -> None:
-        """Test returns 0 when all npm dependencies pass."""
-        mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_path.name = "package.json"
-        mock_path_class.return_value = mock_path
-        mock_check.return_value = ([], [], {})
-
-        with patch("sys.argv", ["check_dependency_versions.py", "package.json"]):
-            result = main()
-
-        assert result == 0
-
-    @patch("ci.check_dependency_versions.check_npm_and_collect")
-    @patch("ci.check_dependency_versions.Path")
-    def test_npm_loose_fails(self, mock_path_class, mock_check) -> None:
-        """Test returns 1 when loose npm constraints found."""
-        mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_path.name = "package.json"
-        mock_path_class.return_value = mock_path
-        mock_check.return_value = (
-            [LooseDependency("react", "react@^18.0.0", "19.1.1")],
-            [],
-            {},
-        )
-
-        with patch("sys.argv", ["check_dependency_versions.py", "package.json"]):
-            result = main()
-
-        assert result == 1
-
-    @patch("ci.check_dependency_versions.upgrade_package_json")
-    @patch("ci.check_dependency_versions.check_npm_and_collect")
-    @patch("ci.check_dependency_versions.Path")
-    def test_npm_upgrade_mode(self, mock_path_class, mock_check, mock_upgrade) -> None:
-        """Test upgrade mode calls upgrade_package_json for npm."""
-        mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_path.name = "package.json"
-        mock_path_class.return_value = mock_path
-        mock_check.return_value = (
-            [LooseDependency("react", "react@^18.0.0", "19.1.1")],
-            [],
-            {},
-        )
-
-        with patch(
-            "sys.argv",
-            ["check_dependency_versions.py", "--upgrade", "package.json"],
-        ):
-            result = main()
-
-        mock_upgrade.assert_called_once()
-        assert result == 0
-
-    @patch("ci.check_dependency_versions.Path")
-    def test_missing_file_returns_one(self, mock_path_class) -> None:
-        """Test returns 1 when package.json not found (all paths missing)."""
-        mock_path = MagicMock()
-        mock_path.exists.return_value = False
-        mock_path_class.return_value = mock_path
-
-        with patch("sys.argv", ["check_dependency_versions.py", "package.json"]):
-            result = main()
-
-        assert result == 1

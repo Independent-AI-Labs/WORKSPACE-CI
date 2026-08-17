@@ -86,7 +86,7 @@ No sudo, no capability abuse, no privilege escalation was used — plain Unix se
 ### 4.3 P1 — WORKSPACE-CI split and locked CI/ deployment
 
 10. **Clone `WORKSPACE-CI`** from `git@github.com:Independent-AI-Labs/WORKSPACE-CI.git` as the agent-writable working repo (sibling of `projects/` or inside it — decide path; recommendation: `projects/WORKSPACE-CI`, added to `workspace-clones.yaml` as mandatory, and `projects/CI` **removed** from the clone manifest).
-11. **New sudo target in WORKSPACE-CI: `make deploy-ci`** (checklist, gap-only):
+11. **Retired mirror-deployment sudo target** (historical checklist, gap-only):
     - `projects/CI` absent → clone from upstream (or `git worktree`/copy from WORKSPACE-CI — decide; recommendation: clone from upstream then fast-forward to WORKSPACE-CI's HEAD if ahead)
     - present but out of sync → `git pull --ff-only`
     - then root-lock the entire tree: `chown -R root:agent`, dirs `0755`, files `0644`/`0755` (preserve exec bits), `chattr +i` on all `config/*.yaml` and `quality_exceptions.yaml`
@@ -150,7 +150,7 @@ Independent three-lens audit of deploy-ci, lock scripts, guard, and Makefile/reg
 
 ### Critical
 
-- **C1. deploy-ci executes agent-writable code as root every deploy** — `scripts/deploy-ci:127,143,188-189` runs `bash "$_WORK_REPO/scripts/unseal-exemptions"`, `lock-exemptions`, `unseal-hooks`, `lock-hooks` directly from the agent-writable work repo, plus `lib/ci.sh` and the `ci.exemption_files` Python module via `ci_uv_run` as root. The promotion path runs code from the very repo it gates. Fix: stage hash-verified copies (`origin/main`) into a root-owned dir and exec from there.
+- **C1. Retired mirror deployment executed agent-writable code as root** — the old mirror path ran root helpers from the agent-writable work repo. The promotion path ran code from the very repo it gated. Fix: stage hash-verified copies (`origin/main`) into a root-owned generation and execute only independently installed validators.
 - **C2. Root-locking covers files, not directories** — `deploy-ci:131-137` chowns tracked files only; `scripts/`, `lib/`, `ci/`, `config/` dirs stay agent-owned, so the agent can rename-swap any "locked" file between deploys. Fix: chown root:root every tracked parent dir (`git ls-files -z | xargs -0 dirname | sort -u`), chmod 0755. **FIXED 2026-07-21.**
 - **C3. Tracked symlinks are a blind spot** — `deploy-ci:132,170` skips symlinks in both chown and verify; a committed symlink `lib/ci.sh -> /home/agent/evil.sh` deploys untouched and is sourced by every consumer hook. `lock-hooks`/`lock-exemptions` also follow symlinks as root (`chown`/`chattr +i` on a retargeted path = system DoS, e.g. immutable `/etc/passwd`). Fix: reject mode-120000 entries at deploy; `-L` guard + `chown -h` in lock scripts. **FIXED 2026-07-21 (`fe2ba7d` deploy-ci reject; lock-script -L guards pending).**
 - **C4. Agent-writable live tier registry = tamper vector reborn** — `ci/config/project_enforcement.yaml` is `agent:agent 0664`; `walk-projects:49`, `checks_compliance.sh:392`, `checks_quality.sh:156` read it. Agent marks a repo `vendored` → hooks never installed there. Guard binary unaffected (reads root-owned `workspace/config` copy, `exec.rs:377-396`). Fix: root-own + `chattr +i`, unify the two diverged registries (workspace/config missing himalaya/matrix entries). **FIXED 2026-07-21 (`678f662`, `3823cea`): registries synced + chattr +i in install-hooks-recursive.**

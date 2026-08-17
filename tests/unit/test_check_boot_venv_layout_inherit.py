@@ -188,9 +188,7 @@ def test_check_dependson_missing_is_warn() -> None:
 
 def test_check_dependson_multiple_entries(tmp_path: Path) -> None:
     moon = MoonYml(
-        project=MoonProject(
-            inherited_boot_dirs=["../CI", "../DATAOPS"]
-        ),
+        project=MoonProject(inherited_boot_dirs=["../CI", "../DATAOPS"]),
         dependsOn=["ci", "dataops"],
     )
     findings = _check_dependson_alignment(moon)

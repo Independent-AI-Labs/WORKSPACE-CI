@@ -1,6 +1,6 @@
 # workspace-ci Wiki production image.
 # Build context: workspace projects root (parent of CI/).
-#   podman build -f CI/web/Containerfile -t workspace-ci-wiki:prod <projects-root>
+#   podman build -f CI/web/Containerfile -t workspace-ci-wiki:0.1.0 <projects-root>
 # CI_CONTEXT_DIR names the repo checkout inside the build context (CI or
 # WORKSPACE-CI); in-image paths stay /workspace/CI regardless.
 
@@ -9,7 +9,7 @@ ARG CI_CONTEXT_DIR=CI
 # -----------------------------------------------------------------------------
 # Stage 1: regenerate wiki JSON data from CI sources
 # -----------------------------------------------------------------------------
-FROM docker.io/library/python:3.13-slim-bookworm AS extract
+FROM docker.io/library/python:3.13 AS extract
 
 ARG CI_CONTEXT_DIR
 
@@ -28,6 +28,7 @@ COPY ${CI_CONTEXT_DIR}/ci ./ci
 COPY ${CI_CONTEXT_DIR}/lib ./lib
 COPY ${CI_CONTEXT_DIR}/scripts ./scripts
 COPY ${CI_CONTEXT_DIR}/config ./config
+COPY ${CI_CONTEXT_DIR}/res ./res
 COPY ${CI_CONTEXT_DIR}/Makefile ./
 COPY ${CI_CONTEXT_DIR}/web/src/data ./web/src/data
 
@@ -45,13 +46,14 @@ RUN set -eux \
     && echo "[wiki-extract] uv sync" \
     && uv sync --frozen \
     && echo "[wiki-extract] extract wiki data via make targets" \
+    && ln -s /bin/bash /bin/bash.real \
     && make extract-hook-sources extract-script-sources extract-swallow-source \
     && echo "[wiki-extract] done"
 
 # -----------------------------------------------------------------------------
 # Stage 2: build Next.js standalone bundle
 # -----------------------------------------------------------------------------
-FROM docker.io/library/node:24-bookworm AS build
+FROM docker.io/library/node:24.19.0 AS build
 
 ARG CI_CONTEXT_DIR
 
@@ -97,6 +99,8 @@ COPY --from=extract /workspace/CI/web/src/data ./CI/web/src/data
 WORKDIR /workspace/CI/web
 ENV CI_WIKI_PROD_BUILD=1
 ENV WIKI_HOME_LANDING_ENABLED=true
+ENV ALLOWED_ORIGINS=""
+ENV WIKI_DEV_PORT=4000
 RUN set -eux \
     && echo "[wiki-build] checking inputs" \
     && test -f /workspace/CI/README.md \
@@ -112,7 +116,7 @@ RUN set -eux \
 # -----------------------------------------------------------------------------
 # Stage 3: minimal runtime
 # -----------------------------------------------------------------------------
-FROM docker.io/library/node:24-bookworm-slim AS run
+FROM docker.io/library/node:24.19.0 AS run
 
 ARG CI_CONTEXT_DIR
 

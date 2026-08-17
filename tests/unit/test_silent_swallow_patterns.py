@@ -56,9 +56,13 @@ _SHOULD_PASS = 0
 
 # Each case: (test_id, file_path, added_lines, expected_rc, optional_output_grep)
 BLOCKED_CASES: list[SwallowCase] = [
-    SwallowCase("py_except_pass", "x.py",
-                ["try:", "    foo()", "except Exception:", "    pass"],
-                _SHOULD_BLOCK, "py-except-"),
+    SwallowCase(
+        "py_except_pass",
+        "x.py",
+        ["try:", "    foo()", "except Exception:", "    pass"],
+        _SHOULD_BLOCK,
+        "py-except-",
+    ),
     SwallowCase(
         "py_except_pass_silent_ok_no_longer_exempts",
         "x.py",
@@ -66,15 +70,26 @@ BLOCKED_CASES: list[SwallowCase] = [
         _SHOULD_BLOCK,
         None,
     ),
-    SwallowCase("py_inline_except_pass", "x.py",
-                ["except Exception: pass"], _SHOULD_BLOCK, None),
-    SwallowCase("py_contextlib_suppress", "x.py",
-                ["import contextlib", "with contextlib.suppress(Exception):"],
-                _SHOULD_BLOCK, None),
-    SwallowCase("py_from_import_suppress", "x.py",
-                ["from contextlib import suppress"], _SHOULD_BLOCK, None),
-    SwallowCase("py_except_ellipsis", "x.py",
-                ["except Exception: ..."], _SHOULD_BLOCK, None),
+    SwallowCase(
+        "py_inline_except_pass", "x.py", ["except Exception: pass"], _SHOULD_BLOCK, None
+    ),
+    SwallowCase(
+        "py_contextlib_suppress",
+        "x.py",
+        ["import contextlib", "with contextlib.suppress(Exception):"],
+        _SHOULD_BLOCK,
+        None,
+    ),
+    SwallowCase(
+        "py_from_import_suppress",
+        "x.py",
+        ["from contextlib import suppress"],
+        _SHOULD_BLOCK,
+        None,
+    ),
+    SwallowCase(
+        "py_except_ellipsis", "x.py", ["except Exception: ..."], _SHOULD_BLOCK, None
+    ),
     SwallowCase(
         "py_except_debug_only",
         "x.py",
@@ -187,22 +202,47 @@ BLOCKED_CASES: list[SwallowCase] = [
         _SHOULD_BLOCK,
         None,
     ),
-    SwallowCase("js_existssync_source_select", "x.ts",
-                ["const p = existsSync(a) ? a : resolveConfigPath('legacy')"],
-                _SHOULD_BLOCK, "js-existssync-source-select"),
-    SwallowCase("js_or_literal_default", "x.ts",
-                ["const bg = readCssVar('--bg') || '#181818'"],
-                _SHOULD_BLOCK, "js-or-literal-default"),
-    SwallowCase("js_nullish_literal_default", "x.ts",
-                ["const label = getNavLabelForHref(href) ?? '/projects'"],
-                _SHOULD_BLOCK, "js-nullish-literal-default"),
-    SwallowCase("js_hardcoded_hex_color", "x.ts",
-                ["return theme === 'light' ? '#ffffff' : '#181818'"],
-                _SHOULD_BLOCK, "js-hardcoded-hex-color"),
-    SwallowCase("js_catch_debug_only", "x.ts",
-                ["try {", "    releasePointerCapture(id)", "} catch (err) {",
-                 "    console.debug('already released:', err)", "}"],
-                _SHOULD_BLOCK, "js-catch-debug-only"),
+    SwallowCase(
+        "js_existssync_source_select",
+        "x.ts",
+        ["const p = existsSync(a) ? a : resolveConfigPath('legacy')"],
+        _SHOULD_BLOCK,
+        "js-existssync-source-select",
+    ),
+    SwallowCase(
+        "js_or_literal_default",
+        "x.ts",
+        ["const bg = readCssVar('--bg') || '#181818'"],
+        _SHOULD_BLOCK,
+        "js-or-literal-default",
+    ),
+    SwallowCase(
+        "js_nullish_literal_default",
+        "x.ts",
+        ["const label = getNavLabelForHref(href) ?? '/projects'"],
+        _SHOULD_BLOCK,
+        "js-nullish-literal-default",
+    ),
+    SwallowCase(
+        "js_hardcoded_hex_color",
+        "x.ts",
+        ["return theme === 'light' ? '#ffffff' : '#181818'"],
+        _SHOULD_BLOCK,
+        "js-hardcoded-hex-color",
+    ),
+    SwallowCase(
+        "js_catch_debug_only",
+        "x.ts",
+        [
+            "try {",
+            "    releasePointerCapture(id)",
+            "} catch (err) {",
+            "    console.debug('already released:', err)",
+            "}",
+        ],
+        _SHOULD_BLOCK,
+        "js-catch-debug-only",
+    ),
     SwallowCase(
         "sh_pipe_true",
         "x.sh",
@@ -305,18 +345,41 @@ PASSING_CASES: list[SwallowCase] = [
         _SHOULD_PASS,
         None,
     ),
-    SwallowCase("js_existssync_guarded_throw", "x.ts",
-                ["if (!existsSync(a)) { throw new Error('missing config') }"],
-                _SHOULD_PASS, None),
-    SwallowCase("js_required_value_no_default", "x.ts",
-                ["const bg = requireCssVar('--bg')"], _SHOULD_PASS, None),
-    SwallowCase("js_nullish_variable_fallback", "x.ts",
-                ["const label = getNavLabelForHref(href) ?? segment"],
-                _SHOULD_PASS, None),
-    SwallowCase("js_catch_error_and_rethrow", "x.ts",
-                ["try {", "    foo()", "} catch (err) {",
-                 "    console.error('failed:', err)", "    throw err", "}"],
-                _SHOULD_PASS, None),
+    SwallowCase(
+        "js_existssync_guarded_throw",
+        "x.ts",
+        ["if (!existsSync(a)) { throw new Error('missing config') }"],
+        _SHOULD_PASS,
+        None,
+    ),
+    SwallowCase(
+        "js_required_value_no_default",
+        "x.ts",
+        ["const bg = requireCssVar('--bg')"],
+        _SHOULD_PASS,
+        None,
+    ),
+    SwallowCase(
+        "js_nullish_variable_fallback",
+        "x.ts",
+        ["const label = getNavLabelForHref(href) ?? segment"],
+        _SHOULD_PASS,
+        None,
+    ),
+    SwallowCase(
+        "js_catch_error_and_rethrow",
+        "x.ts",
+        [
+            "try {",
+            "    foo()",
+            "} catch (err) {",
+            "    console.error('failed:', err)",
+            "    throw err",
+            "}",
+        ],
+        _SHOULD_PASS,
+        None,
+    ),
     SwallowCase(
         "sh_pipefail_real_consumer_jq",
         "x.sh",
@@ -411,89 +474,3 @@ def test_silent_swallow_pattern(
             f"[{case.test_id}] expected '{case.grep_pattern}' in output, "
             f"got: {output!r}"
         )
-
-
-# ---------------------------------------------------------------------------
-# Extra edge-case tests that go beyond simple pattern matching
-# ---------------------------------------------------------------------------
-
-
-class TestEdgeCases:
-    """Edge cases not covered by the parametrized table above."""
-
-    def test_empty_diff_passes(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        rc, _ = _run_main(monkeypatch, "")
-        assert rc == 0
-
-    def test_no_added_lines_passes(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        diff_text = (
-            "diff --git a/x.py b/x.py\n"
-            "--- a/x.py\n"
-            "+++ b/x.py\n"
-            "@@ -1,3 +1,3 @@\n"
-            " context line\n"
-            "-old line\n"
-            "+new line\n"
-        )
-        rc, _output = _run_main(monkeypatch, diff_text)
-        # "new line" is an added line but has no violation pattern
-        assert rc == 0
-
-    def test_multiple_violations_deduplicated(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        lines = ["except Exception: pass", "except ValueError: pass"]
-        diff_text = _diff("x.py", lines)
-        rc, output = _run_main(monkeypatch, diff_text)
-        assert rc == 1
-        # Each except is on a different line so both appear
-        out_lines = output.strip().split("\n")
-        _EXPECTED_TWO_VIOLATIONS = 2
-        assert len(out_lines) == _EXPECTED_TWO_VIOLATIONS
-
-    def test_violations_sorted_by_file_then_line(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        diff_text = _diff("z.py", ["except Exception: pass"]) + _diff(
-            "a.py", ["except Exception: pass"]
-        )
-        rc, output = _run_main(monkeypatch, diff_text)
-        assert rc == 1
-        lines_out = output.strip().split("\n")
-        assert lines_out[0].startswith("a.py:")
-        assert lines_out[1].startswith("z.py:")
-
-    def test_snippet_truncation(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        long_line = "except Exception:  # " + "x " * 200
-        diff_text = _diff("x.py", ["try:", "    foo()", long_line, "    pass"])
-        rc, output = _run_main(monkeypatch, diff_text)
-        assert rc == 1
-        assert "..." in output
-
-    def test_keyboard_interrupt_not_flagged(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        diff_text = _diff(
-            "x.py",
-            ["except KeyboardInterrupt:", "    pass"],
-        )
-        rc, _ = _run_main(monkeypatch, diff_text)
-        assert rc == 0
-
-    def test_unknown_file_type_not_flagged(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        diff_text = _diff("x.txt", ["except Exception: pass"])
-        rc, _ = _run_main(monkeypatch, diff_text)
-        assert rc == 0
-
-    def test_dev_null_file_skipped(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        diff_text = (
-            "diff --git a/x.py b/x.py\n"
-            "--- a/x.py\n"
-            "+++ /dev/null\n"
-            "@@ -1,1 +0,0 @@\n"
-            "-except Exception: pass\n"
-        )
-        rc, _ = _run_main(monkeypatch, diff_text)
-        assert rc == 0

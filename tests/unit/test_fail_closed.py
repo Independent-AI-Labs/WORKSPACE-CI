@@ -40,9 +40,7 @@ def _patch_config_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-def _run_main(
-    monkeypatch: pytest.MonkeyPatch, diff_text: str
-) -> tuple[int, str, str]:
+def _run_main(monkeypatch: pytest.MonkeyPatch, diff_text: str) -> tuple[int, str, str]:
     """Run main() with stdin replaced by diff_text."""
     monkeypatch.setattr("sys.stdin", io.TextIOWrapper(io.BytesIO(diff_text.encode())))
     out = io.StringIO()

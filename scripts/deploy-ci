@@ -1,340 +1,117 @@
 #!/usr/bin/env bash
-# deploy-ci: promote WORKSPACE-CI (agent working repo) to the locked
-# projects/CI deployment that every consumer repo's hooks source live.
-#
-# Security model (SECURITY-AUDIT-2026-07-18-EXEMPTION-TAMPERING §4.3):
-#   - projects/CI is sourced live by generated hooks in every consumer
-#     repo, so an agent-writable projects/CI lets the agent rewrite the
-#     checks that gate its own commits. All CI development therefore
-#     happens in projects/WORKSPACE-CI; this script (root only) is the
-#     ONLY promotion path.
-#   - The deployment consumes upstream (origin/main) exclusively. Local
-#     commits that were never pushed are NOT deployed: hook-sourced code
-#     must have server-side provenance.
-#   - After sync, every git-tracked file is chowned root:root AND
-#     immutable-flagged (chattr +i, lock-repo step 4b): the guard loans
-#     CAP_DAC_OVERRIDE to the agent's git, so chown alone is bypassable;
-#     cap_linux_immutable is never loaned. The boot
-#     tool dir (.boot-linux) is installed during deploy (step 8) as root:
-#     root-locked, world readable/executable, since every workspace
-#     consumer resolves tools from it. Other runtime trees (.venv,
-#     node_modules, .next, .local, uv caches) stay agent-owned so
-#     `uv run` / node / next dev inside hooks keep working without root.
-#
-# Operator: sudo make deploy-ci
+# Build, verify, and atomically publish the immutable Linux CI artifact.
 set -euo pipefail
 
-_SELF="${BASH_SOURCE[0]:-$0}"
-case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
-_SCRIPT_DIR="$(cd "$(dirname "$_SELF")" && pwd)"
-_WORK_REPO="$(cd "$_SCRIPT_DIR/.." && pwd)"
-_PROJECTS_ROOT="$(cd "$_WORK_REPO/.." && pwd)"
-_DEPLOY_DIR="$_PROJECTS_ROOT/CI"
-_BRANCH="${DEPLOY_CI_BRANCH:-main}"
-_QUARANTINE_ROOT="${CI_QUARANTINE_DIR:-$_PROJECTS_ROOT/CI-quarantine}"
-_DEPLOY_REPLACED=0
+readonly SOURCE_ROOT=$(git rev-parse --show-toplevel)
+readonly CANDIDATE=/opt/.workspace-ci.candidate
+readonly DEPLOYED=/opt/workspace-ci
+readonly LOCK=/run/lock/workspace-ci-deploy.lock
+readonly BRANCH=main
+published=0
 
-# Root-only script: exec helper scripts via the sealed real bash. A plain
-# shebang-exec lands on the shell guard at /usr/bin/bash, which refuses to
-# run for root outside a capability context (AT_SECURE == 0) by design.
-# bash.real is installed by the shell-guard install; its absence means the
-# host is not guarded and deploy must not proceed.
-_REAL_BASH=/bin/bash.real
-if [[ ! -x "$_REAL_BASH" ]]; then
-    printf '\033[0;31m[ERROR]\033[0m %s\n' "$_REAL_BASH not found or not executable; install the shell guard first" >&2
-    exit 1
-fi
+die() { printf 'deploy-ci: %s\n' "$*" >&2; exit 1; }
+git_root() { env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' git "$@"; }
 
-log_info() { printf '\033[0;32m[INFO]\033[0m %s\n' "$*"; }
-log_error() { printf '\033[0;31m[ERROR]\033[0m %s\n' "$*" >&2; }
-
-# The shell guard deliberately resets PATH to the approved minimal command
-# path, which excludes /usr/sbin. Resolve runuser explicitly instead of
-# relying on PATH lookup for the owner-scoped Git operations below.
-_RUNUSER=""
-for _candidate in /usr/sbin/runuser /sbin/runuser; do
-    if [[ -x "$_candidate" ]]; then
-        _RUNUSER="$_candidate"
-        break
-    fi
-done
-if [[ -z "$_RUNUSER" ]]; then
-    log_error "runuser not found at /usr/sbin/runuser or /sbin/runuser"
-    exit 1
-fi
-
-_GIT_SSH_WRAPPER=/usr/lib/workspace-guard/git-ssh-wrapper
-
-if [[ $EUID -ne 0 ]]; then
-    log_error "deploy-ci must run as root: sudo make deploy-ci"
-    exit 1
-fi
-
-# M1: serialize deploys against each other. fd 9 stays open for the
-# lifetime of this process, so the lock releases automatically on exit.
-_DEPLOY_LOCK_DIR="${CI_DEPLOY_LOCK_DIR:-/run/lock}"
-if [[ ! -d "$_DEPLOY_LOCK_DIR" ]]; then
-    mkdir -p "$_DEPLOY_LOCK_DIR"
-fi
-exec 9>"$_DEPLOY_LOCK_DIR/ci-deploy.lock"
-flock 9
-export CI_DEPLOY_LOCK_HELD=1
-log_info "Holding deploy lock $_DEPLOY_LOCK_DIR/ci-deploy.lock"
-
-# The deploy mirror is root-owned by design (step 4, audit C2), so the
-# M3 dir-owner cross-check does not apply to the helper calls below.
-export CI_OWNER_DIR_CHECK=skip
-
-# Root shells do not inherit the agent PATH; helper scripts need uv from
-# the workspace boot dir.
-_WORKSPACE_ROOT="$(cd "$_PROJECTS_ROOT/.." && pwd)"
-_BOOT_BIN="$_WORKSPACE_ROOT/.boot-linux/bin"
-if [[ -x "$_BOOT_BIN/uv" ]]; then
-    export PATH="$_BOOT_BIN:$PATH"
-fi
-
-# Git identity model: SSH transport runs ONLY as the work-repo owner
-# (via runuser). The guard injects that user's provisioned deploy key
-# (agent_identity.rs -> git-ssh-wrapper); root's git has no credential
-# context by design. Consequence: no git command in this script ever
-# touches the network as root. The deploy clone instead syncs from the
-# work repo's freshly fetched origin ref over local transport, which
-# keeps server-side provenance (the ref arrived from origin over SSH
-# moments earlier in the same run, as the owner).
-# Owner is resolved from the worktree dir, not .git: the guard's
-# post-op lock root-owns .git even in the agent's working repo. The
-# stat result alone is spoofable in principle (M3), so it is
-# cross-checked against the pinned expected owner in the deployed
-# (root-owned) CI repo; CI_EXPECTED_OWNER overrides the pin.
-_REPO_OWNER="$(stat -c %U "$_WORK_REPO")"
-_OWNER_HOME="$(getent passwd "$_REPO_OWNER" | cut -d: -f6)"
-if [[ -z "$_REPO_OWNER" || -z "$_OWNER_HOME" || "$_REPO_OWNER" == "root" ]]; then
-    log_error "cannot resolve non-root owner of $_WORK_REPO"
-    exit 1
-fi
-_EXPECTED_OWNER="${CI_EXPECTED_OWNER:-}"
-if [[ -z "$_EXPECTED_OWNER" && -f "$_DEPLOY_DIR/config/workspace-owner" ]]; then
-    _EXPECTED_OWNER="$(tr -d '[:space:]' < "$_DEPLOY_DIR/config/workspace-owner")"
-fi
-if [[ -n "$_EXPECTED_OWNER" && "$_REPO_OWNER" != "$_EXPECTED_OWNER" ]]; then
-    log_error "owner mismatch: $_WORK_REPO owned by '$_REPO_OWNER', expected '$_EXPECTED_OWNER'"
-    exit 1
-fi
-log_info "git transport identity: $_REPO_OWNER (home $_OWNER_HOME)"
-git_as_owner() {
-    local -a _ssh_env=()
-    if [[ -x "$_GIT_SSH_WRAPPER" ]]; then
-        _ssh_env=(GIT_SSH_COMMAND="$_GIT_SSH_WRAPPER" GIT_SSH="$_GIT_SSH_WRAPPER")
-    fi
-    "$_RUNUSER" -u "$_REPO_OWNER" -- env HOME="$_OWNER_HOME" "${_ssh_env[@]}" \
-        GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' \
-        git "$@"
-}
-# Root-side git reads the deploy clone (whose .git flips between owner
-# and root across runs); pin safe.directory explicitly instead of
-# relying on ambient gitconfig.
-git_as_root() {
-    env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' \
-        git "$@"
+immutable() {
+    /usr/bin/lsattr -d -- "$1" | awk '{print $1}' | grep -q i
 }
 
-if [[ "$_WORK_REPO" == "$_DEPLOY_DIR" ]]; then
-    log_error "refusing to deploy from inside $_DEPLOY_DIR itself"
-    log_error "run deploy-ci from the WORKSPACE-CI working repo"
-    exit 1
-fi
+unseal_tree() {
+    [[ -e "$1" ]] || return 0
+    /usr/bin/chattr -R -i -- "$1"
+}
 
-_remote="$(git_as_owner -C "$_WORK_REPO" remote get-url origin)"
+remove_candidate() {
+    [[ -e "$CANDIDATE" ]] || return 0
+    [[ ! -L "$CANDIDATE" && -d "$CANDIDATE" ]] || die "unsafe candidate object: $CANDIDATE"
+    [[ $(stat -c %u "$CANDIDATE") -eq 0 ]] || die "candidate is not root-owned"
+    unseal_tree "$CANDIDATE"
+    find "$CANDIDATE" -xdev -depth -delete
+}
 
-# 1. Ensure the deployment clone exists (from upstream, never copied
-#    from the working repo: provenance must be server-visible).
-if [[ ! -d "$_DEPLOY_DIR/.git" ]]; then
-    log_info "cloning $_remote -> $_DEPLOY_DIR"
-    git_as_owner clone --branch "$_BRANCH" "$_remote" "$_DEPLOY_DIR"
-fi
-
-# 2. Verify the working repo has no unpushed commits: deployment must
-#    match origin exactly. Also verify HEAD sits on $_BRANCH and is not
-#    BEHIND origin (L1): ahead-only validation let a stale worktree
-#    redeploy an old revision over a newer deployment.
-# rev-parse --abbrev-ref replaces symbolic-ref --short: the binary guard
-# blocks the symbolic-ref subcommand outright.
-_cur_branch="$(git_as_owner -C "$_WORK_REPO" rev-parse --abbrev-ref HEAD 2>&1)"
-if [[ "$_cur_branch" != "$_BRANCH" ]]; then
-    log_error "WORKSPACE-CI HEAD is on '$_cur_branch', expected '$_BRANCH'"
-    exit 1
-fi
-git_as_owner -C "$_WORK_REPO" fetch origin "$_BRANCH"
-_ahead="$(git_as_owner -C "$_WORK_REPO" rev-list --count "origin/$_BRANCH..HEAD")"
-if [[ "$_ahead" != "0" ]]; then
-    log_error "WORKSPACE-CI has $_ahead unpushed commit(s); push first:"
-    log_error "  git -C $_WORK_REPO push"
-    exit 1
-fi
-_behind="$(git_as_owner -C "$_WORK_REPO" rev-list --count "HEAD..origin/$_BRANCH")"
-if [[ "$_behind" != "0" ]]; then
-    log_error "WORKSPACE-CI is $_behind commit(s) behind origin/$_BRANCH; pull first:"
-    log_error "  git -C $_WORK_REPO pull --ff-only"
-    exit 1
-fi
-if [[ -n "$(git_as_owner -C "$_WORK_REPO" status --porcelain)" ]]; then
-    log_error "WORKSPACE-CI working tree is dirty; commit or stash before deploy"
-    exit 1
-fi
-
-# 2b. Provenance gate for the code deploy-ci executes as root (audit C1):
-# the runtime helpers and everything they pull in (lib/, ci/ package,
-# uv-locked venv) live in the agent-writable work repo. Require the
-# runtime paths to be identical to the pushed origin ref, and re-sync the
-# venv from the hash-pinned lockfile as the owner so `uv run --no-sync`
-# under root resolves exactly the locked, hash-verified dependencies.
-if ! _rt_diff="$(git_as_owner -C "$_WORK_REPO" diff "origin/$_BRANCH" HEAD -- \
-        scripts lib ci pyproject.toml uv.lock)" || [[ -n "$_rt_diff" ]]; then
-    [[ -n "$_rt_diff" ]] && printf '  %s\n' "$_rt_diff" >&2
-    log_error "runtime paths (scripts, lib, ci, pyproject.toml, uv.lock) differ from origin/$_BRANCH"
-    log_error "pull the work repo to origin/$_BRANCH before deploying"
-    exit 1
-fi
-log_info "syncing work repo venv to uv.lock (hash-verified) as $_REPO_OWNER"
-"$_RUNUSER" -u "$_REPO_OWNER" -- env HOME="$_OWNER_HOME" \
-    PATH="$_BOOT_BIN:/usr/local/bin:/usr/bin:/bin" \
-uv sync --locked --all-extras --project "$_WORK_REPO"
-
-# A dirty deployment mirror is tamper evidence, not a reason to leave the
-# live CI path in a compromised state. Preserve the entire tree first, then
-# replace it with a fresh clone of the verified upstream branch.
-if [[ -d "$_DEPLOY_DIR/.git" ]]; then
-    _deploy_dirty="$(git_as_root -C "$_DEPLOY_DIR" status --porcelain --untracked-files=all)"
-    if [[ -n "$_deploy_dirty" ]]; then
-        _quarantine_stamp="$(date -u +%Y%m%dT%H%M%SZ)-$$"
-        _quarantine_path="$_QUARANTINE_ROOT/CI-$_quarantine_stamp"
-        mkdir -p "$_QUARANTINE_ROOT"
-        chmod 700 "$_QUARANTINE_ROOT"
-        log_error "dirty deployment detected; quarantining $_DEPLOY_DIR -> $_quarantine_path"
-        printf '%s\n' "$_deploy_dirty" > "$_quarantine_path.status"
-        cp -a -- "$_DEPLOY_DIR" "$_quarantine_path"
-        chmod 700 "$_quarantine_path"
-        "$_REAL_BASH" "$_SCRIPT_DIR/lock-repo" --unseal "$_DEPLOY_DIR"
-        rm -rf -- "$_DEPLOY_DIR"
-        _DEPLOY_REPLACED=1
-        log_info "recloning $_remote -> $_DEPLOY_DIR after quarantine"
-        git_as_owner clone --branch "$_BRANCH" "$_remote" "$_DEPLOY_DIR"
+cleanup() {
+    local rc=$?
+    if [[ -d "$DEPLOYED" && ! -L "$DEPLOYED" ]] && ! immutable "$DEPLOYED"; then
+        if ! /usr/bin/chattr +i -- "$DEPLOYED"; then
+            printf 'deploy-ci: failed to reseal %s during cleanup\n' "$DEPLOYED" >&2
+        fi
     fi
-fi
-
-# 3. Fast-forward the deployment clone to the origin ref the work repo
-#    just fetched. Local transport: root never authenticates to SSH
-#    (see identity model above); ff-only semantics regardless.
-# The deployment is immutable-flagged between deploys (lock-repo step 4b),
-# so strip the flags first; an EXIT trap re-locks if the deploy aborts
-# anywhere past this point so the mirror never stays mutable.
-if [[ -d "$_DEPLOY_DIR/.git" ]]; then
-    log_info "unsealing $_DEPLOY_DIR immutable flags for deploy"
-    "$_REAL_BASH" "$_SCRIPT_DIR/lock-repo" --unseal "$_DEPLOY_DIR"
-    _deploy_done=0
-    trap 'if [[ $_deploy_done -eq 0 ]]; then
-        log_error "deploy aborted; re-locking $_DEPLOY_DIR"
-        if ! "$_REAL_BASH" "$_SCRIPT_DIR/lock-repo" --unseal "$_DEPLOY_DIR"; then
-            log_error "UNSEAL FAILED: $_DEPLOY_DIR may remain partially locked"
+    if [[ $published -eq 0 ]]; then
+        if ! remove_candidate; then
+            printf 'deploy-ci: failed to remove candidate during cleanup\n' >&2
         fi
-        if ! "$_REAL_BASH" "$_SCRIPT_DIR/lock-repo" --branch "$_BRANCH" "$_DEPLOY_DIR"; then
-            log_error "RE-LOCK FAILED: $_DEPLOY_DIR may be mutable; re-run deploy-ci"
-        fi
-    fi' EXIT
-fi
-log_info "syncing $_DEPLOY_DIR to origin/$_BRANCH (via work repo refs)"
-git_as_root -C "$_DEPLOY_DIR" fetch "$_WORK_REPO" \
-    "+refs/remotes/origin/$_BRANCH:refs/remotes/origin/$_BRANCH"
+    fi
+    exit "$rc"
+}
+trap cleanup EXIT INT TERM
 
-if [[ "$_DEPLOY_REPLACED" -eq 1 ]]; then
-    log_info "fresh deployment clone already checked out on $_BRANCH"
+[[ $(uname -s) == Linux ]] || die "protected deployment is Linux-only"
+[[ $EUID -eq 0 ]] || die "run as root: sudo make deploy-ci"
+[[ "$SOURCE_ROOT" != /opt/* ]] || die "run from the writable WORKSPACE-CI checkout"
+install -d -o root -g root -m 0755 /opt /run/lock
+exec 9>"$LOCK"
+flock -w 120 9 || die "timed out acquiring $LOCK"
+chown root:root "$LOCK"
+chmod 0600 "$LOCK"
+
+[[ ! -L /opt ]] || die "/opt must not be a symlink"
+[[ $(stat -c %u /opt) -eq 0 ]] || die "/opt must be root-owned"
+remove_candidate
+
+owner=$(stat -c %U "$SOURCE_ROOT")
+[[ $owner != root ]] || die "source checkout must have a non-root owner"
+home=$(getent passwd "$owner" | cut -d: -f6)
+[[ -n "$home" ]] || die "cannot resolve source owner home"
+runuser=(/usr/sbin/runuser -u "$owner" -- env HOME="$home" GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' git)
+
+[[ $("${runuser[@]}" -C "$SOURCE_ROOT" rev-parse --abbrev-ref HEAD) == "$BRANCH" ]] || die "source must be on main"
+[[ -z $("${runuser[@]}" -C "$SOURCE_ROOT" status --porcelain --untracked-files=all) ]] || die "source worktree is dirty"
+"${runuser[@]}" -C "$SOURCE_ROOT" fetch origin "$BRANCH"
+head=$("${runuser[@]}" -C "$SOURCE_ROOT" rev-parse HEAD)
+upstream=$("${runuser[@]}" -C "$SOURCE_ROOT" rev-parse "origin/$BRANCH")
+[[ "$head" == "$upstream" ]] || die "source HEAD must equal origin/main"
+tree=$("${runuser[@]}" -C "$SOURCE_ROOT" rev-parse 'HEAD^{tree}')
+remote=$("${runuser[@]}" -C "$SOURCE_ROOT" remote get-url origin)
+
+# Clone Git objects, never writable worktree files. The fetched origin ref is
+# the reviewed upstream identity and root owns candidate construction.
+git_root clone --no-hardlinks --no-checkout "$SOURCE_ROOT" "$CANDIDATE"
+git_root -C "$CANDIDATE" remote set-url origin "$remote"
+git_root -C "$CANDIDATE" checkout --detach "$head"
+[[ $(git_root -C "$CANDIDATE" rev-parse 'HEAD^{tree}') == "$tree" ]] || die "candidate tree mismatch"
+[[ -z $(git_root -C "$CANDIDATE" ls-files -s | awk '$1 == "120000"') ]] || die "tracked symlinks are forbidden"
+
+make -C "$CANDIDATE" bootstrap
+make -C "$CANDIDATE" install-ci
+make -C "$CANDIDATE" check-push
+
+chown -R root:root "$CANDIDATE"
+find "$CANDIDATE" -type d -exec chmod go-w {} +
+find "$CANDIDATE" -type f -exec chmod go-w {} +
+[[ -z $(find "$CANDIDATE" -xdev \( ! -user root -o -perm /022 \) -print -quit) ]] || die "candidate ownership or mode verification failed"
+/usr/bin/chattr -R +i -- "$CANDIDATE"
+/usr/bin/chattr -i -- "$CANDIDATE"
+inventory=$(mktemp)
+find "$CANDIDATE" -xdev -mindepth 1 -print > "$inventory"
+while IFS= read -r path; do immutable "$path" || die "candidate descendant is mutable: $path"; done < "$inventory"
+rm -f "$inventory"
+
+if [[ ! -e "$DEPLOYED" ]]; then
+    mv -T -- "$CANDIDATE" "$DEPLOYED"
 else
-    if ! _co_out="$(git_as_root -C "$_DEPLOY_DIR" checkout "$_BRANCH" 2>&1)"; then
-        log_error "checkout of $_BRANCH failed in $_DEPLOY_DIR:"
-        printf '  %s\n' "$_co_out" >&2
-        exit 1
-    fi
+    [[ ! -L "$DEPLOYED" && -d "$DEPLOYED" ]] || die "deployed path is not a real directory"
+    [[ $(stat -c %u "$DEPLOYED") -eq 0 ]] || die "deployed path is not root-owned"
+    /usr/bin/chattr -i -- "$DEPLOYED"
+    /usr/bin/python3 "$CANDIDATE/ci/atomic_exchange.py" "$CANDIDATE" "$DEPLOYED"
 fi
-if ! _ff_out="$(git_as_root -C "$_DEPLOY_DIR" merge --ff-only "origin/$_BRANCH" 2>&1)"; then
-    printf '  %s\n' "$_ff_out" >&2
-    if [[ "$(git_as_root -C "$_DEPLOY_DIR" rev-parse HEAD)" == \
-          "$(git_as_root -C "$_DEPLOY_DIR" merge-base HEAD "origin/$_BRANCH")" ]]; then
-        log_error "$_DEPLOY_DIR fast-forward blocked by local tree state (see git output above)"
-        log_error "clear the reported paths and re-run deploy"
-    else
-        log_error "$_DEPLOY_DIR has diverged from origin/$_BRANCH (HEAD not an ancestor)"
-        log_error "inspect manually; do not force"
-    fi
-    exit 1
-fi
-if [[ -n "$(git_as_root -C "$_DEPLOY_DIR" status --porcelain --untracked-files=no)" ]]; then
-    log_error "$_DEPLOY_DIR has uncommitted tracked modifications; refusing to deploy over them"
-    exit 1
-fi
+published=1
+/usr/bin/chattr +i -- "$DEPLOYED"
+immutable "$DEPLOYED" || die "deployed root sealing failed"
+[[ $(git_root -C "$DEPLOYED" rev-parse HEAD) == "$head" ]] || die "final commit mismatch"
+[[ $(git_root -C "$DEPLOYED" rev-parse 'HEAD^{tree}') == "$tree" ]] || die "final tree mismatch"
+remove_candidate
 
-_deployed="$(git_as_root -C "$_DEPLOY_DIR" rev-parse HEAD)"
-log_info "deployed commit: $_deployed"
-
-# 3b. Reject tracked symlinks: they bypass both root-locking and the
-#     verify loop, and a symlinked lib/ci.sh would deploy agent code
-#     sourced by every consumer hook (audit C3).
-_symlinks="$(git_as_root -C "$_DEPLOY_DIR" ls-files -s | awk '$1 == "120000" {print $4}')"
-if [[ -n "$_symlinks" ]]; then
-    log_error "tracked symlinks are forbidden in the deployment:"
-    printf '  %s\n' $_symlinks >&2
-    exit 1
-fi
-
-# The deployment root is immutable after lock-repo. Create the untracked boot
-# and runtime directories before that boundary so bootstrap installers and
-# agent-owned dependency installs can populate them.
-log_info "pre-creating boot tool directory before immutable lock"
-mkdir -p "$_DEPLOY_DIR/.boot-linux/bin"
-log_info "pre-creating agent-owned runtime directories before immutable lock"
-make -C "$_DEPLOY_DIR" runtime-dirs OWNER="$_REPO_OWNER"
-
-# 4-7. Root-lock the deployment: tracked files, tracked parent dirs, .git,
-#     exec bits from the index, and the final integrity gate. Single
-#     pathway: scripts/lock-repo owns ALL locking logic.
-"$_REAL_BASH" "$_SCRIPT_DIR/lock-repo" --branch "$_BRANCH" "$_DEPLOY_DIR"
-
-# 8. Full tool install. Every consumer across the workspace resolves
-#    bootstrapped tools from $_DEPLOY_DIR/.boot-<platform>/bin (uv,
-#    ansible-playbook, node, ...). Install as root so the boot dir is
-#    root-locked yet world readable/executable (default umask 022).
-#    All bootstrap-* scripts are idempotent: re-deploys no-op when the
-#    pinned versions are already present.
-log_info "installing boot tools into $_DEPLOY_DIR (root-locked, world read+exec)"
-# Keep uv's cache out of the operator's HOME: deploy preserves HOME for git
-# SSH, so without this root would drop root-owned files into the agent's
-# ~/.cache/uv and break later agent-side uv runs.
-_root_home="$(getent passwd root | cut -d: -f6)"
-UV_CACHE_DIR="${_root_home:-/root}/.cache/uv" \
-    make -C "$_DEPLOY_DIR" install-boot-tools install-pythons install-ansible install-node \
-    install-gitleaks install-osv-scanner install-cloc install-moon
-
-# 9. Runtime trees (.venv, node_modules) stay agent-owned per the header
-#    contract: generated hooks run `uv run` / npm as the agent and need
-#    writability. The agent identity is explicit: the owner of the work
-#    repo ($_REPO_OWNER), the only account whose hooks consume this tree.
-#    SUDO_USER is not consulted: this script runs as root directly
-#    (EUID gate at the top).
-_agent_home="$(getent passwd "$_REPO_OWNER" | cut -d: -f6)"
-[[ -n "$_agent_home" ]] || { log_error "no home for $_REPO_OWNER"; exit 1; }
-log_info "installing python + web deps as $_REPO_OWNER (agent-owned .venv, node_modules)"
-"$_RUNUSER" -u "$_REPO_OWNER" -- env HOME="$_agent_home" \
-    make -C "$_DEPLOY_DIR" install-python-deps install-web-deps
-
-# 10. Lock the WORK repo's policy catalogs (config/*.yaml) and regenerate
-#     its root-owned hooks via the same single pathway the operator uses
-#     (make lock-repo): an agent-owned catalog is a self-gate-weakening
-#     hole, and hooks must always match the just-deployed generate-hooks.
-#     Gate 2b already proved the work repo's scripts/ == origin, so the
-#     rendered hooks are exactly the deployed ones. deploy-ci is the
-#     single convergence point: fresh installs and gate changes never
-#     need a separate manual step.
-log_info "locking work repo catalogs + regenerating hooks (make lock-repo)"
-make -C "$_WORK_REPO" lock-repo
-
-_deploy_done=1
-log_info "deploy-ci complete: $_DEPLOY_DIR @ $_deployed (root-locked, immutable, tools installed)"
+# Hook installation is deliberately after publication and sealing.
+make -C "$SOURCE_ROOT" install-hooks CI_REINSTALL_GENERATE="$DEPLOYED/scripts/generate-hooks"
+trap - EXIT INT TERM
+printf 'deployed %s at %s\n' "$head" "$DEPLOYED"

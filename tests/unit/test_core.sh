@@ -52,6 +52,23 @@ EOF
 }
 _run_test "ci_tool_version reads catalog" test_ci_tool_version
 
+test_ci_cloc_artifact() {
+    _source_lib
+    mkdir -p "$CI_PROJECT_ROOT/res"
+    cat > "$CI_PROJECT_ROOT/res/dependency-pins.yaml" <<'EOF'
+cloc:
+  version: "2.10"
+  artifacts:
+    - asset: "cloc-2.10.pl"
+      sha256: "first-checksum"
+    - asset: "cloc-other.pl"
+      sha256: "second-checksum"
+EOF
+    _assert_eq "cloc-2.10.pl" "$(ci_cloc_artifact asset)" "selected cloc asset"
+    _assert_eq "first-checksum" "$(ci_cloc_artifact sha256)" "selected cloc checksum"
+}
+_run_test "ci_cloc_artifact reads selected catalog artifact" test_ci_cloc_artifact
+
 test_ci_read_yaml_list() {
     cat > "$TEST_TMP/workspace/projects/WORKSPACE-CI/config/test.yaml" <<'EOF'
 extensions:
@@ -261,3 +278,127 @@ test_file_length_default_512() {
     ci_check_file_length src/ok.py
 }
 _run_test "file_length: default 512 works" test_file_length_default_512
+
+# =========================================================================
+# ci_check_module_size tests
+# =========================================================================
+echo ""
+echo "=== ci_check_module_size tests ==="
+
+test_module_size_byte_limit() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/file_length_limits.yaml" <<'EOF'
+max_file_bytes: 10
+extensions:
+  - .py
+EOF
+    mkdir -p src
+    printf '12345678901' > src/large.py
+    git add src/large.py
+    ! ci_check_module_size
+}
+_run_test "module_size: byte limit blocks oversized source" test_module_size_byte_limit
+
+test_module_size_file_count_limit() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/file_length_limits.yaml" <<'EOF'
+max_source_files_per_module: 1
+extensions:
+  - .py
+EOF
+    mkdir -p src
+    : > src/one.py
+    : > src/two.py
+    git add src/one.py src/two.py
+    ! ci_check_module_size
+}
+_run_test "module_size: direct source-file count is enforced" test_module_size_file_count_limit
+
+test_module_size_submodule_limit() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/file_length_limits.yaml" <<'EOF'
+max_submodules_per_module: 1
+extensions:
+  - .py
+EOF
+    mkdir -p src/one src/two
+    : > src/one/one.py
+    : > src/two/two.py
+    git add src/one/one.py src/two/two.py
+    ! ci_check_module_size
+}
+_run_test "module_size: direct submodule count is enforced" test_module_size_submodule_limit
+
+test_module_size_depth_limit() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/file_length_limits.yaml" <<'EOF'
+max_module_depth: 2
+extensions:
+  - .py
+EOF
+    mkdir -p src/one/two
+    : > src/one/two/deep.py
+    git add src/one/two/deep.py
+    ! ci_check_module_size
+}
+_run_test "module_size: module depth is enforced" test_module_size_depth_limit
+
+test_module_size_ignored_and_non_source_pass() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/file_length_limits.yaml" <<'EOF'
+max_source_files_per_module: 1
+extensions:
+  - .py
+EOF
+    mkdir -p vendor/one vendor/two docs
+    : > vendor/one/one.py
+    : > vendor/two/two.py
+    : > docs/readme.md
+    git add vendor/one/one.py vendor/two/two.py docs/readme.md
+    ci_check_module_size
+}
+_run_test "module_size: ignored and non-source files do not count" test_module_size_ignored_and_non_source_pass
+
+test_module_size_override() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/file_length_limits.yaml" <<'EOF'
+max_source_files_per_module: 1
+extensions:
+  - .py
+module_overrides:
+  - path: src/legacy
+    max_source_files: 2
+EOF
+    mkdir -p src/legacy
+    : > src/legacy/one.py
+    : > src/legacy/two.py
+    git add src/legacy/one.py src/legacy/two.py
+    ci_check_module_size
+}
+_run_test "module_size: path override permits documented exception" test_module_size_override
+
+test_module_size_invalid_limit() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/file_length_limits.yaml" <<'EOF'
+max_module_depth: 0
+EOF
+    ! ci_check_module_size
+}
+_run_test "module_size: invalid limits fail closed" test_module_size_invalid_limit
+
+test_module_size_config_path_override() {
+    _source_lib
+    local override="$TEST_TMP/workspace/projects/WORKSPACE-CI/config/size-override.yaml"
+    cat > "$override" <<'EOF'
+max_source_files_per_module: 2
+extensions:
+  - .py
+EOF
+    mkdir -p src
+    : > src/one.py
+    : > src/two.py
+    unset '_CI_CONFIG_PATH_CACHE[file_length_limits|./config/file_length_limits.yaml]'
+    git add src/one.py src/two.py
+    CI_CONFIG_PATH_FILE_LENGTH_LIMITS="$override" ci_check_module_size
+}
+_run_test "module_size: standard config-path override is honored" test_module_size_config_path_override

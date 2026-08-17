@@ -1,142 +1,157 @@
-"""Unit tests for CI bootstrap-tool version validation."""
+"""Unit tests for typed CI bootstrap-tool version validation."""
 
 import urllib.error
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from typing import Self
+from unittest.mock import patch
 
+import pytest
+
+from ci import _registry_common
 from ci._tool_versions import (
-    _check_tool_entry,
     check_tool_versions,
     get_latest_github_release,
     get_latest_node_release,
 )
 
+ARTIFACT = (
+    "  artifacts:\n"
+    "    - asset: tool\n"
+    "      os: any\n"
+    "      architecture: any\n"
+    "      sha256: "
+    "bf59272455172108072a0a106379f7509fd4349bdcfd85203bac038ccd286d83\n"
+)
 
-@patch("ci._tool_versions.get_latest_github_release")
-@patch("ci._tool_versions.find_project_root")
-def test_catalog_rejects_stale_github_release(
-    mock_root, mock_latest, tmp_path: Path
-) -> None:
-    catalog = tmp_path / "res"
-    catalog.mkdir()
-    (catalog / "dependency-pins.yaml").write_text(
+
+class Response:
+    def __init__(self, payload: bytes) -> None:
+        self.payload = payload
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return self.payload
+
+
+@pytest.fixture(autouse=True)
+def reset_query_results() -> None:
+    _registry_common.QUERY_RESULTS.update(successes=0, failures=0)
+
+
+def test_github_latest_parses_tag() -> None:
+    with patch(
+        "urllib.request.urlopen", return_value=Response(b'{"tag_name":"v2.3.4"}')
+    ):
+        assert get_latest_github_release("owner/repo") == "2.3.4"
+    assert _registry_common.QUERY_RESULTS["successes"] == 1
+
+
+@pytest.mark.parametrize("payload", [b"[]", b'{"tag_name":""}', b"bad"])
+def test_github_latest_rejects_invalid_results(payload: bytes) -> None:
+    with patch("urllib.request.urlopen", return_value=Response(payload)):
+        assert get_latest_github_release("owner/repo") is None
+    assert _registry_common.QUERY_RESULTS["failures"] == 1
+
+
+def test_github_latest_handles_network_failure() -> None:
+    with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("down")):
+        assert get_latest_github_release("owner/repo") is None
+
+
+def test_node_latest_selects_requested_major() -> None:
+    payload = b'[{"version":"v24.2.0"},{"version":"v24.10.0"},{"version":"v22.1.0"}]'
+    with patch("urllib.request.urlopen", return_value=Response(payload)):
+        assert get_latest_node_release(24) == "24.10.0"
+
+
+def test_node_latest_handles_network_failure() -> None:
+    with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("down")):
+        assert get_latest_node_release(24) is None
+
+
+@pytest.mark.parametrize("payload", [b"{}", b"[]", b"bad"])
+def test_node_latest_rejects_invalid_results(payload: bytes) -> None:
+    with patch("urllib.request.urlopen", return_value=Response(payload)):
+        assert get_latest_node_release(24) is None
+
+
+def test_invalid_catalog_rejects_before_live_query(tmp_path: Path) -> None:
+    catalog = tmp_path / "dependency-pins.yaml"
+    catalog.write_text("schema_version: 2\n")
+
+    with (
+        patch("ci._tool_versions._catalog_path", return_value=catalog),
+        patch("ci._tool_versions._latest_tool_release") as latest,
+    ):
+        assert check_tool_versions()
+
+    latest.assert_not_called()
+
+
+def test_github_pin_detects_newer_release(tmp_path: Path) -> None:
+    catalog = tmp_path / "dependency-pins.yaml"
+    catalog.write_text(
         "schema_version: 1\n"
         "gitleaks:\n"
         "  version: '8.21.2'\n"
         "  source: gitleaks/gitleaks\n"
+        "  source_kind: github_release\n" + ARTIFACT
+    )
+
+    with (
+        patch("ci._tool_versions._catalog_path", return_value=catalog),
+        patch(
+            "ci._tool_versions.get_latest_github_release", return_value="8.22.0"
+        ) as latest,
+    ):
+        assert check_tool_versions()
+
+    latest.assert_called_once_with("gitleaks/gitleaks")
+
+
+def test_node_pin_queries_its_major_stream(tmp_path: Path) -> None:
+    catalog = tmp_path / "dependency-pins.yaml"
+    catalog.write_text(
+        "schema_version: 1\n"
+        "node:\n"
+        "  version: '24.19.0'\n"
+        "  source: https://nodejs.org/dist\n"
+        "  source_kind: node_release\n" + ARTIFACT
+    )
+
+    with (
+        patch("ci._tool_versions._catalog_path", return_value=catalog),
+        patch(
+            "ci._tool_versions.get_latest_node_release", return_value="24.19.0"
+        ) as latest,
+    ):
+        assert not check_tool_versions()
+
+    latest.assert_called_once_with(24)
+
+
+def test_freshness_warns_for_unknown_and_rejects_invalid_latest(
+    tmp_path: Path, capsys
+) -> None:
+    catalog = tmp_path / "dependency-pins.yaml"
+    catalog.write_text(
+        "schema_version: 1\n"
+        "one:\n  version: '1.0.0'\n  source: owner/one\n"
         "  source_kind: github_release\n"
+        + ARTIFACT
+        + "two:\n  version: '1.0.0'\n  source: owner/two\n"
+        "  source_kind: github_release\n" + ARTIFACT
     )
-    mock_root.return_value = tmp_path
-    mock_latest.return_value = "8.22.0"
-
-    assert check_tool_versions()
-
-
-@patch("ci._tool_versions.urllib.request.urlopen")
-def test_latest_github_release_removes_v_prefix(mock_urlopen) -> None:
-    response = MagicMock()
-    response.read.return_value = b'{"tag_name":"v8.30.1"}'
-    response.__enter__ = lambda value: value
-    response.__exit__ = MagicMock(return_value=False)
-    mock_urlopen.return_value = response
-
-    assert get_latest_github_release("gitleaks/gitleaks") == "8.30.1"
-
-
-@patch("ci._tool_versions.urllib.request.urlopen")
-def test_latest_node_release_stays_in_selected_major(mock_urlopen) -> None:
-    response = MagicMock()
-    response.read.return_value = (
-        b'[{"version":"v25.1.0"},{"version":"v24.19.0"},{"version":"v24.18.1"}]'
-    )
-    response.__enter__ = lambda value: value
-    response.__exit__ = MagicMock(return_value=False)
-    mock_urlopen.return_value = response
-
-    assert get_latest_node_release(24) == "24.19.0"
-
-
-@patch("ci._tool_versions.urllib.request.urlopen")
-def test_latest_node_release_rejects_non_list_payload(mock_urlopen) -> None:
-    response = MagicMock()
-    response.read.return_value = b"{}"
-    response.__enter__ = lambda value: value
-    response.__exit__ = MagicMock(return_value=False)
-    mock_urlopen.return_value = response
-
-    assert get_latest_node_release(24) is None
-
-
-def test_catalog_rejects_unknown_source_kind() -> None:
-    assert _check_tool_entry(
-        "example", {"version": "1.0.0", "source_kind": "untrusted_registry"}
-    )
-
-
-def test_catalog_enforces_feature_floor_without_release_query() -> None:
-    assert _check_tool_entry(
-        "gitleaks",
-        {
-            "version": "8.21.2",
-            "minimum_version": "8.22.0",
-            "source": "gitleaks/gitleaks",
-            "source_kind": "github_release",
-        },
-    )
-
-
-@patch("ci._tool_versions.urllib.request.urlopen")
-def test_latest_github_release_handles_bad_payload(mock_urlopen) -> None:
-    response = MagicMock()
-    response.read.return_value = b"{}"
-    response.__enter__ = lambda value: value
-    response.__exit__ = MagicMock(return_value=False)
-    mock_urlopen.return_value = response
-
-    assert get_latest_github_release("example/project") is None
-
-
-@patch("ci._tool_versions.urllib.request.urlopen")
-def test_latest_github_release_handles_network_error(mock_urlopen) -> None:
-    mock_urlopen.side_effect = urllib.error.URLError("offline")
-
-    assert get_latest_github_release("example/project") is None
-
-
-@patch("ci._tool_versions.urllib.request.urlopen")
-def test_latest_node_release_handles_empty_major(mock_urlopen) -> None:
-    response = MagicMock()
-    response.read.return_value = b'[{"version":"v25.1.0"}]'
-    response.__enter__ = lambda value: value
-    response.__exit__ = MagicMock(return_value=False)
-    mock_urlopen.return_value = response
-
-    assert get_latest_node_release(24) is None
-
-
-def test_catalog_rejects_invalid_entries(tmp_path: Path) -> None:
-    assert _check_tool_entry("example", "not a mapping")
-    assert _check_tool_entry("example", {"source_kind": "github_release"})
-    assert _check_tool_entry(
-        "example", {"source_kind": "github_release", "version": "bad", "source": "a/b"}
-    )
-    assert _check_tool_entry(
-        "example",
-        {"source_kind": "github_release", "version": "1.0.0", "source": "bad"},
-    )
-    assert _check_tool_entry("rust", {"source_kind": "rust_channel", "channel": "bad"})
-    assert not _check_tool_entry(
-        "rust", {"source_kind": "rust_channel", "channel": "stable"}
-    )
-
-    with patch("ci._tool_versions.find_project_root", return_value=tmp_path):
+    with (
+        patch("ci._tool_versions._catalog_path", return_value=catalog),
+        patch("ci._tool_versions._latest_tool_release", side_effect=[None, "bad"]),
+    ):
         assert check_tool_versions()
-
-
-def test_catalog_rejects_unsupported_schema(tmp_path: Path) -> None:
-    catalog = tmp_path / "res"
-    catalog.mkdir()
-    (catalog / "dependency-pins.yaml").write_text("schema_version: 2\n")
-
-    with patch("ci._tool_versions.find_project_root", return_value=tmp_path):
-        assert check_tool_versions()
+    output = capsys.readouterr().out
+    assert "Could not query" in output
+    assert "Invalid latest release" in output

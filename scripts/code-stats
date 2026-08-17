@@ -95,7 +95,7 @@ else
         _repos+=("$_root")
     fi
     _gitdirs=()
-    ci_capture_pipe _gitdirs 'find "$1" -name ".git" -type d | sort' "$_root"
+    ci_capture_pipe _gitdirs 'find "$1" -type d ! -readable -prune -o -name ".git" -type d -print | sort' "$_root"
     for _gitdir in "${_gitdirs[@]}"; do
         _repo="$(dirname "$_gitdir")"
         [[ "$_repo" == "$_root" ]] && continue

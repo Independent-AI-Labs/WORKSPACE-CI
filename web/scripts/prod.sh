@@ -2,13 +2,17 @@
 # Production wiki lifecycle (Podman Compose). Invoked by web/Makefile prod-* targets.
 # Runs as the current user; sudo is used only for sysctl when overriding to :80/:443.
 set -euo pipefail
-# pipefail: podman build | tee must surface podman rc, not tee rc
+# Preserve the build command's status when its output is logged.
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
+case "$SCRIPT_PATH" in
+  /proc/self/fd/*) SCRIPT_PATH="${SHG_SCRIPT_PATH:?shell guard source path is unavailable}" ;;
+esac
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 WEB_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PROJECTS_ROOT="$(cd "${WEB_DIR}/../.." && pwd)"
 
-PROD_IMAGE="${PROD_IMAGE:-localhost/workspace-ci-wiki:prod}"
+PROD_IMAGE="${PROD_IMAGE:-localhost/workspace-ci-wiki:0.1.0}"
 COMPOSE_FILE="${COMPOSE_FILE:-compose.prod.yaml}"
 COMPOSE_CMD="${COMPOSE_CMD:-podman-compose}"
 PODMAN="${PODMAN:-podman}"
@@ -84,16 +88,6 @@ ensure_prod_image() {
   if "${PODMAN}" image exists "${PROD_IMAGE}"; then
     return 0
   fi
-  if "${PODMAN}" image exists "localhost/workspace-ci-wiki:prod"; then
-    echo "[prod-start] tagging localhost/workspace-ci-wiki:prod -> ${PROD_IMAGE}" >&2
-    "${PODMAN}" tag "localhost/workspace-ci-wiki:prod" "${PROD_IMAGE}"
-    return 0
-  fi
-  if "${PODMAN}" image exists "workspace-ci-wiki:prod"; then
-    echo "[prod-start] tagging workspace-ci-wiki:prod -> ${PROD_IMAGE}" >&2
-    "${PODMAN}" tag "workspace-ci-wiki:prod" "${PROD_IMAGE}"
-    return 0
-  fi
   echo "ERROR: production image ${PROD_IMAGE} not found." >&2
   echo "  Build first: make wiki-prod-build" >&2
   exit 1
@@ -129,7 +123,7 @@ cmd_build() {
     -t "${PROD_IMAGE}" \
     "${PROJECTS_ROOT}" 2>&1 | tee "${BUILD_LOG}"
   if [[ "${PIPESTATUS[0]}" -ne 0 ]]; then
-    echo "ERROR: podman build failed (rc=${PIPESTATUS[0]}); see ${BUILD_LOG}" >&2
+    echo "ERROR: image build failed (status=${PIPESTATUS[0]}); see ${BUILD_LOG}" >&2
     if [[ -f "${BUILD_LOG}" ]]; then
       echo "--- last 80 lines of ${BUILD_LOG} ---" >&2
       tail -n 80 "${BUILD_LOG}" >&2
@@ -189,7 +183,7 @@ retry_probe() {
     try=$((try + 1))
   done
   if [[ -s "${curl_err}" ]]; then
-    echo "[verify] last curl error for ${url} (rc=${curl_rc}):" >&2
+    echo "[verify] last curl error for ${url} (status=${curl_rc}):" >&2
     cat "${curl_err}" >&2
   fi
   rm -f "${curl_err}"

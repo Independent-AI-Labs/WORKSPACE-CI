@@ -1,12 +1,12 @@
-'use client'
+"use client";
 
-import { RequestSummary } from '@/types/request'
-import { EvidencePack } from './EvidencePack'
-import { DecisionPanel } from './DecisionPanel'
+import { RequestSummary } from "@/types/request";
+import { EvidencePack } from "./EvidencePack";
+import Link from "next/link";
 
 export function FeedList({ items }: { items: RequestSummary[] }) {
   if (items.length === 0) {
-    return <p className="hitl-empty">No pending requests.</p>
+    return <p className="hitl-empty">No pending requests.</p>;
   }
 
   return (
@@ -14,9 +14,14 @@ export function FeedList({ items }: { items: RequestSummary[] }) {
       {items.map((item) => (
         <li key={item.id} className="hitl-feed-item">
           <EvidencePack request={item} />
-          <DecisionPanel requestId={item.id} tier={item.tier} />
+          <Link
+            href={`/feed/${encodeURIComponent(item.id)}`}
+            className="btn btn--primary"
+          >
+            Review request
+          </Link>
         </li>
       ))}
     </ul>
-  )
+  );
 }

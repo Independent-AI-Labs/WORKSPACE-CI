@@ -14,31 +14,46 @@ _make_fake_osv_scanner() {
     cat > "$TEST_TMP/bin/osv-scanner" <<EOF
 #!/usr/bin/env bash
 $( [[ -n "$capture" ]] && printf 'printf "%%s\\n" "$@" > %q\n' "$capture" )
+for arg in "\$@"; do
+    case "\$arg" in --output-file=*) printf '{}\n' > "\${arg#*=}" ;; esac
+done
 printf '%s' '$err' >&2
 exit $rc
 EOF
     chmod +x "$TEST_TMP/bin/osv-scanner"
 }
 
-# T1: missing binary -> WARN, exit 0 (fail-open)
+_prepare_osv_config() {
+    mkdir -p "$CI_PROJECT_ROOT/ci"
+    if ! cmp -s "$PROJECT_DIR/ci/validate_osv_config.py" "$CI_PROJECT_ROOT/ci/validate_osv_config.py"; then
+        cp "$PROJECT_DIR/ci/validate_osv_config.py" "$CI_PROJECT_ROOT/ci/"
+    fi
+    if ! cmp -s "$PROJECT_DIR/osv-scanner.toml" "$CI_PROJECT_ROOT/osv-scanner.toml"; then
+        cp "$PROJECT_DIR/osv-scanner.toml" "$CI_PROJECT_ROOT/"
+    fi
+}
+
+# T1: missing binary -> failure
 test_cve_scan_missing_binary() {
     _source_lib
+    _prepare_osv_config
     local out rc=0
-    out="$(PATH="/nonexistent" ci_scan_vulnerabilities 2>&1)" || rc=$?
-    [[ "$rc" -eq 0 && "$out" == *"osv-scanner not found"* ]] || {
-        echo "  expected rc=0 + missing-binary WARN, got rc=$rc: $out"
+    out="$(PATH="/usr/bin:/bin" ci_scan_vulnerabilities 2>&1)" || rc=$?
+    [[ "$rc" -eq 1 && "$out" == *"osv-scanner is required"* ]] || {
+        echo "  expected rc=1 + missing-binary failure, got rc=$rc: $out"
         return 1
     }
 }
 
-# T2: no lockfiles -> pass, exit 0
+# T2: no lockfiles -> failure
 test_cve_scan_no_lockfiles() {
     _source_lib
+    _prepare_osv_config
     _make_fake_osv_scanner 0 ""
     local out rc=0
     out="$(PATH="$TEST_TMP/bin:$PATH" ci_scan_vulnerabilities 2>&1)" || rc=$?
-    [[ "$rc" -eq 0 && "$out" == *"no supported lockfiles"* ]] || {
-        echo "  expected rc=0 + no-lockfiles pass, got rc=$rc: $out"
+    [[ "$rc" -eq 1 && "$out" == *"found no lockfiles"* ]] || {
+        echo "  expected rc=1 + no-lockfiles failure, got rc=$rc: $out"
         return 1
     }
 }
@@ -46,11 +61,12 @@ test_cve_scan_no_lockfiles() {
 # T3: clean scan -> pass, exit 0
 test_cve_scan_clean() {
     _source_lib
+    _prepare_osv_config
     touch uv.lock
     _make_fake_osv_scanner 0 ""
     local out rc=0
     out="$(PATH="$TEST_TMP/bin:$PATH" ci_scan_vulnerabilities 2>&1)" || rc=$?
-    [[ "$rc" -eq 0 && "$out" == *"no known vulnerabilities"* ]] || {
+    [[ "$rc" -eq 0 && "$out" == *"without findings"* ]] || {
         echo "  expected rc=0 + clean pass, got rc=$rc: $out"
         return 1
     }
@@ -59,6 +75,7 @@ test_cve_scan_clean() {
 # T4: findings -> FAIL, exit 1 (fail-closed)
 test_cve_scan_findings() {
     _source_lib
+    _prepare_osv_config
     touch uv.lock
     _make_fake_osv_scanner 1 "CVE-2099-0001: bad package"
     local out rc=0
@@ -69,15 +86,16 @@ test_cve_scan_findings() {
     }
 }
 
-# T5: network error on stderr -> WARN, exit 0 (fail-open offline)
+# T5: scanner failure remains blocking
 test_cve_scan_offline() {
     _source_lib
+    _prepare_osv_config
     touch uv.lock
     _make_fake_osv_scanner 1 "Post https://api.osv.dev/v1/querybatch: dial tcp: no such host"
     local out rc=0
     out="$(PATH="$TEST_TMP/bin:$PATH" ci_scan_vulnerabilities 2>&1)" || rc=$?
-    [[ "$rc" -eq 0 && "$out" == *"UNAVAILABLE"* ]] || {
-        echo "  expected rc=0 + offline WARN, got rc=$rc: $out"
+    [[ "$rc" -eq 1 && "$out" == *"scan failed"* ]] || {
+        echo "  expected rc=1 + scanner failure, got rc=$rc: $out"
         return 1
     }
 }
@@ -85,6 +103,7 @@ test_cve_scan_offline() {
 # T6: osv-scanner.toml present -> --config passed to scanner
 test_cve_scan_config_passthrough() {
     _source_lib
+    _prepare_osv_config
     touch uv.lock
     printf '# suppressions\n' > osv-scanner.toml
     _make_fake_osv_scanner 0 "" "$TEST_TMP/args.txt"
@@ -110,10 +129,10 @@ test_cve_scan_source_hygiene() {
     return 0
 }
 
-_run_test "cve-scan: missing binary fails open"        test_cve_scan_missing_binary
-_run_test "cve-scan: no lockfiles passes"              test_cve_scan_no_lockfiles
+_run_test "cve-scan: missing binary fails closed"      test_cve_scan_missing_binary
+_run_test "cve-scan: no lockfiles fails"               test_cve_scan_no_lockfiles
 _run_test "cve-scan: clean scan passes"                test_cve_scan_clean
 _run_test "cve-scan: findings fail closed"             test_cve_scan_findings
-_run_test "cve-scan: offline fails open"               test_cve_scan_offline
+_run_test "cve-scan: scanner failure blocks"           test_cve_scan_offline
 _run_test "cve-scan: config passthrough"               test_cve_scan_config_passthrough
 _run_test "cve-scan: source hygiene (no banned shell)" test_cve_scan_source_hygiene

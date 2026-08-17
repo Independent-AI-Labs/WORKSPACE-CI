@@ -1,7 +1,6 @@
 'use client'
 
 import { RequestSummary } from '@/types/request'
-import { TierBadge } from './TierBadge'
 
 export function EvidencePack({ request }: { request: RequestSummary }) {
   return (
@@ -21,7 +20,10 @@ export function EvidencePack({ request }: { request: RequestSummary }) {
       <div className="evidence-row">
         <span className="evidence-label">Scope</span>
         <span className="evidence-value">{request.scope}</span>
-        <TierBadge tier={request.tier} />
+      </div>
+      <div className="evidence-row">
+        <span className="evidence-label">Working directory</span>
+        <code className="evidence-value">{request.action.cwd}</code>
       </div>
       <div className="evidence-row">
         <span className="evidence-label">Justification</span>

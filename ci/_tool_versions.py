@@ -1,25 +1,24 @@
-"""Validation for CI bootstrap-tool release pins."""
+"""Live freshness validation for typed CI bootstrap-tool pins."""
 
 from __future__ import annotations
 
 import json
 import urllib.error
 import urllib.request
-from collections.abc import Mapping
-from typing import Any
+from pathlib import Path
 
-import yaml
 from packaging.version import InvalidVersion, Version
 
-from ci import _registry_common
+from ci import _registry_common, tool_catalog
 from ci.paths import find_project_root
 
 
 def get_latest_github_release(repository: str) -> str | None:
-    """Return the newest stable GitHub release tag without its optional v prefix."""
-    url = f"https://api.github.com/repos/{repository}/releases/latest"
+    """Return the latest GitHub release tag without an optional v prefix."""
     try:
-        with urllib.request.urlopen(url, timeout=15) as response:
+        with urllib.request.urlopen(
+            f"https://api.github.com/repos/{repository}/releases/latest", timeout=15
+        ) as response:
             payload = json.loads(response.read())
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
         _registry_common.QUERY_RESULTS["failures"] += 1
@@ -33,21 +32,21 @@ def get_latest_github_release(repository: str) -> str | None:
 
 
 def get_latest_node_release(major: int) -> str | None:
-    """Return the newest Node release in the pinned major stream."""
+    """Return the latest Node release in the supplied major stream."""
     try:
         with urllib.request.urlopen(
             "https://nodejs.org/dist/index.json", timeout=15
         ) as response:
-            releases = json.loads(response.read())
+            payload = json.loads(response.read())
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
         _registry_common.QUERY_RESULTS["failures"] += 1
         return None
-    if not isinstance(releases, list):
+    if not isinstance(payload, list):
         _registry_common.QUERY_RESULTS["failures"] += 1
         return None
     versions = [
         entry["version"].removeprefix("v")
-        for entry in releases
+        for entry in payload
         if isinstance(entry, dict)
         and isinstance(entry.get("version"), str)
         and entry["version"].startswith(f"v{major}.")
@@ -59,108 +58,37 @@ def get_latest_node_release(major: int) -> str | None:
     return str(max(Version(version) for version in versions))
 
 
-def _latest_tool_release(entry: Mapping[str, Any], version: Version) -> str | None:
-    kind = entry.get("source_kind")
-    if kind == "node_release":
-        return get_latest_node_release(version.major)
-    if kind != "github_release":
-        return None
-    source = entry.get("source")
-    if not isinstance(source, str) or source.count("/") != 1:
-        return None
-    return get_latest_github_release(source)
+def _latest_tool_release(pin: tool_catalog.ToolPin) -> str | None:
+    if pin.source_kind == "node_release":
+        return get_latest_node_release(pin.version.major)
+    return get_latest_github_release(pin.source)
 
 
-def _catalog_tool_version(name: str, entry: Mapping[str, Any]) -> Version | None:
-    version = entry.get("version")
-    if not isinstance(version, str) or not version:
-        print(f"ERROR: Tool catalog entry {name} has no version")
-        return None
-    try:
-        return Version(version)
-    except InvalidVersion:
-        print(f"ERROR: Tool catalog entry {name} has an invalid version: {version}")
-        return None
-
-
-def _check_rust_channel(name: str, entry: Mapping[str, Any]) -> bool:
-    channel = entry.get("channel")
-    if channel in {"stable", "beta", "nightly"}:
-        return False
-    print(f"ERROR: Tool catalog entry {name} has an invalid Rust channel")
-    return True
-
-
-def _tool_source_kind(name: str, entry: Mapping[str, Any]) -> str | None:
-    kind = entry.get("source_kind")
-    if kind not in {"github_release", "node_release"}:
-        print(f"ERROR: Unsupported source kind for {name}: {kind}")
-        return None
-    if kind == "github_release":
-        source = entry.get("source")
-        if not isinstance(source, str) or source.count("/") != 1:
-            print(f"ERROR: Tool catalog entry {name} has an invalid GitHub source")
-            return None
-    return kind
-
-
-def _valid_minimum_version(
-    name: str, entry: Mapping[str, Any], version: Version
-) -> bool:
-    minimum = entry.get("minimum_version")
-    try:
-        minimum_version = Version(minimum) if isinstance(minimum, str) else None
-    except InvalidVersion:
-        print(f"ERROR: Tool {name} has an invalid minimum version: {minimum}")
-        return False
-    if minimum_version and version < minimum_version:
-        print(f"ERROR: Tool {name} requires >= {minimum} for configured features")
-        return False
-    return True
-
-
-def _check_tool_entry(name: str, entry: object) -> bool:
-    if not isinstance(entry, dict):
-        print(f"ERROR: Tool catalog entry {name} must be a mapping")
-        return True
-    if entry.get("source_kind") == "rust_channel":
-        return _check_rust_channel(name, entry)
-    if _tool_source_kind(name, entry) is None:
-        return True
-    parsed_version = _catalog_tool_version(name, entry)
-    if parsed_version is None or not _valid_minimum_version(
-        name, entry, parsed_version
-    ):
-        return True
-    latest = _latest_tool_release(entry, parsed_version)
-    if latest is None:
-        print(f"WARNING: Could not query release source for {name}")
-        return False
-    errors = parsed_version < Version(latest)
-    if errors:
-        print(f"OUTDATED TOOL: {name} {parsed_version} -> {latest}")
-    return errors
+def _catalog_path() -> Path:
+    return find_project_root() / "res" / "dependency-pins.yaml"
 
 
 def check_tool_versions() -> bool:
-    """Validate tracked bootstrap-tool pins against their declared sources."""
-    catalog = find_project_root() / "res" / "dependency-pins.yaml"
-    if not catalog.is_file():
-        print(f"ERROR: Tool version catalog not found: {catalog}")
-        return True
+    """Return whether a typed bootstrap-tool catalog has freshness errors."""
     try:
-        raw = yaml.safe_load(catalog.read_text(encoding="utf-8"))
-    except (OSError, yaml.YAMLError) as error:
-        print(f"ERROR: Could not read tool version catalog: {error}")
+        catalog = tool_catalog.load_catalog(_catalog_path())
+    except (OSError, tool_catalog.CatalogError) as error:
+        print(f"ERROR: Invalid tool version catalog: {error}")
         return True
-    if not isinstance(raw, dict):
-        print("ERROR: Tool version catalog must be a mapping")
-        return True
-    if raw.get("schema_version") != 1:
-        print("ERROR: Unsupported tool version catalog schema")
-        return True
-    return any(
-        _check_tool_entry(name, entry)
-        for name, entry in raw.items()
-        if name != "schema_version"
-    )
+
+    errors = False
+    for pin in catalog.tools:
+        latest = _latest_tool_release(pin)
+        if latest is None:
+            print(f"WARNING: Could not query release source for {pin.name}")
+            continue
+        try:
+            outdated = pin.version < Version(latest)
+        except InvalidVersion:
+            print(f"ERROR: Invalid latest release for {pin.name}: {latest}")
+            errors = True
+            continue
+        if outdated:
+            print(f"OUTDATED TOOL: {pin.name} {pin.version} -> {latest}")
+            errors = True
+    return errors

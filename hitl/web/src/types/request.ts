@@ -2,11 +2,11 @@ export interface RequestSummary {
   id: string
   principal: string
   host: string
-  action: { display: string }
+  action: { display: string; cwd: string }
   scope: string
-  tier: 1 | 2
   justification: string
   requestHash: string
   createdAt: string
   expiresAt: string
+  state: 'pending' | 'approved' | 'denied' | 'expired' | 'cancelled'
 }

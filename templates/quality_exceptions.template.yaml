@@ -1,6 +1,6 @@
 # quality_exceptions.yaml: per-project exception declarations.
 #
-# This file is MANDATORY at every strict-tier project root. It lives
+# This file is mandatory at every project root. It lives
 # permanently in the repo root (sibling to Makefile) so every reviewer
 # sees it on every PR: that visibility is the social check, replacing
 # any time-based expiry.
