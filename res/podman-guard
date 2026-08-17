@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Restrict destructive bulk Podman operations before calling real-podman.
+set -euo pipefail
+
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+PODMAN_REAL="$(dirname "$(readlink -f "$_SELF")")/real-podman"
+
+if [[ ! -x "$PODMAN_REAL" ]]; then
+    printf 'podman-guard: real-podman not found at %s\n' "$PODMAN_REAL" >&2
+    exit 1
+fi
+
+block() {
+    printf 'podman-guard: blocked: %s\n' "$1" >&2
+    exit 1
+}
+
+case "${1:-}" in
+    rm|rmi)
+        for argument in "$@"; do
+            [[ "$argument" == -a || "$argument" == --all ]] && block "bulk $1"
+        done
+        ;;
+    system)
+        case "${2:-}" in
+            prune|migrate|reset) block "system ${2:-}" ;;
+        esac
+        ;;
+    volume)
+        [[ "${2:-}" == prune ]] && block "volume prune"
+        if [[ "${2:-}" == rm ]]; then
+            for argument in "$@"; do
+                [[ "$argument" == -a || "$argument" == --all ]] && block "bulk volume removal"
+            done
+        fi
+        ;;
+    image)
+        if [[ "${2:-}" == prune ]]; then
+            for argument in "$@"; do
+                [[ "$argument" == -a || "$argument" == --all ]] && block "image prune --all"
+            done
+        fi
+        ;;
+    container|network)
+        [[ "${2:-}" == prune ]] && block "$1 prune"
+        ;;
+esac
+
+exec "$PODMAN_REAL" "$@"

@@ -74,7 +74,7 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
     mkdir -p "${VENV_DIR}/bin"
     ln -sf "$PODMAN_BIN" "${VENV_DIR}/bin/real-podman"
 
-    GUARD_SCRIPT="${CI_WORKSPACE_ROOT}/workspace/scripts/utils/podman-guard"
+    GUARD_SCRIPT="${CI_PROJECT_ROOT}/res/podman-guard"
     if [[ -f "$GUARD_SCRIPT" ]]; then
         rm -f "${VENV_DIR}/bin/podman"
         cp "$GUARD_SCRIPT" "${VENV_DIR}/bin/podman"
@@ -301,7 +301,7 @@ elif [[ -f "${PODMAN_DIR}/bin/podman" ]]; then
 fi
 
 # Install guard script as the main podman command
-GUARD_SCRIPT="${CI_WORKSPACE_ROOT}/workspace/scripts/utils/podman-guard"
+GUARD_SCRIPT="${CI_PROJECT_ROOT}/res/podman-guard"
 if [[ -f "$GUARD_SCRIPT" ]]; then
     rm -f "${VENV_DIR}/bin/podman"  # Remove existing symlink first
     cp "$GUARD_SCRIPT" "${VENV_DIR}/bin/podman"
