@@ -49,6 +49,14 @@ trap cleanup EXIT INT TERM
 [[ $(uname -s) == Linux ]] || die "protected deployment is Linux-only"
 [[ $EUID -eq 0 ]] || die "run as root: sudo make deploy-ci"
 [[ "$SOURCE_ROOT" != /opt/* ]] || die "run from the writable WORKSPACE-CI checkout"
+owner=$(stat -c %U "$SOURCE_ROOT")
+[[ $owner != root ]] || die "source checkout must have a non-root owner"
+candidate_uid=$(id -u "$owner")
+home=$(getent passwd "$owner" | cut -d: -f6)
+[[ -n "$home" ]] || die "cannot resolve source owner home"
+owner_env=(/usr/sbin/runuser -u "$owner" -- env HOME="$home")
+owner_git=("${owner_env[@]}" GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' git)
+
 install -d -o root -g root -m 0755 /opt /run/lock
 exec 9>"$LOCK"
 flock -w 120 9 || die "timed out acquiring $LOCK"
@@ -58,14 +66,6 @@ chmod 0600 "$LOCK"
 [[ ! -L /opt ]] || die "/opt must not be a symlink"
 [[ $(stat -c %u /opt) -eq 0 ]] || die "/opt must be root-owned"
 remove_candidate
-
-owner=$(stat -c %U "$SOURCE_ROOT")
-[[ $owner != root ]] || die "source checkout must have a non-root owner"
-candidate_uid=$(id -u "$owner")
-home=$(getent passwd "$owner" | cut -d: -f6)
-[[ -n "$home" ]] || die "cannot resolve source owner home"
-owner_env=(/usr/sbin/runuser -u "$owner" -- env HOME="$home")
-owner_git=("${owner_env[@]}" GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' git)
 
 [[ $("${owner_git[@]}" -C "$SOURCE_ROOT" rev-parse --abbrev-ref HEAD) == "$BRANCH" ]] || die "source must be on main"
 [[ -z $("${owner_git[@]}" -C "$SOURCE_ROOT" status --porcelain --untracked-files=all) ]] || die "source worktree is dirty"
