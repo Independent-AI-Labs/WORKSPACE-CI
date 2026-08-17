@@ -19,18 +19,27 @@ main() {
         return 1
     fi
 
-    local toolchain rust_home target_dir tmp output errors status=0
+    local toolchain rustup_version rustup_sha rust_home target_dir tmp output errors status=0
     toolchain="$(ci_tool_version rust channel)" || return 2
+    rustup_version="$(ci_tool_version rustup)" || return 2
+    rustup_sha="$(ci_tool_artifact rustup sha256)" || return 2
     rust_home="${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/rust"
     target_dir="${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/bin"
     export RUSTUP_HOME="$rust_home" CARGO_HOME="$rust_home"
     mkdir -p "$rust_home" "$target_dir"
 
     if [[ ! -x "$rust_home/bin/rustup" ]]; then
+        [[ $(uname -s) == Linux && $(uname -m) == x86_64 ]] || {
+            log "unsupported rustup platform: $(uname -s)/$(uname -m)"
+            return 2
+        }
         tmp="$(mktemp -d)"
         trap 'rm -rf "${tmp:-}"' EXIT
-        curl -fsSL --retry 3 --retry-delay 2 -o "$tmp/rustup-init.sh" https://sh.rustup.rs
-        bash "$tmp/rustup-init.sh" -y --no-modify-path --default-toolchain none
+        curl -fsSL --retry 3 --retry-delay 2 -o "$tmp/rustup-init" \
+            "https://static.rust-lang.org/rustup/archive/$rustup_version/x86_64-unknown-linux-gnu/rustup-init"
+        printf '%s  %s\n' "$rustup_sha" "$tmp/rustup-init" | sha256sum -c -
+        chmod 0700 "$tmp/rustup-init"
+        "$tmp/rustup-init" -y --no-modify-path --default-toolchain none
     fi
 
     output="$(mktemp)"

@@ -6,6 +6,9 @@ def test_bootstrap_rust_rejects_root_without_real_shell_escape() -> None:
     assert "EUID -eq 0" in script
     assert "refusing to install a downloaded toolchain as root" in script
     assert "bash.real" not in script
+    assert "sh.rustup.rs" not in script
+    assert "ci_tool_artifact rustup sha256" in script
+    assert '"$tmp/rustup-init" -y' in script
 
 
 def test_automation_has_no_real_shell_escape() -> None:

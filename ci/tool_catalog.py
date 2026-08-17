@@ -49,7 +49,9 @@ class VersionedToolPin(_CatalogModel):
     """Canonical declaration for a versioned release tool."""
 
     name: str
-    source_kind: Literal["github_release", "node_release", "rust_toolchain"]
+    source_kind: Literal[
+        "github_release", "node_release", "rust_toolchain", "rustup_release"
+    ]
     version: Version
     channel: str | None
     source: str
@@ -58,7 +60,9 @@ class VersionedToolPin(_CatalogModel):
 
 
 type ToolPin = VersionedToolPin
-type SourceKind = Literal["github_release", "node_release", "rust_toolchain"]
+type SourceKind = Literal[
+    "github_release", "node_release", "rust_toolchain", "rustup_release"
+]
 
 
 class ToolCatalog(_CatalogModel):
@@ -107,6 +111,8 @@ def _source_kind(value: object) -> SourceKind | None:
         return "node_release"
     if value == "rust_toolchain":
         return "rust_toolchain"
+    if value == "rustup_release":
+        return "rustup_release"
     return None
 
 
@@ -264,12 +270,18 @@ def _validate_source(
     if kind == "rust_toolchain" and source != "https://static.rust-lang.org/dist":
         errors.append(f"DV-CAT-009 {location}.source: unsupported release origin")
         return None
+    if (
+        kind == "rustup_release"
+        and source != "https://static.rust-lang.org/rustup/archive"
+    ):
+        errors.append(f"DV-CAT-009 {location}.source: unsupported release origin")
+        return None
     return source
 
 
 def _versioned_tool(
     name: str,
-    kind: Literal["github_release", "node_release", "rust_toolchain"],
+    kind: SourceKind,
     value: Mapping[Any, Any],
     location: str,
     errors: list[str],

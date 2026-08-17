@@ -61,6 +61,8 @@ def get_latest_node_release(major: int) -> str | None:
 def _latest_tool_release(pin: tool_catalog.ToolPin) -> str | None:
     if pin.source_kind == "node_release":
         return get_latest_node_release(pin.version.major)
+    if pin.source_kind in {"rust_toolchain", "rustup_release"}:
+        return None
     return get_latest_github_release(pin.source)
 
 
