@@ -139,7 +139,7 @@ init: ## Install all system-level dependencies (Homebrew on macOS + apt packages
 preflight: ## Verify environment (curl + tar for bootstrapping; uv is bootstrapped by install-boot-tools)
 	_curl_path="$$(command -v curl 2>&1)" || { echo "ERROR: curl not found: $$_curl_path"; exit 1; }
 	_tar_path="$$(command -v tar 2>&1)" || { echo "ERROR: tar not found: $$_tar_path"; exit 1; }
-	$(SHELL) -c '[ "$${BASH_VERSINFO[0]}" -gt 4 ] || ([ "$${BASH_VERSINFO[0]}" -eq 4 ] && [ "$${BASH_VERSINFO[1]}" -ge 3 ])' \
+	[ "$${BASH_VERSINFO[0]}" -gt 4 ] || ([ "$${BASH_VERSINFO[0]}" -eq 4 ] && [ "$${BASH_VERSINFO[1]}" -ge 3 ]) \
 		|| { echo "ERROR: bash 4.3+ required (nameref support for portable I/O helpers)."; echo "  On macOS: run 'make init' to install Homebrew bash 5.x, then re-run."; echo "  On Linux: install bash 4.3+ via your package manager."; exit 1; }
 	echo "✓ Preflight OK"
 

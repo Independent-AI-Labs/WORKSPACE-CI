@@ -9,6 +9,7 @@ readonly LOCK=/run/lock/workspace-ci-deploy.lock
 readonly BRANCH=main
 readonly ATTRS="$SOURCE_ROOT/ci/deploy_immutability.py"
 published=0
+candidate_uid=0
 
 die() { printf 'deploy-ci: %s\n' "$*" >&2; exit 1; }
 git_root() { env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' git "$@"; }
@@ -18,9 +19,12 @@ immutable() {
 }
 
 remove_candidate() {
+    local current_uid
     [[ -e "$CANDIDATE" ]] || return 0
     [[ ! -L "$CANDIDATE" && -d "$CANDIDATE" ]] || die "unsafe candidate object: $CANDIDATE"
-    [[ $(stat -c %u "$CANDIDATE") -eq 0 ]] || die "candidate is not root-owned"
+    current_uid=$(stat -c %u "$CANDIDATE")
+    [[ $current_uid -eq 0 || $current_uid -eq $candidate_uid ]] \
+        || die "candidate has unexpected owner uid $current_uid"
     /usr/bin/python3 "$ATTRS" unseal-candidate
     find "$CANDIDATE" -xdev -depth -delete
 }
@@ -57,6 +61,7 @@ remove_candidate
 
 owner=$(stat -c %U "$SOURCE_ROOT")
 [[ $owner != root ]] || die "source checkout must have a non-root owner"
+candidate_uid=$(id -u "$owner")
 home=$(getent passwd "$owner" | cut -d: -f6)
 [[ -n "$home" ]] || die "cannot resolve source owner home"
 owner_env=(/usr/sbin/runuser -u "$owner" -- env HOME="$home")
