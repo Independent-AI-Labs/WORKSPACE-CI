@@ -61,6 +61,7 @@ owner_git=("${owner_env[@]}" GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory 
 install -d -o root -g root -m 0755 /opt /run/lock
 exec 9>"$LOCK"
 flock -w 120 9 || die "timed out acquiring $LOCK"
+export CI_DEPLOY_LOCK_HELD=1
 chown root:root "$LOCK"
 chmod 0600 "$LOCK"
 

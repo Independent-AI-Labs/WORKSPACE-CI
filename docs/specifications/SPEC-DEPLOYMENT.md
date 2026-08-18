@@ -139,6 +139,9 @@ working directory remains the writable source checkout receiving the hooks.
 The shell guard trusts the sealed installer; it continues to scan and reject
 equivalent immutable-flag mutations in agent-writable scripts. Generated hooks
 embed or resolve the absolute deployed path `/opt/workspace-ci`.
+Deployment exports its held-lock marker before invoking the installer, so the
+child reuses the parent serialization boundary rather than acquiring the same
+lock again.
 
 Hook installation is not part of artifact publication. If it fails:
 
