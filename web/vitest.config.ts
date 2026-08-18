@@ -46,6 +46,7 @@ export default defineConfig({
     },
   },
   resolve: {
+    dedupe: ['next', 'react', 'react-dom'],
     alias: [
       { find: '@/', replacement: path.resolve(configDir, './src') + '/' },
     ],
