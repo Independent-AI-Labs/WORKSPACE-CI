@@ -64,6 +64,11 @@ if ! source "$CI_LIB_DIR/ci_helpers.sh"; then
     echo "ERROR: failed to source $CI_LIB_DIR/ci_helpers.sh" >&2
     return 1
 fi
+# shellcheck source=ci_catalog.sh
+if ! source "$CI_LIB_DIR/ci_catalog.sh"; then
+    echo "ERROR: failed to source $CI_LIB_DIR/ci_catalog.sh" >&2
+    return 1
+fi
 
 # CI_WORKSPACE_ROOT: the monorepo/workspace root that contains this CI project.
 # Accepts env var override; otherwise walks up from CI_PROJECT_ROOT looking for
@@ -225,31 +230,6 @@ ci_read_yaml() {
         ' "$file"
     fi
 }
-# ci_tool_version <tool> [field]
-# Bootstrap scripts resolve top-level release pins from the tracked catalog.
-ci_tool_version() {
-    local tool="$1" field="${2:-version}" value
-    value="$(ci_read_yaml "$CI_PROJECT_ROOT/res/dependency-pins.yaml" "$tool.$field")" || return 1
-    [[ -n "$value" ]] || return 1
-    printf '%s\n' "$value"
-}
-
-# ci_tool_artifact <tool> <asset|sha256>
-ci_tool_artifact() {
-    local tool="$1" field="$2" value
-    case "$field" in asset|sha256) ;; *) return 1 ;; esac
-    value="$(awk -v tool="$tool" -v field="$field" '
-        $0 == tool ":" { in_tool = 1; next }
-        in_tool && /^[^ ]/ { exit }
-        in_tool && /^    - asset:/ { in_artifact = 1 }
-        in_tool && in_artifact && $0 ~ "^      " field ":" {
-            value = $0; sub(/^[^:]+:[[:space:]]*/, "", value)
-            gsub(/^[\"]|[\"]$/, "", value); print value; exit
-        }
-    ' "$CI_PROJECT_ROOT/res/dependency-pins.yaml")" || return 1
-    [[ -n "$value" ]] && printf '%s\n' "$value"
-}
-ci_cloc_artifact() { ci_tool_artifact cloc "$1"; }
 # ci_read_yaml_list <file> <key>
 #   Reads a YAML list under a key, one item per line (unquoted).
 #   Supports flat keys (dependsOn) and one-level dotpath (project.inherited_boot_dirs).
