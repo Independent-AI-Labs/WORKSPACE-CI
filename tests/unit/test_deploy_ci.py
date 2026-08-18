@@ -26,3 +26,8 @@ def test_cleanup_accepts_the_explicit_build_owner() -> None:
 def test_preflight_does_not_start_a_nested_shell() -> None:
     makefile = (Path(__file__).parents[2] / "Makefile").read_text()
     assert "$(SHELL) -c" not in makefile
+
+
+def test_coverage_data_uses_writable_generated_directory() -> None:
+    makefile = (Path(__file__).parents[2] / "Makefile").read_text()
+    assert 'COVERAGE_FILE="$(CURDIR)/.pytest_cache/.coverage"' in makefile
