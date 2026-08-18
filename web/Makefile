@@ -176,7 +176,6 @@ lint: ## Run eslint
 
 .PHONY: type-check
 type-check: ## Run tsc --noEmit
-	ln -sfn ../../node_modules ../tests/web/node_modules
 	$(WEB_TOOL) typecheck
 
 .PHONY: test

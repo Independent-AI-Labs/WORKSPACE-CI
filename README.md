@@ -294,7 +294,7 @@ make check-guard-host-exec
 | Doc                                                                                          | What's in it                                                                                             |
 | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | [`workflows/README.md`](workflows/README.md)                                                 | Agent/contributor workflows: website copy, architecture diagrams                                         |
-| [`docs/README.md`](docs/README.md)                                                           | Documentation hub (requirements, specifications, runbooks, audits)                                       |
+| [`docs/README.md`](docs/README.md)                                                           | Documentation hub (requirements, specifications, runbooks)                                               |
 | [`docs/runbooks/RUNBOOK-HOOKS.md`](docs/runbooks/RUNBOOK-HOOKS.md)                           | Clean hook generation and protected installation                                                         |
 | [`docs/requirements/REQ-PORTABILITY.md`](docs/requirements/REQ-PORTABILITY.md)               | Shell portability contract: process-substitution ban, temp-file capture helpers                          |
 | [`docs/specifications/SPEC-PORTABILITY.md`](docs/specifications/SPEC-PORTABILITY.md)         | Portability implementation: capture helper API, enforcement                                              |
@@ -304,7 +304,6 @@ make check-guard-host-exec
 | [`docs/specifications/SPEC-WIKI.md`](docs/specifications/SPEC-WIKI.md)                       | Wiki implementation specification                                                                        |
 | [`docs/requirements/REQ-WIKI-RESPONSIVE.md`](docs/requirements/REQ-WIKI-RESPONSIVE.md)       | Wiki responsive layout requirements                                                                      |
 | [`docs/specifications/SPEC-WIKI-RESPONSIVE.md`](docs/specifications/SPEC-WIKI-RESPONSIVE.md) | Wiki responsive layout specification                                                                     |
-| [`docs/audits/SECURITY-AUDIT-2026-07-04.md`](docs/audits/SECURITY-AUDIT-2026-07-04.md)       | Full-repo security audit                                                                                 |
 | [`lib/`](lib/)                                                                               | Shell check functions: core, files, commit, coverage, compliance, quality, dead code                     |
 | [`ci/`](ci/)                                                                                 | Python checks: dependency versions, markdown refs, required hooks manifest, boot layout                  |
 

@@ -23,17 +23,6 @@ describe('normalizeGrafanaDashboardSource', () => {
     })
     expect(out).toEqual({ path: '/d/gateway-cost-leaderboard/x', query: 'orgId=1&from=now-7d' })
   })
-
-  it('parses legacy url field', () => {
-    const out = normalizeGrafanaDashboardSource({
-      title: 'LEADERBOARD',
-      url: 'http://localhost:3030/d/gateway-cost-leaderboard/x?orgId=1&from=now-24h',
-    })
-    expect(out).toEqual({
-      path: '/d/gateway-cost-leaderboard/x',
-      query: 'orgId=1&from=now-24h',
-    })
-  })
 })
 
 describe('buildGrafanaDashboardUrl', () => {

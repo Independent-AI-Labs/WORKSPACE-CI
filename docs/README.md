@@ -2,12 +2,12 @@
 
 **Project:** workspace-ci - CI/CD quality gates, native git hook generation,
 and clean installation for one Linux machine
-**Date:** 2026-07-17
+**Date:** 2026-08-18
 
 Purpose: hub for all project documentation. Documents are organized by
 type: human decisions (DECISION-_), requirement contracts (REQ-_),
 implementation specifications (SPEC-_), operational runbooks (RUNBOOK-_),
-and dated audit reports.
+and operational runbooks.
 
 **Status: Draft** means the document is incomplete or unapproved.
 
@@ -35,8 +35,8 @@ verify and seal the artifact, then install protected hooks as a separate step.
 | [`requirements/REQ-CVE-SCAN.md`](requirements/REQ-CVE-SCAN.md)                           | Dependency vulnerability scanning via OSV-Scanner (live OSV.dev CVE DB)         |
 | [`requirements/REQ-MODULE-SIZE.md`](requirements/REQ-MODULE-SIZE.md)                     | Source file and module-size guardrails                                          |
 | [`requirements/REQ-DEPENDENCY-VALIDATION.md`](requirements/REQ-DEPENDENCY-VALIDATION.md) | Deterministic policy, optional catalogs, and live freshness workflow            |
-| [`requirements/REQ-HITL.md`](requirements/REQ-HITL.md)                                   | Human-in-the-loop oversight and credential-brokering system                     |
-| [`requirements/REQ-HITL-RELAY.md`](requirements/REQ-HITL-RELAY.md)                       | HITL websocket relay and credential-broker backend                              |
+| [`requirements/REQ-HITL.md`](requirements/REQ-HITL.md)                                   | Human-in-the-loop authorization system                                          |
+| [`requirements/REQ-HITL-RELAY.md`](requirements/REQ-HITL-RELAY.md)                       | HITL WebSocket authorization relay                                              |
 | [`requirements/REQ-HITL-WEB.md`](requirements/REQ-HITL-WEB.md)                           | HITL web backend and approver UI                                                |
 | [`requirements/REQ-HITL-GUARD.md`](requirements/REQ-HITL-GUARD.md)                       | WORKSPACE-GUARD HITL elevation integration                                      |
 | [`requirements/REQ-WEB-COMPONENTS.md`](requirements/REQ-WEB-COMPONENTS.md)               | Shared web-component library extraction                                         |
@@ -58,17 +58,6 @@ verify and seal the artifact, then install protected hooks as a separate step.
 | [`specifications/SPEC-HITL-WEB.md`](specifications/SPEC-HITL-WEB.md)                           | HITL approver web application implementation                                       |
 | [`specifications/SPEC-HITL-GUARD.md`](specifications/SPEC-HITL-GUARD.md)                       | WORKSPACE-GUARD HITL client integration                                            |
 | [`specifications/SPEC-WEB-COMPONENTS.md`](specifications/SPEC-WEB-COMPONENTS.md)               | Shared web-component package implementation                                        |
-
-### audits/ - dated audits and disposition records
-
-| Document                                                                                                     | Scope                                     |
-| ------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
-| [`audits/SECURITY-AUDIT-2026-07-04.md`](audits/SECURITY-AUDIT-2026-07-04.md)                                 | Full-repo security audit (2026-07-04)     |
-| [`audits/AUDIT-BASH-REAL-EXECUTION-BOUNDARY-2026-08.md`](audits/AUDIT-BASH-REAL-EXECUTION-BOUNDARY-2026-08.md) | Diverted shell execution boundary audit   |
-| [`audits/WIKI-UX-AUDIT.md`](audits/WIKI-UX-AUDIT.md)                                                         | Wiki UX audit                             |
-| [`audits/AUDIT-card-unification-and-ast-extraction.md`](audits/AUDIT-card-unification-and-ast-extraction.md) | Card unification and AST extraction audit |
-
-Historical audit reports are not part of the blank-slate installation contract.
 
 ## Reading order for newcomers
 

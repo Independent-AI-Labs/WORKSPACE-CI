@@ -74,14 +74,7 @@ ci_verify_coverage() {
             ci_info "--- Running $suite_label Tests (Threshold: ${min_cov}%) ---"
         fi
 
-        # Build command based on runner. The `coverage: false` setting is
-        # honoured by EVERY branch: when coverage is off, no coverage-specific
-        # flags (--min-coverage, --cov-fail-under, --coverage.thresholds, etc.)
-        # are appended, regardless of which branch matched. Only the runner's
-        # own native args + the test path go through. This prevents the
-        # historical bug where the `*)` catch-all branch appended `--min-coverage=N
-        # --source=...` to bare `cargo test` runners, breaking them with
-        # "unexpected argument '--min-coverage'".
+        # Coverage-disabled suites receive only the runner's native arguments.
         local cmd
         case "$runner" in
             *pytest*)

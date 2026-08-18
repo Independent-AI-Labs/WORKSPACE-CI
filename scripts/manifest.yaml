@@ -32,15 +32,6 @@ scripts:
     output: "Writes executable bash scripts to .git/hooks/{pre-commit,commit-msg,pre-push}."
     make_target: install-hooks
 
-  - id: cleanup-precommit
-    path: scripts/cleanup-precommit
-    summary: Remove all traces of the pre-commit Python package (keeps .pre-commit-config.yaml).
-    usage: cleanup-precommit [--remove-config]
-    category: hook-lifecycle
-    args:
-      - { name: --remove-config, description: "Also delete .pre-commit-config.yaml (off by default: it's our config source)" }
-    output: "Deletes pre-commit hooks, virtualenvs, and cache. Exits 0."
-
   - id: bootstrap-gitleaks
     path: scripts/bootstrap-gitleaks
     summary: Fetch the gitleaks binary and place it on PATH (idempotent, validated by SHA256).

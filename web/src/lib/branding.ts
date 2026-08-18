@@ -5,6 +5,7 @@ import { load } from 'js-yaml'
 import {
   type GrafanaDashboardConfig,
   type GrafanaDashboardSource,
+  buildGrafanaDashboardUrl,
   resolveGrafanaBaseUrl,
   resolveGrafanaBaseUrlFromEnv,
   resolveGrafanaBaseUrlSync,
@@ -90,13 +91,15 @@ export function applyGrafanaBaseUrl(branding: Branding, base?: string): Branding
     return branding
   }
 
-  const sources: GrafanaDashboardSource[] = branding.grafana_dashboards.map((d) => ({
-    title: d.title,
-    url: d.url,
-  }))
   return {
     ...branding,
-    grafana_dashboards: resolveGrafanaDashboards(sources, normalizedBase),
+    grafana_dashboards: branding.grafana_dashboards.map((dashboard) => {
+      const current = new URL(dashboard.url)
+      return {
+        title: dashboard.title,
+        url: buildGrafanaDashboardUrl(normalizedBase, current.pathname, current.search.slice(1)),
+      }
+    }),
   }
 }
 

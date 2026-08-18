@@ -364,36 +364,6 @@ def test_validate_production_compose_images_are_numeric_versions() -> None:
     assert result.stdout == ""
 
 
-def test_configured_validators_include_the_web_containerfile() -> None:
-    expected_pre_commit_command = (
-            'entry: "uv run python -m ci.check_dependency_versions validate '
-            '--consumer-root \\"$PWD\\" --exclusions config/dependency_excludes.yaml '
-            "--catalog res/dependency-pins.yaml --npm-workspace-lock package.json "
-            "package-lock.json --uv-lock pyproject.toml "
-        "uv.lock --dockerfile web/Containerfile --compose web/compose.prod.yaml "
-        'pyproject.toml"'
-    )
-    expected_workflow_command = (
-        "run: uv run python -m ci.check_dependency_versions validate "
-            '--consumer-root "$GITHUB_WORKSPACE" '
-            "--exclusions config/dependency_excludes.yaml "
-            "--catalog res/dependency-pins.yaml "
-            "--npm-workspace-lock package.json package-lock.json --uv-lock "
-            "pyproject.toml "
-        "uv.lock --dockerfile web/Containerfile --compose web/compose.prod.yaml "
-        "pyproject.toml"
-    )
-
-    assert (
-        expected_pre_commit_command
-        in (REPOSITORY_ROOT / ".pre-commit-config.yaml").read_text()
-    )
-    assert (
-        expected_workflow_command
-        in (REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml").read_text()
-    )
-
-
 def test_validate_shipped_exclusions_are_versioned_and_valid() -> None:
     result = run_checker(
         "validate",

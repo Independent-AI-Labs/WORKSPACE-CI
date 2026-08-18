@@ -33,7 +33,7 @@ lifecycle types, health endpoints, and fail-closed readiness scaffolding.
 `hitl/web` provides feed/detail/decision components and fail-closed relay-client
 boundaries.
 
-Obsolete credential, tier, grant, and fulfilment types were removed because
+Credential, tier, grant, and fulfilment types are outside this system because
 they are not part of the target contract.
 
 ## 3. Protocol

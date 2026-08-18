@@ -154,20 +154,7 @@ Hook installation is not part of artifact publication. If it fails:
 
 Rerunning `make deploy-ci` is the only convergence operation.
 
-## 9. Rejected Complexity
-
-The implementation does not include:
-
-- `projects/CI`;
-- `CI.state`, `CI.releases`, or `CI.repository`;
-- active/current selectors;
-- generation manifests or content-addressed deployment directories;
-- retained displaced artifacts;
-- a deployment control daemon or installed deployment binary;
-- cross-filesystem copying;
-- automatic restoration after publication.
-
-## 10. Source Basis
+## 9. Source Basis
 
 - POSIX `rename()` guarantees atomic replacement where the destination type is
   replaceable, but cannot replace a non-empty directory.

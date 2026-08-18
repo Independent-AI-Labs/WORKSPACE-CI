@@ -2,8 +2,7 @@ export const GRAFANA_HEALTH_API_PATH = '/api/grafana/health'
 
 export interface GrafanaDashboardSource {
   title: string
-  url?: string
-  path?: string
+  path: string
   query?: string
 }
 
@@ -16,15 +15,8 @@ export function normalizeGrafanaDashboardSource(raw: GrafanaDashboardSource): {
   path: string
   query: string
 } {
-  if (raw.path) {
-    const path = raw.path.startsWith('/') ? raw.path : `/${raw.path}`
-    return { path, query: raw.query === undefined ? '' : raw.query }
-  }
-  if (raw.url) {
-    const u = new URL(raw.url)
-    return { path: u.pathname, query: u.search.slice(1) }
-  }
-  throw new Error(`Grafana dashboard "${raw.title}" must define path or url`)
+  const path = raw.path.startsWith('/') ? raw.path : `/${raw.path}`
+  return { path, query: raw.query === undefined ? '' : raw.query }
 }
 
 export function buildGrafanaDashboardUrl(base: string, path: string, query: string): string {

@@ -480,10 +480,6 @@ clean: ## Remove build artifacts
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 
-.PHONY: clean-precommit
-clean-precommit: ## Remove pre-commit framework traces
-	$(SCRIPT_BASH) scripts/cleanup-precommit
-
 # =============================================================================
 # Workspace Tools
 # =============================================================================

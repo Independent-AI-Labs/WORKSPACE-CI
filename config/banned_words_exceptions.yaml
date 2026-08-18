@@ -72,8 +72,6 @@ exceptions:
   - pattern: ' -- '
     paths: ['web/src/data/script-sources\.json$']
 
-  - pattern: '\blegacy\b'
-    paths: ['scripts/cleanup-precommit$']
   - pattern: '\bsilent'
     paths:
       - 'lib/ci_paths\.py$'

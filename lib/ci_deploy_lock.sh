@@ -4,7 +4,7 @@
 # Usage: source /path/to/ci_deploy_lock.sh
 
 # ---------------------------------------------------------------------------
-# Deploy lock (M1, SECURITY-AUDIT-2026-07-18-EXEMPTION-TAMPERING)
+# Deploy lock
 # ---------------------------------------------------------------------------
 # Serialize deploy operations: without a shared lock, a
 # concurrent hook installation can interleave with generation activation and

@@ -32,12 +32,6 @@ universal_exceptions:
       - 'config/standards\.schema\.yaml$'
       - 'config/wiki_labels\.yaml$'
     patterns: ['.*']
-  # Audit documents catalog banned patterns by name (not production code).
-  - paths:
-      - 'docs/AUDIT-.*\.md$'
-      - 'docs/audits/'
-    patterns: ['.*']
-  # Binary, generated, or intentional-all-patterns fixture paths.
   - paths:
       - 'web/public/standards/.*\.pdf$'
       - '\.png$'

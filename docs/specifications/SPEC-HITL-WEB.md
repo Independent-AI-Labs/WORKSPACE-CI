@@ -83,13 +83,11 @@ are absent or disabled when authorization or connectivity is uncertain.
 Tests cover route authorization, scope filtering, feed/detail separation,
 escaped evidence, CSRF binding/expiry, origin checks, decision request hash,
 disabled controls, schema rejection, no-store, ticket behavior, reconnect
-refetch, and accessibility. Obsolete tier components and fields are removed in
-the implementation phase.
+refetch, and accessibility.
 
 ## 9. Implementation Status
 
 | Item                                       | Status    |
 | ------------------------------------------ | --------- |
 | Target web contract                        | Specified |
-| Obsolete tier cleanup                      | Pending   |
 | Operational authentication/PDP integration | Pending   |
