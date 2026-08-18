@@ -19,6 +19,7 @@
 
 **Cross-references:**
 - [SPEC-PORTABILITY](../specifications/SPEC-PORTABILITY.md): companion specification
+- [DECISION-SHELL-PYTHON-BOUNDARY](../decisions/DECISION-SHELL-PYTHON-BOUNDARY-2026-08-18.md): implementation-language ownership
 - [`lib/ci.sh`](../../lib/ci.sh): owns `ci_capture_lines` / `ci_capture_pipe`
 - [`lib/checks_files.sh`](../../lib/checks_files.sh): owns `ci_check_portable_shell` enforcement
 - [`config/required_hooks.yaml`](../../config/required_hooks.yaml): registers `check-portable-shell` (mandatory, pre-commit)

@@ -224,7 +224,7 @@ admission for pre-commit's hook scheduling.
 | Co-authored history scan on push                           | Catches agent-attribution lines snuck in via rebase or amend that slipped past commit-msg. Scans the actual push range.                                                                                                                        |
 | Enforcement tiers (strict / poc / vendored)                | Per-project gate profiles. Pre-commit has no tier concept; every repo gets the same hooks or none.                                                                                                                                             |
 | Escape-hatch blocking                                      | [WORKSPACE-GUARD](https://github.com/Independent-AI-Labs/WORKSPACE-GUARD) intercepts `--no-verify`, force-push, `git reset`, and `git commit --amend` at the syscall level. No hook framework can do this; hooks are bypassable by definition. |
-| Native bash execution                                      | No Python runtime for hooks, no tree stashing, no remote repo cloning. Hooks are generated bash scripts in `.git/hooks/*`.                                                                                                                     |
+| Native bash dispatch                                       | No pre-commit framework, tree stashing, or remote hook environment. Generated `.git/hooks/*` Bash scripts invoke shell checks and hermetic Python modules as required.                                                                         |
 
 The tools workspace-ci wraps are the floor, not the ceiling. The value is
 the enforcement layer above them.
@@ -297,6 +297,7 @@ make check-guard-host-exec
 | [`docs/README.md`](docs/README.md)                                                           | Documentation hub (requirements, specifications, runbooks)                                               |
 | [`docs/runbooks/RUNBOOK-HOOKS.md`](docs/runbooks/RUNBOOK-HOOKS.md)                           | Clean hook generation and protected installation                                                         |
 | [`docs/requirements/REQ-PORTABILITY.md`](docs/requirements/REQ-PORTABILITY.md)               | Shell portability contract: process-substitution ban, temp-file capture helpers                          |
+| [`docs/decisions/DECISION-SHELL-PYTHON-BOUNDARY-2026-08-18.md`](docs/decisions/DECISION-SHELL-PYTHON-BOUNDARY-2026-08-18.md) | Implementation ownership across shell, CLI tools, and Python |
 | [`docs/specifications/SPEC-PORTABILITY.md`](docs/specifications/SPEC-PORTABILITY.md)         | Portability implementation: capture helper API, enforcement                                              |
 | [`docs/requirements/REQ-BOOT-LAYOUT.md`](docs/requirements/REQ-BOOT-LAYOUT.md)               | Platform-aware boot directory layout (`.boot-linux/`/`.boot-macos/`) and `.venv/` toolchain requirements |
 | [`docs/specifications/SPEC-BOOT-LAYOUT.md`](docs/specifications/SPEC-BOOT-LAYOUT.md)         | Boot layout implementation: walk-up PATH resolution, config schema, compliance check                     |
@@ -315,8 +316,8 @@ make check-guard-host-exec
 
 workspace-ci uses the same `.pre-commit-config.yaml` format, but generates
 **native** `.git/hooks/*` bash scripts instead of running a Python framework.
-Result: no stashing, no Python runtime dependency for hooks, and no remote git
-ref pulls.
+Result: no stashing or remote hook environments. Individual generated hooks may
+invoke hermetic Python checker modules when structured parsing requires them.
 
 ### Does it work for non-Python projects?
 

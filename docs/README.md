@@ -22,6 +22,7 @@ verify and seal the artifact, then install protected hooks as a separate step.
 | Document                                                                                                                 | Scope                                        |
 | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
 | [`decisions/DECISION-BOOTSTRAP-AND-DEPLOYMENT-2026-08-10.md`](decisions/DECISION-BOOTSTRAP-AND-DEPLOYMENT-2026-08-10.md) | Bootstrap, deployment, and sealing decisions |
+| [`decisions/DECISION-SHELL-PYTHON-BOUNDARY-2026-08-18.md`](decisions/DECISION-SHELL-PYTHON-BOUNDARY-2026-08-18.md) | Shell, CLI, and Python implementation ownership |
 
 ### requirements/ - requirement contracts (REQ-*)
 
@@ -61,7 +62,7 @@ verify and seal the artifact, then install protected hooks as a separate step.
 
 ## Reading order for newcomers
 
-1. [`decisions/DECISION-BOOTSTRAP-AND-DEPLOYMENT-2026-08-10.md`](decisions/DECISION-BOOTSTRAP-AND-DEPLOYMENT-2026-08-10.md) - accepted human decisions.
+1. [`decisions/DECISION-BOOTSTRAP-AND-DEPLOYMENT-2026-08-10.md`](decisions/DECISION-BOOTSTRAP-AND-DEPLOYMENT-2026-08-10.md) and [`decisions/DECISION-SHELL-PYTHON-BOUNDARY-2026-08-18.md`](decisions/DECISION-SHELL-PYTHON-BOUNDARY-2026-08-18.md) - accepted human decisions.
 2. [`../README.md`](../README.md) - what workspace-ci is and how to install it.
 3. [`requirements/REQ-BOOT-LAYOUT.md`](requirements/REQ-BOOT-LAYOUT.md) + [`specifications/SPEC-BOOT-LAYOUT.md`](specifications/SPEC-BOOT-LAYOUT.md) - deployment boot layout.
 4. [`requirements/REQ-DEPENDENCY-VALIDATION.md`](requirements/REQ-DEPENDENCY-VALIDATION.md) + [`specifications/SPEC-DEPENDENCY-VALIDATION.md`](specifications/SPEC-DEPENDENCY-VALIDATION.md) - deterministic validation.

@@ -61,8 +61,10 @@ mount boundary. All construction happens at
 6. install locked runtime dependencies into the candidate;
 7. normalize ownership and modes;
 8. run artifact integrity and functional checks;
-9. apply and verify immutable attributes on every descendant while leaving only
-   the candidate root inode renameable;
+9. apply and verify immutable attributes on every non-symlink descendant while
+   leaving only the candidate root inode renameable; sealed parent directories
+   protect generated symlink entries because Linux does not support `chattr` on
+   symlink inodes;
 10. record expected values in process memory for final-path verification.
 
 No artifact build or dependency installation runs against
@@ -132,8 +134,11 @@ locked root replacement operation.
 ## 7. Hook Installation
 
 After the artifact is published, verified, and sealed, deployment invokes the
-hook installer from `/opt/workspace-ci`. Generated hooks embed or resolve the
-absolute deployed path `/opt/workspace-ci`.
+root-owned immutable `/opt/workspace-ci/scripts/reinstall-hooks` while its
+working directory remains the writable source checkout receiving the hooks.
+The shell guard trusts the sealed installer; it continues to scan and reject
+equivalent immutable-flag mutations in agent-writable scripts. Generated hooks
+embed or resolve the absolute deployed path `/opt/workspace-ci`.
 
 Hook installation is not part of artifact publication. If it fails:
 
@@ -181,7 +186,7 @@ Primary references:
 | Item                              | Status   |
 | --------------------------------- | -------- |
 | Specification                     | Complete |
-| Deployment script and Make target | Pending  |
-| Atomic exchange wrapper           | Pending  |
-| Hook/GUARD path migration         | Pending  |
+| Deployment script and Make target | Implemented; final installation verification active |
+| Atomic exchange wrapper           | Implemented |
+| Hook/GUARD path migration         | Implemented through sealed installer trust |
 | Linux tests                       | Pending  |

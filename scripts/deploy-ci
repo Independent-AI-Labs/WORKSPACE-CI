@@ -128,7 +128,8 @@ immutable "$DEPLOYED" || die "deployed root sealing failed"
 [[ $(git_root -C "$DEPLOYED" rev-parse 'HEAD^{tree}') == "$tree" ]] || die "final tree mismatch"
 remove_candidate
 
-# Hook installation is deliberately after publication and sealing.
-make -C "$SOURCE_ROOT" install-hooks CI_REINSTALL_GENERATE="$DEPLOYED/scripts/generate-hooks"
+# Hook installation is deliberately after publication and sealing. Run the
+# trusted deployed installer from the working checkout it must attach hooks to
+(cd "$SOURCE_ROOT" && /bin/bash "$DEPLOYED/scripts/reinstall-hooks")
 trap - EXIT INT TERM
 printf 'deployed %s at %s\n' "$head" "$DEPLOYED"
