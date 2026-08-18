@@ -9,7 +9,7 @@ _OS := $(shell uname -s)
 _BOOT_NAME := $(if $(filter Darwin,$(_OS)),.boot-macos,.boot-linux)
 CARGO_BOOT_BIN := $(abspath ../..)/$(_BOOT_NAME)/bin
 RUSTUP_BOOT_HOME := $(abspath ../..)/$(_BOOT_NAME)/rust
-CARGO_CACHE_HOME := $(abspath ../..)/target/cargo-home
+CARGO_CACHE_HOME := /tmp/workspace-ci-cargo-$(shell id -u)
 CARGO := RUSTUP_HOME="$(RUSTUP_BOOT_HOME)" CARGO_HOME="$(CARGO_CACHE_HOME)" PATH="$(CARGO_BOOT_BIN):$$PATH" $(CARGO_BOOT_BIN)/cargo
 
 .DEFAULT_GOAL := help
