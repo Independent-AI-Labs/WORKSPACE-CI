@@ -1,4 +1,11 @@
-import { describe, it, expect } from 'vitest'
+import { resolve } from 'node:path'
+import { describe, it, expect, vi } from 'vitest'
+
+vi.mock('@/lib/project-registry', () => ({
+  getProjectBySlug: (slug: string) => slug === 'workspace-ci' ? { slug } : undefined,
+  resolveRepoDir: () => resolve(process.cwd(), '..'),
+}))
+
 import { GET } from '../../../../../web/app/(api)/api/project-asset/route'
 
 function makeRequest(project: string | null, path: string | null): import('next/server').NextRequest {

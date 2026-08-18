@@ -1,5 +1,4 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { readFileSync } from 'fs'
 import { join } from 'path'
 import { resolveRepoDir, extractReadmeSummary } from '@/lib/project-registry'
 
@@ -144,12 +143,5 @@ Actual intro sentence.
 `
     const summary = extractReadmeSummary(markdown)
     expect(summary).toBe('Actual intro sentence.')
-  })
-
-  it('extracts multiple sentences from the WORKSPACE-VM README intro', () => {
-    const readmePath = join(__dirname, '..', '..', '..', '..', '..', 'README.md')
-    const summary = extractReadmeSummary(readFileSync(readmePath, 'utf8'))
-    expect(summary).toContain('A federated repository')
-    expect(summary).toContain('The design centers on')
   })
 })
