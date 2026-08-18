@@ -109,7 +109,7 @@ find "$CANDIDATE" -type f -exec chmod go-w {} +
 /usr/bin/python3 "$ATTRS" seal-candidate
 /usr/bin/python3 "$ATTRS" unseal-candidate-root
 inventory=$(mktemp)
-find "$CANDIDATE" -xdev -mindepth 1 -print > "$inventory"
+find "$CANDIDATE" -xdev -mindepth 1 ! -type l -print > "$inventory"
 while IFS= read -r path; do immutable "$path" || die "candidate descendant is mutable: $path"; done < "$inventory"
 rm -f "$inventory"
 

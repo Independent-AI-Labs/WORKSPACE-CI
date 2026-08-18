@@ -20,7 +20,7 @@ locks.
 
 `res/dependency-pins.yaml` owns release selections for UV, Gitleaks, OSV
 Scanner, Node, cloc, Moon, Podman, podman-compose, conmon, netavark, and
-aardvark-dns. Rust declares its moving `stable` channel there. Bootstrap
+aardvark-dns. Rust declares its fixed toolchain there. Bootstrap
 scripts resolve their values through `ci_tool_version`; workflows do not
 duplicate bootstrap release values.
 
@@ -37,7 +37,7 @@ and tool-root resolution must both be correct for umbrella-root hooks.
 
 ## Dependency Checker Finding
 
-`ci/check_dependency_versions.py` defaults to checking only:
+`ci/check_dependency_versions.py` checks these explicit inputs:
 
 ```text
 pyproject.toml
