@@ -105,7 +105,7 @@ install -d -o "$owner" -g "$owner_group" \
 chown -R root:root "$CANDIDATE"
 find "$CANDIDATE" -type d -exec chmod go-w {} +
 find "$CANDIDATE" -type f -exec chmod go-w {} +
-[[ -z $(find "$CANDIDATE" -xdev \( ! -user root -o -perm /022 \) -print -quit) ]] || die "candidate ownership or mode verification failed"
+[[ -z $(find "$CANDIDATE" -xdev \( ! -user root -o \( ! -type l -a -perm /022 \) \) -print -quit) ]] || die "candidate ownership or mode verification failed"
 /usr/bin/python3 "$ATTRS" seal-candidate
 /usr/bin/python3 "$ATTRS" unseal-candidate-root
 inventory=$(mktemp)
