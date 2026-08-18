@@ -28,6 +28,7 @@ web/coverage/
 web-components/coverage/
 hitl/web/coverage/
 hitl/web/.next/
+/target/
 hitl/backend/target/
 *.tsbuildinfo
 data/feedback/
