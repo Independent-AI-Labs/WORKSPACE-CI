@@ -47,7 +47,7 @@ case "$_task" in
     typecheck)
         _dir="${1:-web}"; [[ $# -gt 0 ]] && shift
         cd "$_CI_ROOT/$_dir"
-        exec bash "$_RUN_JS" npx tsc --noEmit "$@"
+        exec bash "$_RUN_JS" npx tsc --noEmit --incremental false "$@"
         ;;
     test)
         _dir="${1:-web}"; [[ $# -gt 0 ]] && shift
