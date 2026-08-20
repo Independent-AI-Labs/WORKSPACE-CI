@@ -29,6 +29,18 @@ import yaml
 from ci.paths import resolve_config_path, validate_exemption_file
 
 _NULL_STDIN = subprocess.DEVNULL
+_SYSTEM_INTERPRETER_INVOCATION_RE = re.compile(
+    r"(?:^|[;&|]|\$\(|`|\b(?:if|elif|while|until|then|do)\s+)\s*!?\s*"
+    r"(?:(?:sudo|env|exec|nice|nohup|setsid|stdbuf|timeout|xargs)\s+)*"
+    r"(?:[A-Za-z_][A-Za-z0-9_]*=\S+\s+)*"
+    r"/(?:usr/)?bin/(?:python[0-9.]*|perl[0-9.]*|ruby[0-9.]*|node|nodejs|"
+    r"lua[0-9.]*|php[0-9.]*)\b",
+    re.IGNORECASE,
+)
+_SYSTEM_INTERPRETER_PATTERN = "protected-system-interpreter"
+_SYSTEM_INTERPRETER_REASON = (
+    "Tracked text must use reviewed hermetic tooling, not a system interpreter."
+)
 
 
 def _scan_root() -> Path | None:
@@ -131,6 +143,24 @@ def _is_exempt(
     if not paths:
         return False
     return any(re.search(pr, filepath) for pr in paths)
+
+
+def _is_exact_exempt(
+    filepath: str,
+    pattern: str,
+    exc_map: dict[str, list[str]],
+) -> bool:
+    """Allow protected-rule exemptions only for one exact anchored file."""
+    for path_pattern in exc_map.get(pattern) or []:
+        if not (path_pattern.startswith("^") and path_pattern.endswith("$")):
+            continue
+        body = path_pattern[1:-1]
+        unescaped = re.sub(r"\\.", "", body)
+        if re.search(r"[.*+?()[\]{}|]", unescaped):
+            continue
+        if re.fullmatch(path_pattern, filepath):
+            return True
+    return False
 
 
 def _get_files(argv_files: list[str]) -> list[str]:
@@ -283,6 +313,19 @@ def _scan_file(
     except OSError as exc:
         sys.stderr.write(f"WARNING: Cannot read {filepath}: {exc}\n")
         return errors
+
+    for line_num, line in enumerate(lines, 1):
+        if _SYSTEM_INTERPRETER_INVOCATION_RE.search(line) and not _is_exact_exempt(
+            filepath, _SYSTEM_INTERPRETER_PATTERN, exc_map
+        ):
+            _emit(
+                filepath,
+                line_num,
+                _SYSTEM_INTERPRETER_PATTERN,
+                _SYSTEM_INTERPRETER_REASON,
+                line,
+            )
+            errors += 1
 
     errors += _scan_directory_rules(filepath, lines, c_dir, exc_map)
     errors += _scan_line_rules(filepath, lines, c_banned, exc_map)

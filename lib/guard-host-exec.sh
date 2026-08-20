@@ -240,24 +240,6 @@ guard_remove_git_install_artifacts() {
     rm -f "$base/deployment-class" "$base/git-ssh-wrapper" "$base/delivery.mode"
 }
 
-purge_guard_state() {
-    local base
-    base="$(guard_state_dir)"
-    if [[ "${GUARD_PURGE_CONFIRM:-}" != "1" ]]; then
-        log_error "Refusing purge: export GUARD_PURGE_CONFIRM=1 to destroy all guard state"
-        log_error "This removes: $base (host-provision.ok, ssh-keys/, identities), /usr/lib/workspace-binary-guard/, guard logs"
-        log_error "Then run: sudo make install-host-stack"
-        return 1
-    fi
-    log_warn "Purging all workspace-guard state under $base"
-    rm -rf "$base"
-    rm -rf /usr/lib/workspace-binary-guard
-    rm -rf /usr/lib/ami-git-guard
-    rm -rf /var/log/workspace-guard
-    rm -rf /var/log/ami-git-guard
-    log_info "Guard state purged"
-}
-
 guard_install_git_ssh_wrapper() {
     local src="" candidate dest
     dest="$(guard_state_dir)/git-ssh-wrapper"

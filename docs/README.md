@@ -12,8 +12,9 @@ and operational runbooks.
 **Status: Draft** means the document is incomplete or unapproved.
 
 The deployment contract is `make deploy-ci`: construct and verify
-`/opt/.workspace-ci.candidate`, atomically publish it at `/opt/workspace-ci`,
-verify and seal the artifact, then install protected hooks as a separate step.
+`/opt/.workspace-ci.candidate` through its final logical path in a private mount
+namespace, atomically publish it at `/opt/workspace-ci`, verify and seal the
+artifact, then install protected hooks as a separate step.
 
 ## Tree
 
@@ -30,11 +31,14 @@ verify and seal the artifact, then install protected hooks as a separate step.
 | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | [`requirements/REQ-BOOT-LAYOUT.md`](requirements/REQ-BOOT-LAYOUT.md)                     | Platform-aware hermetic boot directory layout (`.boot-linux/` / `.boot-macos/`) |
 | [`requirements/REQ-DEPLOYMENT.md`](requirements/REQ-DEPLOYMENT.md)                       | Atomic immutable deployment at `/opt/workspace-ci`                              |
+| [`audits/AUDIT-DEPLOYMENT-DEADLOCK-2026-08-19.md`](audits/AUDIT-DEPLOYMENT-DEADLOCK-2026-08-19.md) | Candidate relocation and repair-deadlock audit |
+| [`decisions/DECISION-ANSIBLE-DEPLOYMENT-AUTHORITY-2026-08-19.md`](decisions/DECISION-ANSIBLE-DEPLOYMENT-AUTHORITY-2026-08-19.md) | Ansible authority and final-path namespace construction |
 | [`requirements/REQ-WIKI.md`](requirements/REQ-WIKI.md)                                   | Interactive wiki web UI (`web/`)                                                |
 | [`requirements/REQ-WIKI-RESPONSIVE.md`](requirements/REQ-WIKI-RESPONSIVE.md)             | Wiki responsive layout (breakpoints, touch targets, fluid type)                 |
 | [`requirements/REQ-PORTABILITY.md`](requirements/REQ-PORTABILITY.md)                     | Shell portability contract: process-substitution ban, capture helpers           |
 | [`requirements/REQ-CVE-SCAN.md`](requirements/REQ-CVE-SCAN.md)                           | Dependency vulnerability scanning via OSV-Scanner (live OSV.dev CVE DB)         |
 | [`requirements/REQ-MODULE-SIZE.md`](requirements/REQ-MODULE-SIZE.md)                     | Source file and module-size guardrails                                          |
+| [`requirements/REQ-BANNED-PATTERN-MATCHING.md`](requirements/REQ-BANNED-PATTERN-MATCHING.md) | Normalized banned-pattern, path, variant, and exemption matching                 |
 | [`requirements/REQ-DEPENDENCY-VALIDATION.md`](requirements/REQ-DEPENDENCY-VALIDATION.md) | Deterministic policy, optional catalogs, and live freshness workflow            |
 | [`requirements/REQ-HITL.md`](requirements/REQ-HITL.md)                                   | Human-in-the-loop authorization system                                          |
 | [`requirements/REQ-HITL-RELAY.md`](requirements/REQ-HITL-RELAY.md)                       | HITL WebSocket authorization relay                                              |

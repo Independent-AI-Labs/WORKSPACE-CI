@@ -35,6 +35,7 @@ export PATH := $(_HB_PREFIX)/opt/coreutils/libexec/gnubin:$(_HB_PREFIX)/opt/gnu-
 override BOOT_NAME := $(if $(filter Darwin,$(_OS)),.boot-macos,.boot-linux)
 override BOOT_BIN := $(CURDIR)/$(BOOT_NAME)/bin
 ANSIBLE_PLAYBOOK := $(BOOT_BIN)/ansible-playbook
+DEPLOY_ANSIBLE_PLAYBOOK := $(abspath ../../.boot-linux/bin/ansible-playbook)
 
 # uv is the hermetic runner for all Python tooling (FR-2.4). Resolve the
 # boot-bin uv by ABSOLUTE path when present: every recipe shell re-enters
@@ -579,7 +580,9 @@ enforce-syslog-limits: ## Enforce system-level log ceilings: logrotate maxsize +
 # WORKSPACE-GUARD
 # =============================================================================
 
-.PHONY: build-guard install-guard install-guard-host-exec reconcile-guard-host-exec uninstall-guard purge-guard-state check-guard check-guard-host-exec
+.PHONY: build-guard install-guard install-guard-host-exec reconcile-guard-host-exec uninstall-guard check-guard check-guard-host-exec
+
+WORKSPACE_GUARD_ROOT ?= $(abspath ../WORKSPACE-GUARD)
 
 # Operator invocation contract: guard targets depend on `ensure-repos`
 # (upstream `make` chain) which pulls every workspace repo over SSH. The
@@ -591,20 +594,17 @@ enforce-syslog-limits: ## Enforce system-level log ceilings: logrotate maxsize +
 # chowns that tree back to SUDO_USER when run under sudo, so agent-uid
 # rebuilds stay usable. check-guard is read-only and runs as the agent.
 build-guard: ## Build git-guard binary (operator: sudo make build-guard)
-	$(SCRIPT_BASH) scripts/bootstrap-workspace-guard build-only
+	WORKSPACE_GUARD_ROOT="$(WORKSPACE_GUARD_ROOT)" $(SCRIPT_BASH) scripts/bootstrap-workspace-guard build-only
 
 install-guard: ## REMOVED: use install-guard-host-exec
 	echo "ERROR: make install-guard is removed. Use: make install-guard-host-exec" >&2
 	exit 1
 
 install-guard-host-exec: build-guard ## Install git-guard (host-exec; operator: sudo make install-guard-host-exec)
-	$(SUDO) $(SCRIPT_BASH) scripts/bootstrap-workspace-guard install-host-exec
+	$(SUDO) WORKSPACE_GUARD_ROOT="$(WORKSPACE_GUARD_ROOT)" $(SCRIPT_BASH) scripts/bootstrap-workspace-guard install-host-exec
 
 uninstall-guard: ## Uninstall git-guard, restore stock git; preserve provision state (operator: sudo make uninstall-guard)
-	$(SUDO) $(SCRIPT_BASH) scripts/bootstrap-workspace-guard uninstall
-
-purge-guard-state: ## Destroy all guard state (requires GUARD_PURGE_CONFIRM=1)
-	$(SUDO) $(SCRIPT_BASH) scripts/bootstrap-workspace-guard purge-guard-state
+	$(SUDO) WORKSPACE_GUARD_ROOT="$(WORKSPACE_GUARD_ROOT)" $(SCRIPT_BASH) scripts/bootstrap-workspace-guard uninstall
 
 reconcile-guard-host-exec: build-guard ## Force rebuild + reinstall git guard and aux artifacts (operator: sudo make reconcile-guard-host-exec)
 	GUARD_FORCE_RECONCILE=1 GUARD_SKIP_BUILD=1 $(MAKE) install-guard-host-exec
@@ -614,8 +614,8 @@ check-guard: ## REMOVED: use check-guard-host-exec
 	exit 1
 
 check-guard-host-exec: ## Check host-exec git-guard installation (read-only, runs as agent)
-	$(SCRIPT_BASH) scripts/bootstrap-workspace-guard check-host-exec
+	WORKSPACE_GUARD_ROOT="$(WORKSPACE_GUARD_ROOT)" $(SCRIPT_BASH) scripts/bootstrap-workspace-guard check-host-exec
 
 .PHONY: deploy-ci
 deploy-ci: ## Build and atomically publish /opt/workspace-ci (root only)
-	$(SCRIPT_BASH) scripts/deploy-ci
+	./scripts/run-deploy-ci "$(CURDIR)" "$(DEPLOY_ANSIBLE_PLAYBOOK)"

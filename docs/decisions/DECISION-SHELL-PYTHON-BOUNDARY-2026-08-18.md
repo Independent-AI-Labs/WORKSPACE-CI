@@ -33,6 +33,12 @@ Shell and installed CLI tools are sufficient for process orchestration,
 filesystem checks exposed by `find`, `stat`, and `lsattr`, Git queries, checksum
 commands, and JSON reshaping with `jq`.
 
+Immutable descendant verification is therefore a shell/native-tool operation.
+It uses `find -print0`, `xargs -0 -P`, batched `lsattr`, and `awk` aggregation.
+Python, system Python, project Python, and other language runtimes are not
+justified for this operation. Native batching replaces per-path shell pipelines
+without crossing the documented shell/Python boundary.
+
 ## Audited Deletions
 
 The 2026-08-18 audit proved these Python removals without reducing behavior:

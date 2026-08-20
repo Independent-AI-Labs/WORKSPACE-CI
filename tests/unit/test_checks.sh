@@ -185,6 +185,83 @@ EOF
 }
 _run_test "banned_words: non-exempted file caught" test_banned_words_non_exempted
 
+test_banned_words_system_interpreter_path_independent() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/banned_words.yaml" <<'EOF'
+version: "4.0.0"
+universal_exceptions:
+  - paths: ['.*']
+    patterns: ['.*']
+banned: []
+EOF
+    local path
+    for path in root-level arbitrary/deep/new-name renamed.tool extensionless; do
+        mkdir -p "$(dirname "$path")"
+        printf '/usr/bin/python3 helper.py\n' > "$path"
+        ! ci_check_banned_words "$path" || return 1
+    done
+}
+_run_test "banned_words: system interpreter enforcement is path independent" test_banned_words_system_interpreter_path_independent
+
+test_banned_words_system_interpreter_wrapper_variants() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/banned_words.yaml" <<'EOF'
+version: "4.0.0"
+banned: []
+EOF
+    cat > arbitrary-name <<'EOF'
+env MODE=check /USR/BIN/PYTHON3.13 helper.py
+safe && /bin/perl helper.pl
+if ! /usr/bin/python3 helper.py; then exit 1; fi
+while /bin/ruby helper.rb; do break; done
+value=$(/usr/bin/node helper.js)
+EOF
+    ! ci_check_banned_words arbitrary-name
+}
+_run_test "banned_words: system interpreter wrappers and case blocked" test_banned_words_system_interpreter_wrapper_variants
+
+test_banned_words_system_interpreter_exact_exemption() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/banned_words.yaml" <<'EOF'
+version: "4.0.0"
+universal_exceptions:
+  - paths: ['^quoted-fixture\.md$']
+    patterns: ['protected-system-interpreter']
+banned: []
+EOF
+    printf '/usr/bin/python3 helper.py\n' > quoted-fixture.md
+    ci_check_banned_words quoted-fixture.md
+}
+_run_test "banned_words: exact file and rule exemption accepted" test_banned_words_system_interpreter_exact_exemption
+
+test_banned_words_system_interpreter_broad_exemption_rejected() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/banned_words.yaml" <<'EOF'
+version: "4.0.0"
+universal_exceptions:
+  - paths: ['.*']
+    patterns: ['protected-system-interpreter']
+banned: []
+EOF
+    printf '/usr/bin/python3 helper.py\n' > quoted-fixture.md
+    ! ci_check_banned_words quoted-fixture.md
+}
+_run_test "banned_words: broad protected-rule exemption rejected" test_banned_words_system_interpreter_broad_exemption_rejected
+
+test_banned_words_hermetic_python_path_independent() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/banned_words.yaml" <<'EOF'
+version: "4.0.0"
+banned: []
+EOF
+    mkdir -p newly-created
+    cat > newly-created/arbitrary <<'EOF'
+/opt/workspace-ci/.boot-linux/bin/uv run --project /opt/workspace-ci --no-sync python -m ci.checks
+EOF
+    ci_check_banned_words newly-created/arbitrary
+}
+_run_test "banned_words: hermetic Python remains path independent" test_banned_words_hermetic_python_path_independent
+
 test_banned_words_filename_rule() {
     _source_lib
     cat > "$CI_CONFIG_DIR/banned_words.yaml" <<'EOF'

@@ -13,7 +13,7 @@ _run_test "generate-hooks rejects empty entry" test_generate_hooks_rejects_empty
 
 test_generate_hooks_binds_protected_deployment() {
     local root="$TEST_TMP/protected-hooks" output="$TEST_TMP/generated"
-    local python_path="/opt/workspace-ci/.venv/bin""/python"
+    local python_path="/opt/workspace-ci/.boot-linux/bin/uv run --project /opt/workspace-ci --no-sync python"
     mkdir -p "$root" "$output"
     git -C "$root" init -q
     printf 'repos:\n  - repo: local\n    hooks:\n      - id: check\n        name: Check\n        entry: "true"\n        language: system\n        stages: [pre-commit]\n      - id: python-check\n        name: Python check\n        entry: "uv run python -m ci.check_dependency_versions validate"\n        language: system\n        stages: [pre-commit]\n' > "$root/.pre-commit-config.yaml"

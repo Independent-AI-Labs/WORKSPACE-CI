@@ -34,8 +34,9 @@ Darwin -> .boot-macos
 ```
 
 Source-development commands resolve `BOOT_BIN` from their current checkout.
-Candidate construction resolves it from `/opt/.workspace-ci.candidate`.
-Protected runtime commands resolve it from `/opt/workspace-ci`.
+Deployment construction resolves it from `/opt/workspace-ci` inside the private
+mount namespace, where that path is a bind mount of the physical candidate.
+Protected runtime commands resolve it from `/opt/workspace-ci` on the host.
 
 The Makefile fixes `BOOT_NAME` and `BOOT_BIN`; environment and command-line
 assignment cannot replace them for protected operations. Tools are invoked by
@@ -49,6 +50,12 @@ scripts keep interpreter pools, tool environments, runtimes, and package state
 inside `.boot-linux`; temporary downloads use bounded temporary paths and are
 removed on exit.
 
+Hermetic means that the interpreter and dependencies are owned by the artifact;
+it does not make a generated environment portable. Ansible creates environments
+through the final pathname in a private mount namespace and verifies symlinks,
+`pyvenv.cfg`, generated shebangs, and executable behavior. It rejects physical
+candidate-path references instead of rewriting them.
+
 Downloaded artifacts are checked against the dependency catalog before
 installation. Locally built tools use locked inputs and record or verify the
 resulting executable identity.
@@ -60,6 +67,12 @@ After publication, `/opt/workspace-ci/.boot-linux` is verified by absolute path
 and sealed with the rest of the artifact. No post-publication operation writes
 inside it.
 
+Pre-publication acceptance runs the interpreter, dependency imports, generated
+entrypoints, and protected-hook commands through the namespace's
+`/opt/workspace-ci`. A separate isolated fixture performs the real publication
+transition. Final-path acceptance repeats those checks on the host before
+success is reported.
+
 ## 5. Acceptance
 
 The test matrix covers:
@@ -70,4 +83,6 @@ The test matrix covers:
 - downloaded and built artifact identity;
 - no HOME or sibling-project writes;
 - missing-tool and missing-directory failure;
+- injected candidate paths in symlinks, `pyvenv.cfg`, and shebangs;
+- successful interpreter, import, entrypoint, and hook execution after rename;
 - root ownership, modes, and immutable attributes in the deployed artifact.

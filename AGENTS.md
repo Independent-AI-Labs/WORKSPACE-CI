@@ -34,8 +34,9 @@ alternate release, or fleet rollout.
 
 `make deploy-ci` clones the exact reviewed upstream tree into
 `/opt/.workspace-ci.candidate`. That checkout builds and verifies its complete
-artifact with local `.boot-linux` tools before atomic publication at
-`/opt/workspace-ci`.
+artifact with local `.boot-linux` tools through `/opt/workspace-ci` in a private
+mount namespace before atomic publication. The host's current artifact remains
+hidden from candidate construction; generated runtime paths are never rewritten.
 
 ## Clean Installation
 

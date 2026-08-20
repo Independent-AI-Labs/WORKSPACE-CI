@@ -160,9 +160,9 @@ BLOCKED_CASES: list[SwallowCase] = [
 
 # ── PASSING: the "fixed" safe variant of each catalog pattern ────────────
 PASSING_CASES: list[SwallowCase] = [
-    # Pattern 1 fixed: command with register + failed_when guard + debug
+    # Replaying a registered result displays output only after process exit.
     SwallowCase(
-        "cat1_safe_command_with_register",
+        "cat1_buffered_command_with_register",
         "res/ansible/dev.yml",
         [
             "- name: Build container images",
@@ -173,10 +173,10 @@ PASSING_CASES: list[SwallowCase] = [
             "  ansible.builtin.debug:",
             "    var: build_result.stdout_lines",
         ],
-        _SHOULD_PASS,
-        None,
+        _SHOULD_BLOCK,
+        "ansible-register-output-buffered",
     ),
-    # Pattern 2 fixed: register with real failed_when (not false) + debug
+    # A real failure guard does not make delayed output live.
     SwallowCase(
         "cat2_safe_shell_register_real_guard",
         "res/ansible/dev.yml",
@@ -191,8 +191,8 @@ PASSING_CASES: list[SwallowCase] = [
             "  ansible.builtin.debug:",
             "    var: test_result.stdout_lines",
         ],
-        _SHOULD_PASS,
-        None,
+        _SHOULD_BLOCK,
+        "ansible-register-output-buffered",
     ),
     # Pattern 3 fixed: failed_when with a real condition (not false)
     SwallowCase(
@@ -206,7 +206,7 @@ PASSING_CASES: list[SwallowCase] = [
         _SHOULD_PASS,
         None,
     ),
-    # Pattern 4 fixed: register + debug display (no failed_when:false)
+    # Explicit process output streaming bypasses Ansible's buffered result.
     SwallowCase(
         "cat4_safe_register_with_debug",
         "res/ansible/dev.yml",
@@ -216,6 +216,7 @@ PASSING_CASES: list[SwallowCase] = [
             "    podman exec -i clickhouse-client < init.sql",
             "  register: ch_init",
             "  changed_when: true",
+            "    >> /var/log/clickhouse-init.log 2>&1",
             "- name: Show init output",
             "  ansible.builtin.debug:",
             "    var: ch_init.stdout_lines",

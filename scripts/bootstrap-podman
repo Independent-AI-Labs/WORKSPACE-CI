@@ -351,7 +351,7 @@ fi
 
 # Create containers.conf to point Podman to helper binaries in venv
 log_info "Configuring Podman to use venv helper binaries"
-CONTAINERS_CONF_DIR="${HOME}/.config/containers"
+CONTAINERS_CONF_DIR="${CONTAINERS_CONF_DIR:-${HOME}/.config/containers}"
 CONTAINERS_CONF="${CONTAINERS_CONF_DIR}/containers.conf"
 mkdir -p "${CONTAINERS_CONF_DIR}"
 
@@ -367,6 +367,8 @@ crun = ["${VENV_DIR}/bin/crun"]
 network_backend = "netavark"
 default_rootless_network_cmd = "slirp4netns"
 EOF
+[[ -s "${CONTAINERS_CONF}" ]] || { log_error "Failed to create ${CONTAINERS_CONF}"; exit 1; }
+log_info "✓ Created ${CONTAINERS_CONF}"
 
 # Create registries.conf for image pulling
 REGISTRIES_CONF="${CONTAINERS_CONF_DIR}/registries.conf"
@@ -377,6 +379,7 @@ unqualified-search-registries = ["docker.io"]
 location = "docker.io"
 EOF
 
+[[ -s "${REGISTRIES_CONF}" ]] || { log_error "Failed to create ${REGISTRIES_CONF}"; exit 1; }
 log_info "✓ Created ${REGISTRIES_CONF}"
 
 # Create policy.json for image signature verification
@@ -457,4 +460,3 @@ log_info "  2. Or activate venv: source ${VENV_DIR}/bin/activate"
 log_info "  3. Run podman commands: podman ps, podman-compose up, etc."
 log_info "  4. Or use docker commands: docker ps, docker-compose up (they map to podman)"
 log_info ""
-log_info "To reset corrupted state: $0 --reset"

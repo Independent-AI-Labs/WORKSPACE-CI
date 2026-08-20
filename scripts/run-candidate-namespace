@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Run a command against the deployment candidate at its final logical path.
+set -euo pipefail
+
+candidate=${1:-}
+owner=${2:-}
+home=${3:-}
+entry=${4:-}
+shift "$(( $# < 4 ? $# : 4 ))"
+
+[[ $EUID -eq 0 && -n $candidate && -n $owner && -n $home && -n $entry && $# -gt 0 ]] \
+    || { printf 'usage: run-candidate-namespace CANDIDATE OWNER HOME ENTRY COMMAND...\n' >&2; exit 2; }
+[[ $candidate == /* && ! -L $candidate && -d $candidate ]] \
+    || { printf 'run-candidate-namespace: candidate must be an absolute real directory\n' >&2; exit 1; }
+[[ $entry == /* && ! -L $entry && -f $entry ]] \
+    || { printf 'run-candidate-namespace: entry must be an absolute regular file\n' >&2; exit 1; }
+
+exec /usr/bin/unshare --mount --propagation private -- \
+    /bin/bash "$entry" \
+    "$candidate" "$owner" "$home" "$@"

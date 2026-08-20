@@ -83,6 +83,10 @@ constructs and verifies a complete candidate under `/opt`, atomically publishes
 the candidate at `/opt/workspace-ci`, verifies and seals the artifact, then
 installs protected hooks as a separate operation.
 
+During construction, a private mount namespace exposes the physical candidate
+at its final logical pathname. This creates non-portable Python environments at
+the path where they will run without changing the host's current artifact.
+
 For the deployment and hook contracts, see
 [`docs/requirements/REQ-DEPLOYMENT.md`](docs/requirements/REQ-DEPLOYMENT.md),
 [`docs/requirements/REQ-BOOT-LAYOUT.md`](docs/requirements/REQ-BOOT-LAYOUT.md),

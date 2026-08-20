@@ -36,6 +36,16 @@ to REQ-DEPLOYMENT.
     part of `/opt/workspace-ci`.
 12. macOS boot support remains developer-owned and is outside the protected
     deployment contract.
+13. Candidate-local interpreters and environments MUST remain hermetic and MUST
+    be created through `/opt/workspace-ci` in the deployment's private mount
+    namespace. Moving or rewriting an environment created through the physical
+    candidate pathname is forbidden.
+14. Boot-layout verification MUST inspect both symlinks and regular runtime
+    metadata, including `pyvenv.cfg` and generated shebangs, for candidate-path
+    coupling.
+15. Acceptance MUST execute the boot interpreter and required environments
+    through the final pathname during isolated construction and after the exact
+    candidate-to-deployed pathname transition.
 
 ## 3. Acceptance
 
@@ -43,3 +53,5 @@ Tests MUST prove platform naming, checkout-local resolution, fixed protected
 resolution, candidate placement, digest and executable verification, no path
 override, no HOME escape, no symlink escape, ownership/mode enforcement, and
 final immutable sealing through REQ-DEPLOYMENT.
+The deployment acceptance also covers candidate-path injection into symlinks,
+virtual-environment configuration, and generated entrypoints.

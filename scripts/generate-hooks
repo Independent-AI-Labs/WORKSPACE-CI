@@ -47,7 +47,7 @@ for _stage in pre-commit commit-msg pre-push; do
             [[ -n "$h_id" ]] || continue
             [[ -n "$h_entry" ]] || { ci_fail "Hook '$h_id' has empty entry"; exit 1; }
             h_cmd="${h_entry//bash -c/\"\$BASH\" -c}"
-            h_cmd="${h_cmd//uv run python -m ci./\/opt\/workspace-ci\/.venv\/bin\/python -m ci.}"
+            h_cmd="${h_cmd//uv run python -m ci./\/opt\/workspace-ci\/.boot-linux\/bin\/uv run --project \/opt\/workspace-ci --no-sync python -m ci.}"
             [[ -n "$h_args" ]] && h_cmd="$h_cmd $h_args"
             printf 'ci_info "Running: %s..."\n' "$h_name"
             if [[ "$_stage" == commit-msg ]]; then

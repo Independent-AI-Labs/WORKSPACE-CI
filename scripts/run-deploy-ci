@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+[[ $# -eq 2 ]] || {
+    printf 'usage: sudo %s SOURCE_ROOT ANSIBLE_PLAYBOOK\n' "$0" >&2
+    exit 2
+}
+
+log=$(mktemp /tmp/workspace-ci-deploy.XXXXXX)
+ansible_pid=
+tail_pid=
+keep_log=false
+cleanup() {
+    if [[ -n $tail_pid && -d /proc/$tail_pid ]]; then
+        if ! kill "$tail_pid"; then
+            printf 'warning: could not stop deployment log process %s\n' "$tail_pid" >&2
+        fi
+        if ! wait "$tail_pid"; then
+            printf 'deployment log stopped during cleanup\n' >&2
+        fi
+    fi
+    if [[ -n $ansible_pid && -d /proc/$ansible_pid ]]; then
+        if ! kill "$ansible_pid"; then
+            printf 'warning: could not stop ansible-playbook process %s\n' "$ansible_pid" >&2
+        fi
+        if ! wait "$ansible_pid"; then
+            printf 'ansible-playbook stopped during cleanup\n' >&2
+        fi
+    fi
+    if [[ $keep_log == false ]]; then
+        rm -f "$log"
+    fi
+}
+trap cleanup EXIT
+
+"$2" \
+    "$1/res/ansible/deploy-ci.yml" \
+    -e "source_root=$1" \
+    -e "deploy_output=$log" &
+ansible_pid=$!
+
+tail --pid="$ansible_pid" -n +1 -F "$log" &
+tail_pid=$!
+if wait "$ansible_pid"; then
+    status=0
+else
+    status=$?
+fi
+ansible_pid=
+wait "$tail_pid"
+tail_pid=
+if [[ $status -ne 0 ]]; then
+    keep_log=true
+    chown --reference="$1" "$log"
+    chmod 0600 "$log"
+    printf 'failed deployment log retained at %s\n' "$log" >&2
+fi
+exit "$status"

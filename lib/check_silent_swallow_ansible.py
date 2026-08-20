@@ -185,6 +185,12 @@ def _has_unconditional_display(
             or f"{reg_var}.stderr" in nt
             or f"{reg_var}.results" in nt
         ):
+            task_start = next(
+                (k for k in range(j, i, -1) if _TASK_NAME_RE.match(lines[k].text)),
+                i,
+            )
+            if not any("ansible.builtin.debug:" in lines[k].text for k in range(task_start, j + 1)):
+                continue
             has_when_guard = False
             for k in range(
                 j - _WHEN_GUARD_WINDOW,
@@ -214,9 +220,15 @@ def _check_ansible_register_output_swallowed(
     reg_var, _ = _find_registered_var(lines, i)
     if not reg_var or reg_var in _REG_VAR_BLOCKLIST:
         return None
+    task_end = next(
+        (j for j in range(i + 1, len(lines)) if _TASK_NAME_RE.match(lines[j].text)),
+        len(lines),
+    )
+    if any(">>" in line.text for line in lines[i:task_end]):
+        return None
     if not _has_unconditional_display(lines, i, reg_var):
         return "ansible-register-output-swallowed"
-    return None
+    return "ansible-register-output-buffered"
 
 
 def detect_registered_output_swallow(added_lines):

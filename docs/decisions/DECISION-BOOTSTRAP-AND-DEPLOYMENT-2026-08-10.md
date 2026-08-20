@@ -4,6 +4,9 @@
 **Status:** Accepted
 **Authority:** Human decisions recorded during the 2026-08-10 working session.
 
+Authority and relocation portions are superseded by
+[DECISION-ANSIBLE-DEPLOYMENT-AUTHORITY-2026-08-19](DECISION-ANSIBLE-DEPLOYMENT-AUTHORITY-2026-08-19.md).
+
 This document is the decision authority for bootstrap and deployment wording.
 
 ## Decisions
@@ -26,6 +29,10 @@ record.
 `/opt/.workspace-ci.candidate`. The candidate builds and verifies its complete
 artifact using local `.boot-linux` tools. `/opt/workspace-ci` is the immutable
 deployed target.
+
+As superseded by the 2026-08-19 decision, runtime construction uses a private
+mount namespace that exposes the physical candidate at `/opt/workspace-ci`.
+Generated environments are not relocated or rewritten.
 
 First installation uses a same-filesystem rename. Replacement uses Linux
 `renameat2(RENAME_EXCHANGE)` to atomically exchange the complete non-empty

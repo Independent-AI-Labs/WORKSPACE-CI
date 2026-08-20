@@ -1,7 +1,7 @@
 # SPEC-DEPLOYMENT: Immutable WORKSPACE-CI Deployment
 
 **Date:** 2026-08-16
-**Status:** Target specification; implementation pending
+**Status:** Active remediation specification; current implementation non-compliant
 **Requirements:** [REQ-DEPLOYMENT](../requirements/REQ-DEPLOYMENT.md)
 
 ## 1. Layout
@@ -25,24 +25,31 @@ alternate active path.
 ## 2. Entrypoint
 
 The operator runs `make deploy-ci` from the writable `WORKSPACE-CI` source
-checkout and assumes responsibility for that root invocation. The Makefile owns
-the deployment flow; no separate installed control plane is introduced.
+checkout and assumes responsibility for that root invocation. The target invokes
+the repository's root-owned Ansible deployment playbook or role. Ansible owns
+the machine transition; no separate project, daemon, or installed deployment
+control plane is introduced.
 
 The target:
 
 1. requires Linux and effective UID 0;
 2. acquires `/run/lock/workspace-ci-deploy.lock`;
-3. verifies required system calls, filesystem support, and immutable-attribute
-   support before touching the current artifact;
+3. verifies mount-namespace, mount, atomic rename/exchange, filesystem, and
+   immutable-attribute support before touching the current artifact;
 4. removes only `/opt/.workspace-ci.candidate` if it exists from an interrupted
    invocation.
+
+The Ansible deployment role uses host provisioning tools and the fresh
+candidate. Before publication it does not source, import, or execute anything
+below `/opt/workspace-ci`. The current artifact may be absent or unusable.
 
 ## 3. Source Binding
 
 Deployment fetches `origin/main`, resolves its commit and root tree, and rejects
-a writable source checkout that is dirty, untracked, on another branch, ahead,
-behind, or divergent. The candidate is cloned from the reviewed upstream
-identity and detached at the resolved commit.
+a writable source checkout that is on another branch, ahead, behind, or
+divergent. Dirty and untracked worktree content is ignored because the candidate
+is cloned from the reviewed upstream identity and detached at the resolved
+commit.
 
 The writable worktree supplies the operator entrypoint only. Its files are not
 copied into the candidate.
@@ -56,19 +63,59 @@ mount boundary. All construction happens at
 1. clone and checkout the exact reviewed commit;
 2. verify remote, commit, and root tree;
 3. reject tracked symbolic links;
-4. run `make bootstrap` using candidate-local paths;
-5. run candidate installation/build steps;
-6. install locked runtime dependencies into the candidate;
-7. normalize ownership and modes;
-8. run artifact integrity and functional checks;
-9. apply and verify immutable attributes on every non-symlink descendant while
+4. enter a private mount namespace and make mount propagation private;
+5. retain access to the physical candidate through a namespace-private bind
+   mount, hide the host `/opt` with a namespace-private temporary mount, and
+   bind the candidate at `/opt/workspace-ci` in that namespace;
+6. run `make bootstrap`, candidate installation/build steps, and locked runtime
+   dependency installation through `/opt/workspace-ci` in that namespace;
+7. execute the interpreter, required imports, generated entrypoints, and every
+   protected-hook command through that final logical pathname;
+8. leave the namespace and reject candidate-path coupling in symlinks,
+   `pyvenv.cfg`, generated shebangs, entrypoints, and other runtime metadata;
+   deployment does not rewrite those references;
+9. normalize ownership and modes;
+10. run artifact integrity and functional checks;
+11. apply and verify immutable attributes on every non-symlink descendant while
    leaving only the candidate root inode renameable; sealed parent directories
    protect generated symlink entries because Linux does not support `chattr` on
    symlink inodes;
-10. record expected values in process memory for final-path verification.
+12. record expected values in process memory for final-path verification.
 
-No artifact build or dependency installation runs against
-`/opt/workspace-ci`.
+Immutable descendant verification is a native bulk shell operation, not a
+per-path loop and not a Python program. `find -print0` creates a NUL-delimited
+inventory, native tools measure its total, and `xargs -0` passes fixed-size
+batches to `lsattr`. `xargs -P` provides bounded parallelism. The default worker
+count is four and `CI_DEPLOY_VERIFY_JOBS` is the reviewed tuning control. `awk`
+validates attribute records and aggregates batch completion. `set -o pipefail`
+and `xargs` status propagation make any mutable path, malformed result, or
+worker failure fail deployment.
+
+The native aggregation pipeline owns operator progress for this bulk phase. It
+updates one status line from actual completed-batch path counts and prints a
+final completed/total summary. It does not print successful paths individually.
+Failed attribute records are printed individually. Shell execution tracing is
+disabled only while this pipeline owns output, preventing hundreds of thousands
+of trace lines from obscuring its real progress. No Python executable, project
+virtual environment, or host language runtime participates in this operation.
+
+The namespace exposes only the physical candidate at `/opt/workspace-ci`.
+Nothing in the host mount namespace changes, and no pre-publication process can
+resolve the current artifact through that pathname.
+
+Python virtual environments are created through their final logical pathname.
+They are never created at the physical candidate pathname and then moved or
+rewritten. This follows Python's requirement to recreate environments at their
+target location while retaining complete candidate construction before atomic
+publication.
+
+Candidate and current artifacts must coexist until publication. Resource
+preflight therefore uses a measured complete-candidate inode and byte budget
+plus documented margin. Deployment does not use an unexplained fixed threshold.
+The broken deployed artifact measured on 2026-08-19 contains 114,618 filesystem
+objects and occupies 4,185,591,808 allocated bytes. These values are a baseline,
+not a preflight threshold; a successful clean candidate build must supply the
+authoritative peak measurement.
 
 ## 5. Atomic Publication
 
@@ -123,13 +170,22 @@ performs no writes inside the artifact. It verifies at least:
 - root ownership and fixed modes;
 - source commit and root tree;
 - expected file inventory and absence of tracked symlinks;
+- absence of dangling generated symlinks;
+- absence of unresolved candidate-path runtime metadata;
 - boot-tool and runtime executable identities;
+- deployed interpreter startup and required dependency imports;
+- generated entrypoint and protected-hook command execution;
 - no group/other writable artifact paths.
 
 After verification, `chattr +i` is applied recursively and `lsattr` confirms
 the result. The artifact root itself is sealed because its parent `/opt` is
 root-controlled; later deployment may clear immutability only as part of the
 locked root replacement operation.
+
+Recursive ownership, mode normalization, and immutable mutation retain their
+native batched traversal. They are not parallelized without measurement because
+parallel metadata writes can increase filesystem contention. Read-only
+immutable verification uses bounded parallelism because batches are independent.
 
 ## 7. Hook Installation
 
@@ -150,6 +206,10 @@ Hook installation is not part of artifact publication. If it fails:
 3. no displaced artifact is restored;
 4. protected Git operations fail closed until a later successful installation.
 
+After installation, Ansible executes each protected hook in its read-only
+verification mode. Deployment is not reported successful until these checks
+run from the sealed `/opt/workspace-ci` artifact.
+
 ## 8. Failure Semantics
 
 | Failure point                 | Result                                                                     |
@@ -160,9 +220,29 @@ Hook installation is not part of artifact publication. If it fails:
 | Final verification or sealing | Command fails visibly; no automatic restoration occurs.                    |
 | Hook installation             | New artifact remains sealed; hooks remain a separate failed operation.     |
 
-Rerunning `make deploy-ci` is the only convergence operation.
+Rerunning the Ansible-owned `make deploy-ci` flow is the only convergence
+operation. Because candidate construction never executes the current artifact,
+the same operation converges when `/opt/workspace-ci` is absent or unusable.
 
-## 9. Source Basis
+## 9. Acceptance Strategy
+
+The deployment acceptance suite runs on Linux with the same fixed candidate and
+deployed paths used in production, inside an isolated machine or container
+fixture capable of atomic directory exchange and immutable attributes.
+
+The suite injects failures into candidate symlinks, `pyvenv.cfg`, generated
+shebangs, and hook commands. It proves that these defects are rejected rather
+than rewritten, performs the actual rename or exchange, and then executes the
+complete runtime. It also starts from an unusable current artifact and records
+all pre-publication filesystem and process accesses to prove Ansible did not
+read or execute that tree. Namespace tests prove the host view of
+`/opt/workspace-ci` remains unchanged during construction.
+
+The defective implementation must fail each injected path-coupling case. The
+replacement is accepted only when first installation, healthy replacement, and
+unusable-current replacement all pass through the same Ansible role.
+
+## 10. Source Basis
 
 - POSIX `rename()` guarantees atomic replacement where the destination type is
   replaceable, but cannot replace a non-empty directory.
@@ -178,6 +258,8 @@ Rerunning `make deploy-ci` is the only convergence operation.
 Primary references:
 
 - [Linux `rename(2)`](https://man7.org/linux/man-pages/man2/rename.2.html)
+- [Linux mount namespaces](https://man7.org/linux/man-pages/man7/mount_namespaces.7.html)
+- [Python virtual environments](https://docs.python.org/3/library/venv.html)
 - [POSIX `rename()`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/rename.html)
 - [Linux `chattr(1)`](https://man7.org/linux/man-pages/man1/chattr.1.html)
 - [Capistrano deployment structure](https://capistranorb.com/documentation/getting-started/structure/)
@@ -188,8 +270,11 @@ Primary references:
 
 | Item                              | Status   |
 | --------------------------------- | -------- |
-| Specification                     | Complete |
-| Deployment script and Make target | Implemented; final installation verification active |
+| Specification                     | Revised after 2026-08-19 audit |
+| Ansible deployment role           | Implemented; Linux acceptance pending |
+| Make target delegation            | Implemented |
+| Final-path namespace construction | Implemented; privileged run pending |
 | Atomic exchange wrapper           | Implemented |
 | Hook/GUARD path migration         | Implemented through sealed installer trust |
-| Linux tests                       | Pending  |
+| Real-transition fault tests       | Partial; privileged deployment pending |
+| Linux acceptance                  | Failed on audited deployment |

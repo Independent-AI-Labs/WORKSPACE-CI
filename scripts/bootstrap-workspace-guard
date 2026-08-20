@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bootstrap: Build and install capability-based workspace guard (git)
-# Called from CI Makefile: lives in the CI repo, builds from sibling WORKSPACE-GUARD.
+# Called from CI Makefile with the explicit WORKSPACE-GUARD source path.
 set -euo pipefail
 
 _SELF="${BASH_SOURCE[0]:-$0}"
@@ -9,7 +9,7 @@ _SCRIPT_DIR="$(cd "$(dirname "$_SELF")" && pwd)"
 _CI_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
 WORKSPACE_ROOT="$(cd "$_CI_ROOT/../.." && pwd)"
 
-_guard_dir="$_CI_ROOT/../WORKSPACE-GUARD"
+_guard_dir="${WORKSPACE_GUARD_ROOT:?WORKSPACE_GUARD_ROOT must name the reviewed WORKSPACE-GUARD checkout}"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
@@ -17,7 +17,7 @@ log_info()  { echo -e "${GREEN}[INFO]${NC} $*"; }
 log_warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $*"; }
 
-MODE="${1:-install-host-exec}"  # install-host-exec | check-host-exec | uninstall | purge-guard-state | build-only
+MODE="${1:-install-host-exec}"  # install-host-exec | check-host-exec | uninstall | build-only
 
 _guard_removed_target_error() {
     local removed_target="$1" replacement="$2"
@@ -249,7 +249,6 @@ check_guard() {
 
 case "$MODE" in
     uninstall) uninstall_guard ;;
-    purge-guard-state) purge_guard_state ;;
     check-host-exec) check_guard ;;
     check) _guard_removed_target_error check-guard check-guard-host-exec ;;
     build-only) build_guard_binary ;;

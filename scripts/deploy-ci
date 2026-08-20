@@ -7,15 +7,50 @@ readonly CANDIDATE=/opt/.workspace-ci.candidate
 readonly DEPLOYED=/opt/workspace-ci
 readonly LOCK=/run/lock/workspace-ci-deploy.lock
 readonly BRANCH=main
-readonly ATTRS="$SOURCE_ROOT/ci/deploy_immutability.py"
-published=0
+readonly VERIFY_IMMUTABLE="$SOURCE_ROOT/scripts/verify-immutable"
+readonly OLD=/opt/.workspace-ci.old
+readonly CANDIDATE_NAMESPACE="$SOURCE_ROOT/scripts/run-candidate-namespace"
+readonly CANDIDATE_NAMESPACE_ENTRY="$SOURCE_ROOT/scripts/enter-candidate-namespace.sh"
 candidate_uid=0
 
 die() { printf 'deploy-ci: %s\n' "$*" >&2; exit 1; }
 git_root() { env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' git "$@"; }
 
+remote_check=$(git_root -C "$SOURCE_ROOT" remote get-url origin)
+case $remote_check in
+    http://*@*|https://*@*|http://*\?*|https://*\?*)
+        die "credential-bearing HTTP origin URLs are forbidden"
+        ;;
+esac
+unset remote_check
+PS4='+ ${BASH_SOURCE}:${LINENO}: '
+set -x
+
 immutable() {
     /usr/bin/lsattr -d -- "$1" | awk '{print $1}' | grep -q i
+}
+
+seal_tree() {
+    find "$1" -xdev ! -type l -exec /usr/bin/chattr "${2:-+i}" -- {} +
+}
+
+attr_root() {
+    /usr/bin/chattr "$1" -- "$2"
+}
+
+verify_candidate_paths() {
+    local name
+    [[ -d "$CANDIDATE/.boot-linux" && -d "$CANDIDATE/.venv" ]] \
+        || die "candidate runtime directories are missing"
+    for name in containers.conf registries.conf; do
+        [[ -s "$CANDIDATE/.boot-linux/containers/$name" ]] \
+            || die "candidate Podman configuration is missing: $name"
+    done
+    [[ -z $(find "$CANDIDATE/.boot-linux" "$CANDIDATE/.venv" -xdev -type l -printf '%l\n' \
+        | grep -F -- "$CANDIDATE") ]] \
+        || die "candidate runtime symlinks reference the physical candidate path"
+    [[ -z $(grep -rlF -- "$CANDIDATE" "$CANDIDATE/.boot-linux" "$CANDIDATE/.venv") ]] \
+        || die "candidate runtime files reference the physical candidate path"
 }
 
 remove_candidate() {
@@ -25,22 +60,34 @@ remove_candidate() {
     current_uid=$(stat -c %u "$CANDIDATE")
     [[ $current_uid -eq 0 || $current_uid -eq $candidate_uid ]] \
         || die "candidate has unexpected owner uid $current_uid"
-    /usr/bin/python3 "$ATTRS" unseal-candidate
+    seal_tree "$CANDIDATE" -i
     find "$CANDIDATE" -xdev -depth -delete
+}
+
+build_candidate() {
+    "$CANDIDATE_NAMESPACE" "$CANDIDATE" "$owner" "$home" \
+        "$CANDIDATE_NAMESPACE_ENTRY" \
+        "$SOURCE_ROOT/scripts/build-candidate.sh"
 }
 
 cleanup() {
     local status=$?
     trap - EXIT INT TERM
     if [[ -d "$DEPLOYED" && ! -L "$DEPLOYED" ]] && ! immutable "$DEPLOYED"; then
-        if ! /usr/bin/python3 "$ATTRS" seal-deployed; then
+        if ! attr_root +i "$DEPLOYED"; then
             printf 'deploy-ci: failed to reseal %s during cleanup\n' "$DEPLOYED" >&2
         fi
     fi
-    if [[ $published -eq 0 ]]; then
-        if ! remove_candidate; then
-            printf 'deploy-ci: failed to remove candidate during cleanup\n' >&2
+    if [[ -d "$OLD" && ! -L "$OLD" ]]; then
+        if ! seal_tree "$OLD" -i; then
+            printf 'deploy-ci: failed to unseal %s during cleanup\n' "$OLD" >&2
         fi
+        if ! find "$OLD" -xdev -depth -delete; then
+            printf 'deploy-ci: failed to remove %s during cleanup\n' "$OLD" >&2
+        fi
+    fi
+    if ! remove_candidate; then
+        printf 'deploy-ci: failed to remove candidate during cleanup\n' >&2
     fi
     exit "$status"
 }
@@ -48,6 +95,7 @@ trap cleanup EXIT INT TERM
 
 [[ $(uname -s) == Linux ]] || die "protected deployment is Linux-only"
 [[ $EUID -eq 0 ]] || die "run as root: sudo make deploy-ci"
+[[ ${1:-} == --from-ansible && $# -eq 1 ]] || die "invoke through: make deploy-ci"
 [[ "$SOURCE_ROOT" != /opt/* ]] || die "run from the writable WORKSPACE-CI checkout"
 owner=$(stat -c %U "$SOURCE_ROOT")
 [[ $owner != root ]] || die "source checkout must have a non-root owner"
@@ -58,7 +106,7 @@ home=$(getent passwd "$owner" | cut -d: -f6)
 owner_env=(/usr/sbin/runuser -u "$owner" -- env HOME="$home")
 owner_git=("${owner_env[@]}" GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' git)
 
-install -d -o root -g root -m 0755 /opt /run/lock
+install -v -d -o root -g root -m 0755 /opt /run/lock
 exec 9>"$LOCK"
 flock -w 120 9 || die "timed out acquiring $LOCK"
 export CI_DEPLOY_LOCK_HELD=1
@@ -67,10 +115,11 @@ chmod 0600 "$LOCK"
 
 [[ ! -L /opt ]] || die "/opt must not be a symlink"
 [[ $(stat -c %u /opt) -eq 0 ]] || die "/opt must be root-owned"
+/usr/bin/unshare --mount --propagation private -- /bin/true \
+    || die "private mount namespaces are unavailable"
 remove_candidate
 
 [[ $("${owner_git[@]}" -C "$SOURCE_ROOT" rev-parse --abbrev-ref HEAD) == "$BRANCH" ]] || die "source must be on main"
-[[ -z $("${owner_git[@]}" -C "$SOURCE_ROOT" status --porcelain --untracked-files=all) ]] || die "source worktree is dirty"
 "${owner_git[@]}" -C "$SOURCE_ROOT" fetch origin "$BRANCH"
 head=$("${owner_git[@]}" -C "$SOURCE_ROOT" rev-parse HEAD)
 upstream=$("${owner_git[@]}" -C "$SOURCE_ROOT" rev-parse "origin/$BRANCH")
@@ -86,7 +135,7 @@ git_root -C "$CANDIDATE" checkout --detach "$head"
 [[ $(git_root -C "$CANDIDATE" rev-parse 'HEAD^{tree}') == "$tree" ]] || die "candidate tree mismatch"
 [[ -z $(git_root -C "$CANDIDATE" ls-files -s | awk '$1 == "120000"') ]] || die "tracked symlinks are forbidden"
 
-install -d -o "$owner" -g "$owner_group" \
+install -v -d -o "$owner" -g "$owner_group" \
     "$CANDIDATE/.boot-linux" \
     "$CANDIDATE/.venv" \
     "$CANDIDATE/.pytest_cache" \
@@ -99,19 +148,25 @@ install -d -o "$owner" -g "$owner_group" \
     "$CANDIDATE/target" \
     "$CANDIDATE/hitl/backend/target" \
     "$CANDIDATE/workspace_ci.egg-info"
-"${owner_env[@]}" make -C "$CANDIDATE" bootstrap
-"${owner_env[@]}" make -C "$CANDIDATE" install-ci
-"${owner_env[@]}" make -C "$CANDIDATE" check-push
+build_candidate
+verify_candidate_paths
 
 chown -R root:root "$CANDIDATE"
 find "$CANDIDATE" -type d -exec chmod go-w {} +
 find "$CANDIDATE" -type f -exec chmod go-w {} +
 [[ -z $(find "$CANDIDATE" -xdev \( ! -user root -o \( ! -type l -a -perm /022 \) \) -print -quit) ]] || die "candidate ownership or mode verification failed"
-/usr/bin/python3 "$ATTRS" seal-candidate
-/usr/bin/python3 "$ATTRS" unseal-candidate-root
+seal_tree "$CANDIDATE"
+attr_root -i "$CANDIDATE"
 inventory=$(mktemp)
-find "$CANDIDATE" -xdev -mindepth 1 ! -type l -print > "$inventory"
-while IFS= read -r path; do immutable "$path" || die "candidate descendant is mutable: $path"; done < "$inventory"
+find "$CANDIDATE" -xdev -mindepth 1 ! -type l -print0 > "$inventory"
+verify_jobs=${CI_DEPLOY_VERIFY_JOBS:-4}
+set +x
+if ! "$VERIFY_IMMUTABLE" "$inventory" "$verify_jobs" "$SOURCE_ROOT/scripts"; then
+    set -x
+    rm -f "$inventory"
+    die "candidate descendant immutable verification failed"
+fi
+set -x
 rm -f "$inventory"
 
 if [[ ! -e "$DEPLOYED" ]]; then
@@ -119,14 +174,25 @@ if [[ ! -e "$DEPLOYED" ]]; then
 else
     [[ ! -L "$DEPLOYED" && -d "$DEPLOYED" ]] || die "deployed path is not a real directory"
     [[ $(stat -c %u "$DEPLOYED") -eq 0 ]] || die "deployed path is not root-owned"
-    /usr/bin/python3 "$ATTRS" unseal-deployed
-    /usr/bin/python3 "$CANDIDATE/ci/atomic_exchange.py" "$CANDIDATE" "$DEPLOYED"
+    [[ ! -e "$OLD" ]] || die "stale previous artifact exists: $OLD"
+    attr_root -i "$DEPLOYED"
+    mv -T -- "$DEPLOYED" "$OLD"
+    mv -T -- "$CANDIDATE" "$DEPLOYED"
+    seal_tree "$OLD" -i
+    find "$OLD" -xdev -depth -delete
 fi
-published=1
-/usr/bin/python3 "$ATTRS" seal-deployed
+attr_root +i "$DEPLOYED"
 immutable "$DEPLOYED" || die "deployed root sealing failed"
 [[ $(git_root -C "$DEPLOYED" rev-parse HEAD) == "$head" ]] || die "final commit mismatch"
 [[ $(git_root -C "$DEPLOYED" rev-parse 'HEAD^{tree}') == "$tree" ]] || die "final tree mismatch"
+[[ -z $(find -L "$DEPLOYED" -xdev -type l -print -quit) ]] || die "published artifact contains a dangling symlink"
+"$DEPLOYED/.boot-linux/bin/uv" run --project "$DEPLOYED" --no-sync python \
+    -c 'import yaml, pydantic' || die "published Python environment is unusable"
+install -v -d -o "$owner" -g "$owner_group" -m 0755 "$home/.config/containers"
+install -v -o "$owner" -g "$owner_group" -m 0644 \
+    "$DEPLOYED/.boot-linux/containers/containers.conf" \
+    "$DEPLOYED/.boot-linux/containers/registries.conf" \
+    "$home/.config/containers/"
 remove_candidate
 
 # Hook installation is deliberately after publication and sealing. Run the

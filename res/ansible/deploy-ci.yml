@@ -1,0 +1,75 @@
+---
+- name: Deploy immutable WORKSPACE-CI
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  vars:
+    workspace_ci_source_root: '{{ source_root }}'
+  tasks:
+    - name: Inspect reviewed source checkout
+      ansible.builtin.stat:
+        path: '{{ workspace_ci_source_root }}'
+        follow: false
+      register: deploy_source
+
+    - name: Require a writable-checkout source directory
+      ansible.builtin.assert:
+        that:
+          - workspace_ci_source_root is match('^/')
+          - deploy_source.stat.isdir | default(false)
+          - not (deploy_source.stat.islnk | default(false))
+          - deploy_source.stat.pw_name != 'root'
+        fail_msg: 'source_root must be an absolute, non-root-owned real directory'
+
+    - name: Verify private mount namespace support
+      ansible.builtin.shell: >-
+        /usr/bin/unshare --mount --propagation private -- /bin/true
+        >>{{ deploy_output | quote }} 2>&1
+      register: namespace_stream
+      changed_when: false
+      failed_when: namespace_stream.rc != 0
+
+    - name: Show namespace check output
+      ansible.builtin.debug:
+        var: namespace_stream.stdout
+
+    - name: Run reviewed deployment implementation
+      ansible.builtin.shell: >-
+        /bin/bash {{ (workspace_ci_source_root + '/scripts/deploy-ci') | quote }}
+        --from-ansible >>{{ deploy_output | quote }} 2>&1
+      register: deploy_run
+      changed_when: true
+      failed_when: deploy_run.rc != 0
+
+    - name: Show deployment run output
+      ansible.builtin.debug:
+        var: deploy_run.stdout
+
+    - name: Inspect deployed artifact
+      ansible.builtin.stat:
+        path: /opt/workspace-ci
+        follow: false
+        get_attributes: true
+      register: deployed_artifact
+
+    - name: Require sealed root-owned deployed artifact
+      ansible.builtin.assert:
+        that:
+          - deployed_artifact.stat.isdir | default(false)
+          - not (deployed_artifact.stat.islnk | default(false))
+          - deployed_artifact.stat.pw_name == 'root'
+          - '''immutable'' in (deployed_artifact.stat.attributes | default([]))'
+
+    - name: Verify deployed Python runtime independently
+      ansible.builtin.shell: >-
+        /opt/workspace-ci/.boot-linux/bin/uv run
+        --project /opt/workspace-ci --no-sync python
+        -c 'import yaml, pydantic' >>{{ deploy_output | quote }} 2>&1
+      register: deployed_python_stream
+      changed_when: false
+      failed_when: deployed_python_stream.rc != 0
+
+    - name: Show deployed Python check output
+      ansible.builtin.debug:
+        var: deployed_python_stream.stdout
