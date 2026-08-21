@@ -28,6 +28,14 @@ def _write_config(tmp_path, entries, baseline_digests, with_baseline=True):
 
 def _run(tmp_path, monkeypatch):
     monkeypatch.setenv("CI_CONFIG_DIR", str(tmp_path))
+    # Tests must be hermetic against ambient build-time override inputs
+    # (REQ-WIKI PIPE-5): an inherited CI_CONFIG_OVERRIDES or per-file
+    # override would redirect resolution away from the fixture configs.
+    monkeypatch.delenv("CI_CONFIG_OVERRIDES", raising=False)
+    monkeypatch.delenv(
+        "CI_CONFIG_PATH_POLICY_INTEGRITY_BASELINE", raising=False
+    )
+    monkeypatch.delenv("CI_GUARD_CONFIG_OVERRIDES", raising=False)
     monkeypatch.chdir(PROJECT)
     return main()
 
