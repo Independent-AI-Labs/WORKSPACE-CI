@@ -40,6 +40,14 @@ ci_check_unstaged() {
         local add_rc=0
         git add -A || add_rc=$?
         if [[ $add_rc -ne 0 ]]; then
+            # Self-diagnosing failure: capture the capability and PATH
+            # context of this exact hook process so a permission fault
+            # identifies itself instead of needing post-hoc replay.
+            echo "" >&2
+            ci_info "Auto-stage diagnostics (hook exec context):" >&2
+            grep -E 'Cap(Eff|Bnd|Amb)|NoNewPrivs' /proc/self/status | sed 's/^/  /' >&2
+            ci_info "  git resolves to: $(command -v git)" >&2
+            getcap "$(command -v git)" 2>&1 | sed 's/^/  caps: /' >&2
             ci_fail "Auto-stage FAILED: git add -A exited $add_rc. Nothing was staged; stage manually and re-run."
             return 1
         fi
