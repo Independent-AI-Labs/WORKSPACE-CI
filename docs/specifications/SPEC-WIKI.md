@@ -67,6 +67,16 @@ full manifest for static page entries, preventing a second route list.
 
 ### 4.1 CI and Guard Configuration
 
+Config override inputs are phase-scoped (REQ-WIKI PIPE-5, amended
+2026-08-21). They exist during web content pipeline execution and do
+not exist in enforcement contexts: the enforcement entry point
+(`lib/checks.sh`, sourced by every protected hook) unsets
+`CI_CONFIG_OVERRIDES`, `CI_GUARD_CONFIG_OVERRIDES`, and all
+`CI_CONFIG_PATH_*` / `CI_GUARD_CONFIG_PATH_*` variables before any
+checker launches. Downstream resolution is therefore unconditional:
+no checker contains enforcement-context detection, and no hook-sourced
+process can be pointed at policy files outside the deployed artifact.
+
 `config-paths.ts` resolves:
 
 - CI root from `CI_CONFIG_DIR` or `WORKSPACE_CI_CONFIG_ROOT`;

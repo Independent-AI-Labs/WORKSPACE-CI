@@ -150,7 +150,7 @@ Next.js parenthesized route groups MAY organize these routes without changing
 | PIPE-2 | Generated JSON under `web/src/data/` MUST be consumed as build inputs and regenerated from canonical workspace sources.                                                                                              |
 | PIPE-3 | YAML and Markdown filesystem reads MUST occur in server modules.                                                                                                                                                     |
 | PIPE-4 | Syntax highlighting and Markdown rendering MUST sanitize generated HTML before insertion.                                                                                                                            |
-| PIPE-5 | `WORKSPACE_CI_CONFIG_ROOT`, `WORKSPACE_GUARD_CONFIG_ROOT`, per-file overrides, project root, docs root, scripts root, and web-content root MUST remain configurable through their implemented environment contracts. |
+| PIPE-5 | `WORKSPACE_CI_CONFIG_ROOT`, `WORKSPACE_GUARD_CONFIG_ROOT`, project root, docs root, scripts root, and web-content root MUST remain configurable through their implemented environment contracts during web content pipeline execution. Per-file config overrides (`CI_CONFIG_OVERRIDES`, `CI_CONFIG_PATH_*`, guard equivalents) are build-time inputs only: the enforcement entry point (`lib/checks.sh` as sourced by protected hooks) MUST remove them from the environment before any checker launches, so the variables do not exist in enforcement contexts and resolution there is unconditionally canonical under the deployed artifact. |
 
 ## 12. Quality Attributes
 

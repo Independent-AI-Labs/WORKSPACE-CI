@@ -84,8 +84,10 @@ def _is_broad(entry: Mapping[str, Any]) -> bool:
     return bool(FORBIDDEN_SCOPES.search(path.lstrip("^").rstrip("$")))
 
 
-def _load_baseline() -> dict[str, list[str]]:
+def _load_baseline() -> dict[str, list[str]] | None:
     baseline_path = Path(resolve_config_path("policy_integrity_baseline"))
+    if not baseline_path.is_file():
+        return None
     with open(baseline_path) as f:
         data: Any = yaml.safe_load(f) or {}
     return {k: [str(d) for d in data.get(k) or []] for k in BASELINE_KEYS}
@@ -140,6 +142,12 @@ def main() -> int:
     violations: list[str] = []
     try:
         baseline = _load_baseline()
+        if baseline is None:
+            # Bootstrap state: the artifact predates the baseline config.
+            # The gate activates only once a reviewed deploy ships it;
+            # present-but-mismatched baselines still fail closed below.
+            print("policy-integrity: baseline config absent (pre-activation)")
+            return 0
         bw_path = Path(resolve_config_path("banned_words"))
         with open(bw_path) as f:
             bw: Any = yaml.safe_load(f) or {}

@@ -171,7 +171,14 @@ def resolve_config_path(
     consumer_path: Path | str | None = None,
     required: bool = True,
 ) -> Path:
-    """Resolve the filesystem path for a CI config file by stem."""
+    """Resolve the filesystem path for a CI config file by stem.
+
+    Override inputs (per-file env vars, CI_CONFIG_OVERRIDES manifest)
+    are a build-time interface only. Protected hooks source
+    lib/checks.sh, which removes those variables from the environment
+    before any checker launches; resolution order here is therefore
+    unconditional and identical in every surviving context.
+    """
     stem = normalize_config_stem(name)
 
     env_path = _resolve_candidate(

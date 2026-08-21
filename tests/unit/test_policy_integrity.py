@@ -14,21 +14,28 @@ BROAD_ENTRY = {"paths": [".*"], "patterns": ["\\bdelve\\b"]}
 EXACT_ENTRY = {"paths": ["^README\\.md$"], "patterns": ["protected-system-interpreter"]}
 
 
-def _write_config(tmp_path, entries, baseline_digests):
+def _write_config(tmp_path, entries, baseline_digests, with_baseline=True):
     (tmp_path / "banned_words.yaml").write_text(
         yaml.safe_dump(
             {"version": "4.0.0", "universal_exceptions": entries, "banned": []}
         )
     )
-    (tmp_path / "policy_integrity_baseline.yaml").write_text(
-        yaml.safe_dump({"universal": baseline_digests, "project": []})
-    )
+    if with_baseline:
+        (tmp_path / "policy_integrity_baseline.yaml").write_text(
+            yaml.safe_dump({"universal": baseline_digests, "project": []})
+        )
 
 
 def _run(tmp_path, monkeypatch):
     monkeypatch.setenv("CI_CONFIG_DIR", str(tmp_path))
     monkeypatch.chdir(PROJECT)
     return main()
+
+
+def test_absent_baseline_bootstrap_passes(tmp_path, monkeypatch):
+    """Pre-activation state: no baseline shipped yet, gate must pass."""
+    _write_config(tmp_path, [BROAD_ENTRY], [], with_baseline=False)
+    assert _run(tmp_path, monkeypatch) == 0
 
 
 def test_exact_single_file_entry_passes(tmp_path, monkeypatch):

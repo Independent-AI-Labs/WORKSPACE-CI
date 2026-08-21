@@ -1,143 +1,114 @@
-# WORKSPACE-CI Agent Operating Rules
+# WORKSPACE-CI Code
 
-## Blank-Slate Scope
+## Article I — Scope
 
-This repository defines one clean installation of WORKSPACE-CI on one Linux
-machine. There are no prior releases, tags, alternate branches, parallel
-operators, external consumers, migration requirements, support windows,
-rollback targets, or recovery targets. Other workspace projects may break.
+§1. One installation of WORKSPACE-CI on one Linux machine.
 
-The lifecycle is:
+§2. Lifecycle, in order: root-owned bootstrap; exact reviewed
+   origin/main tree; verified candidate at
+   `/opt/.workspace-ci.candidate`; atomic publication at
+   `/opt/workspace-ci`; sealed artifact; protected hook
+   installation.
 
-```text
-root-owned Ansible bootstrap
-  -> exact reviewed origin/main tree
-  -> cryptographic build verification
-  -> complete root-owned candidate
-  -> atomic directory publication
-  -> immutable /opt/workspace-ci artifact
-  -> protected WORKSPACE-CI hook installation
-```
+§3. A failed or absent install is remedied only by rerunning
+   `make deploy-ci` from reviewed source.
 
-There is no `CI.previous`, `CI.backup`, migration snapshot, rollback, recovery,
-alternate release, or fleet rollout.
+## Article II — Trust Domains
 
-## Trust Domains
+| Path                           | Role                 | Control  |
+| ------------------------------ | -------------------- | -------- |
+| `projects/WORKSPACE-CI`        | CI source            | Agent    |
+| `origin/main`                  | Source authority     | Upstream |
+| `/opt/workspace-ci`            | Sealed artifact      | Root     |
+| `/opt/.workspace-ci.candidate` | Deployment candidate | Root     |
+| `projects/WORKSPACE-GUARD`     | Git/filesystem guard | Root     |
 
-| Path                           | Role                                                  | Ownership                |
-| ------------------------------ | ----------------------------------------------------- | ------------------------ |
-| `projects/WORKSPACE-CI`        | Writable CI source                                    | Agent-owned working tree |
-| `origin/main`                  | Installation source authority                         | Reviewed upstream        |
-| `/opt/workspace-ci`            | Immutable deployed artifact, including `.boot-linux/` | Root-controlled          |
-| `/opt/.workspace-ci.candidate` | Fixed same-filesystem deployment candidate            | Root-controlled          |
-| `projects/WORKSPACE-GUARD`     | Git/filesystem guard                                  | Root-controlled boundary |
+§4. `make deploy-ci` clones origin/main into the candidate, builds
+   and verifies it with local `.boot-linux` tools in a private mount
+   namespace, publishes atomically on the same filesystem, seals
+   with `chattr +i`, then installs protected hooks as a separate
+   operation. The current artifact never participates in candidate
+   construction. Generated runtime paths are never rewritten.
 
-`make deploy-ci` clones the exact reviewed upstream tree into
-`/opt/.workspace-ci.candidate`. That checkout builds and verifies its complete
-artifact with local `.boot-linux` tools through `/opt/workspace-ci` in a private
-mount namespace before atomic publication. The host's current artifact remains
-hidden from candidate construction; generated runtime paths are never rewritten.
+§5. All mutations below `/opt` are prohibited. The artifact is not
+   an editing target.
 
-## Clean Installation
+§6. Root ownership of paths in the working tree, including `.git/`
+   metadata and `config/`, is the guard's designed state. It is not
+   damage, not drift, and not reportable.
 
-`make deploy-ci` is the root deployment entrypoint. The operator assumes
-responsibility for invoking the writable Makefile. The target constructs and
-verifies `/opt/.workspace-ci.candidate`, atomically publishes it at
-`/opt/workspace-ci`, verifies and seals the artifact, then installs protected
-hooks as a separate operation.
+## Article III — Git Procedure
 
-Required behavior:
+§7. All git invocations pass through the guard. No git operation is
+   performed outside it.
 
-1. Bind the exact reviewed source commit and tree.
-2. Build and verify the complete candidate without changing the current artifact.
-3. Publish by same-filesystem rename or atomic directory exchange.
-4. Verify and seal `/opt/workspace-ci` with `chattr +i`.
-5. Install protected hooks without modifying or restoring the artifact.
+§8. The commit flow is exactly one command: `git commit` with the
+   message via `-F` file; the commit-msg gate requires a body.
 
-## Hook Execution
+§9. The pre-commit hook auto-stages everything and runs the gates.
+   There is no other flow: no selective staging, no unstaging, no
+   `restore` or `checkout` of paths, no snapshot maneuvers.
 
-`.pre-commit-config.yaml` is declarative hook input. Protected hooks resolve
-WORKSPACE-CI directly at `/opt/workspace-ci`.
+§10. A dirty tree rides the next commit as-is. Foreign or
+    unexpected files in the tree are reported to the operator
+    before any commit that would include them.
 
-## The one git flow
+§11. A failing gate is never fought. Fix source and commit again.
 
-The commit flow is exactly one command: `git commit` (message via `-F` file;
-the commit-msg gate requires a body). The pre-commit hook auto-stages
-everything (`git add -A` via `check-unstaged`) and runs the gates. There is
-no other flow:
+§12. History is forward-only: no `--amend`, no `reset`, no
+    force-push. `git stash` is prohibited; baselines use
+    `git worktree add /tmp/wt-baseline HEAD`; snapshots use
+    `git diff > /tmp/change.patch`.
 
-- No selective staging, no unstaging, no `git restore`/`checkout` of paths,
-  no snapshot dances around the hook.
-- A dirty tree rides the next commit as-is. If that is unacceptable, stop
-  and ask the operator; never improvise a side flow.
-- Never fight a failing gate: fix the underlying source and commit again.
+§13. `.git/` metadata is never touched manually: no chown, no
+    deletion, no rebuild. An unexpected git failure is reported to
+    the operator, never repaired by the agent.
 
-## WORKSPACE-GUARD owns git
+## Article IV — Policy Data
 
-All git invocations are wrapped by the WORKSPACE-GUARD git guard
-(`/usr/bin/git` -> `git.original` under `CAP_DAC_OVERRIDE` loan):
+§14. Policy changes belong in source and activate only through a
+    fresh reviewed installation.
 
-- Root ownership of `.git/index`, `.git/objects`, and relocked artifacts is
-  the guard's post-exec relock working as designed, NOT damage and NOT
-  something to fix. Never chown, delete, or rebuild `.git` metadata.
-- If a plain `git commit` reports `Permission denied` on
-  `.git/index.lock`, that is a guard/deployment fault, not a hint to stage
-  manually or repair ownership: stop and report it to the operator.
-- `git stash` is unconditionally blocked (REQ-GGUARD-050). Baselines use
-  `git worktree add /tmp/wt-baseline HEAD`; snapshots use
-  `git diff > /tmp/change.patch`.
-- History is forward-only: no `--amend`, no `reset`, no force-push.
-- One-off root operations (ownership repairs, relocks, policy installs) are
-  prepared as scripts in `/tmp/opencode/` and run by the operator with
-  sudo. They are never committed to the repo and never become Makefile
-  targets.
+§15. Existing files in root-owned `config/` are edited only
+    through the secure interface: `sudo make -C
+    ../WORKSPACE-GUARD yaml-set`, `yaml-add`, `yaml-remove`,
+    `yaml-unset`, `yaml-remove-comment`, or `yaml-delete
+    FILE=... EXPECT_SHA256=<digest>`. `sed -i`, redirection,
+    `rm` plus `cp`, and ad hoc rewrites are prohibited. Deletion is
+    single-file and requires a digest reviewed immediately before
+    execution.
 
-## Source Changes and Validation
+§16. A new policy file is created by the agent under
+    `config-staging/`, then moved into `config/` by the operator
+    with a single `mv` command, then committed as ordinary source.
 
-Before changing this repository:
+## Article V — Root Operations
 
-```bash
-git status
-```
+§17. Root operations are performed by the operator only. An
+    operation with an existing Makefile target is requested by that
+    target, never reimplemented. An operation expressible as one
+    command is given as that command.
 
-Run focused tests for changed code, then the relevant full gate. For module-size
-changes, run:
+§18. A script in `/tmp/opencode/` is permitted only for a root
+    operation that has no Makefile target and no one-command form.
+    Such scripts are never committed and never become Makefile
+    targets.
 
-```bash
-source lib/checks.sh && ci_check_module_size
-```
+## Article VI — Validation
 
-Never fix a failing gate by bypassing hooks or editing installed deployment
-files. Fix source, validate the fresh clean-install path, and install only
-through the root-owned Ansible bootstrap.
+§19. Before changing this repository: `git status`.
 
-## Policy YAML Editing
+§20. Run focused tests for changed code, then the relevant full
+    gate. For module-size changes:
+    `source lib/checks.sh && ci_check_module_size`.
 
-Never use `sed -i`, shell redirection, `rm` plus `cp`, or ad hoc rewrites on
-root-owned policy files. Use the secure WORKSPACE-GUARD interface:
+§21. Gates are never satisfied by bypassing hooks or editing
+    deployed files. Fix source, validate the clean-install path,
+    and install only through the reviewed flow.
 
-```bash
-sudo make -C ../WORKSPACE-GUARD yaml-set \
-  FILE=/path/to/policy.yaml KEY=some.scalar VALUE=value
-sudo make -C ../WORKSPACE-GUARD yaml-add \
-  FILE=/path/to/policy.yaml KEY=list FIELDS="name=value"
-sudo make -C ../WORKSPACE-GUARD yaml-remove \
-  FILE=/path/to/policy.yaml KEY=list FIELDS="name=value"
-sudo make -C ../WORKSPACE-GUARD yaml-unset \
-  FILE=/path/to/policy.yaml KEY='hooks[].field'
-sudo make -C ../WORKSPACE-GUARD yaml-remove-comment \
-  FILE=/path/to/policy.yaml VALUE='exact comment text'
-sudo make -C ../WORKSPACE-GUARD yaml-delete \
-  FILE=/path/to/policy.yaml EXPECT_SHA256=<reviewed-digest>
-```
+## Article VII — Hook Resolution
 
-Policy changes belong in source and become active only through a fresh
-reviewed installation. The installed artifact is not a policy-editing target.
-All mutations below `/opt` are forbidden. Deletion is single-file,
-non-recursive, and requires a digest reviewed immediately before execution.
-
-## Recovery and Break-Glass
-
-No recovery, rollback, migration, backup, selector, or break-glass workflow
-exists for this blank-slate installation. A failed or absent install is handled
-by rerunning `make deploy-ci` from reviewed source.
+§22. `.pre-commit-config.yaml` is declarative hook input. Protected
+    hooks resolve WORKSPACE-CI at `/opt/workspace-ci`. References to
+    workspace-relative CI paths are corrected to `/opt/workspace-ci`
+    whenever encountered.
