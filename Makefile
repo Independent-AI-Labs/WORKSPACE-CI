@@ -153,7 +153,7 @@ install-ci: preflight install-deps ## CI install: deps + bootstrap binaries, no 
 	:
 
 .PHONY: bootstrap
-bootstrap: preflight install-boot-tools ## Build candidate-local bootstrap tools
+bootstrap: preflight install-boot-tools install-osv-scanner ## Build candidate-local bootstrap tools + pinned osv-scanner
 	:
 
 .PHONY: install-deps

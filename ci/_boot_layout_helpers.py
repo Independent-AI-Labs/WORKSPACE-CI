@@ -98,8 +98,6 @@ def is_world_writable(p: Path) -> bool:
 # Inherit-owner derivation (SPEC §8.2)
 # ---------------------------------------------------------------------------
 
-_INHERIT_OWNER_RE = re.compile(r"(?:^|/)([A-Za-z0-9_-]+)$")
-
 
 def derive_moon_id_from_inherited(
     entry: str, workspace_yml: dict | None = None

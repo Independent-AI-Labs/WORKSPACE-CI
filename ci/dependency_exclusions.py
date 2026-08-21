@@ -82,9 +82,3 @@ def parse_exclusions_text(
     if errors:
         return None, sorted(errors)
     return DependencyExclusions(path, excludes, npm_excludes), []
-
-
-def validate_exclusions_text(text: str, path: Path) -> list[str]:
-    """Validate descriptor-bound YAML without reading from the filesystem."""
-    _, errors = parse_exclusions_text(text, path)
-    return errors

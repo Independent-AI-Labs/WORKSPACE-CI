@@ -27,10 +27,16 @@ ci_scan_vulnerabilities() {
     [[ -s "$lockfiles" ]] || { ci_fail "vulnerability scan found no lockfiles"; return 1; }
 
     # Refresh is visible but non-authoritative; validation below is always offline.
-    IFS= read -r first_lockfile < "$lockfiles"
-    timeout --signal=TERM --kill-after=5s 60s "$scanner" scan source \
-        --download-offline-databases --config="$config" --lockfile="$first_lockfile" \
-        --format=json --output-file="$output" || ci_warn "OSV database refresh failed; using cached database"
+    # osv-scanner rejects --download-offline-databases unless offline mode is on,
+    # and each ecosystem database is fetched only when its lockfile is scanned,
+    # so refresh every lockfile with a cold-download-sized timeout.
+    while IFS= read -r first_lockfile; do
+        timeout --signal=TERM --kill-after=10s 300s "$scanner" scan source \
+            --offline --offline-vulnerabilities --download-offline-databases \
+            --config="$config" --lockfile="$first_lockfile" \
+            --format=json --output-file="$output" \
+            || ci_warn "OSV database refresh failed for $first_lockfile; using cached database"
+    done < "$lockfiles"
 
     local args=(scan source --offline --offline-vulnerabilities --config="$config" --format=json --output-file="$output")
     while IFS= read -r lockfile; do args+=(--lockfile="$lockfile"); done < "$lockfiles"

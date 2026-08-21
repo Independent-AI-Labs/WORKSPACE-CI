@@ -45,10 +45,3 @@ class ImageRef(NamedTuple):
 
     image: str
     tag: str | None
-
-
-class PathCheckResult(NamedTuple):
-    """Result from checking a single file for dependency issues."""
-
-    has_errors: bool
-    upgrade_count: int
