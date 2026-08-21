@@ -5,10 +5,22 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 import yaml
 from check_policy_integrity import _entry_digest, _is_broad, main
+from ci import paths as ci_paths
 
 PROJECT = Path(__file__).resolve().parents[2]
+
+
+@pytest.fixture(autouse=True)
+def _clear_override_manifest_cache():
+    """Resolution state must not leak across tests (lru_cache in
+    ci.paths._load_override_manifest survives env changes; xdist workers
+    reuse one process for many files)."""
+    ci_paths.clear_config_override_cache()
+    yield
+    ci_paths.clear_config_override_cache()
 
 BROAD_ENTRY = {"paths": [".*"], "patterns": ["\\bdelve\\b"]}
 EXACT_ENTRY = {"paths": ["^README\\.md$"], "patterns": ["protected-system-interpreter"]}

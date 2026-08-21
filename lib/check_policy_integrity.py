@@ -85,7 +85,9 @@ def _is_broad(entry: Mapping[str, Any]) -> bool:
 
 
 def _load_baseline() -> dict[str, list[str]] | None:
-    baseline_path = Path(resolve_config_path("policy_integrity_baseline"))
+    baseline_path = Path(
+        resolve_config_path("policy_integrity_baseline", required=False)
+    )
     if not baseline_path.is_file():
         return None
     with open(baseline_path) as f:
