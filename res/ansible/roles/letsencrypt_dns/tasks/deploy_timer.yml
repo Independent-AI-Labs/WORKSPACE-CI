@@ -23,14 +23,12 @@
     mode: '0644'
 
 - name: Enable systemd user linger for renewal timer
-  ansible.builtin.command: loginctl enable-linger {{ ansible_user_id }}
+  ansible.builtin.shell: >-
+    loginctl enable-linger {{ ansible_user_id }}
+    >>{{ letsencrypt_run_log | quote }} 2>&1
   register: _linger
   changed_when: _linger.rc == 0
   failed_when: _linger.rc != 0
-
-- name: Show linger enable result
-  ansible.builtin.debug:
-    msg: '{{ _linger.stdout | default("") | trim }}'
 
 - name: Reload systemd user daemon
   ansible.builtin.systemd:

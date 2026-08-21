@@ -12,6 +12,8 @@
     compose_file: compose.prod.yaml
     prod_unit: wiki-prod-compose.service
     systemd_dir: '{{ ansible_facts["env"]["HOME"] }}/.config/systemd/user'
+    prod_log_dir: '{{ ansible_facts["env"]["HOME"] }}/.cache/wiki-prod-ansible'
+    prod_log: '{{ prod_log_dir }}/run.log'
     wiki_http_port: "{{ lookup('env', 'WIKI_HTTP_PORT') | default('8080', true) }}"
     wiki_https_port: "{{ lookup('env', 'WIKI_HTTPS_PORT') | default('8443', true) }}"
     allowed_origins: "{{ lookup('env', 'ALLOWED_ORIGINS') | default('https://localhost,https://127.0.0.1', true) }}"
@@ -25,18 +27,22 @@
     - name: Resolve project root
       tags: [always]
       block:
-        - name: Get absolute project path
-          ansible.builtin.command: realpath {{ project_root }}
-          register: resolved_root
-          changed_when: false
+        - name: Ensure run log directory exists
+          ansible.builtin.file:
+            path: '{{ prod_log_dir }}'
+            state: directory
+            mode: '0700'
+
+        - name: Resolve absolute project path
+          ansible.builtin.set_fact:
+            project_root: '{{ project_root | realpath }}'
 
         - name: Set resolved paths
           ansible.builtin.set_fact:
-            project_root: '{{ resolved_root.stdout }}'
-            web_dir: '{{ resolved_root.stdout }}/web'
+            web_dir: '{{ project_root }}/web'
             wiki_tls_dir: >-
               {{ wiki_tls_dir if wiki_tls_dir | length > 0 else
-                 (resolved_root.stdout + '/cloudflare/certs/' +
+                 (project_root + '/cloudflare/certs/' +
                   (wiki_tunnel_hostname if wiki_tunnel_hostname | length > 0 else wiki_tls_cn)) }}
 
     - name: Resolve Podman and podman-compose
@@ -47,82 +53,73 @@
             podman_path: '/opt/workspace-ci/{{ ".boot-macos" if ansible_facts["system"] == "Darwin" else ".boot-linux" }}/bin/podman'
 
         - name: Verify Podman guard
-          ansible.builtin.command:
-            argv:
-              - '{{ podman_path }}'
-              - --version
+          ansible.builtin.shell: >-
+            '{{ podman_path }}' --version
+            >>{{ prod_log | quote }} 2>&1
           register: podman_check
           changed_when: false
+          failed_when: podman_check.rc != 0
 
         - name: Show Podman guard result
           ansible.builtin.debug:
-            var: podman_check.stdout
+            msg: '{{ lookup("ansible.builtin.file", prod_log) | trim }}'
 
         - name: Show podman path
           ansible.builtin.debug:
             msg: '{{ podman_path }}'
 
         - name: Find podman-compose
-          ansible.builtin.command: which podman-compose
-          register: compose_check
-          changed_when: false
+          ansible.builtin.set_fact:
+            compose_cmd: >-
+              {{ lookup("ansible.builtin.first_found",
+                         files=["podman-compose"],
+                         paths=(lookup("env", "PATH").split(":")),
+                         errors="ignore") }}
 
         - name: Show podman-compose path
           ansible.builtin.debug:
-            msg: '{{ compose_check.stdout | default("") | trim }}'
+            msg: '{{ compose_cmd | default("", true) }}'
 
         - name: Fail if podman-compose missing
           ansible.builtin.fail:
             msg: 'podman-compose not on PATH'
-          when: compose_check.rc != 0
+          when: compose_cmd | default("", true) | length == 0
 
         - name: Set runtime facts
           ansible.builtin.set_fact:
-            compose_cmd: '{{ compose_check.stdout }}'
-            compose_bin_dir: '{{ compose_check.stdout | dirname }}'
+            compose_bin_dir: '{{ compose_cmd | dirname }}'
             podman_bin_dir: '{{ podman_path | dirname }}'
 
     - name: Deploy wiki prod stack
       tags: [deploy, start, restart]
       block:
         - name: Check gateway Grafana is running
-          ansible.builtin.command:
-            argv:
-              - podman
-              - ps
-              - --filter
-              - name=gw-grafana
-              - --filter
-              - status=running
-              - --format
-              - '{{ "{{" }}.Names{{ "}}" }}'
+          ansible.builtin.shell: >-
+            podman ps --filter name=gw-grafana --filter status=running
+            --format '{{ "{{" }}.Names{{ "}}" }}' | grep -q .
+            >>{{ prod_log | quote }} 2>&1
           register: grafana_running
           changed_when: false
-
-        - name: Show Grafana container probe
-          ansible.builtin.debug:
-            msg: '{{ grafana_running.stdout | default("(none)") | trim }}'
+          failed_when: grafana_running.rc not in [0, 1]
 
         - name: Warn if Grafana is not running
           ansible.builtin.debug:
             msg: |
               WARNING: gw-grafana is not running. Wiki nginx will still start,
               but /grafana/ embeds will fail until gateway-compose is up.
-          when: grafana_running.stdout | trim | length == 0
+          when: grafana_running.rc != 0
 
         - name: Check prod image exists
-          ansible.builtin.command:
-            argv:
-              - podman
-              - image
-              - exists
-              - localhost/workspace-ci-wiki:0.1.0
+          ansible.builtin.shell: >-
+            podman image exists localhost/workspace-ci-wiki:0.1.0
+            >>{{ prod_log | quote }} 2>&1
           register: prod_image
           changed_when: false
+          failed_when: prod_image.rc not in [0, 1]
 
         - name: Show prod image check result
           ansible.builtin.debug:
-            msg: 'prod image exists check rc={{ prod_image.rc }} stdout={{ prod_image.stdout | default("") | trim }}'
+            msg: 'prod image exists check rc={{ prod_image.rc }}'
 
         - name: Fail if prod image missing
           ansible.builtin.fail:
@@ -143,18 +140,12 @@
 
         - name: Enable systemd user linger
           tags: [deploy]
-          ansible.builtin.command:
-            argv:
-              - loginctl
-              - enable-linger
-              - '{{ ansible_facts["user_id"] }}'
+          ansible.builtin.shell: >-
+            loginctl enable-linger {{ ansible_facts["user_id"] }}
+            >>{{ prod_log | quote }} 2>&1
           register: linger_result
           changed_when: linger_result.rc == 0
           failed_when: linger_result.rc != 0
-
-        - name: Show linger enable result
-          ansible.builtin.debug:
-            msg: '{{ linger_result.stdout | default("") | trim }}'
 
         - name: Install wiki prod systemd unit
           ansible.builtin.template:
@@ -231,22 +222,21 @@
       tags: [status, never]
       block:
         - name: Check wiki prod service
-          ansible.builtin.command: systemctl --user is-active {{ prod_unit }}
+          ansible.builtin.shell: >-
+            systemctl --user is-active {{ prod_unit | quote }}
+            >>{{ prod_log_dir | quote }}/unit-state.log 2>&1
           register: prod_status
           failed_when: prod_status.rc not in [0, 3]
           changed_when: false
 
         - name: List wiki prod containers
-          ansible.builtin.command:
-            argv:
-              - podman
-              - ps
-              - --filter
-              - name=wiki-ci-
-              - --format
-              - 'table {{ "{{" }}.Names{{ "}}" }}\t{{ "{{" }}.Status{{ "}}" }}\t{{ "{{" }}.Ports{{ "}}" }}'
+          ansible.builtin.shell: >-
+            podman ps --filter name=wiki-ci-
+            --format 'table {{ "{{" }}.Names{{ "}}" }}\t{{ "{{" }}.Status{{ "}}" }}\t{{ "{{" }}.Ports{{ "}}" }}'
+            >>{{ prod_log_dir | quote }}/containers.log 2>&1
           register: wiki_containers
           changed_when: false
+          failed_when: wiki_containers.rc not in [0, 1]
 
         - name: Probe HTTP
           block:
@@ -279,11 +269,11 @@
           ansible.builtin.debug:
             msg: |
               Wiki prod status:
-                Unit     : {{ prod_status.stdout | default('not installed') }}
+                Unit     : {{ lookup("ansible.builtin.file", prod_log_dir + "/unit-state.log") | trim | default('not installed') }}
                 HTTP     : {{ http_probe.status | default('DOWN') }} (expect 301)
                 HTTPS    : {{ https_probe.status | default('DOWN') }} (expect 200)
                 Containers :
-              {{ wiki_containers.stdout | default('(none)') | indent(2, first=False) }}
+              {{ lookup("ansible.builtin.file", prod_log_dir + "/containers.log") | default('(none)') | indent(2, first=False) }}
 
     - name: Undeploy wiki prod compose
       tags: [undeploy, never]

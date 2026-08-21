@@ -10,38 +10,28 @@
   when: not _published_cert.stat.exists
 
 - name: Read certificate expiry
-  ansible.builtin.command:
-    argv:
-      - openssl
-      - x509
-      - -in
-      - '{{ letsencrypt_cert_dir }}/fullchain.pem'
-      - -noout
-      - -enddate
-      - -subject
+  ansible.builtin.shell: >-
+    openssl x509 -in '{{ letsencrypt_cert_dir }}/fullchain.pem'
+    -noout -enddate -subject
+    > {{ letsencrypt_run_log_dir | quote }}/cert-meta.log 2>&1
+    && cat {{ letsencrypt_run_log_dir | quote }}/cert-meta.log
+    >>{{ letsencrypt_run_log | quote }}
   register: _cert_meta
   changed_when: false
+  failed_when: _cert_meta.rc != 0
 
 - name: Show certificate metadata
   ansible.builtin.debug:
-    msg: '{{ _cert_meta.stdout | default("") | trim }}'
+    msg: '{{ lookup("ansible.builtin.file", letsencrypt_run_log_dir + "/cert-meta.log") | default("") | trim }}'
 
 - name: Check certificate days remaining
-  ansible.builtin.command:
-    argv:
-      - openssl
-      - x509
-      - -in
-      - '{{ letsencrypt_cert_dir }}/fullchain.pem'
-      - -noout
-      - -checkend
-      - '{{ (letsencrypt_cert_min_days | int) * 86400 }}'
+  ansible.builtin.shell: >-
+    openssl x509 -in '{{ letsencrypt_cert_dir }}/fullchain.pem'
+    -noout -checkend '{{ (letsencrypt_cert_min_days | int) * 86400 }}'
+    >>{{ letsencrypt_run_log_dir | quote }}/cert-checkend.log 2>&1
   register: _cert_checkend
   changed_when: false
-
-- name: Show certificate expiry check
-  ansible.builtin.debug:
-    msg: '{{ _cert_checkend.stdout | default("") | trim }}'
+  failed_when: _cert_checkend.rc not in [0, 1]
 
 - name: Fail if certificate expires too soon
   ansible.builtin.fail:
@@ -50,27 +40,27 @@
       Run: --tags renew (or issue for first-time setup).
   when: _cert_checkend.rc != 0
 
-- name: Verify certificate SAN includes primary domain
-  ansible.builtin.command:
-    argv:
-      - openssl
-      - x509
-      - -in
-      - '{{ letsencrypt_cert_dir }}/fullchain.pem'
-      - -noout
-      - -text
-  register: _cert_text
+- name: Read certificate text for SAN check
+  ansible.builtin.shell: >-
+    openssl x509 -in '{{ letsencrypt_cert_dir }}/fullchain.pem'
+    -noout -text
+    > {{ letsencrypt_run_log_dir | quote }}/cert-text.log 2>&1
+    && grep -q {{ letsencrypt_primary_domain | quote }}
+    {{ letsencrypt_run_log_dir | quote }}/cert-text.log
+    >>{{ letsencrypt_run_log | quote }} 2>&1
+  register: _cert_san
   changed_when: false
+  failed_when: _cert_san.rc not in [0, 1, 2]
 
 - name: Fail if primary domain missing from certificate
   ansible.builtin.fail:
     msg: "Certificate does not appear to include {{ letsencrypt_primary_domain }}."
-  when: letsencrypt_primary_domain not in (_cert_text.stdout | default(''))
+  when: _cert_san.rc != 0
 
 - name: Certificate verification passed
   ansible.builtin.debug:
     msg: |
       TLS certificate OK.
         Path   : {{ letsencrypt_cert_dir }}
-        Meta   : {{ _cert_meta.stdout | default('') | trim }}
+        Meta   : {{ lookup("ansible.builtin.file", letsencrypt_run_log_dir + "/cert-meta.log") | default("") | trim }}
         MinDays: {{ letsencrypt_cert_min_days }} (check passed)

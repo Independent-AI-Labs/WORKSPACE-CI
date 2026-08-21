@@ -23,23 +23,23 @@
       no_log: true
 
     - name: Run certbot renew
-      ansible.builtin.command:
-        argv:
-          - '{{ letsencrypt_certbot_bin }}'
-          - renew
-          - '--dns-cloudflare'
-          - '--dns-cloudflare-credentials'
-          - '{{ letsencrypt_cloudflare_credentials }}'
-          - '--config-dir'
-          - '{{ letsencrypt_config_dir }}'
-          - '--work-dir'
-          - '{{ letsencrypt_work_dir }}'
-          - '--logs-dir'
-          - '{{ letsencrypt_logs_dir }}'
-          - '--non-interactive'
+      ansible.builtin.shell: >-
+        '{{ letsencrypt_certbot_bin }}' renew
+        --dns-cloudflare
+        --dns-cloudflare-credentials '{{ letsencrypt_cloudflare_credentials }}'
+        --config-dir '{{ letsencrypt_config_dir }}'
+        --work-dir '{{ letsencrypt_work_dir }}'
+        --logs-dir '{{ letsencrypt_logs_dir }}'
+        --non-interactive
+        >>{{ letsencrypt_run_log | quote }} 2>&1
       register: _certbot_renew
-      changed_when: "'No renewals were attempted' not in (_certbot_renew.stdout | default(''))"
+      failed_when: _certbot_renew.rc != 0
       no_log: true
+
+    - name: Record whether a renewal was attempted
+      ansible.builtin.set_fact:
+        _renew_changed: >-
+          {{ 'No renewals were attempted' not in lookup('ansible.builtin.file', letsencrypt_run_log) }}
 
     - name: Publish fullchain.pem after renewal
       ansible.builtin.copy:
@@ -48,7 +48,7 @@
         remote_src: true
         mode: '0644'
         follow: true
-      when: _certbot_renew.changed
+      when: _renew_changed
       notify: Reload TLS consumer
 
     - name: Publish privkey.pem after renewal
@@ -58,9 +58,9 @@
         remote_src: true
         mode: '0600'
         follow: true
-      when: _certbot_renew.changed
+      when: _renew_changed
       notify: Reload TLS consumer
 
     - name: Renewal result
       ansible.builtin.debug:
-        msg: "{{ 'Certificate renewed and published.' if _certbot_renew.changed else 'No renewal needed.' }}"
+        msg: "{{ 'Certificate renewed and published.' if _renew_changed else 'No renewal needed.' }}"

@@ -68,6 +68,13 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: check-policy-integrity
+        name: Check Policy Integrity (non-exemptible)
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_policy_integrity'"
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: check-resolution-shapes
         name: Check Resolution Shapes
         entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_fallback_resolution'"

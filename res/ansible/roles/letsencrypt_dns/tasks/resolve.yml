@@ -1,16 +1,22 @@
 ---
+- name: Ensure role run log directory exists
+  ansible.builtin.file:
+    path: '{{ letsencrypt_run_log_dir }}'
+    state: directory
+    mode: '0700'
+
 - name: Resolve project root for bootstrap script
   when: letsencrypt_bootstrap_script | length == 0
   block:
-    - name: Get absolute playbook project path
-      ansible.builtin.command: realpath {{ letsencrypt_project_root | default(playbook_dir | dirname | dirname, true) }}
-      register: _le_project_root
-      changed_when: false
+    - name: Resolve playbook project path
+      ansible.builtin.set_fact:
+        _le_project_root: >-
+          {{ (letsencrypt_project_root | default(playbook_dir | dirname | dirname, true)) | realpath }}
 
     - name: Set bootstrap script path
       ansible.builtin.set_fact:
-        letsencrypt_bootstrap_script: '{{ _le_project_root.stdout }}/scripts/bootstrap-certbot'
-        letsencrypt_project_root: '{{ letsencrypt_project_root | default(_le_project_root.stdout, true) }}'
+        letsencrypt_bootstrap_script: '{{ _le_project_root }}/scripts/bootstrap-certbot'
+        letsencrypt_project_root: '{{ letsencrypt_project_root | default(_le_project_root, true) }}'
 
 - name: Resolve certbot binary from boot bin
   when: letsencrypt_certbot_bin | length == 0

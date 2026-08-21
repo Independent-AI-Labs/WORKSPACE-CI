@@ -9,10 +9,12 @@
   when: letsencrypt_certbot_bin | length == 0 or not (_certbot_stat.stat.exists | default(false))
   block:
     - name: Run bootstrap-certbot
-      ansible.builtin.command:
-        argv: [bash, '{{ letsencrypt_bootstrap_script }}']
+      ansible.builtin.shell: >-
+        bash {{ letsencrypt_bootstrap_script | quote }}
+        >>{{ letsencrypt_run_log | quote }} 2>&1
       register: _bootstrap_certbot
-      changed_when: "'installed:' in (_bootstrap_certbot.stderr | default('')) or 're-installing' in (_bootstrap_certbot.stderr | default(''))"
+      failed_when: _bootstrap_certbot.rc != 0
+      changed_when: _bootstrap_certbot.rc == 0
 
     - name: Re-stat repo-local certbot after bootstrap
       ansible.builtin.stat:

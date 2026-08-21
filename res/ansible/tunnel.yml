@@ -20,6 +20,8 @@
     project_root: '{{ playbook_dir | dirname | dirname }}'
     tunnel_unit: wiki-ci-tunnel.service
     systemd_dir: '{{ ansible_facts["env"]["HOME"] }}/.config/systemd/user'
+    tunnel_log_dir: '{{ ansible_facts["env"]["HOME"] }}/.cache/wiki-tunnel-ansible'
+    tunnel_log: '{{ tunnel_log_dir }}/run.log'
     tunnel_token_dir: '{{ ansible_facts["env"]["HOME"] }}/.config/workspace-ci'
     tunnel_token_file: '{{ tunnel_token_dir }}/tunnel-token'
     boot_name: "{{ '.boot-macos' if ansible_facts['system'] == 'Darwin' else '.boot-linux' }}"
@@ -39,28 +41,35 @@
     - name: Resolve project root
       tags: [always]
       block:
-        - name: Get absolute project path
-          ansible.builtin.command: realpath {{ project_root }}
-          register: resolved_root
-          changed_when: false
+        - name: Ensure run log directory exists
+          ansible.builtin.file:
+            path: '{{ tunnel_log_dir }}'
+            state: directory
+            mode: '0700'
+
+        - name: Resolve absolute project path
+          ansible.builtin.set_fact:
+            project_root: '{{ project_root | realpath }}'
 
         - name: Set resolved paths
           ansible.builtin.set_fact:
-            project_root: '{{ resolved_root.stdout }}'
-            tunnel_config_default: '{{ resolved_root.stdout }}/cloudflare/config.yml'
-            tunnel_config: "{{ lookup('env', 'TUNNEL_CONFIG') | default(resolved_root.stdout + '/cloudflare/config.yml', true) }}"
+            tunnel_config_default: '{{ project_root }}/cloudflare/config.yml'
+            tunnel_config: "{{ lookup('env', 'TUNNEL_CONFIG') | default(project_root + '/cloudflare/config.yml', true) }}"
 
         - name: Resolve cloudflared binary (boot walk-up or PATH)
-          ansible.builtin.command:
-            argv: [bash, scripts/resolve-cloudflared.sh]
-            chdir: '{{ resolved_root.stdout }}'
+          ansible.builtin.shell: >-
+            bash scripts/resolve-cloudflared.sh
+            >>{{ tunnel_log | quote }} 2>&1
+          args:
+            chdir: '{{ project_root }}'
           register: cloudflared_resolve
           changed_when: false
+          failed_when: cloudflared_resolve.rc != 0
           when: lookup('env', 'CLOUDFLARED_BIN') | length == 0
 
         - name: Set cloudflared from resolver
           ansible.builtin.set_fact:
-            cloudflared_bin: '{{ cloudflared_resolve.stdout }}'
+            cloudflared_bin: "{{ lookup('ansible.builtin.file', tunnel_log) | trim }}"
           when: lookup('env', 'CLOUDFLARED_BIN') | length == 0
 
     - name: Ensure systemd user directory exists
@@ -122,31 +131,29 @@
             - not tunnel_creds.stat.exists
 
         - name: Check wiki prod containers are running
-          ansible.builtin.command:
-            argv:
-              - podman
-              - ps
-              - --filter
-              - name=wiki-ci-
-              - --format
-              - '{{ "{{" }}.Names{{ "}}" }} {{ "{{" }}.Status{{ "}}" }}'
+          ansible.builtin.shell: >-
+            podman ps --filter name=wiki-ci- --format
+            '{{ "{{" }}.Names{{ "}}" }} {{ "{{" }}.Status{{ "}}" }}'
+            > {{ tunnel_log_dir | quote }}/containers.log
+            && grep -q wiki-ci-app {{ tunnel_log_dir | quote }}/containers.log
+            && grep -q wiki-ci-nginx {{ tunnel_log_dir | quote }}/containers.log
+            >>{{ tunnel_log | quote }} 2>&1
           register: wiki_containers
           changed_when: false
+          failed_when: wiki_containers.rc not in [0, 1, 2]
 
         - name: Show wiki prod container list
           ansible.builtin.debug:
-            msg: '{{ wiki_containers.stdout | default("(none)") | trim }}'
+            msg: "{{ lookup('ansible.builtin.file', tunnel_log_dir + '/containers.log') | default('(none)') | trim }}"
 
         - name: Fail if wiki prod stack is not running
           ansible.builtin.fail:
             msg: |
               Wiki prod stack must be running before starting the tunnel.
               Expected containers: wiki-ci-app, wiki-ci-nginx
-              Found: {{ wiki_containers.stdout | default('(none)') | trim }}
+              Found: {{ lookup('ansible.builtin.file', tunnel_log_dir + '/containers.log') | default('(none)') | trim }}
               Start prod first: make wiki-prod-start
-          when: >
-            'wiki-ci-app' not in (wiki_containers.stdout | default(''))
-            or 'wiki-ci-nginx' not in (wiki_containers.stdout | default(''))
+          when: wiki_containers.rc != 0
 
         - name: Sync Cloudflare tunnel ingress to local origin (token-mode tunnels)
           when:
@@ -235,18 +242,12 @@
 
         - name: Enable systemd user linger
           tags: [deploy]
-          ansible.builtin.command:
-            argv:
-              - loginctl
-              - enable-linger
-              - '{{ ansible_facts["user_id"] }}'
+          ansible.builtin.shell: >-
+            loginctl enable-linger {{ ansible_facts["user_id"] }}
+            >>{{ tunnel_log | quote }} 2>&1
           register: linger_result
           failed_when: linger_result.rc != 0
           changed_when: linger_result.rc == 0
-
-        - name: Show linger enable result
-          ansible.builtin.debug:
-            msg: '{{ linger_result.stdout | default("") | trim }}'
 
         - name: Reload systemd user daemon
           ansible.builtin.systemd:
@@ -296,7 +297,9 @@
       tags: [status, never]
       block:
         - name: Check tunnel service
-          ansible.builtin.command: systemctl --user is-active {{ tunnel_unit }}
+          ansible.builtin.shell: >-
+            systemctl --user is-active {{ tunnel_unit | quote }}
+            >>{{ tunnel_log_dir | quote }}/unit-state.log 2>&1
           register: tunnel_status
           failed_when: tunnel_status.rc not in [0, 3]
           changed_when: false
@@ -314,7 +317,7 @@
           ansible.builtin.debug:
             msg: |
               Tunnel status:
-                Unit   : {{ tunnel_status.stdout | default('not installed') }}
+                Unit   : {{ lookup('ansible.builtin.file', tunnel_log_dir + '/unit-state.log') | trim | default('not installed') }}
                 Binary : {{ cloudflared_bin }}
                 Config : {{ tunnel_config }}
                 {% if wiki_tunnel_hostname | length > 0 %}
@@ -329,7 +332,7 @@
           ansible.builtin.debug:
             msg: |
               Tunnel status:
-                Unit   : {{ tunnel_status.stdout | default('not installed') }}
+                Unit   : {{ lookup('ansible.builtin.file', tunnel_log_dir + '/unit-state.log') | trim | default('not installed') }}
                 Binary : {{ cloudflared_bin }}
                 Config : {{ tunnel_config }}
                 {% if wiki_tunnel_hostname | length > 0 %}
@@ -348,21 +351,17 @@
           when: wiki_tunnel_hostname | length == 0
 
         - name: Route DNS
-          ansible.builtin.command:
-            argv:
-              - '{{ cloudflared_bin }}'
-              - tunnel
-              - route
-              - dns
-              - '{{ wiki_tunnel_name }}'
-              - '{{ wiki_tunnel_hostname }}'
+          ansible.builtin.shell: >-
+            '{{ cloudflared_bin }}' tunnel route dns
+            {{ wiki_tunnel_name | quote }} {{ wiki_tunnel_hostname | quote }}
+            >>{{ tunnel_log | quote }} 2>&1
           register: route_dns
           failed_when: route_dns.rc != 0
           changed_when: route_dns.rc == 0
 
         - name: Route DNS result
           ansible.builtin.debug:
-            msg: '{{ route_dns.stdout | default("") | trim }}'
+            msg: '{{ lookup("ansible.builtin.file", tunnel_log) | default("") | trim }}'
 
     - name: Undeploy tunnel
       tags: [undeploy, never]

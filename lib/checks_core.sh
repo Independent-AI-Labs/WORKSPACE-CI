@@ -99,3 +99,21 @@ ci_check_banned_words() {
     CI_CONFIG_DIR="$CI_CONFIG_DIR" \
         ci_uv_run "$script_path" "$@" </dev/null
 }
+
+# --- ci_check_policy_integrity ---
+# Delegates to lib/check_policy_integrity.py: non-exemptible structural
+# validation of banned_words.yaml + banned_words_exceptions.yaml, run
+# BEFORE ordinary exemptions load. Broad exemptions are frozen against
+# the exact-digest baseline in config/policy_integrity_baseline.yaml;
+# new or modified broad entries fail closed.
+ci_check_policy_integrity() {
+    local script_path="${CI_LIB_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}/check_policy_integrity.py"
+    if [[ ! -f "$script_path" ]]; then
+        ci_fail "Policy-integrity: helper not found at $script_path"
+        return 1
+    fi
+    local _scan_root="${CI_SCAN_ROOT:-$PWD}"
+    CI_SCAN_ROOT="$_scan_root" \
+    CI_CONFIG_DIR="$CI_CONFIG_DIR" \
+        ci_uv_run "$script_path" "$@" </dev/null
+}

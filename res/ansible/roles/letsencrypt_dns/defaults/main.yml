@@ -21,3 +21,5 @@ letsencrypt_playbook_path: ''
 letsencrypt_bootstrap_script: ''
 
 letsencrypt_cert_min_days: 30
+letsencrypt_run_log_dir: "{{ ansible_env.HOME }}/.cache/letsencrypt-ansible"
+letsencrypt_run_log: "{{ letsencrypt_run_log_dir }}/run.log"
