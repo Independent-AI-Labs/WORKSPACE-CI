@@ -87,6 +87,16 @@ guard_workload_file_cap_string() {
     printf '%s' "$GUARD_WORKLOAD_FILE_CAP_STRING"
 }
 
+# Inheritable-only variant of the workload cap set (suffix =ei): grants the
+# caps only to processes already holding them in CapInh, i.e. exclusively
+# guard-descended hook contexts. Used for /usr/lib/git-core/git, which
+# resolves ahead of the guard inside hooks (git prefixes PATH with its
+# exec path), so hook-side git can write the root-locked .git tree while
+# direct agent-shell invocation gains nothing.
+guard_workload_file_cap_string_inheritable() {
+    printf '%s' "${GUARD_WORKLOAD_FILE_CAP_STRING%=ep}=ei"
+}
+
 # Normalize file-cap strings for comparison (order and =ep/+ep suffix).
 guard_file_cap_normalize() {
     local raw="${1:-}"

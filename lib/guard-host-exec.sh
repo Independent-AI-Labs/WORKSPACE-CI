@@ -406,6 +406,25 @@ install_guard_host_exec() {
         return 1
     fi
 
+    # Git prepends its exec path (/usr/lib/git-core) to PATH when running
+    # hooks, so a hook's `git` resolves to the real capless binary instead
+    # of the guarded /usr/bin/git. Against the root-locked .git tree that
+    # makes hook-side staging (ci_check_unstaged) fail with git's own
+    # EACCES on .git/index.lock. Grant the same capability set with the
+    # inheritable-only flag: caps materialize only in processes already
+    # carrying them in CapInh (guard-descended hook contexts); a direct
+    # agent-shell invocation (CapInh=0) gains nothing.
+    local _git_core=/usr/lib/git-core/git
+    if [[ -x "$_git_core" ]]; then
+        local _icap_str
+        _icap_str="$(guard_workload_file_cap_string_inheritable)"
+        if ! "$_setcap_path" "$_icap_str" "$_git_core" 2>"$_setcap_err"; then
+            log_error "Failed to set inheritable file capabilities on $_git_core: $_icap_str"
+            [[ -s "$_setcap_err" ]] && log_error "$(cat "$_setcap_err")"
+            return 1
+        fi
+    fi
+
     guard_write_deployment_class "$GUARD_HOST_EXEC_CLASS"
     guard_install_git_ssh_wrapper || return 1
     guard_install_agent_git_identity || return 1
