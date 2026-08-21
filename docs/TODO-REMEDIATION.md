@@ -20,9 +20,9 @@ completion.
 ## Destructive-Path Audit
 
 - [ ] Inventory every command in WORKSPACE-GATEWAY that can delete containers, volumes, tables, databases, users, or host state.
-- [ ] Inventory every command in WORKSPACE-CI that can delete containers, volumes, tables, databases, users, or host state.
+- [x] Inventory every command in WORKSPACE-CI that can delete containers, volumes, tables, databases, users, or host state (`docs/audits/AUDIT-CI-DESTRUCTIVE-PATHS-2026-08-21.md`).
 - [ ] Inventory every command in WORKSPACE-GUARD that can delete containers, volumes, tables, databases, users, or host state.
-- [ ] Distinguish bounded temporary-file cleanup from persistent-data destruction.
+- [x] Distinguish bounded temporary-file cleanup from persistent-data destruction (WORKSPACE-CI scoped; see the 2026-08-21 CI destructive-path audit).
 - [ ] Remove unneeded persistent-data destruction mechanisms.
 - [x] Remove Gateway whole-volume clean and ClickHouse-volume reset mechanisms.
 - [x] Remove Guard state-purge and operator reset implementations from executable source.

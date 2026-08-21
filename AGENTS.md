@@ -59,6 +59,39 @@ Required behavior:
 `.pre-commit-config.yaml` is declarative hook input. Protected hooks resolve
 WORKSPACE-CI directly at `/opt/workspace-ci`.
 
+## The one git flow
+
+The commit flow is exactly one command: `git commit` (message via `-F` file;
+the commit-msg gate requires a body). The pre-commit hook auto-stages
+everything (`git add -A` via `check-unstaged`) and runs the gates. There is
+no other flow:
+
+- No selective staging, no unstaging, no `git restore`/`checkout` of paths,
+  no snapshot dances around the hook.
+- A dirty tree rides the next commit as-is. If that is unacceptable, stop
+  and ask the operator; never improvise a side flow.
+- Never fight a failing gate: fix the underlying source and commit again.
+
+## WORKSPACE-GUARD owns git
+
+All git invocations are wrapped by the WORKSPACE-GUARD git guard
+(`/usr/bin/git` -> `git.original` under `CAP_DAC_OVERRIDE` loan):
+
+- Root ownership of `.git/index`, `.git/objects`, and relocked artifacts is
+  the guard's post-exec relock working as designed, NOT damage and NOT
+  something to fix. Never chown, delete, or rebuild `.git` metadata.
+- If a plain `git commit` reports `Permission denied` on
+  `.git/index.lock`, that is a guard/deployment fault, not a hint to stage
+  manually or repair ownership: stop and report it to the operator.
+- `git stash` is unconditionally blocked (REQ-GGUARD-050). Baselines use
+  `git worktree add /tmp/wt-baseline HEAD`; snapshots use
+  `git diff > /tmp/change.patch`.
+- History is forward-only: no `--amend`, no `reset`, no force-push.
+- One-off root operations (ownership repairs, relocks, policy installs) are
+  prepared as scripts in `/tmp/opencode/` and run by the operator with
+  sudo. They are never committed to the repo and never become Makefile
+  targets.
+
 ## Source Changes and Validation
 
 Before changing this repository:
