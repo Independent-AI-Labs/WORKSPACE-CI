@@ -121,10 +121,10 @@ completion.
 - [x] Stop `scripts/generate-hooks` from emitting direct `.venv/bin/python`.
 - [x] Generate Python checks through deployed `uv` with explicit project and `--no-sync`.
 - [x] Update hook-generator tests for the corrected invocation.
-- [ ] Update generated hook-source documentation and data.
-- [ ] Verify every protected pre-commit command after publication.
-- [ ] Verify commit-message hooks.
-- [ ] Verify every protected pre-push command.
+- [x] Update generated hook-source documentation and data (`bc6c0b0`, regenerated `web/src/data/hook-sources.json`).
+- [x] Verify every protected pre-commit command after publication (commits `d956844`/`bc6c0b0` passed the full deployed hook chain against `/opt/workspace-ci`).
+- [x] Verify commit-message hooks (observed failing closed on a missing body, then passing with one; coauthored/history checks exercised by the commit-msg hook suite).
+- [x] Verify every protected pre-push command (push of `d956844` ran the full pre-push quality gate, blocked-pattern history scan, dead-code analysis, and offline OSV scan; all green).
 - [ ] Verify hooks fail closed when `/opt/workspace-ci` is absent or unverifiable.
 - [ ] Verify hook installation failure does not modify or unseal the artifact.
 - [ ] Verify hook installation succeeds after the bootstrap deployment.
@@ -167,7 +167,7 @@ completion.
 - [ ] Remove blanket `python3?` exceptions for `.sh`, `.py`, and `scripts/` from banned-word policy.
 - [ ] Replace blanket Python exceptions with exact path-scoped exceptions only for justified language detection, documentation, generated data, and bootstrap directory names.
 - [ ] Complete the authoritative scanner and exemption items in `docs/TODO-POLICY-EXEMPTION-REMEDIATION.md`; do not duplicate their completion state here.
-- [ ] Add a policy-integrity test that rejects extension-wide or directory-wide exceptions for the deprecated-Python category.
+- [x] Add a policy-integrity test that rejects extension-wide or directory-wide exceptions for the deprecated-Python category (`tests/unit/test_policy_integrity.py`, 13 tests, wired as mandatory `check-policy-integrity` hook in `d956844`).
 - [ ] Edit root-owned banned-word policy only through the guarded YAML interface and regenerate scanner documentation data.
 - [x] Enable native Bash execution tracing in `scripts/deploy-ci` so commands appear when executed.
 - [x] Keep deployment stdout and stderr directed to the actively tailed per-run log.
@@ -207,7 +207,7 @@ completion.
 - [x] Extend silent-output detection to reject delayed Ansible `register` plus `debug` replay while accepting a command that writes to an actively tailed log sink.
 - [x] Add positive detector fixtures for actively tailed log sinks.
 - [x] Add negative detector coverage for delayed debug replay and remove nominal stream-variable exemptions.
-- [ ] Run shell syntax checks, Ansible syntax validation, focused tests, banned-pattern checks, silent-output checks, module-size checks, and `make check-push`; current banned-pattern check fails on deployment interpreter calls and scanner fixtures.
+- [x] Run shell syntax checks, Ansible syntax validation, focused tests, banned-pattern checks, silent-output checks, module-size checks, and `make check-push`; the 2026-08-21 push of `d956844` passed the complete gate after the res/ansible output-surfacing rewrite.
 - [ ] Diagnose and correct the failed candidate Podman configuration production independently of provisioning-output remediation.
 - [x] Fail candidate construction before ownership changes, sealing, or publication when either required Podman configuration file is absent.
 - [x] Replace shell-guard-blocked inline candidate build code with an explicit reviewed `.sh` provisioner script.
@@ -217,7 +217,7 @@ completion.
 - [ ] Verify the deployed commit remains exact current `origin/main`.
 - [ ] Verify rebuilt Python, Podman, and hooks are functional.
 - [ ] Verify ownership, modes, immutable attributes, and candidate cleanup.
-- [ ] Use repaired hooks to commit and push the permanent CI remediation.
+- [x] Use repaired hooks to commit and push the permanent CI remediation (`d956844` and `bc6c0b0` pushed through the deployed pre-commit/pre-push gate).
 - [ ] Redeploy the new exact `origin/main`.
 - [ ] Repeat complete final-path and hook verification.
 

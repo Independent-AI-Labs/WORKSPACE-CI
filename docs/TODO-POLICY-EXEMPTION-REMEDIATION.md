@@ -10,19 +10,19 @@ mandatory for scanner and exemption acceptance.
 
 ## P0 Execution Queue
 
-- [ ] Stop deployment acceptance while any non-hermetic system interpreter remains reachable from `make deploy-ci`.
+- [x] Stop deployment acceptance while any non-hermetic system interpreter remains reachable from `make deploy-ci`. The eight absolute system-interpreter calls were removed before the `e005d53` deployment; zero remain in `scripts/deploy-ci` (repo-wide scan clean).
 - [x] Replace all eight `/usr/bin/python3` deployment operations without another interpreter indirection. Removed `ci/deploy_immutability.py`, `ci/atomic_exchange.py`, `ci/verify_candidate_paths.py`; `scripts/deploy-ci` now uses native `chattr`/`find`, `grep -rlF` path verification, and `mv -T` publication; `bash -n scripts/deploy-ci` passes and the repo-wide scan reports zero findings in `scripts/deploy-ci`.
 - [x] Complete path-independent absolute-system-interpreter enforcement: `if !`, `while`, `$(`, and backtick command contexts are detected; exact anchored single-file exemptions accepted and broad wildcard exemptions rejected; 107 shell unit tests pass.
 - [x] Complete native batched immutable verification and its full validation gate. Deployed run verified 111,432/111,432 candidate descendants immutable at 100%.
 - [x] Complete root deployment, publication, sealing, cleanup, and hook acceptance. `make deploy-ci` published `0862eca3a04dd3a256736f56f47e9e8c952cbbf1` at `/opt/workspace-ci`; root sealed, commit/tree verified, deployed Python runtime verified, protected hooks installed; Ansible recap ok=7 changed=1 failed=0.
-- [ ] Install and validate non-exemptible policy-integrity enforcement before removing broad exemptions.
+- [ ] Install and validate non-exemptible policy-integrity enforcement before removing broad exemptions. Source enforcement landed in `d956844` (checker, baseline generator, 13 unit tests, mandatory hook); root-only pieces (baseline install to `config/`, `required_hooks.yaml` registration) are prepared in `/tmp/opencode/install-policy-integrity.sh` and pending the operator root shell; activation via next `make deploy-ci`.
 - [ ] Remove critical broad Python exemptions through guarded policy mutation.
 - [ ] Only after all P0 items pass, implement the remaining matching-normalization requirements.
 
 ## Classification
 
-- [ ] Classify every current exemption as either justified exact quoted data or a critical enforcement bypass.
-- [ ] Record the owner commit, author, author date, and stated rationale for every exemption.
+- [x] Classify every current exemption as either justified exact quoted data or a critical enforcement bypass (`docs/audits/AUDIT-POLICY-EXEMPTION-CLASSIFICATION-2026-08-21.md`, 23 entries classified against `e005d53`).
+- [ ] Record the owner commit, author, author date, and stated rationale for every exemption (2 of 6 provenance commits traced: `d1f4a67`, `7255c11`).
 - [ ] Do not classify non-executable historical audit text as an execution attack surface.
 - [ ] Do not classify policy files quoting their own rules as ordinary source violations.
 - [ ] Treat broad executable-source, deployment, hook, bootstrap, and active-operator-documentation exemptions as critical until narrowed.
@@ -35,8 +35,8 @@ mandatory for scanner and exemption acceptance.
 - [ ] Do not introduce a duplicate WORKSPACE-GUARD implementation of WORKSPACE-CI policy semantics.
 - [ ] Do not treat candidate self-tests as an independent security authority.
 - [ ] Preserve the deployment rule that current `/opt/workspace-ci` is hidden and never executed during candidate construction.
-- [ ] Add a protected policy-integrity checker that cannot be disabled by writable `banned_words.yaml` or `banned_words_exceptions.yaml` content.
-- [ ] Run policy-integrity checks before the protected checker loads or applies ordinary writable-source exemptions.
+- [x] Add a protected policy-integrity checker that cannot be disabled by writable `banned_words.yaml` or `banned_words_exceptions.yaml` content (`lib/check_policy_integrity.py` in `d956844`: structural rules fail closed independent of exemption content; digest baseline freezes broad entries).
+- [ ] Run policy-integrity checks before the protected checker loads or applies ordinary writable-source exemptions (wired as an earlier mandatory pre-commit hook in source; active after next deployment installs the hook into `/opt/workspace-ci`).
 - [ ] Scan writable policy structure even though policy-definition content is excluded from ordinary banned-word matching.
 - [ ] Make policy-integrity failures from immutable `/opt/workspace-ci` block commit and push.
 - [ ] Keep deployment acceptance under the existing reviewed Ansible, exact-source, namespace, publication, and sealing contract; do not add a new validation authority.
@@ -195,8 +195,8 @@ mandatory for scanner and exemption acceptance.
 
 ## Provenance Review
 
-- [ ] Review commit `d1f4a67c64263e925bb51531f3a34ee4d6c173bf` for initial extension-wide Python and tests exemptions.
-- [ ] Review commit `7255c11ddfa3c3ea9dd5c69b32362932dbf0deec` for the explicit `scripts/` Python exemption.
+- [x] Review commit `d1f4a67c64263e925bb51531f3a34ee4d6c173bf` for initial extension-wide Python and tests exemptions (traced 2026-08-21; author V, 2026-06-09).
+- [x] Review commit `7255c11ddfa3c3ea9dd5c69b32362932dbf0deec` for the explicit `scripts/` Python exemption (traced 2026-08-21; workspace-agent, 2026-07-07; this entry hid all eight deployment system-interpreter calls).
 - [ ] Review commit `0ed799b3da8eecea98839a8d0435893587469bc7` for full wildcard and meta-policy exemptions.
 - [ ] Review commit `19b0ebbe17d371c290a64be7289355e8c5e36523` for global `paths: ['.*']` semantic exemptions.
 - [ ] Review commit `2f4e2bd6b6036c0b480c999cdd99c8e16847cd69` for broad documentation exemptions.
