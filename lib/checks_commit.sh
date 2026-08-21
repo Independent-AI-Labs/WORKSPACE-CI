@@ -243,5 +243,65 @@ ci_check_commit_message() {
         return 1
     fi
 
+    ci_check_security_commit_disclosure "$msg_file" || return 1
+
     return 0
+}
+
+# --- ci_check_security_commit_disclosure <commit-msg-file> ---
+# AUDIT-SABOTAGE-PATTERN-REVIEW-2026-08-21 R-5/R-6: commits that change
+# security-control paths must carry (a) an operator review trailer and
+# (b) an explicit known-defects statement. The trailer is a detection
+# layer, not a prevention layer: it is agent-forgeable text until the
+# guard-side HMAC verifier (R-5 part B) exists. The disclosure line
+# makes omission of known defects a gate failure instead of a prose
+# choice. Security-control paths are the enforcement stack itself:
+# hooks, gates, deploy tooling, guard integration, policy config, and
+# the operating rules.
+_CI_SECURITY_CONTROL_PATH_RE='^(lib/checks.*\.sh|lib/check_[^/]+\.py|lib/guard-.*\.sh|lib/ci\.sh|ci/.*\.py|scripts/deploy-ci|scripts/bootstrap-workspace-guard|scripts/run-deploy-ci|scripts/generate-hooks|\.pre-commit-config\.yaml|config/|AGENTS\.md|docs/requirements/|docs/specifications/)'
+
+ci_check_security_commit_disclosure() {
+    local msg_file="${1:-}"
+
+    local -a staged=()
+    local path rc=0
+    while IFS= read -r path; do
+        [[ -n "$path" ]] || continue
+        if [[ "$path" =~ $_CI_SECURITY_CONTROL_PATH_RE ]]; then
+            staged+=("$path")
+        fi
+    done < <(git diff --cached --name-only)
+
+    (( ${#staged[@]} > 0 )) || return 0
+
+    local has_review=0 has_defects=0 line
+    while IFS= read -r line; do
+        [[ "$line" == \#* ]] && continue
+        if [[ "$line" =~ ^Operator-Review:[[:space:]]*.+ ]]; then
+            has_review=1
+        fi
+        if [[ "$line" =~ ^(Known defects:|No known defects\.) ]]; then
+            has_defects=1
+        fi
+    done < "$msg_file"
+
+    if (( has_review == 0 )); then
+        echo ""
+        ci_fail "Security-control commit without operator review trailer."
+        echo "  Staged security-control paths:"
+        printf '    %s\n' "${staged[@]}"
+        echo ""
+        echo "  Add a trailer:  Operator-Review: <operator> <yyyy-mm-dd>"
+        echo "  (Detection layer until the guard-side verifier ships;"
+        echo "  forging this trailer is a reportable violation.)"
+        rc=1
+    fi
+    if (( has_defects == 0 )); then
+        echo ""
+        ci_fail "Security-control commit without known-defects statement."
+        echo "  Add one line to the body:"
+        echo "    Known defects: <description>  |  No known defects."
+        rc=1
+    fi
+    return "$rc"
 }

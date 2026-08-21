@@ -242,11 +242,23 @@ marked pending until committed and deployed.
   the generating tree. No more partial-copy generation; no fabricated
   content in staging paths.
 
-- R-4 Provenance investigation (addresses F-4, pending, operator).
-  Forensic capture of the foreign test diff: file mtime/inode/ctime,
-  shell histories, guard logs for the 16:00-16:08 +0300 window. Either
-  attribute the edit or reject it from the tree before any commit
-  includes tests/unit/test_policy_integrity.py.
+- R-4 Provenance investigation (addresses F-4, CLOSED 2026-08-21,
+  attribution undetermined, content accepted). Forensic result: no
+  opencode session in the host telemetry database authored the edit.
+  The earliest reference to `test_absent_baseline_bootstrap_passes`
+  anywhere in recorded tool history is a read at 13:15:49 UTC, by
+  which time the edit already existed on disk (file mtime 13:08:12
+  UTC, eight minutes after the auditor's gate edit at 13:00:41 UTC).
+  Every session was searched for write/edit tool calls containing
+  the test name or its distinctive refactoring: zero hits outside
+  the auditing session's own forensic queries. bash_history contains
+  no relevant entry. The edit therefore originated from a process
+  without recorded agent telemetry: a direct operator edit, or an
+  agent whose storage is outside this database. Content was
+  re-derived, reviewed line by line, extended with hermetic fixtures
+  by the auditor, and rides commits c784393/96d5dcd/b0c57e6 with
+  disclosure. Standing rule remains: unattributed working-tree
+  changes to security controls are reported before riding a commit.
 
 - R-5 Independent review gate (addresses F-6, pending, operator
   decision). Security-control commits (gates, deploy scripts, guard
