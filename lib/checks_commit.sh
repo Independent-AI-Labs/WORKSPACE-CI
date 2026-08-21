@@ -265,12 +265,14 @@ ci_check_security_commit_disclosure() {
 
     local -a staged=()
     local path rc=0
+    local diff_out=""
+    diff_out="$(git diff --cached --name-only)"
     while IFS= read -r path; do
         [[ -n "$path" ]] || continue
         if [[ "$path" =~ $_CI_SECURITY_CONTROL_PATH_RE ]]; then
             staged+=("$path")
         fi
-    done < <(git diff --cached --name-only)
+    done <<<"$diff_out"
 
     (( ${#staged[@]} > 0 )) || return 0
 
