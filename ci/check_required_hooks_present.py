@@ -167,6 +167,88 @@ def _emit(level: str, msg: str) -> None:
     print(f"  {colour}[{level}]{RESET} {msg}")
 
 
+def _hook_marker(hook_id: str) -> str:
+    return f"# === Hook: {hook_id} ==="
+
+
+def _resolve_gitdir(project_dir: Path) -> Path:
+    """Resolve .git directory, including worktree-style gitdir pointers."""
+    gitdir = project_dir / ".git"
+    if not gitdir.is_file():
+        return gitdir
+    content = gitdir.read_text(encoding="utf-8").strip()
+    if not content.startswith("gitdir:"):
+        return gitdir
+    target = Path(content.split(":", 1)[1].strip())
+    return target if target.is_absolute() else (project_dir / target).resolve()
+
+
+def _read_rendered_hooks(hooks_dir: Path) -> dict[str, str]:
+    rendered: dict[str, str] = {}
+    for stage in ("pre-commit", "commit-msg", "pre-push"):
+        path = hooks_dir / stage
+        if path.is_file():
+            rendered[stage] = path.read_text(encoding="utf-8")
+    return rendered
+
+
+def _detect_languages(project_dir: Path) -> set[str]:
+    """Detect project languages from file markers."""
+    langs: set[str] = set()
+    if (project_dir / "Cargo.toml").is_file():
+        langs.add("rust")
+    if (project_dir / "pyproject.toml").is_file():
+        langs.add("python")
+    if (project_dir / "package.json").is_file():
+        langs.add("node")
+    return langs
+
+
+def _hook_applies(hook: HookEntry, languages: set[str]) -> bool:
+    if not hook.mandatory:
+        return False
+    if "any" in hook.applicable_to:
+        return True
+    return bool(languages & set(hook.applicable_to))
+
+
+def _check_hooks_rendered(
+    project_dir: Path,
+    manifest: HooksManifest,
+) -> list[str]:
+    """Invariant 3: applicable mandatory hooks and built-in compliance
+    blocks are present in the rendered .git/hooks/ scripts.
+
+    The b4210cf generator rewrite dropped both the emissions and this
+    check; restored 2026-08-21 after the regression surfaced as missing
+    markers in regenerated consumer hooks (gateway incident).
+    """
+    hooks_dir = _resolve_gitdir(project_dir) / "hooks"
+    if not hooks_dir.is_dir():
+        return [f".git/hooks not found at {hooks_dir}"]
+    rendered = _read_rendered_hooks(hooks_dir)
+    required_markers = [
+        "CI-BUILTIN-EXEMPTION-COMPLIANCE",
+        "quality_exceptions.yaml preflight",
+    ]
+    if (project_dir / "scripts" / "generate-hooks").is_file():
+        required_markers.append("CI-BUILTIN-CATALOG-PROVENANCE")
+    issues = [
+        f"built-in block '{marker}' missing from .git/hooks/{stage}"
+        for stage, content in rendered.items()
+        for marker in required_markers
+        if marker not in content
+    ]
+    languages = _detect_languages(project_dir)
+    issues += [
+        f"hook '{hook.id}' (stage={hook.stage}) not present in .git/hooks/{hook.stage}"
+        for hook in manifest.hooks
+        if _hook_applies(hook, languages)
+        and _hook_marker(hook.id) not in rendered.get(hook.stage, "")
+    ]
+    return issues
+
+
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -252,6 +334,10 @@ def main(argv: list[str] | None = None) -> int:
             quiet=args.quiet,
         ),
     )
+    rendered_issues = _check_hooks_rendered(project_dir, manifest)
+    issues.extend(rendered_issues)
+    if not rendered_issues and not args.quiet:
+        _emit("OK", "rendered hooks carry required markers")
 
     if issues:
         print()
