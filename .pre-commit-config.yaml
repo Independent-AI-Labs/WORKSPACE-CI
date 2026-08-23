@@ -131,6 +131,13 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: check-deletion-consumers
+        name: Forbid deleting files with remaining consumers
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && CI_COMMIT_MSG_FILE=$1 ci_check_deletion_consumers' --"
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: ci-type-check
         name: Type-check (make type-check)
         entry: make type-check
