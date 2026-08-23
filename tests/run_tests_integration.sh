@@ -14,6 +14,8 @@ source "$TESTS_DIR/test_helpers.sh"
 # Run integration test suites
 source "$TESTS_DIR/integration/test_blocked_patterns.sh"
 
+source "$TESTS_DIR/test_rewrite_history.sh"
+
 source "$TESTS_DIR/integration/test_deletion_consumers.sh"
 
 source "$TESTS_DIR/integration/test_security_disclosure.sh"
