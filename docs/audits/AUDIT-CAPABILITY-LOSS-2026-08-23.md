@@ -115,7 +115,7 @@ field-level catalog drift remains open.
 
 - [ ] Restore or rewrite REQ/SPEC-SCAFFOLD-CI docs from current
       behavior.
-- [ ] Extend invariant 4 to cover safety-marked catalog fields
+- [x] Extend invariant 4 to cover safety-marked catalog fields
       (ledgered in TODO-REMEDIATION).
-- [ ] Deploy `847857a..a0efdec` and run the root-tier REV happy-path
+- [ ] Deploy `847857a..` and run the root-tier REV happy-path
       test.

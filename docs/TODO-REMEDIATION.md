@@ -97,6 +97,22 @@ completion.
       (pending commit); deployed copy still broken until the one-time
       unblock below.
 
+## Invariant 4 Extension: Safety-Marked Catalog Fields (done 2026-08-24)
+
+- [x] `ci/check_required_hooks_present.py` `HookEntry` is now strict
+      (`extra="forbid"`): a misspelled or silently-renamed catalog
+      field is a load-time violation instead of a silently-shrunk
+      hook. All observed catalog fields are modeled (`safety`,
+      `always_run`, `pass_filenames`, `files`, `files_types`).
+- [x] Invariant 4 enforces safety-field coherence: safety hooks must
+      be mandatory, and a catalog with no `safety: true` hooks at all
+      fails (the wholesale-deletion class that broke the poc tier on
+      2026-08-24). Fires with or without a shipping lib (catalog-data
+      coherence, not entry resolution).
+- [x] Tests: non-mandatory safety hook flagged; empty safety set
+      flagged; unknown field rejected; existing fixtures updated to
+      carry a coherent baseline safety hook. 27/27 in the module.
+
 ## One-Time Deadlock Unblock (operator)
 
 - [ ] Operator lands the staged working-tree fix (restored

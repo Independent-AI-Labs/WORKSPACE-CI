@@ -32,15 +32,26 @@ RESET = "\033[0m"
 
 
 class HookEntry(BaseModel):
-    """One entry in required_hooks.yaml."""
+    """One entry in required_hooks.yaml.
 
-    model_config = ConfigDict(extra="allow")
+    ``extra="forbid"``: the 2026-08-24 safety-marker incident dropped
+    catalog data one field at a time while the model (``extra="allow"``)
+    accepted the shrunk entries without complaint. Strict validation turns any
+    unknown or misspelled field name into a load-time violation instead.
+    """
+
+    model_config = ConfigDict(extra="forbid")
     id: str
     kind: str
     entry: str
     stage: str
     mandatory: bool = False
+    safety: bool = False
+    always_run: bool = False
+    pass_filenames: bool = True
     applicable_to: list[str] = Field(default_factory=lambda: ["any"])
+    files: list[str] = Field(default_factory=list)
+    files_types: list[str] = Field(default_factory=list)
 
 
 class HooksManifest(BaseModel):
@@ -345,6 +356,13 @@ def _run_invariant_4_entries(
     and in candidate check-push (deploy-time), so a tree that drops an
     implementation while keeping its catalog entry can neither commit
     nor publish.
+
+    Also enforces coherence of the safety-marked catalog fields: the
+    wholesale deletion of every ``safety: true`` marker (2026-08-24,
+    f7422dc-era) broke the poc tier's safety-only filter undetected. A
+    catalog with no safety hooks at all is now a violation, as is a
+    safety hook that is not mandatory (safety hooks run even at poc
+    tier; non-mandatory safety hooks are incoherent).
     """
     if package_root is None:
         # Anchor to the checker's own tree: ci/ sits beside lib/ in both
@@ -354,6 +372,19 @@ def _run_invariant_4_entries(
         package_root = ci_dir.parent
     lib_dir = package_root / "lib"
     issues: list[str] = []
+    safety_hooks = [h for h in manifest.hooks if h.safety]
+    issues.extend(
+        f"hook '{hook.id}' is safety-marked but not mandatory; safety"
+        " hooks must be mandatory (they run even at poc tier)"
+        for hook in safety_hooks
+        if not hook.mandatory
+    )
+    if not safety_hooks:
+        issues.append(
+            "no hook in required_hooks.yaml carries safety: true; the"
+            " poc tier filters to safety hooks only and would emit none"
+            " (wholesale safety-marker deletion, 2026-08-24 incident)",
+        )
     if not lib_dir.is_dir():
         # Consumer invocation without a shipping lib (checker imported
         # from a source checkout elsewhere); generation-time refusal and
