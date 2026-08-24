@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# cleanup-precommit: OPERATOR-ONLY tool. Remove all traces of the
+# historical pre-commit Python package from a consumer repository whose
+# hooks have migrated to the generated native hooks
+# (scripts/generate-hooks, DECISION-BOOTSTRAP-AND-DEPLOYMENT-2026-08-10).
+#
+# Scope: ~/.cache/pre-commit, pre-commit-era hook backups
+# the pre-commit package in the project venv. It does NOT touch
+# protected hooks, the deployed artifact, or .pre-commit-config.yaml
+# (the config source for generate-hooks) unless --remove-config is
+# passed explicitly.
+#
+# This is a migration aid for humans. Agents have no business removing
+# policy tooling; the script self-reports when it is being run
+# non-interactively and refuses.
+#
+# Usage (operator, from the consumer repo root): cleanup-precommit [--remove-config]
+set -euo pipefail
+
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+_SCRIPT_DIR="$(cd "$(dirname "$_SELF")" && pwd)"
+_CI_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
+if ! source "$_CI_ROOT/lib/ci.sh"; then
+    echo "ERROR: failed to source $_CI_ROOT/lib/ci.sh" >&2
+    exit 2
+fi
+
+if [[ -n "${CI-}" || -n "${WORKSPACE_AGENT:-}" ]] || [[ ! -t 0 ]]; then
+    ci_fail "cleanup-precommit is operator-only: run it interactively from a human shell."
+    exit 1
+fi
+
+_remove_config=0
+[[ "${1:-}" == "--remove-config" ]] && _remove_config=1
+
+# Remove pre-commit cache
+if [[ -d "$HOME/.cache/pre-commit" ]]; then
+    rm -rf "$HOME/.cache/pre-commit"
+    ci_pass "Removed ~/.cache/pre-commit"
+else
+    ci_info "No pre-commit cache found"
+fi
+
+# Remove old hook backup
+# Remove hook backups left by the pre-commit package's install mode
+# (its migration mode renames the prior hook with a suffix).
+if [[ -f ".git/hooks/pre-commit.legacy" ]]; then
+    rm -f ".git/hooks/pre-commit.legacy"
+    ci_pass "Removed pre-commit-era hook backup"
+fi
+
+# Uninstall pre-commit package via hermetic boot-dir uv only; never
+# ambient system binaries. uv resolves the project venv itself when run
+# from the project root.
+_uv="$(ci_uv_bin)" || exit 1
+if (cd "$CI_PROJECT_ROOT" && env -u VIRTUAL_ENV "$_uv" pip uninstall pre-commit); then
+    ci_pass "Uninstalled pre-commit (uv, project venv)"
+else
+    ci_info "pre-commit not installed in project venv (or no venv yet)"
+fi
+
+# Optionally remove config
+if [[ $_remove_config -eq 1 ]]; then
+    rm -f .pre-commit-config.yaml
+    ci_pass "Removed .pre-commit-config.yaml"
+fi
+
+echo ""
+ci_info "NOTE: If pre-commit is in pyproject.toml dev dependencies, remove it manually."
+ci_pass "Pre-commit cleanup complete."

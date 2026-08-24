@@ -207,7 +207,10 @@ universal_exceptions:
       - ^tests/unit/test_checks\.sh$
     patterns:
       - protected-system-interpreter
-
+  - paths:
+      - scripts/cleanup-precommit
+    patterns:
+      - \blegacy\b
 banned:
   # === LINTER/TYPE SUPPRESSION ===
 
