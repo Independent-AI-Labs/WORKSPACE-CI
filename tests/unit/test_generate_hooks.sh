@@ -41,3 +41,32 @@ test_generate_hooks_advisory_wrapper_is_non_failing() {
     ! grep -q 'false || { ci_fail' "$output/pre-push"
 }
 _run_test "generate-hooks advisory wrapper is non-failing" test_generate_hooks_advisory_wrapper_is_non_failing
+
+test_generate_hooks_refuses_unresolved_shell_entry() {
+    local root="$TEST_TMP/unresolved-hooks" output="$TEST_TMP/unresolved-generated"
+    mkdir -p "$root" "$output"
+    git -C "$root" init -q
+    # The 2026-08-24 incident class: catalog entry references a function
+    # that no lib module defines (ci_check_portable_shell was dropped
+    # from checks_files.sh while the entry survived).
+    printf 'repos:\n  - repo: local\n    hooks:\n      - id: ghost\n        name: Ghost Gate\n        entry: "bash -c \x27source lib/checks.sh && ci_check_ghost_function\x27"\n        language: system\n        stages: [pre-commit]\n' > "$root/.pre-commit-config.yaml"
+    local out rc=0
+    out="$(cd "$root" && bash "$PROJECT_DIR/scripts/generate-hooks" --output-dir "$output" 2>&1)" || rc=$?
+    [[ $rc -ne 0 ]] || { echo "expected generation refusal for unresolved entry"; return 1; }
+    echo "$out" | grep -q "ci_check_ghost_function"
+    echo "$out" | grep -q "no lib module defines it"
+}
+
+test_generate_hooks_refuses_missing_python_module() {
+    local root="$TEST_TMP/ghostmod-hooks" output="$TEST_TMP/ghostmod-generated"
+    mkdir -p "$root" "$output"
+    git -C "$root" init -q
+    printf 'repos:\n  - repo: local\n    hooks:\n      - id: ghostmod\n        name: Ghost Module\n        entry: "uv run python -m ci.ghost_module_subsystem"\n        language: system\n        stages: [pre-commit]\n' > "$root/.pre-commit-config.yaml"
+    local out rc=0
+    out="$(cd "$root" && bash "$PROJECT_DIR/scripts/generate-hooks" --output-dir "$output" 2>&1)" || rc=$?
+    [[ $rc -ne 0 ]] || { echo "expected generation refusal for missing module"; return 1; }
+    echo "$out" | grep -q "ci.ghost_module_subsystem"
+}
+
+_run_test "generate-hooks refuses unresolved shell entry" test_generate_hooks_refuses_unresolved_shell_entry
+_run_test "generate-hooks refuses missing python module" test_generate_hooks_refuses_missing_python_module

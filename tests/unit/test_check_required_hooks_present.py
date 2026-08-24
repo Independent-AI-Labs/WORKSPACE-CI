@@ -18,6 +18,7 @@ from ci.check_required_hooks_present import (
     QualityExceptions,
     _check_manifest_completeness,
     _check_quality_exceptions,
+    _run_invariant_4_entries,
     main,
 )
 
@@ -382,3 +383,111 @@ def test_main_accepts_workspace_root(tmp_path: Path) -> None:
     (root / ".git" / "hooks").mkdir(parents=True)
     rc = main(["--project", str(root), "--quiet"])
     assert rc == EXIT_OK
+
+
+def _manifest_of(hooks: list[dict[str, object]]) -> HooksManifest:
+    return HooksManifest.model_validate({"version": 1, "hooks": hooks})
+
+
+def test_invariant4_flags_shell_entry_without_definition(
+    tmp_path: Path,
+) -> None:
+    """The 2026-08-24 portable_shell class: catalog entry survives, the
+    implementing function does not."""
+    (tmp_path / "lib").mkdir()
+    (tmp_path / "lib" / "checks_core.sh").write_text(
+        "#!/usr/bin/env bash\nci_check_present() { :; }\n"
+    )
+    manifest = _manifest_of(
+        [
+            {
+                "id": "ghost-gate",
+                "kind": "shell",
+                "entry": (
+                    "bash -c 'source lib/checks.sh && ci_check_ghost_function'"
+                ),
+                "stage": "pre-commit",
+            },
+        ],
+    )
+    issues = _run_invariant_4_entries(manifest, quiet=True, package_root=tmp_path)
+    assert issues == [
+        "hook 'ghost-gate' entry references shell function"
+        " 'ci_check_ghost_function' but no lib/*.sh module defines it"
+    ]
+
+
+def test_invariant4_accepts_defined_shell_entry(tmp_path: Path) -> None:
+    (tmp_path / "lib").mkdir()
+    (tmp_path / "lib" / "checks_files.sh").write_text(
+        "#!/usr/bin/env bash\n"
+        "# comment mentioning ci_check_ghost_function in prose only\n"
+        "function ci_check_portable_shell() { :; }\n"
+    )
+    manifest = _manifest_of(
+        [
+            {
+                "id": "portable",
+                "kind": "shell",
+                "entry": (
+                    "bash -c 'source lib/checks.sh && ci_check_portable_shell'"
+                ),
+                "stage": "pre-commit",
+            },
+        ],
+    )
+    assert _run_invariant_4_entries(manifest, quiet=True, package_root=tmp_path) == []
+
+
+def test_invariant4_flags_missing_python_module(tmp_path: Path) -> None:
+    (tmp_path / "lib").mkdir()
+    (tmp_path / "ci").mkdir()
+    (tmp_path / "ci" / "check_real_thing.py").write_text("def main() -> None\n")
+    manifest = _manifest_of(
+        [
+            {
+                "id": "ghostmod",
+                "kind": "python_module",
+                "entry": "ci.check_ghost_module",
+                "stage": "pre-commit",
+            },
+        ],
+    )
+    issues = _run_invariant_4_entries(manifest, quiet=True, package_root=tmp_path)
+    assert issues == [
+        "hook 'ghostmod' entry references python module"
+        " 'ci.check_ghost_module' but it does not exist"
+    ]
+
+
+def test_invariant4_accepts_existing_python_module(tmp_path: Path) -> None:
+    (tmp_path / "lib").mkdir()
+    (tmp_path / "ci").mkdir()
+    (tmp_path / "ci" / "check_boot_venv_layout.py").write_text(
+        "def main() -> None\n"
+    )
+    manifest = _manifest_of(
+        [
+            {
+                "id": "bootlayout",
+                "kind": "python_module",
+                "entry": "ci.check_boot_venv_layout",
+                "stage": "pre-commit",
+            },
+        ],
+    )
+    assert _run_invariant_4_entries(manifest, quiet=True, package_root=tmp_path) == []
+
+
+def test_invariant4_skips_when_no_shipping_lib(tmp_path: Path) -> None:
+    manifest = _manifest_of(
+        [
+            {
+                "id": "ghost-gate",
+                "kind": "shell",
+                "entry": "bash -c 'ci_check_ghost_function'",
+                "stage": "pre-commit",
+            },
+        ],
+    )
+    assert _run_invariant_4_entries(manifest, quiet=True, package_root=tmp_path) == []

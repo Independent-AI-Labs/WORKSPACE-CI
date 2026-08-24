@@ -33,6 +33,47 @@ mkdir -p "$_output_dir"
 _hooks="$(awk -f "$_CI_ROOT/lib/parse_precommit_config.awk" "$_config")"
 [[ -n "$_hooks" ]] || exit 0
 
+# === entry-resolution integrity (2026-08-24 portable_shell incident) ===
+# A rendered hook whose entry does not resolve fails only at commit time,
+# in the deployed artifact, where fixing it deadlocks (the broken gate
+# blocks the fix commit). Refuse at generation instead: every shell
+# function entry must be defined in the sourced lib, and every python
+# module entry must exist as a file. This mirrors what the hook itself
+# will do: source lib/checks.sh, then invoke the entry.
+_entry_unresolved=0
+while IFS=$'\034' read -r _e_id _e_name _e_entry _e_rest; do
+    [[ -n "$_e_id" ]] || continue
+    # grep exits 1 when an entry has no shell-function token (make
+    # targets, python modules, bare commands); that is expected.
+    _e_fns=""
+    _e_fns_rc=0
+    _e_fns="$(printf '%s\n' "$_e_entry" | grep -oE 'ci_[a-z_][a-z0-9_]*' | sort -u)" || _e_fns_rc=$?
+    for _e_fn in $_e_fns; do
+        _e_found=""
+        for _e_lib in "$_CI_ROOT"/lib/*.sh; do
+            if grep -qE "^[[:space:]]*(function[[:space:]]+)?${_e_fn}[[:space:]]*\(\)" "$_e_lib"; then
+                _e_found="$_e_lib"
+                break
+            fi
+        done
+        if [[ -z "$_e_found" ]]; then
+            ci_fail "Hook '$_e_id' entry references '${_e_fn}' but no lib module defines it."
+            echo "  Checked: $_CI_ROOT/lib/*.sh" >&2
+            _entry_unresolved=1
+        fi
+    done
+    _e_mod=""
+    _e_mod_rc=0
+    _e_mod="$(printf '%s\n' "$_e_entry" | grep -oE 'python -m ci\.[a-z_][a-z0-9_.]*' | sed 's/^python -m //')" || _e_mod_rc=$?
+    _e_mod="${_e_mod%%$'\n'*}"
+    _e_mod_path="${_e_mod//./\/}"
+    if [[ -n "$_e_mod" && ! -f "$_CI_ROOT/$_e_mod_path.py" && ! -d "$_CI_ROOT/$_e_mod_path" ]]; then
+        ci_fail "Hook '$_e_id' entry references python module '$_e_mod' but it does not exist."
+        _entry_unresolved=1
+    fi
+done <<< "$_hooks"
+[[ $_entry_unresolved -eq 0 ]] || exit 1
+
 for _stage in pre-commit commit-msg pre-push; do
     _stage_hooks="$(printf '%s\n' "$_hooks" | awk -F'\034' -v s="$_stage" '$4 == s')"
     [[ -n "$_stage_hooks" ]] || continue

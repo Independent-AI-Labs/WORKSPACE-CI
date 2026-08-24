@@ -9,6 +9,8 @@ Exit codes: 0 = all invariants hold, 1 = violation, 2 = infrastructure error.
 from __future__ import annotations
 
 import argparse
+import functools
+import re
 import sys
 from pathlib import Path
 
@@ -298,6 +300,91 @@ def _run_invariant_2_exceptions(
     return issues
 
 
+class LibReadError(RuntimeError):
+    """A lib/*.sh module could not be read for entry resolution."""
+
+
+@functools.lru_cache(maxsize=1)
+def _shell_fn_re() -> re.Pattern[str]:
+    return re.compile(
+        r"^\s*(?:function\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\(\)",
+        re.MULTILINE,
+    )
+
+
+@functools.cache
+def _shell_function_names(lib_dir: Path) -> frozenset[str]:
+    """Function names defined across the lib/*.sh modules next to this
+    checker's package (works identically in the source checkout and the
+    deployed artifact: ci/ sits beside lib/)."""
+    names: set[str] = set()
+    if not lib_dir.is_dir():
+        return frozenset(names)
+    pattern = _shell_fn_re()
+    for lib_file in sorted(lib_dir.glob("*.sh")):
+        try:
+            text = lib_file.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            raise LibReadError(lib_file) from exc
+        names.update(m.group(1) for m in pattern.finditer(text))
+    return frozenset(names)
+
+
+def _run_invariant_4_entries(
+    manifest: HooksManifest,
+    *,
+    quiet: bool,
+    package_root: Path | None = None,
+) -> list[str]:
+    """Invariant 4: every manifest entry resolves in the shipping lib.
+
+    The 2026-08-24 portable_shell incident: ci_check_portable_shell was
+    dropped from lib/checks_files.sh while required_hooks.yaml kept the
+    entry; the deployed hook failed with "command not found" on every
+    commit, deadlocking the fix. This invariant runs in source pre-commit
+    and in candidate check-push (deploy-time), so a tree that drops an
+    implementation while keeping its catalog entry can neither commit
+    nor publish.
+    """
+    if package_root is None:
+        # Anchor to the checker's own tree: ci/ sits beside lib/ in both
+        # the source checkout and the deployed artifact, so the invariant
+        # always validates the lib that will actually be shipped.
+        ci_dir = Path(__file__).resolve().parent
+        package_root = ci_dir.parent
+    lib_dir = package_root / "lib"
+    issues: list[str] = []
+    if not lib_dir.is_dir():
+        # Consumer invocation without a shipping lib (checker imported
+        # from a source checkout elsewhere); generation-time refusal and
+        # the CI-repo self-check own this invariant.
+        return issues
+    defined = _shell_function_names(lib_dir)
+    for hook in manifest.hooks:
+        if hook.kind == "shell":
+            issues.extend(
+                f"hook '{hook.id}' entry references shell function"
+                f" '{fn}' but no lib/*.sh module defines it"
+                for fn in sorted(
+                    set(re.findall(r"\bci_[a-z_][a-z0-9_]*\b", hook.entry))
+                )
+                if fn not in defined
+            )
+        elif hook.kind == "python_module":
+            module_path = hook.entry.replace("ci.", "ci/", 1)
+            if not (
+                (package_root / f"{module_path}.py").is_file()
+                or (package_root / module_path).is_dir()
+            ):
+                issues.append(
+                    f"hook '{hook.id}' entry references python module"
+                    f" '{hook.entry}' but it does not exist"
+                )
+    if not issues and not quiet:
+        _emit("OK", "every manifest entry resolves in the shipping lib")
+    return issues
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _build_arg_parser().parse_args(argv)
 
@@ -338,6 +425,9 @@ def main(argv: list[str] | None = None) -> int:
     issues.extend(rendered_issues)
     if not rendered_issues and not args.quiet:
         _emit("OK", "rendered hooks carry required markers")
+
+    entry_issues = _run_invariant_4_entries(manifest, quiet=args.quiet)
+    issues.extend(entry_issues)
 
     if issues:
         print()
