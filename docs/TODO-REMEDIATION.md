@@ -10,11 +10,11 @@ completion.
 ## Fail-Open Gate Audit (2026-08-24; full-transcript evidence)
 
 - [x] FO-1 coverage gate: pytest printed `FAIL Required test coverage of
-      90% not reached` yet exited 0 (live-verified). Root cause: the
+      90% not reached` yet exited 0 (live-verified).       Root cause: the
       workspace-root pytest config runs the suite under xdist
-      (`addopts = "-n 1"`, a documented segfault workaround) and
-      pytest-cov's `--cov-fail-under` exit code does not fire in the
-      controller process under xdist. Every prior "green" check-push
+      (`addopts = "-n 1"`, a documented interpreter-isolation
+      necessity) and pytest-cov's `--cov-fail-under` exit code does
+      not fire in the controller process under xdist. Every prior "green" check-push
       passed with the coverage threshold unenforced. Fix: Makefile
       `_test-push-impl` now enforces the threshold via
       `coverage report --fail-under=90` (coverage's own exit code);
@@ -23,7 +23,7 @@ completion.
       100 integration, 91% enforced.
 - [x] FO-2 dead-code gate contradiction: catalog said advisory
       ("always exits 0") while the rendered pre-push hook wrapped it
-      blocking (`|| { ci_fail; exit 1; }`) — unreachable code, gate
+      blocking (`|| { ci_fail; exit 1; }`): unreachable code, gate
       theater. Ruling (operator 2026-08-24): non-failing by design.
       Fix: `advisory: true` in .pre-commit-config.yaml; awk parser and
       generate-hooks emit an rc-capturing wrapper that reports
