@@ -31,42 +31,57 @@ _in_ignored_dir() {
 # Auto-stages all unstaged or untracked changes before the remaining hooks run.
 # Prevents partial commits that leave the working tree in an inconsistent state.
 #
-# SAFETY NET ONLY (AGENTS.md Code §8): git decides "anything to commit?"
-# from its pre-hook index snapshot, so if the user staged nothing this
-# hook-time add cannot carry the current commit; the commit exits with
-# "nothing added to commit" and the staged content lands on the retry.
-# That first-attempt failure is stock git 2.43 semantics, not a guard or
-# hook defect. Users must `git add -A` before `git commit`.
+# Single-command flow (AGENTS.md Code §8): git decides "anything to
+# commit?" from its pre-hook index snapshot, so a hook-time add cannot
+# make git count content the user never staged (stock git 2.43
+# semantics, proven 2026-08-24). When nothing was pre-staged, this
+# check stages everything, then fails with instructions naming the
+# cause; the same commit command re-run succeeds because the index now
+# carries the content. When something IS pre-staged, hook-time staging
+# rides the commit via git's post-hook index re-read.
 ci_check_unstaged() {
-    local untracked
+    local untracked pre_staged
     untracked=$(git ls-files --others --exclude-standard)
-    if [[ -n "$(git diff --stat)" ]] || [ -n "$untracked" ]; then
-        echo ""
-        ci_info "Unstaged or untracked files detected, auto-staging now."
-        git diff
-        local add_rc=0
-        git add -A || add_rc=$?
-        if [[ $add_rc -ne 0 ]]; then
-            # Self-diagnosing failure: capture the capability and PATH
-            # context of this exact hook process so a permission fault
-            # identifies itself instead of needing post-hoc replay.
-            echo "" >&2
-            ci_info "Auto-stage diagnostics (hook exec context):" >&2
-            grep -E 'Cap(Eff|Bnd|Amb)|NoNewPrivs' /proc/self/status | sed 's/^/  /' >&2
-            ci_info "  git resolves to: $(command -v git)" >&2
-            getcap "$(command -v git)" 2>&1 | sed 's/^/  caps: /' >&2
-            ci_fail "Auto-stage FAILED: git add -A exited $add_rc. Nothing was staged; stage manually and re-run."
-            return 1
-        fi
-        if [ -n "$untracked" ]; then
-            echo ""
-            ci_info "Untracked files being staged:"
-            echo "$untracked" | sed 's/^/  /'
-        fi
-        echo ""
-        ci_info "All changes staged; continuing commit."
+    if [[ -z "$(git diff --stat)" ]] && [[ -z "$untracked" ]]; then
         return 0
     fi
+    # Was anything staged before this commit attempt began? git's
+    # committable check counts only pre-hook staging; hook staging here
+    # cannot save an otherwise-empty commit.
+    pre_staged=1
+    if git diff --cached --quiet; then
+        pre_staged=0
+    fi
+    echo ""
+    ci_info "Unstaged or untracked files detected, auto-staging now."
+    git diff
+    local add_rc=0
+    git add -A || add_rc=$?
+    if [[ $add_rc -ne 0 ]]; then
+        # Self-diagnosing failure: capture the capability and PATH
+        # context of this exact hook process so a permission fault
+        # identifies itself instead of needing post-hoc replay.
+        echo "" >&2
+        ci_info "Auto-stage diagnostics (hook exec context):" >&2
+        grep -E 'Cap(Eff|Bnd|Amb)|NoNewPrivs' /proc/self/status | sed 's/^/  /' >&2
+        ci_info "  git resolves to: $(command -v git)" >&2
+        getcap "$(command -v git)" 2>&1 | sed 's/^/  caps: /' >&2
+        ci_fail "Auto-stage FAILED: git add -A exited $add_rc. Nothing was staged; stage manually and re-run."
+        return 1
+    fi
+    if [ -n "$untracked" ]; then
+        echo ""
+        ci_info "Untracked files being staged:"
+        echo "$untracked" | sed 's/^/  /'
+    fi
+    if [[ $pre_staged -eq 0 ]]; then
+        echo ""
+        ci_fail "Nothing was pre-staged: git cannot count hook-time staging (pre-hook index snapshot)."
+        echo "  All changes are now staged. Re-run the SAME git commit command; it succeeds."
+        return 1
+    fi
+    echo ""
+    ci_info "All changes staged; continuing commit."
     return 0
 }
 
