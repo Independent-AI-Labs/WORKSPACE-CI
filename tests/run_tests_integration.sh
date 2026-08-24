@@ -28,6 +28,7 @@ source "$TESTS_DIR/integration/test_dead_code_real.sh"
 source "$TESTS_DIR/integration/test_silent_swallow.sh"
 source "$TESTS_DIR/integration/test_fail_closed.sh"
 source "$TESTS_DIR/integration/test_config_overrides.sh"
+source "$TESTS_DIR/integration/test_scaffold_ci.sh"
 
 # Some suites enable `set -euo pipefail` for standalone use; sourced into
 # this runner the flag leaks and any nonzero command (e.g. cleanup find on

@@ -24,6 +24,10 @@ _required_unit_tests=(
     test_verify_immutable.sh
     test_deploy_ci_rev.sh
     test_cleanup_precommit.sh
+    scaffold/test_scaffold_ci.sh
+    scaffold/test_scaffold_ci_force.sh
+    scaffold/test_scaffold_ci_gen.sh
+    scaffold/test_scaffold_ci_inspect.sh
 )
 for _unit_test in "${_required_unit_tests[@]}"; do
     if [[ ! -f "$TESTS_DIR/unit/$_unit_test" ]]; then
@@ -45,6 +49,10 @@ source "$TESTS_DIR/unit/test_generate_hooks.sh"
 source "$TESTS_DIR/unit/test_verify_immutable.sh"
 source "$TESTS_DIR/unit/test_deploy_ci_rev.sh"
 source "$TESTS_DIR/unit/test_cleanup_precommit.sh"
+source "$TESTS_DIR/unit/scaffold/test_scaffold_ci.sh"
+source "$TESTS_DIR/unit/scaffold/test_scaffold_ci_force.sh"
+source "$TESTS_DIR/unit/scaffold/test_scaffold_ci_gen.sh"
+source "$TESTS_DIR/unit/scaffold/test_scaffold_ci_inspect.sh"
 
 # Summary
 echo ""

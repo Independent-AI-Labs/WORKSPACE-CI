@@ -69,6 +69,7 @@ mode == "registry" {
 mode == "profile" {
     if (/^version:/) { printf "S%sversion%s%s\n", sep, sep, scalar_top(); next }
     if (/^project:/) { printf "S%sproject%s%s\n", sep, sep, scalar_top(); next }
+    if (/^tier:/)    { printf "S%stier%s%s\n", sep, sep, scalar_top(); next }
 
     if (/^languages:/) {
         in_languages = 1
