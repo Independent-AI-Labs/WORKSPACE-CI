@@ -42,12 +42,17 @@
 §7. All git invocations pass through the guard. No git operation is
    performed outside it.
 
-§8. The commit flow is exactly one command: `git commit` with the
-   message via `-F` file; the commit-msg gate requires a body.
+§8. The commit flow is exactly two commands: `git add -A` then
+    `git commit` with the message via `-F` file; the commit-msg gate
+    requires a body. Staging first is required, not stylistic: git
+    computes "anything to commit?" from its pre-hook index snapshot,
+    so hook-time staging alone cannot carry a commit (proven against
+    stock git 2.43, 2026-08-24).
 
-§9. The pre-commit hook auto-stages everything and runs the gates.
-   There is no other flow: no selective staging, no unstaging, no
-   `restore` or `checkout` of paths, no snapshot maneuvers.
+§9. The pre-commit hook auto-stages anything left unstaged as a
+    safety net and runs the gates. There is no other flow: no
+    selective staging, no unstaging, no `restore` or `checkout` of
+    paths, no snapshot maneuvers.
 
 §10. A dirty tree rides the next commit as-is. Foreign or
     unexpected files in the tree are reported to the operator

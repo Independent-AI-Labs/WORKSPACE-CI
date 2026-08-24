@@ -30,6 +30,13 @@ _in_ignored_dir() {
 # --- ci_check_unstaged ---
 # Auto-stages all unstaged or untracked changes before the remaining hooks run.
 # Prevents partial commits that leave the working tree in an inconsistent state.
+#
+# SAFETY NET ONLY (AGENTS.md Code §8): git decides "anything to commit?"
+# from its pre-hook index snapshot, so if the user staged nothing this
+# hook-time add cannot carry the current commit; the commit exits with
+# "nothing added to commit" and the staged content lands on the retry.
+# That first-attempt failure is stock git 2.43 semantics, not a guard or
+# hook defect. Users must `git add -A` before `git commit`.
 ci_check_unstaged() {
     local untracked
     untracked=$(git ls-files --others --exclude-standard)
