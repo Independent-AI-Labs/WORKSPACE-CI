@@ -6,6 +6,7 @@
   become: false
   vars:
     workspace_ci_source_root: '{{ source_root }}'
+    workspace_ci_deploy_rev: '{{ deploy_rev | default("") }}'
   tasks:
     - name: Inspect reviewed source checkout
       ansible.builtin.stat:
@@ -37,7 +38,9 @@
     - name: Run reviewed deployment implementation
       ansible.builtin.shell: >-
         /bin/bash {{ (workspace_ci_source_root + '/scripts/deploy-ci') | quote }}
-        --from-ansible >>{{ deploy_output | quote }} 2>&1
+        --from-ansible {{ ('--rev ' ~ (workspace_ci_deploy_rev | quote))
+        if workspace_ci_deploy_rev else '' }}
+        >>{{ deploy_output | quote }} 2>&1
       register: deploy_run
       changed_when: true
       failed_when: deploy_run.rc != 0

@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-[[ $# -eq 2 ]] || {
-    printf 'usage: sudo %s SOURCE_ROOT ANSIBLE_PLAYBOOK\n' "$0" >&2
+[[ $# -eq 2 || $# -eq 3 ]] || {
+    printf 'usage: sudo %s SOURCE_ROOT ANSIBLE_PLAYBOOK [REV]\n' "$0" >&2
+    printf 'REV: optional committed ancestor of origin/main to deploy\n' >&2
+    printf '     (reviewed-ancestor rollback; DECISION-REVIEWED-ANCESTOR-ROLLBACK-2026-08-24)\n' >&2
     exit 2
 }
 
@@ -33,11 +35,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
-"$2" \
-    "$1/res/ansible/deploy-ci.yml" \
-    -e "source_root=$1" \
-    -e "deploy_output=$log" &
-ansible_pid=$!
+deploy_cmd=("$2" "$1/res/ansible/deploy-ci.yml" -e "source_root=$1" -e "deploy_output=$log")
+if [[ $# -eq 3 && -n "$3" ]]; then
+    deploy_cmd+=(-e "deploy_rev=$3")
+fi
+
+"${deploy_cmd[@]}" & ansible_pid=$!
 
 tail --pid="$ansible_pid" -n +1 -F "$log" &
 tail_pid=$!

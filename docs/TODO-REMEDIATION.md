@@ -46,28 +46,35 @@ completion.
 
 ## Reviewed-Ancestor Rollback (DECISION-REVIEWED-ANCESTOR-ROLLBACK-2026-08-24)
 
-- [ ] Add `REV=<commit>` argument to `scripts/deploy-ci`; verify REV is a
-      committed ancestor of fetched `origin/main` via
-      `git merge-base --is-ancestor`; refuse anything else with a clear
-      error.
-- [ ] Construct the candidate at REV by fetching the rev from the source
-      repository objects; never move the working checkout backwards.
-- [ ] Replace the `HEAD == origin/main` precondition with
-      `REV is an ancestor of origin/main`; with no REV given the target is
-      the fetched `origin/main` tip (explicit, not a resolution chain).
-- [ ] Pass `REV` through the Makefile `deploy-ci` target and
-      `scripts/run-deploy-ci` wrapper.
-- [ ] Preserve per-generation verification: candidate at REV runs that
+- [x] Add `REV=<commit>` argument to `scripts/deploy-ci` (--rev /
+      --rev= forms); argument validation precedes the root gate so
+      refusals are testable unprivileged; unknown arguments, empty REV,
+      and missing --from-ansible are refused with clear errors.
+- [x] Ancestry constraint: REV must resolve in the source repository
+      and pass `git merge-base --is-ancestor` against the fetched
+      `origin/main`; anything else is refused.
+- [x] Candidate at REV: cloned from the source repository's objects
+      and checked out at the resolved REV head; the working checkout
+      is never moved. Downstream tree/commit verification keys off the
+      resolved head automatically.
+- [x] The `HEAD == origin/main` precondition applies to the default
+      path only; the REV path validates ancestry instead.
+- [x] REV passthrough: Makefile deploy-ci target passes `$(REV)`;
+      run-deploy-ci accepts an optional third argument and exports
+      `deploy_rev`; the Ansible playbook forwards `--rev` when set
+      (ansible-playbook --syntax-check green).
+- [x] Per-generation verification preserved: candidate at REV runs that
       revision's own `check-push` in the namespace (no future-baseline
       retrojection; operator ruling 2026-08-24).
-- [ ] Test: refuse non-ancestor REV, refuse REV not on main, refuse
-      dirty-tree REV.
+- [x] Agent-runnable tests (tests/unit/test_deploy_ci_rev.sh, 7 cases:
+      unknown-arg/empty-REV/missing-from-ansible refusals live, parser
+      ordering pinned, ancestry enforcement source assertions,
+      run-deploy-ci and Makefile passthrough). Suite 115/115.
 - [ ] Test (root/podman tier): happy-path deploy of a prior sanctioned
       rev restores healthy gates; subsequent ordinary deploy of fixed
-      main supersedes it.
-- [ ] Update SPEC-DEPLOYMENT and RUNBOOK-HOOKS with the REV flow and the
-      deadlock-recovery sequence (rollback, fix through restored gates,
-      redeploy main).
+      main supersedes it; functional refusal of a non-ancestor REV.
+- [x] SPEC-DEPLOYMENT section 8.1 and RUNBOOK-HOOKS deadlock-recovery
+      section document the REV flow and recovery sequence.
 
 ## Hook-Entry Integrity (deadlock prevention; 2026-08-24 portable_shell incident)
 

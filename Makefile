@@ -623,5 +623,5 @@ check-guard-host-exec: ## Check host-exec git-guard installation (read-only, run
 	WORKSPACE_GUARD_ROOT="$(WORKSPACE_GUARD_ROOT)" $(SCRIPT_BASH) scripts/bootstrap-workspace-guard check-host-exec
 
 .PHONY: deploy-ci
-deploy-ci: ## Build and atomically publish /opt/workspace-ci (root only)
-	./scripts/run-deploy-ci "$(CURDIR)" "$(DEPLOY_ANSIBLE_PLAYBOOK)"
+deploy-ci: ## Build and atomically publish /opt/workspace-ci (root only). Optional REV=<commit>: deploy a committed ancestor of origin/main (reviewed-ancestor rollback).
+	./scripts/run-deploy-ci "$(CURDIR)" "$(DEPLOY_ANSIBLE_PLAYBOOK)" "$(REV)"

@@ -94,8 +94,24 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 [[ $(uname -s) == Linux ]] || die "protected deployment is Linux-only"
+# Reviewed-ancestor rollback (DECISION-REVIEWED-ANCESTOR-ROLLBACK-2026-08-24):
+# with --rev, deploy the given committed ancestor of origin/main instead of
+# the upstream tip. The working checkout is never moved; the candidate is
+# cloned from the source repository's objects at the requested rev.
+# Argument validation runs before the root check so refusals are testable
+# in unprivileged contexts.
+_rev=""
+_args=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --from-ansible) _args+=("$1"); shift ;;
+        --rev) [[ -n "${2:-}" ]] || die "--rev requires a commit argument"; _rev="$2"; shift 2 ;;
+        --rev=*) _rev="${1#--rev=}"; [[ -n "$_rev" ]] || die "--rev requires a commit argument"; shift ;;
+        *) die "unknown argument: $1 (expected --from-ansible [--rev REV]); invoke through: make deploy-ci" ;;
+    esac
+done
+[[ ${#_args[@]} -eq 1 ]] || die "invoke through: make deploy-ci"
 [[ $EUID -eq 0 ]] || die "run as root: sudo make deploy-ci"
-[[ ${1:-} == --from-ansible && $# -eq 1 ]] || die "invoke through: make deploy-ci"
 [[ "$SOURCE_ROOT" != /opt/* ]] || die "run from the writable WORKSPACE-CI checkout"
 owner=$(stat -c %U "$SOURCE_ROOT")
 [[ $owner != root ]] || die "source checkout must have a non-root owner"
@@ -121,10 +137,23 @@ remove_candidate
 
 [[ $("${owner_git[@]}" -C "$SOURCE_ROOT" rev-parse --abbrev-ref HEAD) == "$BRANCH" ]] || die "source must be on main"
 "${owner_git[@]}" -C "$SOURCE_ROOT" fetch origin "$BRANCH"
-head=$("${owner_git[@]}" -C "$SOURCE_ROOT" rev-parse HEAD)
-upstream=$("${owner_git[@]}" -C "$SOURCE_ROOT" rev-parse "origin/$BRANCH")
-[[ "$head" == "$upstream" ]] || die "source HEAD must equal origin/main"
-tree=$("${owner_git[@]}" -C "$SOURCE_ROOT" rev-parse 'HEAD^{tree}')
+if [[ -n "$_rev" ]]; then
+    # Binding condition 1: REV must resolve and be a committed ancestor of
+    # the fetched reviewed upstream tip. Anything else is refused; the
+    # deployable set stays equal to the sanctioned set.
+    _rev_resolved=""
+    if ! _rev_resolved=$("${owner_git[@]}" -C "$SOURCE_ROOT" rev-parse --verify "${_rev}^{commit}" 2>&1); then
+        die "REV does not resolve to a commit in the source repository: $_rev"
+    fi
+    "${owner_git[@]}" -C "$SOURCE_ROOT" merge-base --is-ancestor "$_rev" "origin/$BRANCH" \
+        || die "REV is not a committed ancestor of origin/$BRANCH: $_rev"
+    head=$_rev_resolved
+else
+    head=$("${owner_git[@]}" -C "$SOURCE_ROOT" rev-parse HEAD)
+    upstream=$("${owner_git[@]}" -C "$SOURCE_ROOT" rev-parse "origin/$BRANCH")
+    [[ "$head" == "$upstream" ]] || die "source HEAD must equal origin/main"
+fi
+tree=$("${owner_git[@]}" -C "$SOURCE_ROOT" rev-parse "${head}^{tree}")
 remote=$("${owner_git[@]}" -C "$SOURCE_ROOT" remote get-url origin)
 
 # Clone Git objects, never writable worktree files. The fetched origin ref is

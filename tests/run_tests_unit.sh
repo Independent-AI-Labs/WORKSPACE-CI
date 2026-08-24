@@ -22,6 +22,7 @@ _required_unit_tests=(
     test_resolve_tool_path.sh
     test_generate_hooks.sh
     test_verify_immutable.sh
+    test_deploy_ci_rev.sh
 )
 for _unit_test in "${_required_unit_tests[@]}"; do
     if [[ ! -f "$TESTS_DIR/unit/$_unit_test" ]]; then
@@ -41,6 +42,7 @@ source "$TESTS_DIR/unit/test_portable_shell.sh"
 source "$TESTS_DIR/unit/test_resolve_tool_path.sh"
 source "$TESTS_DIR/unit/test_generate_hooks.sh"
 source "$TESTS_DIR/unit/test_verify_immutable.sh"
+source "$TESTS_DIR/unit/test_deploy_ci_rev.sh"
 
 # Summary
 echo ""

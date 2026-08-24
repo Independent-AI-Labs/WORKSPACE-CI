@@ -224,6 +224,28 @@ Rerunning the Ansible-owned `make deploy-ci` flow is the only convergence
 operation. Because candidate construction never executes the current artifact,
 the same operation converges when `/opt/workspace-ci` is absent or unusable.
 
+### 8.1 Reviewed-Ancestor Rollback
+
+`make deploy-ci REV=<commit>` deploys a prior sanctioned generation instead of
+the upstream tip. REV must resolve in the source repository and verify as a
+committed ancestor of the fetched `origin/main` (`git merge-base
+--is-ancestor`); every other value is refused, keeping the deployable set
+equal to the sanctioned set. The working checkout is never moved: the
+candidate is cloned from the source repository's objects and checked out at
+REV. Argument validation runs before the root gate so refusals are testable
+unprivileged. The candidate at REV runs that revision's own `check-push`
+inside the private namespace (per-generation verification; policy is
+forward-activating, so a historical generation is not measured against
+future baselines).
+
+Rollback exists so recovery never depends on the broken component: when a
+deployed artifact gates every commit (for example a hook whose entry no
+longer resolves), deploying the last-known-good ancestor restores healthy
+gates, the fix commits normally, and the fixed tip is redeployed in the
+ordinary way. The rollback redeploys an immutable ancestor; history stays
+forward-only. Evidence basis and binding conditions:
+`docs/decisions/DECISION-REVIEWED-ANCESTOR-ROLLBACK-2026-08-24.md`.
+
 ## 9. Acceptance Strategy
 
 The deployment acceptance suite runs on Linux with the same fixed candidate and
