@@ -7,6 +7,135 @@ Policy and exemption hardening is tracked separately in
 `docs/TODO-POLICY-EXEMPTION-REMEDIATION.md`; both ledgers are mandatory for
 completion.
 
+## Fail-Open Gate Audit (2026-08-24; full-transcript evidence)
+
+- [x] FO-1 coverage gate: pytest printed `FAIL Required test coverage of
+      90% not reached` yet exited 0 (live-verified). Root cause: the
+      workspace-root pytest config runs the suite under xdist
+      (`addopts = "-n 1"`, a documented segfault workaround) and
+      pytest-cov's `--cov-fail-under` exit code does not fire in the
+      controller process under xdist. Every prior "green" check-push
+      passed with the coverage threshold unenforced. Fix: Makefile
+      `_test-push-impl` now enforces the threshold via
+      `coverage report --fail-under=90` (coverage's own exit code);
+      real unit coverage raised 89.0% -> 91% (8 new tool_catalog
+      error-branch tests); `make _test-push-impl` rc=0 with 108 unit,
+      100 integration, 91% enforced.
+- [x] FO-2 dead-code gate contradiction: catalog said advisory
+      ("always exits 0") while the rendered pre-push hook wrapped it
+      blocking (`|| { ci_fail; exit 1; }`) — unreachable code, gate
+      theater. Ruling (operator 2026-08-24): non-failing by design.
+      Fix: `advisory: true` in .pre-commit-config.yaml; awk parser and
+      generate-hooks emit an rc-capturing wrapper that reports
+      findings with ci_info and never exits 1.
+- [x] FO-3 boot-layout audit: same contradiction, same ruling, same
+      fix (advisory wrapper).
+- [x] Blocking wrappers for all other hooks verified unchanged
+      fail-closed (unit test asserts the blocking wrapper shape and
+      the absence of a fail-closed wrapper for advisory entries).
+- [x] Regenerate web/src/data/hook-sources.json after the generator
+      change (`make extract-hook-sources`).
+- [ ] After deploy: verify the rendered deployed hooks carry the
+      advisory wrapper for check-dead-code and check-boot-venv-layout,
+      and that an injected nonzero advisory exit is reported but does
+      not fail the push (root/podman tier).
+- [ ] Consider a periodic differential audit: every gate's printed
+      verdict vs its propagated exit code (fail-open scanner), so a
+      printed-FAIL/exited-0 divergence is caught by machine, not by
+      incident.
+
+## Reviewed-Ancestor Rollback (DECISION-REVIEWED-ANCESTOR-ROLLBACK-2026-08-24)
+
+- [ ] Add `REV=<commit>` argument to `scripts/deploy-ci`; verify REV is a
+      committed ancestor of fetched `origin/main` via
+      `git merge-base --is-ancestor`; refuse anything else with a clear
+      error.
+- [ ] Construct the candidate at REV by fetching the rev from the source
+      repository objects; never move the working checkout backwards.
+- [ ] Replace the `HEAD == origin/main` precondition with
+      `REV is an ancestor of origin/main`; with no REV given the target is
+      the fetched `origin/main` tip (explicit, not a resolution chain).
+- [ ] Pass `REV` through the Makefile `deploy-ci` target and
+      `scripts/run-deploy-ci` wrapper.
+- [ ] Preserve per-generation verification: candidate at REV runs that
+      revision's own `check-push` in the namespace (no future-baseline
+      retrojection; operator ruling 2026-08-24).
+- [ ] Test: refuse non-ancestor REV, refuse REV not on main, refuse
+      dirty-tree REV.
+- [ ] Test (root/podman tier): happy-path deploy of a prior sanctioned
+      rev restores healthy gates; subsequent ordinary deploy of fixed
+      main supersedes it.
+- [ ] Update SPEC-DEPLOYMENT and RUNBOOK-HOOKS with the REV flow and the
+      deadlock-recovery sequence (rollback, fix through restored gates,
+      redeploy main).
+
+## Hook-Entry Integrity (deadlock prevention; 2026-08-24 portable_shell incident)
+
+- [ ] Generation-time refusal: `scripts/generate-hooks` resolves every
+      `config/required_hooks.yaml` `entry:` (shell: `declare -F` after
+      sourcing `lib/checks.sh`; python: `python -m` import probe) before
+      rendering; refuse to emit a hook with an unresolvable entry.
+- [ ] Commit-time verification: `ci/check_required_hooks_present.py`
+      verifies every catalog entry resolves in the sourced lib; a tree
+      that drops a function while keeping its catalog entry cannot
+      commit (runs in source pre-commit and in candidate `check-push`,
+      hence also blocks deploy).
+- [ ] Tests: entry-dropped-but-catalog-kept fails generation and the
+      self-check; restored entry passes both.
+- [ ] Root-cause record: the `a37d062`-era `lib/checks_files.sh` refactor
+      dropped `ci_check_portable_shell` while `required_hooks.yaml:118`
+      and `.pre-commit-config.yaml` kept it; the `000a754` deploy shipped
+      the broken hook; every commit then failed at
+      `check-portable-shell`. Function restored in tree 2026-08-24
+      (pending commit); deployed copy still broken until the one-time
+      unblock below.
+
+## One-Time Deadlock Unblock (operator)
+
+- [ ] Operator lands the staged working-tree fix (restored
+      `ci_check_portable_shell` in `lib/checks_files.sh`, restored
+      `tests/unit/test_deploy_ci.py`, message at
+      `/tmp/opencode/pdf-msg.txt`) via root-path commit or `/opt`
+      hand-patch, then `sudo make deploy-ci`.
+- [ ] After the fix deploy: verify `check-portable-shell` resolves in
+      `/opt/workspace-ci/lib/checks_files.sh` and a clean commit passes.
+
+## Capability-Loss Restoration (AUDIT-CAPABILITY-LOSS-2026-08-23 backlog)
+
+- [x] Restore `tests/test_rewrite_history.sh` with operator-context split
+      (`014a524`; execute-path tests skip as agent, run as root/podman).
+- [x] Restore `tests/unit/test_bootstrap_rust.py` with
+      enter-candidate-namespace lockdown-assertion allowlist (`88587a6`).
+- [x] Restore `tests/unit/test_podman_guard.py` unchanged (`3e09957`).
+- [ ] Restore `tests/unit/test_deploy_ci.py` reconciled to the
+      namespace-runner build architecture (staged in tree; blocked on the
+      one-time unblock).
+- [ ] Restore `tests/integration/test_dependency_checker_integration.py`.
+- [ ] Restore `scripts/cleanup-precommit` as a documented operator-only
+      tool plus its traps test (GATEWAY consumer was removed with the
+      `clean-precommit` target).
+- [ ] Restore the scaffold-ci subsystem (`scripts/scaffold-ci`,
+      `lib/scaffold_lib.sh`, `lib/scaffold_analyze.sh`) deleted in
+      `f7422dc`; consumer scaffolding vacuum was filled by the stale
+      `../CI` clone when GATEWAY's config was regenerated 2026-08-22.
+- [ ] Write `docs/audits/AUDIT-CAPABILITY-LOSS-2026-08-23.md`: systematic
+      old `projects/CI` vs new tree differential; classify every
+      divergence superseded / dead-reference / dropped-capability.
+- [ ] Root-cause record: the rewritten-history rewriter's guard bypass
+      (PATH prepend to real git) is doubly defeated as agent (shell-guard
+      PATH normalization; `git.original` 0700 root); document the tool as
+      operator-only.
+
+## Pre-Commit Index-Snapshot Semantics (2026-08-24 finding)
+
+- [x] `ci_check_unstaged` fails explicitly with instructions when nothing
+      was pre-staged; retry succeeds by design (`000a754`; proven against
+      stock git 2.43, 30/30 scratch trials with real git).
+- [x] AGENTS.md §8 documents the one deliberate retry; §9 documents the
+      auto-stage as a safety net.
+- [ ] Verify the deployed `000a754`+ artifact shows the explicit
+      pre-stage failure message (observed once live; keep as evidence).
+
 ## Immediate Safety
 
 - [x] Remove the pre-existing `gw-clean` target and every `compose down -v` path.

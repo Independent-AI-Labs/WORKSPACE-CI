@@ -165,6 +165,7 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+        advisory: true
 
       - id: check-commit-message
         name: Check Commit Message Format
@@ -203,6 +204,7 @@ repos:
         stages: [pre-push]
         pass_filenames: false
         always_run: true
+        advisory: true
 
       - id: osv-scan
         name: Dependency Vulnerability Scan (bounded offline validation)

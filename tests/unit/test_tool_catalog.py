@@ -289,3 +289,140 @@ def test_catalog_accepts_fixed_rust_toolchain(tmp_path: Path) -> None:
     )
 
     assert validate_catalog(catalog) == []
+
+
+DIGEST = "bf59272455172108072a0a106379f7509fd4349bdcfd85203bac038ccd286d83"
+
+
+def _tool_block(overrides: str, artifacts: str) -> str:
+    return (
+        "schema_version: 1\nuv:\n  source: astral-sh/uv\n"
+        "  source_kind: github_release\n" + overrides + artifacts
+    )
+
+
+def test_catalog_rejects_non_string_version(tmp_path: Path) -> None:
+    catalog = tmp_path / "dependency-pins.yaml"
+    catalog.write_text(_tool_block("  version: 12\n", ARTIFACT))
+
+    assert any(
+        "DV-CAT-006 $.uv.version: expected a nonempty string version"
+        in diagnostic
+        for diagnostic in validate_catalog(catalog)
+    )
+
+
+def test_catalog_rejects_invalid_version_string(tmp_path: Path) -> None:
+    catalog = tmp_path / "dependency-pins.yaml"
+    catalog.write_text(_tool_block("  version: 'not-a-version'\n", ARTIFACT))
+
+    assert any(
+        "DV-CAT-007 $.uv.version: invalid version" in diagnostic
+        for diagnostic in validate_catalog(catalog)
+    )
+
+
+def test_catalog_rejects_unknown_source_kind(tmp_path: Path) -> None:
+    catalog = tmp_path / "dependency-pins.yaml"
+    catalog.write_text(_tool_block("  version: '0.12.2'\n", ARTIFACT).replace(
+        "source_kind: github_release", "source_kind: mystery"
+    ))
+
+    assert any(
+        "DV-CAT-005 $.uv.source_kind: unsupported source kind 'mystery'"
+        in diagnostic
+        for diagnostic in validate_catalog(catalog)
+    )
+
+
+def test_catalog_rejects_source_without_owner_repo(tmp_path: Path) -> None:
+    catalog = tmp_path / "dependency-pins.yaml"
+    catalog.write_text(_tool_block("  version: '0.12.2'\n", ARTIFACT).replace(
+        "  source: astral-sh/uv\n", "  source: no-slash\n"
+    ))
+
+    assert any(
+        "DV-CAT-009 $.uv.source: expected owner/repository" in diagnostic
+        for diagnostic in validate_catalog(catalog)
+    )
+
+
+def test_catalog_rejects_non_string_archive_member(tmp_path: Path) -> None:
+    catalog = tmp_path / "dependency-pins.yaml"
+    catalog.write_text(_tool_block("  version: '0.12.2'\n", ARTIFACT).replace(
+        "        format: tar.gz\n        member: uv-x86_64-unknown-linux-gnu/uv\n",
+        "        format: tar.gz\n        member: [not, a, string]\n",
+    ))
+
+    assert any(
+        "DV-CAT-006 $.uv.artifacts[0].archive.member: expected a nonempty string"
+        in diagnostic
+        for diagnostic in validate_catalog(catalog)
+    )
+
+
+def test_catalog_rejects_non_mapping_archive(tmp_path: Path) -> None:
+    catalog = tmp_path / "dependency-pins.yaml"
+    catalog.write_text(_tool_block("  version: '0.12.2'\n", ARTIFACT).replace(
+        "      archive:\n        format: tar.gz\n"
+        "        member: uv-x86_64-unknown-linux-gnu/uv\n",
+        "      archive: not-a-mapping\n",
+    ))
+
+    assert any(
+        "DV-CAT-017 $.uv.artifacts[0].archive: archive must be a mapping"
+        in diagnostic
+        for diagnostic in validate_catalog(catalog)
+    )
+
+
+def test_catalog_rejects_unsupported_archive_format(tmp_path: Path) -> None:
+    catalog = tmp_path / "dependency-pins.yaml"
+    catalog.write_text(_tool_block("  version: '0.12.2'\n", ARTIFACT).replace(
+        "        format: tar.gz\n", "        format: tar.bz2\n"
+    ))
+
+    assert any(
+        "DV-CAT-018 $.uv.artifacts[0].archive.format: unsupported archive format"
+        in diagnostic
+        for diagnostic in validate_catalog(catalog)
+    )
+
+
+def test_catalog_rejects_unsupported_os(tmp_path: Path) -> None:
+    catalog = tmp_path / "dependency-pins.yaml"
+    catalog.write_text(_tool_block("  version: '0.12.2'\n", ARTIFACT).replace(
+        "      os: linux\n", "      os: plan9\n"
+    ))
+
+    assert any(
+        "DV-CAT-015 $.uv.artifacts[0].os: unsupported operating system"
+        in diagnostic
+        for diagnostic in validate_catalog(catalog)
+    )
+
+
+def test_catalog_rejects_unsupported_architecture(tmp_path: Path) -> None:
+    catalog = tmp_path / "dependency-pins.yaml"
+    catalog.write_text(_tool_block("  version: '0.12.2'\n", ARTIFACT).replace(
+        "      architecture: x86_64\n", "      architecture: m68k\n"
+    ))
+
+    assert any(
+        "DV-CAT-016 $.uv.artifacts[0].architecture: unsupported architecture"
+        in diagnostic
+        for diagnostic in validate_catalog(catalog)
+    )
+
+
+def test_catalog_rejects_archive_format_mismatch(tmp_path: Path) -> None:
+    catalog = tmp_path / "dependency-pins.yaml"
+    catalog.write_text(_tool_block("  version: '0.12.2'\n", ARTIFACT).replace(
+        "        format: tar.gz\n", "        format: zip\n"
+    ))
+
+    assert any(
+        "DV-CAT-022 $.uv.artifacts[0].archive.format: does not match asset extension"
+        in diagnostic
+        for diagnostic in validate_catalog(catalog)
+    )

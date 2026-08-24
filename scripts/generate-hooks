@@ -95,7 +95,7 @@ for _stage in pre-commit commit-msg pre-push; do
         printf '%s\n' '        exit 1'
         printf '%s\n' '    fi'
         printf '%s\n' 'fi'
-        while IFS=$'\034' read -r h_id h_name h_entry h_stage h_pass h_always h_files h_exclude h_args h_types; do
+        while IFS=$'\034' read -r h_id h_name h_entry h_stage h_pass h_always h_files h_exclude h_args h_types h_advisory; do
             [[ -n "$h_id" ]] || continue
             [[ -n "$h_entry" ]] || { ci_fail "Hook '$h_id' has empty entry"; exit 1; }
             h_cmd="${h_entry//bash -c/\"\$BASH\" -c}"
@@ -103,7 +103,14 @@ for _stage in pre-commit commit-msg pre-push; do
             [[ -n "$h_args" ]] && h_cmd="$h_cmd $h_args"
             printf '# === Hook: %s ===\n' "$h_id"
             printf 'ci_info "Running: %s..."\n' "$h_name"
-            if [[ "$_stage" == commit-msg ]]; then
+            if [[ "$h_advisory" == "true" ]]; then
+                # Advisory hooks report findings but never fail the gate:
+                # the exit status is captured explicitly (sanctioned
+                # pattern) and surfaced with ci_info, never enforced.
+                printf '_advisory_rc=0\n'
+                printf '%s || _advisory_rc=$?\n' "$h_cmd"
+                printf 'if [[ "$_advisory_rc" -ne 0 ]]; then ci_info "ADVISORY (non-blocking): %s exited $_advisory_rc; reported, not enforced"; fi\n' "$h_name"
+            elif [[ "$_stage" == commit-msg ]]; then
                 printf '%s "$1" || { ci_fail "%s"; exit 1; }\n' "$h_cmd" "$h_name"
             else
                 printf '%s || { ci_fail "%s"; exit 1; }\n' "$h_cmd" "$h_name"

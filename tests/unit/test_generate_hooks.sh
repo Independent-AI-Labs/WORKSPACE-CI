@@ -24,3 +24,20 @@ test_generate_hooks_binds_protected_deployment() {
     ! grep -q 'projects/CI' "$output/pre-commit"
 }
 _run_test "generate-hooks binds protected deployment" test_generate_hooks_binds_protected_deployment
+
+test_generate_hooks_advisory_wrapper_is_non_failing() {
+    local root="$TEST_TMP/advisory-hooks" output="$TEST_TMP/advisory-generated"
+    mkdir -p "$root" "$output"
+    git -C "$root" init -q
+    printf 'repos:\n  - repo: local\n    hooks:\n      - id: blocker\n        name: Blocking Gate\n        entry: "true"\n        language: system\n        stages: [pre-push]\n      - id: advisory-one\n        name: Advisory Gate\n        entry: "false"\n        language: system\n        stages: [pre-push]\n        advisory: true\n' > "$root/.pre-commit-config.yaml"
+    (cd "$root" && bash "$PROJECT_DIR/scripts/generate-hooks" --output-dir "$output")
+    # Advisory hook: rc captured, reported with ci_info, never exits 1.
+    grep -q 'false || _advisory_rc=$?' "$output/pre-push"
+    grep -q 'ADVISORY (non-blocking): Advisory Gate' "$output/pre-push"
+    # Blocking hook: unchanged fail-closed wrapper.
+    grep -q 'true || { ci_fail "Blocking Gate"; exit 1; }' "$output/pre-push"
+    # Advisory wrapper must not contain the fail-closed wrapper for the
+    # advisory entry.
+    ! grep -q 'false || { ci_fail' "$output/pre-push"
+}
+_run_test "generate-hooks advisory wrapper is non-failing" test_generate_hooks_advisory_wrapper_is_non_failing

@@ -11,7 +11,13 @@
    installation.
 
 §3. A failed or absent install is remedied only by rerunning
-   `make deploy-ci` from reviewed source.
+   `make deploy-ci` from reviewed source, or by deploying a prior
+   sanctioned generation: `make deploy-ci REV=<commit>` where REV is
+   a committed ancestor of origin/main (verified at deploy time).
+   Reviewed-ancestor rollback restores healthy gates without
+   rewriting history or mutating the working tree; see
+   docs/decisions/DECISION-REVIEWED-ANCESTOR-ROLLBACK-2026-08-24.md.
+   Recovery never falls back to unsealed source-tree gates.
 
 ## Article II — Trust Domains
 

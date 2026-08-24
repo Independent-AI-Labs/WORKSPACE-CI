@@ -3,7 +3,7 @@
 #
 # Input:  .pre-commit-config.yaml (repo:local, language:system hooks only)
 # Output: One line per hook, fields separated by \034 (ASCII FS):
-#   id \034 name \034 entry \034 stage \034 pass_filenames \034 always_run \034 files \034 exclude \034 args \034 types_or
+#   id \034 name \034 entry \034 stage \034 pass_filenames \034 always_run \034 files \034 exclude \034 args \034 types_or \034 advisory
 
 /^[[:space:]]*- id:/ {
     flush()
@@ -11,7 +11,7 @@
     id = trim_quotes($0)
     name = ""; entry = ""; stage = "pre-commit"
     pass_filenames = "true"; always_run = "false"
-    files = ""; exclude = ""; args = ""; types_or = ""
+    files = ""; exclude = ""; args = ""; types_or = ""; advisory = "false"
     in_hook = 1
     next
 }
@@ -27,6 +27,7 @@ in_hook {
     if (/^[[:space:]]+args:/)           { args = inline_list(); next }
     if (/^[[:space:]]+types_or:/)      { types_or = inline_list(); next }
     if (/^[[:space:]]+types:/)         { types_or = inline_list(); next }
+    if (/^[[:space:]]+advisory:/)       { advisory = scalar(); next }
     # language, verbose, etc.: ignored without warning
 }
 
@@ -37,9 +38,9 @@ END { flush() }
 function flush(    sep) {
     if (id == "") return
     sep = "\034"
-    printf "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n", \
+    printf "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n", \
         id, sep, name, sep, entry, sep, stage, sep, \
-        pass_filenames, sep, always_run, sep, files, sep, exclude, sep, args, sep, types_or
+        pass_filenames, sep, always_run, sep, files, sep, exclude, sep, args, sep, types_or, sep, advisory
     id = ""
 }
 

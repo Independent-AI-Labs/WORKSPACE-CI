@@ -322,7 +322,12 @@ _test-push-impl:
 	cd tests && source ./run_tests_unit.sh
 	cd tests && source ./run_tests_integration.sh
 	mkdir -p .pytest_cache
-	COVERAGE_FILE="$(CURDIR)/.pytest_cache/.coverage" $(PYTEST) tests/unit --cov=ci --cov-report=term-missing --cov-fail-under=90 --tb=short
+	COVERAGE_FILE="$(CURDIR)/.pytest_cache/.coverage" $(PYTEST) tests/unit --cov=ci --cov-report=term-missing --tb=short
+	# The workspace-root pytest config runs the suite under xdist (-n 1, a
+	# documented segfault workaround); pytest-cov's --cov-fail-under exit
+	# code does not fire in the controller process under xdist, so the
+	# threshold is enforced here by coverage's own exit code instead.
+	COVERAGE_FILE="$(CURDIR)/.pytest_cache/.coverage" $(UV) run coverage report --fail-under=90
 	$(PYTEST) tests/integration --tb=short
 	$(MAKE) -C web lint type-check test
 	$(MAKE) -C web-components lint type-check test

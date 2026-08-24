@@ -312,3 +312,74 @@ ci_check_no_dead_imports() {
     ci_pass "No dead imports after deletions."
     return 0
 }
+
+# --- ci_check_portable_shell [files...] ---
+# Enforces that no process substitution (< <(...), > >(...), <(...), >(...))
+# appears in shell scripts under lib/ and scripts/.
+# Process substitution opens /dev/fd/NN by path, which breaks under PRoot,
+# bwrap/firejail sandboxes, and chroots without /proc.
+# Scans comment lines and string literals to avoid false positives where the
+# pattern appears as prose.
+ci_check_portable_shell() {
+    local has_errors=0
+    local _ci_root
+    _ci_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+    # Collect shell files: lib/*.sh + scripts/* (extensionless scripts included)
+    local _shell_files=()
+    local _f
+    for _f in "$_ci_root"/lib/*.sh; do
+        [[ -f "$_f" ]] && _shell_files+=("$_f")
+    done
+    for _f in "$_ci_root"/scripts/*; do
+        [[ -f "$_f" ]] || continue
+        # Skip non-shell files (yaml, json, md, .txt, directories)
+        case "$(basename "$_f")" in
+            *.yaml|*.yml|*.json|*.md|*.txt|*.toml) continue ;;
+        esac
+        _shell_files+=("$_f")
+    done
+
+    local violations=()
+    local _file _line _lineno
+    # Regex patterns stored in variables to avoid bash interpreting < > as
+    # operators inside [[ =~ ]]. [<] and [>] match literal angle brackets in ERE.
+    local _re_dup_in='[<][[:space:]]*[<][(]'
+    local _re_dup_out='[>][[:space:]]*[>][(]'
+    local _re_pipe_in='[|][[:space:]]*[<][(]'
+    local _re_pipe_out='[|][[:space:]]*[>][(]'
+    local _re_standalone_in='[[:space:]][<][(][^)]*[)][[:space:]]'
+    local _re_standalone_out='[[:space:]][>][(][^)]*[)][[:space:]]?$'
+    for _file in "${_shell_files[@]}"; do
+        _lineno=0
+        while IFS= read -r _line; do
+            _lineno=$((_lineno + 1))
+            # Skip comment lines (the ci.sh doc comment mentions < <(cmd) as prose)
+            [[ "$_line" =~ ^[[:space:]]*# ]] && continue
+            # Detect process substitution: < <(...), > >(...), | <(...), | >(...),
+            # and standalone <(...) / >(...) as command arguments.
+            local _pat
+            for _pat in "$_re_dup_in" "$_re_dup_out" "$_re_pipe_in" \
+                        "$_re_pipe_out" "$_re_standalone_in" \
+                        "$_re_standalone_out"; do
+                if [[ "$_line" =~ $_pat ]]; then
+                    violations+=("$_file:$_lineno: $_line")
+                    has_errors=1
+                    break
+                fi
+            done
+        done < "$_file"
+    done
+
+    if [[ $has_errors -eq 1 ]]; then
+        ci_fail "Process substitution found (not portable across virtualization layers):"
+        echo "  Use ci_capture_lines / ci_capture_pipe from lib/ci.sh instead." >&2
+        echo "" >&2
+        for v in "${violations[@]}"; do
+            echo "  $v" >&2
+        done
+        return 1
+    fi
+    ci_pass "No process substitution in shell scripts."
+    return 0
+}
