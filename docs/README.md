@@ -40,6 +40,7 @@ artifact, then install protected hooks as a separate step.
 | [`requirements/REQ-MODULE-SIZE.md`](requirements/REQ-MODULE-SIZE.md)                     | Source file and module-size guardrails                                          |
 | [`requirements/REQ-BANNED-PATTERN-MATCHING.md`](requirements/REQ-BANNED-PATTERN-MATCHING.md) | Normalized banned-pattern, path, variant, and exemption matching                 |
 | [`requirements/REQ-DEPENDENCY-VALIDATION.md`](requirements/REQ-DEPENDENCY-VALIDATION.md) | Deterministic policy, optional catalogs, and live freshness workflow            |
+| [`requirements/REQ-SCAFFOLD-CI.md`](requirements/REQ-SCAFFOLD-CI.md)                     | Profile-driven CI bootstrapper for consumer projects                             |
 | [`requirements/REQ-HITL.md`](requirements/REQ-HITL.md)                                   | Human-in-the-loop authorization system                                          |
 | [`requirements/REQ-HITL-RELAY.md`](requirements/REQ-HITL-RELAY.md)                       | HITL WebSocket authorization relay                                              |
 | [`requirements/REQ-HITL-WEB.md`](requirements/REQ-HITL-WEB.md)                           | HITL web backend and approver UI                                                |
@@ -58,6 +59,7 @@ artifact, then install protected hooks as a separate step.
 | [`specifications/SPEC-CVE-SCAN.md`](specifications/SPEC-CVE-SCAN.md)                           | OSV-Scanner bootstrap, `ci_scan_vulnerabilities` wrapper, `osv-scan` pre-push hook |
 | [`specifications/SPEC-MODULE-SIZE.md`](specifications/SPEC-MODULE-SIZE.md)                     | Module-size hook implementation and configuration                                  |
 | [`specifications/SPEC-DEPENDENCY-VALIDATION.md`](specifications/SPEC-DEPENDENCY-VALIDATION.md) | Offline policy and live freshness components                                       |
+| [`specifications/SPEC-SCAFFOLD-CI.md`](specifications/SPEC-SCAFFOLD-CI.md)                 | Scaffold generator implementation contract                                        |
 | [`specifications/SPEC-HITL.md`](specifications/SPEC-HITL.md)                                   | HITL system architecture and implementation plan                                   |
 | [`specifications/SPEC-HITL-RELAY.md`](specifications/SPEC-HITL-RELAY.md)                       | HITL relay protocol and backend implementation                                     |
 | [`specifications/SPEC-HITL-WEB.md`](specifications/SPEC-HITL-WEB.md)                           | HITL approver web application implementation                                       |
