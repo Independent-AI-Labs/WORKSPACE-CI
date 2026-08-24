@@ -113,8 +113,10 @@ field-level catalog drift remains open.
 
 ## Open Items
 
-- [ ] Restore or rewrite REQ/SPEC-SCAFFOLD-CI docs from current
-      behavior.
+- [x] Restore or rewrite REQ/SPEC-SCAFFOLD-CI docs from current
+      behavior (restored verbatim from f7422dc^ in 6ddcc88; the
+      implementation restoration in a0efdec was verbatim, so the
+      contract text is accurate again).
 - [x] Extend invariant 4 to cover safety-marked catalog fields
       (ledgered in TODO-REMEDIATION).
 - [ ] Deploy `847857a..` and run the root-tier REV happy-path
