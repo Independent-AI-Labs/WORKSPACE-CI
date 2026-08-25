@@ -107,4 +107,4 @@ exceptions:
       - docs/specifications/SPEC-HITL
   - pattern: \blegacy\b
     paths:
-      - scripts/cleanup-precommit
+      - ^scripts/cleanup-precommit$

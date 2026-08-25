@@ -208,7 +208,7 @@ universal_exceptions:
     patterns:
       - protected-system-interpreter
   - paths:
-      - scripts/cleanup-precommit
+      - ^scripts/cleanup-precommit$
     patterns:
       - \blegacy\b
 banned:

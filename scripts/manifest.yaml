@@ -65,14 +65,13 @@ scripts:
   - id: bootstrap-workspace-guard
     path: scripts/bootstrap-workspace-guard
     summary: Build and install the capability-based git guard binary from the sibling WORKSPACE-GUARD repo.
-    usage: bootstrap-workspace-guard [build-only|install-host-exec|check-host-exec|uninstall|purge-guard-state]
+    usage: bootstrap-workspace-guard [build-only|install-host-exec|check-host-exec|uninstall]
     category: bootstrap
     args:
       - { name: build-only, description: "Compile workspace-guard and workspace-git-ssh (no root needed)" }
       - { name: install-host-exec, description: "Install or reconcile host-exec git guard (requires root)" }
       - { name: check-host-exec, description: "Report host-exec guard installation status" }
       - { name: uninstall, description: "Restore stock git; preserve host-provision state" }
-      - { name: purge-guard-state, description: "Destroy all guard state (requires GUARD_PURGE_CONFIRM=1)" }
     output: "Builds/installs/removes the git-guard binary. Status text on stdout."
     make_target: build-guard
 
