@@ -182,7 +182,15 @@ if ! _realpath_path="$(command -v realpath 2>&1)"; then
     ci_fail "realpath(1) not found, install coreutils >= 8.23"
     exit 2
 fi
-REL_CI="$(realpath --relative-to="$_consumer" "$_CI_ROOT")"
+# Deployed tree (post-migration _CI_ROOT=/opt/workspace-ci) MUST be resolved
+# directly per REQ-DEPLOYMENT §25: an ancestor-shared relative path does not
+# exist, so realpath would emit a multi-level climb (../../../opt/...).
+# Relative paths remain only for sibling source-development checkouts.
+if [[ "$_CI_ROOT" == /opt/workspace-ci ]]; then
+    REL_CI="$_CI_ROOT"
+else
+    REL_CI="$(realpath --relative-to="$_consumer" "$_CI_ROOT")"
+fi
 
 # ── Parse profile ──────────────────────────────────────────────────────────
 _profile_parsed="$(awk -v mode=profile -f "$_PARSER" "$_profile")" || {
