@@ -330,12 +330,21 @@ EOF
     cd "$PROJECT_DIR"
     bash "$_SCI_SCRIPT" --consumer "$consumer" > "$TEST_TMP/out" 2>&1
 
-    local rel_ci
-    rel_ci="$(realpath --relative-to="$consumer" "$PROJECT_DIR")"
-    grep -q "$rel_ci" "$consumer/.pre-commit-config.yaml" || { echo "missing rel path in precommit"; return 1; }
-    grep -q "$rel_ci" "$consumer/Makefile" || { echo "missing rel path in Makefile"; return 1; }
+    # SPEC-DEPLOYMENT section 7: generated hooks embed the ABSOLUTE
+    # deployed path when the generator resolves at /opt/workspace-ci
+    # (true in the deployed artifact and during candidate check-push,
+    # which namespace-mounts the candidate there). Relative paths are
+    # for sibling source checkouts only.
+    local expected_ci
+    if [[ "$PROJECT_DIR" == "/opt/workspace-ci" ]]; then
+        expected_ci="/opt/workspace-ci"
+    else
+        expected_ci="$(realpath --relative-to="$consumer" "$PROJECT_DIR")"
+    fi
+    grep -q "$expected_ci" "$consumer/.pre-commit-config.yaml" || { echo "missing CI path in precommit (expected $expected_ci)"; return 1; }
+    grep -q "$expected_ci" "$consumer/Makefile" || { echo "missing CI path in Makefile (expected $expected_ci)"; return 1; }
 }
-_run_test "scaffold_rel_paths: correct relative paths in output" test_scaffold_relative_paths
+_run_test "scaffold_rel_paths: correct CI paths in output" test_scaffold_relative_paths
 
 # ── Override entry is written verbatim ─────────────────────────────────────
 
