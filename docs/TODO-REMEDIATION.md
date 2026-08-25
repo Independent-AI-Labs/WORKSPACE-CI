@@ -418,6 +418,39 @@ completion.
 - [ ] Run `make gw-verify`.
 - [ ] Run the full Gateway test suite against the running stack.
 
+## Consumer Config Provenance (added 2026-08-25)
+
+- [x] Commit the scaffold-ci REL_CI absolute-path fix (`06b5511`); had
+      been authored 2026-08-24 but left uncommitted, so the first
+      GATEWAY regeneration from the restored scaffold-ci emitted
+      relative `../../../../../opt/workspace-ci` entries (functional,
+      provenance violation per SPEC-DEPLOYMENT section 7).
+- [ ] Redeploy so `/opt` scaffold-ci embeds absolute paths; GATEWAY
+      then regenerates `.pre-commit-config.yaml` (tracked in GATEWAY
+      TODO P3.2).
+- [ ] Root `make install-hooks` in GATEWAY: `.git/hooks/*` still source
+      `../CI` from the 2026-08-22 stale install; until reinstalled, any
+      GATEWAY commit runs the stale-clone hooks. Verify `+i` restored
+      on exactly three hooks and zero `../CI` refs in `.git/hooks/*`
+      after (GATEWAY TODO P3.7).
+- [ ] `.gitleaksignore` investigation (GATEWAY TODO P3.4): deployed
+      `checks_secrets.sh` builds its allowlist from git-ignored paths
+      and never reads `.gitleaksignore`; the deployed-vs-source finding
+      discrepancy in the gitignored `.env` is unexplained. Compare
+      `checks_secrets.sh` generations across the three CI trees; fix
+      any ignore-propagation defect here.
+- [ ] Ledger the WORKSPACE-GUARD yaml-edit splice defect: cannot append
+      to indentless block sequences (discovered 2026-08-25 against
+      `policy_integrity_baseline.yaml`; splice inserts at key-indent+2
+      and its verification re-parse fails). Track as WORKSPACE-GUARD
+      issue; our generator now emits indented sequences.
+- [ ] Stale `../CI` tree disposition (operator decision): unreferenced
+      by anything live since the GATEWAY regeneration; reconcile or
+      remove.
+- [ ] Extend the deployed hook-drift check to reject consumer configs
+      whose embedded CI path differs from the deployed root (also
+      GATEWAY TODO P3.2).
+
 ## Gateway Live Verification
 
 - [ ] Verify APISIX public and Admin endpoints.
