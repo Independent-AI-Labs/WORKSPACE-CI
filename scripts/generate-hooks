@@ -29,9 +29,15 @@ done
 [[ -f "$_config" ]] || { ci_fail "Config not found: $_config"; exit 1; }
 [[ -n "$_output_dir" ]] || _output_dir="$(git rev-parse --git-dir)/hooks"
 mkdir -p "$_output_dir"
+ci_info "generate-hooks: $_config -> $_output_dir"
 
 _hooks="$(awk -f "$_CI_ROOT/lib/parse_precommit_config.awk" "$_config")"
-[[ -n "$_hooks" ]] || exit 0
+if [[ -z "$_hooks" ]]; then
+    ci_pass "no hooks configured; nothing to generate"
+    exit 0
+fi
+_total_entries="$(printf '%s\n' "$_hooks" | awk 'END {print NR}')"
+ci_pass "parsed $_total_entries hook entries from $_config"
 
 # === entry-resolution integrity (2026-08-24 portable_shell incident) ===
 # A rendered hook whose entry does not resolve fails only at commit time,
@@ -41,6 +47,7 @@ _hooks="$(awk -f "$_CI_ROOT/lib/parse_precommit_config.awk" "$_config")"
 # module entry must exist as a file. This mirrors what the hook itself
 # will do: source lib/checks.sh, then invoke the entry.
 _entry_unresolved=0
+_written_stages=()
 while IFS=$'\034' read -r _e_id _e_name _e_entry _e_rest; do
     [[ -n "$_e_id" ]] || continue
     # grep exits 1 when an entry has no shell-function token (make
@@ -73,10 +80,17 @@ while IFS=$'\034' read -r _e_id _e_name _e_entry _e_rest; do
     fi
 done <<< "$_hooks"
 [[ $_entry_unresolved -eq 0 ]] || exit 1
+ci_pass "entry integrity: all shell functions and python modules resolve in lib"
 
 for _stage in pre-commit commit-msg pre-push; do
     _stage_hooks="$(printf '%s\n' "$_hooks" | awk -F'\034' -v s="$_stage" '$4 == s')"
     [[ -n "$_stage_hooks" ]] || continue
+    # grep -c exits 1 on zero matches and awk can legitimately emit
+    # nothing (stage with no advisory hooks); both are fatal under
+    # set -e inside $( ). Count with awk's END block instead: always
+    # prints, always exits 0.
+    _stage_count="$(printf '%s\n' "$_stage_hooks" | awk 'END {print NR}')"
+    _stage_advisory="$(printf '%s\n' "$_hooks" | awk -F'\034' -v s="$_stage" '$4 == s && $11 == "true"' | awk 'END {print NR}')"
     _tmp="$(mktemp)"
     {
         printf '%s\n' '#!/usr/bin/env bash' 'set -euo pipefail'
@@ -161,8 +175,20 @@ for _stage in pre-commit commit-msg pre-push; do
     if [[ "$_dry_run" -eq 1 ]]; then
         cat "$_tmp"
         rm -f "$_tmp"
+        ci_info "DRY-RUN: $_stage would write $_stage_count hooks ($_stage_advisory advisory)"
     else
         mv "$_tmp" "$_output_dir/$_stage"
         chmod 0755 "$_output_dir/$_stage"
+        ci_pass "$_stage: $_stage_count hooks written ($_stage_advisory advisory)"
+        _written_stages+=("$_stage")
     fi
 done
+if [[ "$_dry_run" -eq 1 ]]; then
+    ci_pass "dry run complete; no files written"
+elif [[ "${#_written_stages[@]}" -gt 0 ]]; then
+    ci_pass "SUCCESS: ${#_written_stages[@]} hook files written to $_output_dir"
+    ci_info "activate with: make install-hooks"
+else
+    ci_fail "no stages rendered from $_config"
+    exit 1
+fi

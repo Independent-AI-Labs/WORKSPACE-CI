@@ -26,7 +26,7 @@ _hooks_root_owned() {
 }
 
 main() {
-    local repo_root hooks_dir generated stage hook
+    local repo_root hooks_dir generated stage hook _installed=0
     repo_root="$(git rev-parse --show-toplevel)"
     hooks_dir="$(git -C "$repo_root" rev-parse --git-path hooks)"
     [[ "$hooks_dir" == /* ]] || hooks_dir="$repo_root/$hooks_dir"
@@ -44,10 +44,12 @@ main() {
     trap 'find "$generated" -depth -delete' RETURN
     "$BASH" "$_GENERATE" --output-dir "$generated"
     install -d -o root -g root -m 0755 "$hooks_dir"
+    local _installed=0
     for stage in pre-commit commit-msg pre-push; do
         hook="$hooks_dir/$stage"
         [[ -f "$generated/$stage" ]] || { ci_fail "generated hook missing: $stage"; return 1; }
         [[ ! -L "$hook" ]] || { ci_fail "refusing symlink hook: $hook"; return 1; }
+        ci_info "installing $stage (root-owned, immutable)"
         [[ ! -e "$hook" ]] || chattr -i -- "$hook"
         install -o root -g root -m 0755 "$generated/$stage" "$hook"
         chattr +i -- "$hook"
@@ -55,7 +57,9 @@ main() {
             ci_fail "hook is not immutable: $hook"
             return 1
         }
+        _installed=$((_installed + 1))
     done
+    ci_pass "SUCCESS: $_installed hooks installed to $hooks_dir and verified immutable"
 }
 
 main "$@"
