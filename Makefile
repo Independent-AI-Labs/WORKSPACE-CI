@@ -632,7 +632,8 @@ check-guard-host-exec: ## Check host-exec git-guard installation (read-only, run
 
 .PHONY: scaffold-ci
 scaffold-ci: ## Generate CI integration files for a consumer project (make scaffold-ci CONSUMER=<path> ARGS="--force-precommit --yes")
-	$(SCRIPT_BASH) scripts/scaffold-ci $(ARGS)
+	test -n "$(CONSUMER)" || { echo "ERROR: CONSUMER=<path> is required" >&2; exit 1; }
+	$(SCRIPT_BASH) scripts/scaffold-ci --consumer "$(CONSUMER)" $(ARGS)
 
 .PHONY: deploy-ci
 deploy-ci: ## Build and atomically publish /opt/workspace-ci (root only). Optional REV=<commit>: deploy a committed ancestor of origin/main (reviewed-ancestor rollback).
