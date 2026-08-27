@@ -433,12 +433,30 @@ completion.
       GATEWAY commit runs the stale-clone hooks. Verify `+i` restored
       on exactly three hooks and zero `../CI` refs in `.git/hooks/*`
       after (GATEWAY TODO P3.7).
-- [ ] `.gitleaksignore` investigation (GATEWAY TODO P3.4): deployed
-      `checks_secrets.sh` builds its allowlist from git-ignored paths
-      and never reads `.gitleaksignore`; the deployed-vs-source finding
-      discrepancy in the gitignored `.env` is unexplained. Compare
-      `checks_secrets.sh` generations across the three CI trees; fix
-      any ignore-propagation defect here.
+- [x] `.gitleaksignore` investigation (GATEWAY TODO P3.4), resolved
+      2026-08-27:
+      1. Wrapper drift ruled out: `checks_secrets.sh` is byte-identical
+         across the source tree, `/opt`, and the stale `../CI` tree.
+      2. Ignore-propagation defect ruled out: the wrapper allowlists
+         git-ignored paths via its generated config in BOTH binary
+         versions; the real wrapper run in GATEWAY passes with AND
+         without `.gitleaksignore`, under both 8.21.2 and 8.30.1.
+         `.env` has been gitignored since the initial GATEWAY commit.
+      3. `.gitleaksignore` is inert under the wrapper (never read) and
+         unnecessary (allowlist covers the gitignored `.env`); it only
+         affects direct gitleaks invocations. Keep-or-remove is a
+         GATEWAY-side decision for the parallel session.
+      4. Real defect found instead: the source tree's
+         `.boot-linux/bin/gitleaks` is 8.21.2, BELOW the pinned
+         minimum 8.22.0 (res/dependency-pins.yaml; deployed correctly
+         at 8.30.1). With `useDefault = true` the rule set is embedded
+         in the binary, so version skew = rule drift: the plausible
+         source of the historical `.env` findings asymmetry (the
+         fingerprints name `generic-api-key`, a default rule).
+         Remediation: `sudo make install-gitleaks` (binary is
+         root-owned; bootstrap verified checksum-true against the
+         pin). Gate-gap candidate: nothing verifies the installed
+         boot-dir tool versions against the pin minimums.
 - [ ] Ledger the WORKSPACE-GUARD yaml-edit splice defect: cannot append
       to indentless block sequences (discovered 2026-08-25 against
       `policy_integrity_baseline.yaml`; splice inserts at key-indent+2
