@@ -5,22 +5,23 @@
 # make scaffold-ci ARGS=--emit-template.
 
 pre-commit:
-  - check-unstaged
   - block-sensitive-files
   - gitleaks
+  - check-unstaged
   - ci-check-error-swallow
   - check-coverage-no-devolution
   - check-banned-words
   - check-portable-shell
-  - check-markdown-docs
-  - check-resolution-shapes
-  - check-boot-venv-layout
   - check-file-length
   - check-required-hooks-present
   - ci-lint
   - ci-type-check
   - check-dependency-versions
+  - check-markdown-docs
+  - check-resolution-shapes
+  - check-module-size
   - check-npm-lock-sync
+  - check-boot-venv-layout
   - check-duplicate-dependencies
 
 commit-msg:
@@ -33,6 +34,6 @@ pre-push:
   - check-dead-code
   - osv-scan
 
-# Total hooks: 23 (pre-commit=17 commit-msg=2 pre-push=4)
-# Generated: 2026-08-01T10:21:53Z
+# Total hooks: 24 (pre-commit=18 commit-msg=2 pre-push=4)
+# Generated: 2026-08-27T07:20:56Z
 # Source: config/required_hooks.yaml

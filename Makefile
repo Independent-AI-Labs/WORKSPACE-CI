@@ -507,6 +507,14 @@ compliance-all: ## Recursive compliance audit of all repos in workspace
 rewrite-history: ## Strip blocked patterns from git history (dangerous)
 	$(SCRIPT_BASH) scripts/rewrite-history
 
+.PHONY: clean-precommit
+clean-precommit: ## Remove pre-commit framework traces (operator-only tool; refuses non-interactive agents)
+	$(SCRIPT_BASH) scripts/cleanup-precommit
+
+.PHONY: check-templates
+check-templates: ## Verify generated templates are fresh vs config/required_hooks.yaml
+	$(SCRIPT_BASH) scripts/scaffold-ci --check-template
+
 .PHONY: code-stats
 code-stats: ## Codebase statistics across the workspace via cloc (lines, files, per-repo, per-language)
 	$(SCRIPT_BASH) scripts/code-stats $(ARGS)
@@ -621,6 +629,10 @@ check-guard: ## REMOVED: use check-guard-host-exec
 
 check-guard-host-exec: ## Check host-exec git-guard installation (read-only, runs as agent)
 	WORKSPACE_GUARD_ROOT="$(WORKSPACE_GUARD_ROOT)" $(SCRIPT_BASH) scripts/bootstrap-workspace-guard check-host-exec
+
+.PHONY: scaffold-ci
+scaffold-ci: ## Generate CI integration files for a consumer project (make scaffold-ci CONSUMER=<path> ARGS="--force-precommit --yes")
+	$(SCRIPT_BASH) scripts/scaffold-ci $(ARGS)
 
 .PHONY: deploy-ci
 deploy-ci: ## Build and atomically publish /opt/workspace-ci (root only). Optional REV=<commit>: deploy a committed ancestor of origin/main (reviewed-ancestor rollback).
