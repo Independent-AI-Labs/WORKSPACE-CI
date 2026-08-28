@@ -71,17 +71,19 @@ ci_scan_secrets() {
     else
         printf '[extend]\nuseDefault = true\n\n' >"$_ss_config_tmp"
     fi
-    printf '[[allowlists]]\ndescription = "Git-ignored paths"\npaths = [\n' >>"$_ss_config_tmp"
-    while IFS= read -r -d '' _ss_path; do
-        _ss_suffix=''
-        if [[ "$_ss_path" == */ ]]; then
-            _ss_path="${_ss_path%/}"
-            _ss_suffix='(?:/.*)?'
-        fi
-        _ss_path="$(printf '%s' "$_ss_path" | sed 's/[][\\.^$*+?(){}|]/\\&/g')"
-        printf "  '''(^|/)%s%s$''',\n" "$_ss_path" "$_ss_suffix" >>"$_ss_config_tmp"
-    done <"$_ss_ignored_tmp"
-    printf ']\n' >>"$_ss_config_tmp"
+    if [[ -s "$_ss_ignored_tmp" ]]; then
+        printf '[[allowlists]]\ndescription = "Git-ignored paths"\npaths = [\n' >>"$_ss_config_tmp"
+        while IFS= read -r -d '' _ss_path; do
+            _ss_suffix=''
+            if [[ "$_ss_path" == */ ]]; then
+                _ss_path="${_ss_path%/}"
+                _ss_suffix='(?:/.*)?'
+            fi
+            _ss_path="$(printf '%s' "$_ss_path" | sed 's/[][\\.^$*+?(){}|]/\\&/g')"
+            printf "  '''(^|/)%s%s$''',\n" "$_ss_path" "$_ss_suffix" >>"$_ss_config_tmp"
+        done <"$_ss_ignored_tmp"
+        printf ']\n' >>"$_ss_config_tmp"
+    fi
     rm -f "$_ss_candidates_tmp" "$_ss_stderr_tmp"
     local _ss_rc=0
     (cd "$_ss_root" && "$_ss_gitleaks_bin" dir . \

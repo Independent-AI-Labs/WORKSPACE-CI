@@ -44,3 +44,36 @@ MOCK_EOF
     grep -Fq "(^|/)ignored-dir(?:/.*)?$" "$GITLEAKS_CONFIG_CAPTURE"
 }
 _run_test "secrets: one process with global allowlist" test_secrets_uses_one_process_and_global_allowlist
+
+test_secrets_no_ignored_paths_omits_allowlist() {
+    _source_lib
+    printf 'clean\n' > clean.txt
+    git add clean.txt
+    git commit -q -m fixture
+
+    local _mock_bin="$TEST_TMP/mock-gitleaks"
+    mkdir -p "$_mock_bin"
+    cat >"$_mock_bin/gitleaks" <<'MOCK_EOF'
+#!/bin/sh
+config=''
+while [ "$#" -gt 0 ]; do
+    if [ "$1" = "--config" ]; then
+        config="$2"
+        break
+    fi
+    shift
+done
+cp "$config" "$GITLEAKS_CONFIG_CAPTURE"
+exit 0
+MOCK_EOF
+    chmod +x "$_mock_bin/gitleaks"
+    export PATH="$_mock_bin:$PATH"
+    export GITLEAKS_CONFIG_CAPTURE="$TEST_TMP/gitleaks-config"
+
+    ci_scan_secrets
+    if grep -Fq '[[allowlists]]' "$GITLEAKS_CONFIG_CAPTURE"; then
+        echo "FAIL: empty allowlist emitted when no paths are git-ignored"
+        return 1
+    fi
+}
+_run_test "secrets: no ignored paths omits empty allowlist" test_secrets_no_ignored_paths_omits_allowlist
