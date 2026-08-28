@@ -34,7 +34,7 @@ export PATH := $(_HB_PREFIX)/opt/coreutils/libexec/gnubin:$(_HB_PREFIX)/opt/gnu-
 # (fresh install), PATH is not modified: install-python-deps handles it.
 override BOOT_NAME := $(if $(filter Darwin,$(_OS)),.boot-macos,.boot-linux)
 override BOOT_BIN := $(CURDIR)/$(BOOT_NAME)/bin
-ANSIBLE_PLAYBOOK := $(BOOT_BIN)/ansible-playbook
+ANSIBLE_PLAYBOOK := /opt/workspace-ci/.boot-linux/bin/ansible-playbook
 DEPLOY_ANSIBLE_PLAYBOOK := $(abspath ../../.boot-linux/bin/ansible-playbook)
 
 # uv is the hermetic runner for all Python tooling (FR-2.4). Resolve the
