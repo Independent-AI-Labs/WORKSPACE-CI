@@ -95,7 +95,7 @@
       block:
         - name: Check gateway Grafana is running
           ansible.builtin.shell: >-
-            podman ps --filter name=gw-grafana --filter status=running
+            '{{ podman_path }}' ps --filter name=gw-grafana --filter status=running
             --format '{{ "{{" }}.Names{{ "}}" }}' | grep -q .
             >>{{ prod_log | quote }} 2>&1
           register: grafana_running
@@ -111,7 +111,7 @@
 
         - name: Check prod image exists
           ansible.builtin.shell: >-
-            podman image exists localhost/workspace-ci-wiki:0.1.0
+            '{{ podman_path }}' image exists localhost/workspace-ci-wiki:0.1.0
             >>{{ prod_log | quote }} 2>&1
           register: prod_image
           changed_when: false
@@ -231,7 +231,7 @@
 
         - name: List wiki prod containers
           ansible.builtin.shell: >-
-            podman ps --filter name=wiki-ci-
+            '{{ podman_path }}' ps --filter name=wiki-ci-
             --format 'table {{ "{{" }}.Names{{ "}}" }}\t{{ "{{" }}.Status{{ "}}" }}\t{{ "{{" }}.Ports{{ "}}" }}'
             >>{{ prod_log_dir | quote }}/containers.log 2>&1
           register: wiki_containers
