@@ -57,7 +57,7 @@ ci_check_module_size() {
         local override_data
         override_data="$(awk '
           function emit() {
-              if (path != "") print path "\t" files "\t" children "\t" depth
+              if (path != "") print path "|" files "|" children "|" depth
               path=files=children=depth=""
           }
           /^module_overrides:[[:space:]]*$/ { in_mod=1; next }
@@ -78,7 +78,7 @@ ci_check_module_size() {
           }
           END { if (in_mod) emit() }
         ' "$config")"
-        while IFS=$'\t' read -r path value key depth; do
+        while IFS='|' read -r path value key depth; do
             [[ -n "$path" ]] || continue
             [[ -z "$value" || "$value" =~ ^[1-9][0-9]*$ ]] || { ci_fail "Invalid module override max_source_files for $path"; return 1; }
             [[ -z "$key" || "$key" =~ ^[1-9][0-9]*$ ]] || { ci_fail "Invalid module override max_submodules for $path"; return 1; }

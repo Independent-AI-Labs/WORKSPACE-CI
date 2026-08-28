@@ -377,6 +377,24 @@ EOF
 }
 _run_test "module_size: path override permits documented exception" test_module_size_override
 
+test_module_size_submodule_override() {
+    _source_lib
+    cat > "$CI_CONFIG_DIR/file_length_limits.yaml" <<'EOF'
+max_submodules_per_module: 1
+extensions:
+  - .py
+module_overrides:
+  - path: src
+    max_submodules: 2
+EOF
+    mkdir -p src/one src/two
+    : > src/one/one.py
+    : > src/two/two.py
+    git add src/one/one.py src/two/two.py
+    ci_check_module_size
+}
+_run_test "module_size: submodule-only override is honored" test_module_size_submodule_override
+
 test_module_size_invalid_limit() {
     _source_lib
     cat > "$CI_CONFIG_DIR/file_length_limits.yaml" <<'EOF'
