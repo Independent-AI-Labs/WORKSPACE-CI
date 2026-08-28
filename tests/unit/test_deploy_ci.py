@@ -41,16 +41,27 @@ def test_coverage_data_uses_writable_generated_directory() -> None:
     assert 'COVERAGE_FILE="$(CURDIR)/.pytest_cache/.coverage"' in makefile
 
 
-def test_deploy_repoints_host_podman_links_after_publication() -> None:
+def test_deploy_installs_root_only_host_podman_entries() -> None:
     script = (Path(__file__).parents[2] / "scripts/deploy-ci").read_text()
-    # Host-side link repoint must run after the artifact is published and
-    # verified, and must fail the deploy if the link does not resolve.
+    # System podman entries are admin-only: mode 0700 real files installed
+    # after publication, never world-executable symlinks, and the deploy
+    # fails if the entry point is not root-only.
+    assert "ln -sfn" not in script
+    assert "install -v -o root -g root -m 0700" in script
     assert "/usr/local/bin/podman" in script
     assert "/usr/local/lib/systemd/user-generators/podman-user-generator" in script
     publish = script.index("attr_root +i")
-    repoint = script.index("ln -sfn", publish)
+    entries = script.index("install -v -o root -g root -m 0700", publish)
     containers_install = script.index('"$home/.config/containers/"')
-    assert containers_install < repoint
+    assert containers_install < entries
+    assert 'stat -c %a /usr/local/bin/podman) == 700' in script
+
+
+def test_bootstrap_podman_never_links_world_exec_system_entries() -> None:
+    bootstrap = (Path(__file__).parents[2] / "scripts/bootstrap-podman").read_text()
+    assert 'ln -sf "${VENV_DIR}/bin/podman" "${QUADLET_PODMAN_PATH}"' not in bootstrap
+    assert 'install -o root -g root -m 0700' in bootstrap
+    assert 'chmod 0700 "${QUADLET_PODMAN_PATH}"' in bootstrap
 
 
 def test_prod_sh_resolves_podman_only_from_sealed_artifact() -> None:

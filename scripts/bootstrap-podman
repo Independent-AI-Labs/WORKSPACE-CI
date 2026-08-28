@@ -329,16 +329,24 @@ if [[ -f "${GENERATOR_SRC}" ]]; then
     chmod +x "${GENERATOR_BIN}"
     log_info "✓ Staged quadlet generator at ${GENERATOR_BIN}"
     if [[ -w "${SYSTEM_GENERATOR_DIR%/*}" ]] || [[ -w "${SYSTEM_GENERATOR_DIR}" ]]; then
+        # System podman entries are root-only (mode 0700, real files: symlink
+        # modes are ignored by exec). Non-root consumers use the boot-dir or
+        # sealed-artifact podman explicitly; system binaries are admin-only.
         mkdir -p "${SYSTEM_GENERATOR_DIR}"
-        ln -sf "${GENERATOR_BIN}" "${SYSTEM_GENERATOR_DIR}/podman-user-generator"
-        ln -sf "${VENV_DIR}/bin/podman" "${QUADLET_PODMAN_PATH}"
-        log_info "✓ Linked generator into ${SYSTEM_GENERATOR_DIR}"
+        rm -f "${SYSTEM_GENERATOR_DIR}/podman-user-generator" "${QUADLET_PODMAN_PATH}"
+        install -o root -g root -m 0700 "${GENERATOR_SRC}" \
+            "${SYSTEM_GENERATOR_DIR}/podman-user-generator"
+        printf '#!/usr/bin/env bash\nexec %s/bin/podman "$@"\n' "${VENV_DIR}" \
+            > "${QUADLET_PODMAN_PATH}"
+        chown root:root "${QUADLET_PODMAN_PATH}"
+        chmod 0700 "${QUADLET_PODMAN_PATH}"
+        log_info "✓ Installed root-only system podman entries (mode 0700)"
     else
-        log_warn "Quadlet generator link requires root. Operator must run:"
+        log_warn "Quadlet/system podman install requires root. Operator must run:"
         log_warn "  mkdir -p ${SYSTEM_GENERATOR_DIR}"
-        log_warn "  ln -sf ${GENERATOR_BIN} ${SYSTEM_GENERATOR_DIR}/podman-user-generator"
-        log_warn "  ln -sf ${VENV_DIR}/bin/podman ${QUADLET_PODMAN_PATH}"
-        log_warn "  systemctl --user daemon-reload   # per user"
+        log_warn "  install -o root -g root -m 0700 ${GENERATOR_SRC} ${SYSTEM_GENERATOR_DIR}/podman-user-generator"
+        log_warn "  printf '#!/usr/bin/env bash\\nexec ${VENV_DIR}/bin/podman \"\$@\"\\n' > ${QUADLET_PODMAN_PATH}"
+        log_warn "  chown root:root ${QUADLET_PODMAN_PATH} && chmod 0700 ${QUADLET_PODMAN_PATH}"
     fi
 else
     log_warn "podman-user-generator missing from ${GENERATOR_SRC} - quadlet support unavailable"

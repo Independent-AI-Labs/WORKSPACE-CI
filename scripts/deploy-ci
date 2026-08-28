@@ -223,15 +223,23 @@ install -v -o "$owner" -g "$owner_group" -m 0644 \
     "$DEPLOYED/.boot-linux/containers/registries.conf" \
     "$home/.config/containers/"
 # Repoint host-level podman entry points at the freshly published artifact.
-# bootstrap-podman creates these links inside the candidate mount namespace,
-# where they are discarded at namespace exit; without this host-side step
-# they keep targeting whatever the previous host bootstrap installed.
+# bootstrap-podman creates these inside the candidate mount namespace, where
+# the writes are discarded at namespace exit. Both entries are root-only
+# (mode 0700, real files: symlink modes are ignored by exec): system podman
+# is an admin binary, non-root consumers use the sealed artifact explicitly.
+rm -f -- /usr/local/bin/podman /usr/local/lib/systemd/user-generators/podman-user-generator
 install -v -d -o root -g root -m 0755 /usr/local/lib/systemd/user-generators
-ln -sfn -- "$DEPLOYED/.boot-linux/bin/podman" /usr/local/bin/podman
-ln -sfn -- "$DEPLOYED/.boot-linux/bin/podman-user-generator" \
+install -v -o root -g root -m 0700 \
+    "$DEPLOYED/.boot-linux/bin/podman-user-generator" \
     /usr/local/lib/systemd/user-generators/podman-user-generator
-[[ "$(readlink -f /usr/local/bin/podman)" == "$DEPLOYED/.boot-linux/bin/podman" ]] \
-    || die "host podman link does not resolve to the published artifact"
+printf '#!/usr/bin/env bash\nexec %s/.boot-linux/bin/podman "$@"\n' "$DEPLOYED" \
+    > /usr/local/bin/podman
+chown root:root /usr/local/bin/podman
+chmod 0700 /usr/local/bin/podman
+[[ $(stat -c %a /usr/local/bin/podman) == 700 ]] \
+    || die "host podman entry point is not root-only"
+[[ $(stat -c %U /usr/local/bin/podman) == root ]] \
+    || die "host podman entry point is not root-owned"
 remove_candidate
 
 # Hook installation is deliberately after publication and sealing. Run the
