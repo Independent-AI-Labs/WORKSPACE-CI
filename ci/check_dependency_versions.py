@@ -25,10 +25,41 @@ VALIDATE_FLAGS = frozenset(
 )
 
 
+def _default_validation_arguments(root: Path) -> list[str]:
+    arguments = ["validate", "--consumer-root", str(root)]
+    optional_files = (
+        ("--catalog", "res/dependency-pins.yaml"),
+        ("--dockerfile", "web/Containerfile"),
+        ("--dockerfile", "Containerfile"),
+        ("--dockerfile", "Dockerfile"),
+        ("--compose", "web/compose.prod.yaml"),
+        ("--compose", "compose.yml"),
+        ("--compose", "compose.yaml"),
+        ("--compose", "docker-compose.yml"),
+        ("--compose", "docker-compose.yaml"),
+    )
+    for flag, path in optional_files:
+        if (root / path).exists():
+            arguments.extend((flag, path))
+    dependency_arguments: list[str] = []
+    for flag, declaration, lock in (
+        ("--npm-workspace-lock", "package.json", "package-lock.json"),
+        ("--uv-lock", "pyproject.toml", "uv.lock"),
+    ):
+        if (root / declaration).exists() and (root / lock).exists():
+            dependency_arguments.extend((flag, declaration, lock))
+    if dependency_arguments and (root / "config/dependency_excludes.yaml").exists():
+        arguments.extend(("--exclusions", "config/dependency_excludes.yaml"))
+    arguments.extend(dependency_arguments)
+    return arguments
+
+
 def _normalize_transition_arguments(arguments: list[str]) -> list[str]:
     """Translate the exact invocation installed by the predecessor hook."""
     match arguments:
-        case [] | ["--deterministic-only", "--catalog", _]:
+        case []:
+            return _default_validation_arguments(Path.cwd())
+        case ["--deterministic-only", "--catalog", _]:
             return [
                 "validate",
                 "--consumer-root",

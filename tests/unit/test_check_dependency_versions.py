@@ -7,7 +7,11 @@ from unittest.mock import patch
 
 import pytest
 
-from ci.check_dependency_versions import _mode, _normalize_transition_arguments
+from ci.check_dependency_versions import (
+    _default_validation_arguments,
+    _mode,
+    _normalize_transition_arguments,
+)
 
 USAGE_ERROR = 2
 
@@ -49,8 +53,23 @@ def test_predecessor_hook_invocation_maps_to_offline_validation() -> None:
     ]
 
 
-def test_generated_hook_invocation_maps_to_offline_validation() -> None:
-    assert _normalize_transition_arguments([])[0] == "validate"
+def test_generated_hook_discovers_only_complete_inputs(tmp_path: Path) -> None:
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config/dependency_excludes.yaml").touch()
+    (tmp_path / "pyproject.toml").touch()
+    (tmp_path / "package.json").touch()
+    (tmp_path / "package-lock.json").touch()
+
+    assert _default_validation_arguments(tmp_path) == [
+        "validate",
+        "--consumer-root",
+        str(tmp_path),
+        "--exclusions",
+        "config/dependency_excludes.yaml",
+        "--npm-workspace-lock",
+        "package.json",
+        "package-lock.json",
+    ]
 
 
 def test_rejects_missing_or_unknown_mode(capsys) -> None:
