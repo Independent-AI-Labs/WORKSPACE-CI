@@ -1,0 +1,32 @@
+# Schema for exemption_files.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: exemption_files
+description: "Canonical manifest of per-project exemption/config files consumed by CI checks; consumers validate provenance (root-owned, immutable, regular file) and fail closed otherwise."
+fields:
+  - path: version
+    type: integer
+    required: true
+    description: "Schema version of the exemption manifest. Bumped when the YAML shape changes."
+
+  - path: files
+    type: list
+    required: true
+    description: "The list of exemption/config files materialized in consumer projects."
+
+  - path: files[].path
+    type: string
+    required: true
+    description: "Repo-relative location of the file in the consumer project."
+
+  - path: files[].default_source
+    type: string
+    description: "CI-relative file copied when scaffolding the entry (optional)."
+
+  - path: files[].default_content
+    type: string
+    description: "Inline default content used when no default_source is given (optional)."

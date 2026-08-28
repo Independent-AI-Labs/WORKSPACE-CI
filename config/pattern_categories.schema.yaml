@@ -1,0 +1,29 @@
+# Schema for pattern_categories.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: pattern_categories
+description: "Single source of truth for anti-pattern category IDs and human-readable labels, consumed by the CI checker for grouped violation reporting and by the wiki for /anti-patterns navigation."
+fields:
+  - path: version
+    type: integer
+    required: true
+    description: "Schema version of the pattern category registry. Bumped when the YAML shape changes."
+
+  - path: categories
+    type: list
+    required: true
+    description: "The list of pattern categories; kept in sync with the PatternCategory union in web/src/types/patterns.ts."
+
+  - path: categories[].id
+    type: string
+    required: true
+    description: "Stable category identifier referenced by pattern definitions (e.g. 'linter-suppression')."
+
+  - path: categories[].label
+    type: string
+    required: true
+    description: "Human-readable category label shown in violation reports and the wiki UI."

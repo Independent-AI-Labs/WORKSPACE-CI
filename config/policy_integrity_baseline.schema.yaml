@@ -1,0 +1,19 @@
+# Schema for policy_integrity_baseline.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: policy_integrity_baseline
+description: "Frozen baseline of SHA-256 digests for broad-exemption policy files; only shrinkable through review."
+fields:
+  - path: project
+    type: list
+    required: true
+    description: "SHA-256 digests of project-scoped policy file states sanctioned as baseline."
+
+  - path: universal
+    type: list
+    required: true
+    description: "SHA-256 digests of universal (cross-project) policy file states sanctioned as baseline."

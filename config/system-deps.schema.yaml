@@ -1,0 +1,50 @@
+# Schema for system-deps.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: system-deps
+description: "System dependency manifest checked and installed by 'make init' via scripts/install-system-deps; unified schema shared with WORKSPACE-VM and WORKSPACE-GATEWAY."
+fields:
+  - path: requires
+    type: list
+    required: true
+    description: "The list of required system dependencies."
+
+  - path: requires[].check_cmd
+    type: string
+    description: "Binary name verified via find_binary (exactly one of check_cmd/check_type per entry)."
+
+  - path: requires[].check_type
+    type: string
+    description: "Semantic check: c-compiler, network-tools, playwright-libs, libolm-headers, or apt-package."
+
+  - path: requires[].apt_package
+    type: string
+    description: "Debian package installed via apt-get when the check fails (Linux)."
+
+  - path: requires[].brew_package
+    type: string
+    description: "Homebrew formula installed via brew when the check fails (macOS only)."
+
+  - path: requires[].description
+    type: string
+    description: "Human-readable text shown in check output."
+
+  - path: requires[].optional
+    type: boolean
+    description: "Optional misses warn but do not fail the check (default false)."
+
+  - path: requires[].platforms
+    type: list
+    description: "Platforms the entry applies to (e.g. [linux], [darwin]); omitted means all platforms."
+
+  - path: requires[].bootstrap_script
+    type: string
+    description: "Hermetic install script path; flags the entry as bootstrap-owned so the system install phase skips it."
+
+  - path: requires[].component
+    type: string
+    description: "Traceability tag for deps flattened out of a consumer's bootstrap-components.yaml."

@@ -108,3 +108,6 @@ exceptions:
   - pattern: \blegacy\b
     paths:
       - ^scripts/cleanup-precommit$
+  - pattern: \bsilent
+    paths:
+      - config/silent_swallow_exceptions\.schema\.yaml

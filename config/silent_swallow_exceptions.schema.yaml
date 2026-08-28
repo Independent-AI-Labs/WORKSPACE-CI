@@ -1,0 +1,14 @@
+# Schema for silent_swallow_exceptions.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: silent_swallow_exceptions
+description: "Exemptions from the silent-swallow check; patterns allowed to suppress errors without reporting."
+fields:
+  - path: exceptions
+    type: list
+    required: true
+    description: "List of sanctioned silent-swallow exceptions; empty by default."

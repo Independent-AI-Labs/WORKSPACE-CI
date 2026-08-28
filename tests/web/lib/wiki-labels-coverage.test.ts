@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { readdirSync, readFileSync } from 'fs'
+import { readdirSync, readFileSync, existsSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { load } from 'js-yaml'
@@ -18,6 +18,22 @@ describe('wiki_labels config coverage', () => {
       )
       .map((f) => f.replace(/\.yaml$/, ''))
     const missing = stems.filter((s) => labels.config_categories[s] === undefined)
+    expect(missing).toEqual([])
+  })
+
+  it('every config file has a schema with a description (configAdapter invariant)', () => {
+    const stems = readdirSync(configDir)
+      .filter(
+        (f) =>
+          f.endsWith('.yaml') && !f.endsWith('.schema.yaml') && !f.includes('banned_words_exceptions')
+      )
+      .map((f) => f.replace(/\.yaml$/, ''))
+    const missing = stems.filter((s) => {
+      const schemaPath = join(configDir, `${s}.schema.yaml`)
+      if (!existsSync(schemaPath)) return true
+      const schema = load(readFileSync(schemaPath, 'utf8')) as { description?: string }
+      return !schema?.description
+    })
     expect(missing).toEqual([])
   })
 })

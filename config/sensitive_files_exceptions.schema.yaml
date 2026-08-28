@@ -1,0 +1,14 @@
+# Schema for sensitive_files_exceptions.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7)
+# to render field/type/default/description for the configuration reference
+# pages (FR-7.3). This file is the canonical source for field descriptions;
+# the wiki derives documentation from it, never hand-maintaining prose.
+config: sensitive_files_exceptions
+description: "Exemptions from the sensitive-files check; lists files that would otherwise be flagged as sensitive."
+fields:
+  - path: safe_exceptions
+    type: list
+    required: true
+    description: "Repo-relative paths exempted from sensitive-file detection (e.g. '.markdown_docs_exceptions.yaml')."
