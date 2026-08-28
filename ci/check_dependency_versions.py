@@ -28,7 +28,7 @@ VALIDATE_FLAGS = frozenset(
 def _normalize_transition_arguments(arguments: list[str]) -> list[str]:
     """Translate the exact invocation installed by the predecessor hook."""
     match arguments:
-        case ["--deterministic-only", "--catalog", _]:
+        case [] | ["--deterministic-only", "--catalog", _]:
             return [
                 "validate",
                 "--consumer-root",

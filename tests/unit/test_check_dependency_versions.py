@@ -49,6 +49,10 @@ def test_predecessor_hook_invocation_maps_to_offline_validation() -> None:
     ]
 
 
+def test_generated_hook_invocation_maps_to_offline_validation() -> None:
+    assert _normalize_transition_arguments([])[0] == "validate"
+
+
 def test_rejects_missing_or_unknown_mode(capsys) -> None:
     assert _mode([]) is None
     assert "usage:" in capsys.readouterr().err
