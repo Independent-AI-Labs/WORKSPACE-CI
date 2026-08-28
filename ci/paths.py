@@ -178,6 +178,11 @@ def resolve_config_path(
     lib/checks.sh, which removes those variables from the environment
     before any checker launches; resolution order here is therefore
     unconditional and identical in every surviving context.
+
+    A consumer-supplied path that exists wins over the sealed default:
+    per-repo config customization (e.g. module_overrides in a
+    consumer's file_length_limits.yaml) must be authoritative, and the
+    sealed config serves consumers without their own file.
     """
     stem = normalize_config_stem(name)
 
@@ -197,16 +202,16 @@ def resolve_config_path(
     if manifest_path is not None:
         return manifest_path
 
-    default_path = _resolve_from_config_dir(stem, guard=False)
-    if default_path.is_file():
-        return default_path
-
     if consumer_path is not None:
         resolved_consumer = Path(consumer_path)
         if not resolved_consumer.is_absolute():
             resolved_consumer = (Path.cwd() / resolved_consumer).resolve()
-        if resolved_consumer.is_file() or not required:
+        if resolved_consumer.is_file():
             return resolved_consumer
+
+    default_path = _resolve_from_config_dir(stem, guard=False)
+    if default_path.is_file():
+        return default_path
 
     if required and not default_path.is_file():
         msg = f"Config not found: {default_path}"

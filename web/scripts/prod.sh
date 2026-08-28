@@ -15,7 +15,16 @@ PROJECTS_ROOT="$(cd "${WEB_DIR}/../.." && pwd)"
 PROD_IMAGE="${PROD_IMAGE:-localhost/workspace-ci-wiki:0.1.0}"
 COMPOSE_FILE="${COMPOSE_FILE:-compose.prod.yaml}"
 COMPOSE_CMD="${COMPOSE_CMD:-podman-compose}"
-PODMAN="${PODMAN:-podman}"
+# The sealed CI artifact is the single podman provider (AGENTS.md Article VII).
+# Explicit resolution only: prod fails loudly if it is missing.
+DEPLOYED_CI_ROOT="${DEPLOYED_CI_ROOT:-/opt/workspace-ci}"
+PODMAN="$DEPLOYED_CI_ROOT/.boot-linux/bin/podman"
+if [[ ! -x "$PODMAN" ]]; then
+  echo "ERROR: podman not found at $PODMAN (sealed artifact $DEPLOYED_CI_ROOT)." >&2
+  echo "Deploy CI first: make deploy-ci" >&2
+  exit 1
+fi
+export PODMAN
 PROD_HTTP_PORT="${PROD_HTTP_PORT:-8080}"
 PROD_HTTPS_PORT="${PROD_HTTPS_PORT:-8443}"
 BUILD_LOG="${BUILD_LOG:-/tmp/wiki-prod-build.log}"
@@ -44,7 +53,6 @@ resolve_cmd() {
   fi
 }
 
-resolve_cmd PODMAN podman
 resolve_cmd COMPOSE_CMD podman-compose
 
 require_cmd() {

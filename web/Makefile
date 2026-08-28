@@ -43,15 +43,16 @@ CI_REPO := $(abspath ..)
 PROD_IMAGE := localhost/workspace-ci-wiki:0.1.0
 COMPOSE_FILE := compose.prod.yaml
 # Override on the command line or in the environment if needed:
-#   COMPOSE_CMD=podman-compose PODMAN=podman make prod-start
+#   COMPOSE_CMD=podman-compose PODMAN=/opt/workspace-ci/.boot-linux/bin/podman make prod-start
 COMPOSE_CMD ?= podman-compose
-PODMAN ?= podman
+# The sealed CI artifact is the single podman provider (AGENTS.md Article VII).
+PODMAN ?= /opt/workspace-ci/.boot-linux/bin/podman
 # `export COMPOSE_CMD` with no value defines an empty var; ?= will not override it.
 ifeq ($(COMPOSE_CMD),)
 COMPOSE_CMD := podman-compose
 endif
 ifeq ($(PODMAN),)
-PODMAN := podman
+PODMAN := /opt/workspace-ci/.boot-linux/bin/podman
 endif
 export PROD_HTTP_PORT ?= 8080
 export PROD_HTTPS_PORT ?= 8443

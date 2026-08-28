@@ -9,8 +9,9 @@ declare -g -A _CI_CONFIG_PATH_CACHE=()
 # Resolve a CI config YAML path using the same precedence as ci/paths.py:
 #   1. CI_CONFIG_PATH_{STEM}  (pure bash)
 #   2. CI_CONFIG_OVERRIDES manifest  (lib/resolve_config_path.py when set)
-#   3. CI_CONFIG_DIR/{stem}.yaml  (pure bash)
-#   4. consumer_path when provided and the file exists  (pure bash)
+#   3. consumer_path when provided and the file exists  (pure bash;
+#      per-repo config customization is authoritative)
+#   4. CI_CONFIG_DIR/{stem}.yaml  (pure bash; sealed default)
 ci_config_path() {
     local _stem="${1%.yaml}"
     local _consumer_path="${2:-}"
@@ -56,16 +57,16 @@ ci_config_path() {
         fi
     fi
 
+    if [[ -n "$_consumer_path" && -f "$_consumer_path" ]]; then
+        _CI_CONFIG_PATH_CACHE[$_cache_key]="$_consumer_path"
+        echo "$_consumer_path"
+        return 0
+    fi
+
     local _default="${CI_CONFIG_DIR}/${_stem}.yaml"
     if [[ -f "$_default" ]]; then
         _CI_CONFIG_PATH_CACHE[$_cache_key]="$_default"
         echo "$_default"
-        return 0
-    fi
-
-    if [[ -n "$_consumer_path" && -f "$_consumer_path" ]]; then
-        _CI_CONFIG_PATH_CACHE[$_cache_key]="$_consumer_path"
-        echo "$_consumer_path"
         return 0
     fi
 

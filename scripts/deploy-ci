@@ -222,6 +222,16 @@ install -v -o "$owner" -g "$owner_group" -m 0644 \
     "$DEPLOYED/.boot-linux/containers/containers.conf" \
     "$DEPLOYED/.boot-linux/containers/registries.conf" \
     "$home/.config/containers/"
+# Repoint host-level podman entry points at the freshly published artifact.
+# bootstrap-podman creates these links inside the candidate mount namespace,
+# where they are discarded at namespace exit; without this host-side step
+# they keep targeting whatever the previous host bootstrap installed.
+install -v -d -o root -g root -m 0755 /usr/local/lib/systemd/user-generators
+ln -sfn -- "$DEPLOYED/.boot-linux/bin/podman" /usr/local/bin/podman
+ln -sfn -- "$DEPLOYED/.boot-linux/bin/podman-user-generator" \
+    /usr/local/lib/systemd/user-generators/podman-user-generator
+[[ "$(readlink -f /usr/local/bin/podman)" == "$DEPLOYED/.boot-linux/bin/podman" ]] \
+    || die "host podman link does not resolve to the published artifact"
 remove_candidate
 
 # Hook installation is deliberately after publication and sealing. Run the

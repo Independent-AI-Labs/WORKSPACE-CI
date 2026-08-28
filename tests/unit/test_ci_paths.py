@@ -97,6 +97,26 @@ class TestResolveConfigPath:
         result = ci_paths.resolve_config_path("banned_words")
         assert result == override_file.resolve()
 
+    def test_consumer_path_wins_over_config_dir(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        sealed = config_dir / "dead_code.yaml"
+        sealed.write_text("version: 1\n", encoding="utf-8")
+        consumer = tmp_path / "local.yaml"
+        consumer.write_text("version: 2\n", encoding="utf-8")
+        monkeypatch.setenv("CI_CONFIG_DIR", str(config_dir))
+        monkeypatch.chdir(tmp_path)
+
+        result = ci_paths.resolve_config_path(
+            "dead_code",
+            consumer_path=Path("local.yaml"),
+        )
+        assert result == consumer.resolve()
+
     def test_consumer_path_used_when_default_missing(
         self,
         monkeypatch: pytest.MonkeyPatch,

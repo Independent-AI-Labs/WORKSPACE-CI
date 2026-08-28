@@ -62,6 +62,17 @@ EOF
     unset CI_CONFIG_OVERRIDES
 }
 
+test_ci_config_path_consumer_wins() {
+    _source_ci
+    local _tmp _resolved
+    _tmp="$(mktemp -d)"
+    echo "version: 1" > "$_tmp/dead_code.yaml"
+    _resolved="$(cd "$_tmp" && ci_config_path dead_code "./dead_code.yaml")"
+    [[ "$_resolved" == "./dead_code.yaml" ]]
+    rm -rf "$_tmp"
+}
+
 _run_test "config-overrides: CI_CONFIG_DIR preserved when pre-set" test_ci_config_dir_preserved_on_source
 _run_test "config-overrides: per-file env override via ci_config_path" test_ci_config_path_env_override
 _run_test "config-overrides: bash ci_config_path matches Python resolver" test_ci_config_path_matches_python
+_run_test "config-overrides: existing consumer path wins over sealed default" test_ci_config_path_consumer_wins

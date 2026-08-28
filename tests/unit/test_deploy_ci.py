@@ -39,3 +39,21 @@ def test_preflight_does_not_start_a_nested_shell() -> None:
 def test_coverage_data_uses_writable_generated_directory() -> None:
     makefile = (Path(__file__).parents[2] / "Makefile").read_text()
     assert 'COVERAGE_FILE="$(CURDIR)/.pytest_cache/.coverage"' in makefile
+
+
+def test_deploy_repoints_host_podman_links_after_publication() -> None:
+    script = (Path(__file__).parents[2] / "scripts/deploy-ci").read_text()
+    # Host-side link repoint must run after the artifact is published and
+    # verified, and must fail the deploy if the link does not resolve.
+    assert "/usr/local/bin/podman" in script
+    assert "/usr/local/lib/systemd/user-generators/podman-user-generator" in script
+    publish = script.index("attr_root +i")
+    repoint = script.index("ln -sfn", publish)
+    containers_install = script.index('"$home/.config/containers/"')
+    assert containers_install < repoint
+
+
+def test_prod_sh_resolves_podman_only_from_sealed_artifact() -> None:
+    prod = (Path(__file__).parents[2] / "web/scripts/prod.sh").read_text()
+    assert 'PODMAN="$DEPLOYED_CI_ROOT/.boot-linux/bin/podman"' in prod
+    assert "resolve_cmd PODMAN podman" not in prod
