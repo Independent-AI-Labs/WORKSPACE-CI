@@ -112,3 +112,24 @@ test_silent_e2e_passes_no_staged_files() {
     ci_check_silent_swallow
 }
 _run_test "silent: e2e passes with no staged files" test_silent_e2e_passes_no_staged_files
+
+test_silent_e2e_honors_map_schema_exception() {
+    _setup_silent_repo
+    mkdir -p config ansible/playbooks
+    rm -f config/silent_swallow_exceptions.yaml
+    cat > config/silent_swallow_exceptions.yaml <<'EOF'
+exceptions:
+  - paths:
+      - ansible/playbooks/intentional-register.yml
+EOF
+    cat > ansible/playbooks/intentional-register.yml <<'EOF'
+- name: Intentionally buffer command result for control flow
+  ansible.builtin.command: tool status
+  register: tool_status
+  changed_when: false
+  failed_when: tool_status.rc not in [0, 1]
+EOF
+    git add config/silent_swallow_exceptions.yaml ansible/playbooks/intentional-register.yml
+    ci_check_silent_swallow
+}
+_run_test "silent: map-schema path exception is honored" test_silent_e2e_honors_map_schema_exception

@@ -96,8 +96,14 @@ ci_check_silent_swallow() {
     if [[ -f "$_exc_cfg" ]]; then
         local _exc_tmp
         _exc_tmp="$(mktemp)"
-        sed -n "s/^\s*-\s*['\"]\(.*[^'\"]\)['\"]\s*$/\1/p" "$_exc_cfg" > "$_exc_tmp"
+        # Guard schema requires list-of-maps:
+        #   - paths:
+        #       - path/to/file
+        # Accept quoted or unquoted scalar path items. The top-level
+        # "- paths:" map marker is skipped below.
+        sed -n -E "s/^[[:space:]]*-[[:space:]]*['\"]?([^'\"]+)['\"]?[[:space:]]*$/\1/p" "$_exc_cfg" > "$_exc_tmp"
         while IFS= read -r _pat; do
+            [[ "$_pat" == *: ]] && continue
             [[ -n "$_pat" ]] && _exc_paths+=("$_pat")
         done < "$_exc_tmp"
         rm -f "$_exc_tmp"

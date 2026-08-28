@@ -549,7 +549,7 @@ extract-wiki-data: extract-code-stats extract-hook-sources extract-script-source
 # root-owned unconditionally; there is no seal/unseal cycle).
 _YAML_EDIT ?= /usr/bin/workspace-yaml-edit
 
-.PHONY: yaml-add yaml-remove yaml-set yaml-get yaml-list yaml-validate
+.PHONY: yaml-add yaml-remove yaml-set yaml-bootstrap yaml-get yaml-list yaml-validate
 yaml-add: ## Append a list entry: make yaml-add FILE=.. KEY=.. FIELDS="pattern=x;paths=[a]" (ROOT)
 	if [ "$$(id -u)" != "0" ]; then \
 		echo "ERROR: yaml-add needs root: sudo make yaml-add" >&2; exit 1; \
@@ -569,6 +569,12 @@ yaml-set: ## Set a scalar: make yaml-set FILE=.. KEY=.. VALUE=.. (ROOT)
 		echo "ERROR: yaml-set needs root: sudo make yaml-set" >&2; exit 1; \
 	fi
 	"$(_YAML_EDIT)" set "$(FILE)" "$(KEY)" "$(VALUE)" $(YAML_FLAGS)
+
+yaml-bootstrap: ## Create a missing top-level scalar key: make yaml-bootstrap FILE=.. KEY=.. VALUE=.. (ROOT)
+	if [ "$$(id -u)" != "0" ]; then \
+		echo "ERROR: yaml-bootstrap needs root: sudo make yaml-bootstrap" >&2; exit 1; \
+	fi
+	"$(_YAML_EDIT)" bootstrap "$(FILE)" "$(KEY)" "$(VALUE)" $(YAML_FLAGS)
 
 yaml-get: ## Print a scalar: make yaml-get FILE=.. KEY=..
 	"$(_YAML_EDIT)" get "$(FILE)" "$(KEY)"

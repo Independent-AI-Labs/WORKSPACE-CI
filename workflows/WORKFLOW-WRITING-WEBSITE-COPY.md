@@ -7,7 +7,7 @@ heroes, footers, branding strings, and README catalogue blurbs.
 Canonical path: `/opt/workspace-ci/workflows/WORKFLOW-WRITING-WEBSITE-COPY.md`
 
 Sources: [HubSpot blink test](https://blog.hubspot.com/blog/tabid/6307/bid/34061/how-to-make-sure-your-website-passes-the-dreaded-blink-test.aspx),
-[Blend B2B homepage hero practices](https://www.blendb2b.com/websites-decoded/homepage-hero-best-practices),
+[Blend B2B homepage guidance](https://www.blendb2b.com/blog/what-should-you-put-on-your-homepage),
 plain-language guidance from [plainlanguage.gov](https://www.plainlanguage.gov/guidelines/conversational/use-pronouns/).
 
 ## When this workflow applies
