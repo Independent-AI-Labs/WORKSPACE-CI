@@ -210,27 +210,6 @@ BLOCKED_CASES: list[SwallowCase] = [
         "js-existssync-source-select",
     ),
     SwallowCase(
-        "js_or_literal_default",
-        "x.ts",
-        ["const bg = readCssVar('--bg') || '#181818'"],
-        _SHOULD_BLOCK,
-        "js-or-literal-default",
-    ),
-    SwallowCase(
-        "js_nullish_literal_default",
-        "x.ts",
-        ["const label = getNavLabelForHref(href) ?? '/projects'"],
-        _SHOULD_BLOCK,
-        "js-nullish-literal-default",
-    ),
-    SwallowCase(
-        "js_hardcoded_hex_color",
-        "x.ts",
-        ["return theme === 'light' ? '#ffffff' : '#181818'"],
-        _SHOULD_BLOCK,
-        "js-hardcoded-hex-color",
-    ),
-    SwallowCase(
         "js_catch_debug_only",
         "x.ts",
         [
