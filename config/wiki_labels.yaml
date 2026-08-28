@@ -57,6 +57,15 @@ config_categories:
   boot_layout: Project Structure
   markdown_docs: Project Structure
   required_hooks: Project Structure
+  exemption_files: Quality Gates
+  pattern_categories: Content Rules
+  policy_integrity_baseline: Quality Gates
+  projects: Project Structure
+  sensitive_files_exceptions: Content Rules
+  silent_swallow_exceptions: Content Rules
+  standards: Content Rules
+  system-deps: Dependencies
+  wiki_labels: Project Structure
 
 guard_categories:
   guard_config_keys: Access Control
@@ -91,4 +100,3 @@ playground_languages:
     label: Lua
   - id: yaml
     label: YAML
-
