@@ -197,7 +197,10 @@ export function extractReadmeSummary(markdown: string): string {
       continue
     }
     if (stripEmbeds(trimmed) === '') continue
-    if (isIntroBoundary(trimmed)) break
+    if (isIntroBoundary(trimmed)) {
+      if (paragraphs.length > 0 || currentLines.length > 0) break
+      continue
+    }
 
     currentLines.push(trimmed)
   }

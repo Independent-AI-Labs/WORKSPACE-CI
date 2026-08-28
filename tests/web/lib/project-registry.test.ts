@@ -131,6 +131,17 @@ Intro with ![icon](icon.png) inline image and <sub>subscript</sub> text.
     expect(summary).toBe('Intro with inline image and subscript text.')
   })
 
+  it('skips leading blockquotes before the intro text', () => {
+    const markdown = `# Title
+
+> **Status:** leading note that is not the summary.
+
+Real intro sentence here. Second intro sentence.
+`
+    const summary = extractReadmeSummary(markdown)
+    expect(summary).toBe('Real intro sentence here. Second intro sentence.')
+  })
+
   it('skips multi-line HTML comments before the intro', () => {
     const markdown = `# Title
 
