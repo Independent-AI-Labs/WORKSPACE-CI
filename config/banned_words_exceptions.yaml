@@ -1,7 +1,0 @@
-# Legacy v4-format project exemptions, emptied for the contract phase of
-# DECISION-POLICY-GENERATION-TRANSITION-2026-09-08. The v5 engine reads
-# only banned_words_exceptions_v5.yaml; this file remains solely because
-# the deployed artifact's exemption_files.yaml still lists it, and the
-# rendered commit-msg provenance preamble fails closed on listed files
-# that are missing. The post-deploy cleanup commit deletes it.
-exceptions: []

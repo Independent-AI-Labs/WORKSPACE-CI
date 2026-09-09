@@ -138,7 +138,7 @@ secrets, sensitive files, banned words, and commit hygiene; vendored tier
 installs no hooks.
 
 All rules are config-driven. Patterns live in [`config/banned_words.yaml`](config/banned_words.yaml)
-(with per-project overrides in [`banned_words_exceptions.yaml`](config/banned_words_exceptions.yaml)),
+(with per-project overrides in [`config/banned_words_exceptions_v5.yaml`](config/banned_words_exceptions_v5.yaml)),
 file rules in [`config/sensitive_files.yaml`](config/sensitive_files.yaml),
 coverage gates in [`config/coverage_thresholds.yaml`](config/coverage_thresholds.yaml),
 hook registry in [`config/required_hooks.yaml`](config/required_hooks.yaml),
