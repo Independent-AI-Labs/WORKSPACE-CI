@@ -131,13 +131,6 @@ repos:
         pass_filenames: false
         always_run: true
 
-      - id: check-deletion-consumers
-        name: Forbid deleting files with remaining consumers
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && CI_COMMIT_MSG_FILE=$1 ci_check_deletion_consumers' --"
-        language: system
-        pass_filenames: false
-        always_run: true
-
       - id: ci-type-check
         name: Type-check (make type-check)
         entry: make type-check
@@ -170,6 +163,15 @@ repos:
       - id: check-commit-message
         name: Check Commit Message Format
         entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_commit_message \"$1\"' --"
+        language: system
+        stages: [commit-msg]
+
+      # commit-msg stage: $1 is the message file, so the Deletion-Review
+      # escape hatch is deliverable. At pre-commit $1 is empty (git has not
+      # written the message yet) and the hatch was inert.
+      - id: check-deletion-consumers
+        name: Forbid deleting files with remaining consumers
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && CI_COMMIT_MSG_FILE=$1 ci_check_deletion_consumers' --"
         language: system
         stages: [commit-msg]
 

@@ -190,6 +190,24 @@ def test_nul_delimited_discovery_handles_spaces(tmp_path: Path):
     assert name in files
 
 
+def test_project_exception_file_repo_wins_over_sealed(tmp_path: Path):
+    from ci.banned_scan import discover
+
+    repo = tmp_path / "repo"
+    sealed = tmp_path / "sealed-config"
+    (repo / "config").mkdir(parents=True)
+    sealed.mkdir()
+    repo_file = repo / "config" / "banned_words_exceptions_v5.yaml"
+    sealed_file = sealed / "banned_words_exceptions_v5.yaml"
+
+    assert discover.project_exception_file(sealed, repo) is None
+    sealed_file.write_text("exceptions: []\n", encoding="utf-8")
+    assert discover.project_exception_file(sealed, repo) == sealed_file
+    repo_file.write_text("exceptions: []\n", encoding="utf-8")
+    assert discover.project_exception_file(sealed, repo) == repo_file
+    assert discover.project_exception_file(repo / "config", repo) == repo_file
+
+
 def test_unknown_key_fails_closed(tmp_path: Path):
     import yaml
 

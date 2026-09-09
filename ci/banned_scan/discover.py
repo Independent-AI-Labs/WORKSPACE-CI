@@ -19,6 +19,23 @@ def scan_root() -> Path:
     return Path(raw) if raw else Path.cwd()
 
 
+def project_exception_file(config_dir: Path, root: Path) -> Path | None:
+    """The one project-exceptions file to load: repo config wins.
+
+    When CI_CONFIG_DIR points at the sealed artifact config and the repo
+    also carries its own banned_words_exceptions_v5.yaml, the consumer
+    file wins and the sealed default is not loaded (loading both would
+    double every entry).
+    """
+    for candidate in (
+        root / "config" / "banned_words_exceptions_v5.yaml",
+        config_dir / "banned_words_exceptions_v5.yaml",
+    ):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def tracked_files(argv_files: list[str], root: Path) -> list[str]:
     """File list from argv (hook contract) or NUL-delimited git ls-files."""
     if argv_files:

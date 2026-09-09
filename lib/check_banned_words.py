@@ -39,29 +39,17 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         policy = model.load_universal(config_dir)
+        exc_file = discover.project_exception_file(config_dir, root)
         project_exc: dict[str, list[model.ExceptionEntry]] = {}
-        for exc_file in {
-            config_dir / "banned_words_exceptions_v5.yaml",
-            root / "config" / "banned_words_exceptions_v5.yaml",
-        }:
-            if exc_file.is_file():
-                try:
-                    validate_exemption_file(exc_file, "banned_words_exceptions_v5.yaml")
-                except ExemptionFileError as exc:
-                    print(f"banned-words: {exc}", file=sys.stderr)
-                    return 1
+        if exc_file is not None:
+            try:
+                validate_exemption_file(exc_file, "banned_words_exceptions_v5.yaml")
+            except ExemptionFileError as exc:
+                print(f"banned-words: {exc}", file=sys.stderr)
+                return 1
             loaded = model.load_project_exceptions(policy, exc_file, str(exc_file))
             for rule_id, entries in loaded.items():
-                bucket = project_exc.setdefault(rule_id, [])
-                for entry in entries:
-                    if any(entry.path == prior.path for prior in bucket):
-                        print(
-                            f"banned-words: duplicate exception rule={rule_id} "
-                            f"path={entry.path}",
-                            file=sys.stderr,
-                        )
-                        return 1
-                    bucket.append(entry)
+                project_exc[rule_id] = list(entries)
         classes = classify.load(root)
     except (model.PolicyError, classify.ClassificationError) as exc:
         print(f"banned-words: policy invalid: {exc}", file=sys.stderr)

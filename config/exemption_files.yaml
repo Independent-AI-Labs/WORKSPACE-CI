@@ -14,10 +14,6 @@ files:
     default_content: 'exceptions: []
 
       '
-  - path: config/banned_words_exceptions.yaml
-    default_content: 'exceptions: []
-
-      '
   - path: config/banned_words_exceptions_v5.yaml
     default_content: 'exceptions: []
 

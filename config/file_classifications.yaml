@@ -14,9 +14,6 @@ files:
   config/banned_words.yaml:
     class: policy-definition
     owner: workspace-ci
-  config/banned_words_exceptions.yaml:
-    class: policy-definition
-    owner: workspace-ci
   config/exemption_files.yaml:
     class: policy-definition
     owner: workspace-ci
