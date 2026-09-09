@@ -137,12 +137,22 @@ def main() -> int:
             continue
         sources.append(result)
 
+    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if OUTPUT_PATH.exists():
+        try:
+            previous = json.loads(OUTPUT_PATH.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            previous = None
+        if isinstance(previous, dict) and previous.get("sources") == sources:
+            # Deterministic regeneration: identical content keeps the
+            # committed generated_at so `git diff --exit-code` stays clean.
+            print(f"script-sources.json unchanged ({len(sources)} sources)")
+            return 0
+
     output = {
         "generated_at": datetime.now(UTC).isoformat(),
         "sources": sources,
     }
-
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2, ensure_ascii=False)
         f.write("\n")

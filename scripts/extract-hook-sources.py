@@ -115,7 +115,13 @@ def extract_shell_function(entry: str) -> dict[str, str | None] | None:
                 continue
 
             source = "\n".join(body)
-            rel_path = str(sh_file.relative_to(_REPO_ROOT))
+            if _REPO_ROOT in sh_file.parents:
+                rel_path = str(sh_file.relative_to(_REPO_ROOT))
+            else:
+                # Protected hooks set CI_LIB_DIR to the sealed artifact; its
+                # lib/ mirrors this repo (artifact == origin/main), so record
+                # the in-repo path for the extracted source.
+                rel_path = f"lib/{sh_file.name}"
             docstring = _extract_leading_comments(lines, i)
 
             return {
@@ -315,12 +321,22 @@ def main() -> int:
         result["description"] = extract_description(hook)
         sources.append(result)
 
+    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if OUTPUT_PATH.exists():
+        try:
+            previous = json.loads(OUTPUT_PATH.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            previous = None
+        if isinstance(previous, dict) and previous.get("sources") == sources:
+            # Deterministic regeneration: identical content keeps the
+            # committed generated_at so `git diff --exit-code` stays clean.
+            print(f"hook-sources.json unchanged ({len(sources)} sources)")
+            return 0
+
     output = {
         "generated_at": datetime.now(UTC).isoformat(),
         "sources": sources,
     }
-
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2, ensure_ascii=False)
         f.write("\n")
