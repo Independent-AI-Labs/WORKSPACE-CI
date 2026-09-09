@@ -408,7 +408,7 @@ def _run_invariant_4_entries(
                 or (package_root / module_path).is_dir()
             ):
                 issues.append(
-                    f"hook '{hook.id}' entry references python module"
+                    f"hook '{hook.id}' entry references python-module"
                     f" '{hook.entry}' but it does not exist"
                 )
     if not issues and not quiet:

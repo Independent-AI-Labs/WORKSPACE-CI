@@ -8,12 +8,15 @@ inherited_boot_dirs owners).
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 from ci._boot_layout_helpers import MoonProject, MoonYml
 from ci.check_boot_venv_layout import (
     _check_dependson_alignment,
     _check_inherited_boot_dirs,
 )
+
+EXPECTED_FINDING_COUNT = 2
 
 # ---------------------------------------------------------------------------
 # Check 3+4: _check_inherited_boot_dirs
@@ -133,6 +136,34 @@ def test_check_inherited_boot_dirs_world_writable_bin_preserves_nfr(
     assert "NFR-3.2" in msg
 
 
+def test_check_inherited_boot_dirs_rejects_symlink_escape(tmp_path: Path) -> None:
+    project = tmp_path / "p"
+    project.mkdir()
+    sibling = tmp_path / "CI"
+    sibling.mkdir()
+    external_boot = tmp_path / "external-boot"
+    (external_boot / "bin").mkdir(parents=True)
+    (sibling / ".boot-linux").symlink_to(external_boot, target_is_directory=True)
+    moon = MoonYml(project=MoonProject(inherited_boot_dirs=["../CI"]))
+    findings = _check_inherited_boot_dirs(moon, project)
+    level, msg = findings[0]
+    assert level == "WARN"
+    assert "escapes" in msg
+
+
+def test_check_inherited_boot_dirs_rejects_owner_mismatch(tmp_path: Path) -> None:
+    project = tmp_path / "p"
+    project.mkdir()
+    sibling = tmp_path / "CI" / ".boot-linux" / "bin"
+    sibling.mkdir(parents=True)
+    moon = MoonYml(project=MoonProject(inherited_boot_dirs=["../CI"]))
+    with patch("ci._boot_layout_helpers.have_same_owner", return_value=False):
+        findings = _check_inherited_boot_dirs(moon, project)
+    level, msg = findings[0]
+    assert level == "WARN"
+    assert "different owners" in msg
+
+
 def test_check_inherited_boot_dirs_multiple_entries(tmp_path: Path) -> None:
     project = tmp_path / "p"
     project.mkdir()
@@ -146,7 +177,7 @@ def test_check_inherited_boot_dirs_multiple_entries(tmp_path: Path) -> None:
         project=MoonProject(inherited_boot_dirs=["../CI", "../WORKSPACE-GUARD"])
     )
     findings = _check_inherited_boot_dirs(moon, project)
-    assert len(findings) == 2
+    assert len(findings) == EXPECTED_FINDING_COUNT
     assert all(lvl == "OK" for lvl, _ in findings)
 
 
@@ -192,7 +223,7 @@ def test_check_dependson_multiple_entries(tmp_path: Path) -> None:
         dependsOn=["ci", "dataops"],
     )
     findings = _check_dependson_alignment(moon)
-    assert len(findings) == 2
+    assert len(findings) == EXPECTED_FINDING_COUNT
     assert all(lvl == "OK" for lvl, _ in findings)
 
 

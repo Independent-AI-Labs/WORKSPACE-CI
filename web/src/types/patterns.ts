@@ -28,12 +28,14 @@ export type DetectionType = 'inline' | 'custom' | 'multiline'
 export type SwallowLanguage = 'shell' | 'python' | 'js_ts' | 'ansible' | 'cron'
 
 export interface ClassifiedPattern {
+  id?: string
   pattern: string
   reason: string
   category: PatternCategory
   categoryLabel: string
   scope: PatternScope
   directory?: string
+  ruleScope?: RuleScope
   languages?: SwallowLanguage[]
   extensions?: string[]
   detectionType?: DetectionType
@@ -43,23 +45,36 @@ export interface ClassifiedPattern {
   detectorDocstring?: string
 }
 
+export type RuleScope = 'all' | 'production' | 'docs'
+
+export type MatchingMode = 'raw-regex' | 'normalized-token' | 'normalized-path' | 'filename'
+
 export interface BannedWordsConfig {
   version: string
-  universal_exceptions?: UniversalException[]
-  banned: PatternEntry[]
+  rules: PatternEntry[]
   directory_rules?: Record<string, PatternEntry[]>
   filename_rules?: PatternEntry[]
+  exceptions?: PolicyException[]
 }
 
 export interface PatternEntry {
+  id: string
+  mode: MatchingMode
+  case: 'sensitive' | 'fold'
   pattern: string
   reason: string
   category?: string
+  scope?: RuleScope
+  non_exemptible?: boolean
 }
 
-export interface UniversalException {
-  paths: string[]
-  patterns: string[]
+export interface PolicyException {
+  rule: string
+  path: string
+  rationale: string
+  owner: string
+  review_date: string
+  removal: string
 }
 
 export interface SwallowInlinePattern {

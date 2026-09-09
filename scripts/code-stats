@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# code-stats -- Codebase statistics across the workspace.
+# code-stats: Codebase statistics across the workspace.
 #
 # Walks every nested .git repo under the workspace root and runs cloc to
 # produce: total lines (code/comment/blank/files), per-repo breakdown, and
@@ -225,7 +225,7 @@ fi
 # Render
 # ---------------------------------------------------------------------------
 # Use Python for table formatting: awk's number formatting + sort across
-# multiple keys gets ugly fast and we already depend on python above.
+# multiple keys gets ugly fast and we already depend on Python above.
 "$UV_BIN" run python - "$_per_repo" "$_per_repo_lang" "$_mode" "$_top_n" "$_json" "$_root" <<'PY'
 import sys, json, os
 per_repo_path, per_lang_path, mode, top_n, as_json, root = sys.argv[1:]
@@ -305,7 +305,7 @@ if not sys.stdout.isatty():
 
 def hr(ch="="): print(ch * 78)
 
-# -- Summary --
+# Summary
 hr("=")
 print(f"{BOLD}CODE STATISTICS{NC}  root: {root}")
 hr("=")

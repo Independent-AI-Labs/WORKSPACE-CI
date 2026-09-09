@@ -94,6 +94,26 @@ def is_world_writable(p: Path) -> bool:
     return bool(st.st_mode & 0o002)
 
 
+def have_same_owner(*paths: Path) -> bool:
+    """Return whether every path has the same owning UID."""
+    try:
+        return len({os.stat(path).st_uid for path in paths}) == 1
+    except OSError:
+        return False
+
+
+def boot_composition_issue(project: Path, boot_bin: Path) -> str | None:
+    """Return the reason an inherited boot bin cannot be composed."""
+    boot_root = boot_bin.parent
+    if not boot_root.resolve(strict=False).is_relative_to(project):
+        return "boot directory escapes the inherited project through a symlink"
+    if not have_same_owner(project, boot_root, boot_bin):
+        return "project root and boot directories have different owners"
+    if is_world_writable(boot_root) or is_world_writable(boot_bin):
+        return "boot directory is world-writable (security risk per NFR-3.2)"
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Inherit-owner derivation (SPEC §8.2)
 # ---------------------------------------------------------------------------
@@ -157,8 +177,8 @@ def scan_precommit_venv_python_refs(pcc_path: Path) -> list[int]:
 
 
 def scan_precommit_project_refs(pcc_path: Path) -> list[tuple[int, str]]:
-    """Yield (line_no, project_path) for every ``uv run --project X --no-sync
-    python -m ci.<check>`` ref found in <pcc_path>.
+    """Yield (line_no, project_path) for every ``uv run --project X
+    --no-sync python -m ci.<check>`` ref found in <pcc_path>.
     """
     refs: list[tuple[int, str]] = []
     try:

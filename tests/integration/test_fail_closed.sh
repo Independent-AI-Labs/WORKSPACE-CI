@@ -48,7 +48,7 @@ import os
 import sys
 
 if os.environ.get("MOCK_STDOUT") == "1":
-    print("mock violation: fake pattern -- mock output line")
+    print("mock violation: fake pattern: mock output line")
 sys.exit(int(os.environ.get("MOCK_EXIT_CODE", "1")))
 PYEOF
     printf '%s' "$_dir/mock_checker.py"
@@ -154,7 +154,7 @@ test_fail_closed_missing_python() {
     CI_PROJECT_ROOT="$_saved_root"
     [[ $_rc -eq 1 ]]
 }
-_run_test "fail-closed: missing python returns 1" test_fail_closed_missing_python
+_run_test "fail-closed: missing Python returns 1" test_fail_closed_missing_python
 
 # ---------------------------------------------------------------------------
 # Test: ci_run_python_checker must not leak ci_uv_bin resolver output.

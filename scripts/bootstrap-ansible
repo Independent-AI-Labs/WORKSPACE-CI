@@ -42,7 +42,7 @@ main() {
     uv_bin="${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/bin/uv"
 
     if [[ ! -x "$uv_bin" ]]; then
-        _log "ERROR: uv not found at $uv_bin -- run 'make install-boot-tools' first"
+        _log "ERROR: uv not found at $uv_bin: run 'make install-boot-tools' first"
         return 1
     fi
 
@@ -71,7 +71,7 @@ main() {
     # UV_TOOL_DIR keeps the tool env inside the boot dir so executables stay
     # runnable for all users when installed with elevation (root-locked bin).
     # UV_PYTHON_INSTALL_DIR keeps the base interpreter inside the boot dir
-    # too -- otherwise the tool env symlinks to $HOME/.local/share/uv/python.
+    # too: otherwise the tool env symlinks to $HOME/.local/share/uv/python.
     UV_PYTHON_INSTALL_DIR="$python_dir" UV_TOOL_DIR="$tool_dir" UV_TOOL_BIN_DIR="$target_dir" \
         "$uv_bin" tool install ansible-core --with ansible --with passlib --force
 

@@ -152,7 +152,7 @@ test_compliance_detects_python() {
     local _rc=0; output="$(ci_compliance_score "$pdir")" || _rc=$?
     echo "$output" | grep -q "Language: python"
 }
-_run_test "compliance: detects python language" test_compliance_detects_python
+_run_test "compliance: detects Python language" test_compliance_detects_python
 
 test_compliance_detects_node() {
     _source_lib

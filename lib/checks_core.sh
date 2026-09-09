@@ -108,7 +108,7 @@ ci_check_fallback_resolution() {
 # Replaces a prior bash+AWK implementation that spawned ~33,000 subprocesses
 # under PRoot and took 5+ minutes; the Python version does zero subprocess
 # spawns and completes in <1s.
-# Per-project exemptions are supported via config/banned_words_exceptions.yaml
+# Per-project exemptions are supported via config/banned_words_exceptions_v5.yaml
 # with granular path and pattern scoping.
 ci_check_banned_words() {
     local config
@@ -132,10 +132,11 @@ ci_check_banned_words() {
 
 # --- ci_check_policy_integrity ---
 # Delegates to lib/check_policy_integrity.py: non-exemptible structural
-# validation of banned_words.yaml + banned_words_exceptions.yaml, run
-# BEFORE ordinary exemptions load. Broad exemptions are frozen against
-# the exact-digest baseline in config/policy_integrity_baseline.yaml;
-# new or modified broad entries fail closed.
+# validation of banned_words.yaml, banned_words_exceptions_v5.yaml, and
+# file_classifications.yaml against the final v5 model, run BEFORE
+# ordinary exemptions load. Every exemption must be one exact anchored
+# file + one rule id with full provenance; classification entries must
+# be exact tracked files.
 ci_check_policy_integrity() {
     local script_path="${CI_LIB_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}/check_policy_integrity.py"
     if [[ ! -f "$script_path" ]]; then

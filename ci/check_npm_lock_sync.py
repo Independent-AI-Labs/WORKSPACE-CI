@@ -17,7 +17,7 @@ Checks, for the root manifest and every workspace declared in its
 Repositories without a package-lock.json pass trivially (nothing to sync).
 
 Usage:
-    python -m ci.check_npm_lock_sync [ROOT]
+    uv run python -m ci.check_npm_lock_sync [ROOT]
 """
 
 from __future__ import annotations

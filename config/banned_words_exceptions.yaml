@@ -111,3 +111,42 @@ exceptions:
   - pattern: \bsilent
     paths:
       - config/silent_swallow_exceptions\.schema\.yaml
+
+  # ── v5 migration bridge (expand-contract transition) ─────────────────
+  # Exact-path entries covering files introduced by the schema v5 cut so
+  # the deployed v4 gate passes the migration commit. This entire section
+  # is deleted by the contract commit immediately after the v5 deploy
+  # activates (DECISION-POLICY-GENERATION-TRANSITION-2026-09-08).
+  - pattern: '\bsilent'
+    paths:
+      - ^config/banned_words_exceptions_v5\.yaml$
+      - ^config/file_classifications\.yaml$
+      - ^config/file_classifications\.schema\.yaml$
+      - ^config/silent_swallow_exceptions\.yaml$
+      - ^reports/effective-exemptions\.json$
+  - pattern: '\bpython3?\b'
+    paths:
+      - ^config/banned_words_exceptions_v5\.yaml$
+      - ^reports/effective-exemptions\.json$
+  - pattern: 'protected-system-interpreter'
+    paths:
+      - ^tests/unit/test_banned_words\.sh$
+      - ^docs/audits/AUDIT-DEPLOY-TOOL-INVENTORY-2026-09-06\.md$
+      - ^docs/proposals/PROPOSAL-SHELL-GUARD-INTERPRETER-COVERAGE-2026-09-06\.md$
+  - pattern: '_v[0-9]+'
+    paths:
+      - ^config/banned_words_exceptions_v5\.yaml$
+  - pattern: '\bleverage\b'
+    paths: ['^tests/unit/test_banned_words\.sh$']
+  - pattern: '\bsynerg'
+    paths: ['^tests/unit/test_banned_words\.sh$']
+  - pattern: 'harness the power of'
+    paths: ['^tests/unit/test_banned_words\.sh$']
+  - pattern: 'move the needle'
+    paths: ['^tests/unit/test_banned_words\.sh$']
+  - pattern: 'low-hanging fruit'
+    paths: ['^tests/unit/test_banned_words\.sh$']
+  - pattern: 'best practices'
+    paths: ['^tests/unit/test_banned_words\.sh$']
+  - pattern: 'north star'
+    paths: ['^tests/unit/test_banned_words\.sh$']

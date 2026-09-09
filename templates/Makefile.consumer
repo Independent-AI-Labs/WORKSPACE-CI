@@ -71,7 +71,7 @@ init: ## Install system-level dependencies
 	@echo "TODO: implement per-project system dependencies."
 	@:
 
-install: install-deps install-hooks ## Full install: deps + hooks
+install: install-deps ## Full install: deps (hooks install separately, root-only: sudo make install-hooks)
 	@:
 
 install-ci: install-deps ## CI install: deps only, no hooks
@@ -81,10 +81,10 @@ install-deps: ## Install project dependencies
 	@echo "TODO: implement per-project dependency install."
 	@:
 
-install-hooks: ## (Re)generate native git hooks
+install-hooks: ## Install native git hooks (root-only: root-owned, immutable)
 	$(SCRIPT_BASH) $(CI_DIR)/scripts/reinstall-hooks
 
-sync: install-deps install-hooks ## Sync deps + reinstall hooks
+sync: install-deps ## Sync deps (hooks install separately, root-only: sudo make install-hooks)
 	@:
 
 # =============================================================================

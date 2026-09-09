@@ -441,9 +441,9 @@ install_guard_host_exec() {
         return 1
     fi
     if ! agent_git_works_runuser "$verify_user"; then
-        log_error "runuser -u $verify_user -- git --version failed (host-exec delivery)"
+        log_error "runuser git-version check failed for $verify_user (host-exec delivery)"
         return 1
     fi
-    log_info "host-exec verified: runuser -u $verify_user -- git --version"
+    log_info "host-exec verified: runuser git-version check for $verify_user"
     return 0
 }

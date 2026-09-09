@@ -1,1019 +1,1501 @@
-# Banned Word Patterns Configuration v4.0.0
-# Universal rules -- no project-specific exceptions in this file.
-#
-# Format:
-#   pattern: regex pattern to match
-#   reason: why this pattern is banned
-#
-# Exceptions are defined in two places:
-#   1. universal_exceptions (below): apply to ALL projects (e.g. tests/)
-#   2. Per-project banned_words_exceptions.yaml in each project's config/ dir
-#
-# See docs/runbooks/RUNBOOK-HOOKS.md for details on the exception mechanism.
-
-version: "4.0.0"
-
-# Universal exceptions -- these paths are exempt from the listed patterns
-# in every project that uses this config.
-universal_exceptions:
-  # Policy definition files MUST quote every forbidden string (patterns,
-  # reasons, examples). Full path exemption for these two files only.
-  - paths:
-      - 'config/banned_words\.yaml$'
-      - 'config/banned_words_exceptions\.yaml$'
-    patterns: ['.*']
-  # CI meta-config and schema files quote pattern names and official standard terms.
-  - paths:
-      - 'config/banned_words\.schema\.yaml$'
-      - 'config/silent_swallow_patterns\.yaml$'
-      - 'config/silent_swallow_patterns\.schema\.yaml$'
-      - 'config/exemption_files\.yaml$'
-      - 'config/standards\.yaml$'
-      - 'config/standards\.schema\.yaml$'
-      - 'config/wiki_labels\.yaml$'
-    patterns: ['.*']
-  - paths:
-      - 'web/public/standards/.*\.pdf$'
-      - '\.png$'
-      - 'web/package-lock\.json$'
-      - 'web/src/lib/patterns\.ts$'
-      - 'tests/web/lib/patterns\.test\.ts$'
-      - 'tests/unit/test_checks\.sh$'
-      - 'tests/integration/test_e2e_checks\.sh$'
-      - 'web/src/data/hook-sources\.json$'
-      - 'web/src/data/script-sources\.json$'
-    patterns: ['.*']
-  # Verbatim quote archives and generated lockfiles (narrow paths only).
-  - paths: ['docs/references/']
-    patterns: ['.*']
-  - paths: ['uv\.lock$']
-    patterns: ['.*']
-  - paths: ['package-lock\.json$']
-    patterns: ['.*']
-  - paths: ['docs/archive/']
-    patterns: ['.*']
-  # WORKSPACE-VM umbrella: pattern catalog quotes forbidden examples.
-  - paths: ['workspace/config/patterns/']
-    patterns: ['.*']
-  # WORKSPACE-GUARD: sandbox hostname table uses a catch-all regex entry.
-  - paths: ['config/sandbox/profiles\.yaml$']
-    patterns:
-      - 'pattern:\s*"\.\*"'
-      - "pattern:\\s*'\\.\\*'"
-  # Root AGENTS.md documents hook/checker policy (meta-references).
-  - paths: ['AGENTS\.md$']
-    patterns:
-      - '#\s*noqa'
-      - '#\s*type:\s*ignore'
-      - '\bsilent'
-      - 'unsafe\s*\{'
-      - 'mypy: ignore-errors'
-      - '\bstubs?\b'
-      - '\bfallback\b'
-      - '\blegacy\b'
-      - '\bmock\b'
-      - '\bpython3?\b'
-      - 'self\.get\('
-      - ' -- '
-      - '\u2014'
-  # Hook config references checker ids/names (e.g. ci-check-silent-swallow).
-  - paths: ['\.pre-commit-config\.yaml$']
-    patterns: ['\bsilent']
-  # Install e2e scripts assert post-bootstrap layout.
-  - paths: ['scripts/setup/test_install_e2e.*\.sh$']
-    patterns: ['\.venv/bin/python']
-  - paths: ['tests/unit/scripts/test_register_extensions\.py$']
-    patterns: ['\.venv/bin/python']
-  - paths: ['workspace/config/']
-    patterns:
-      - '\u2014'
-      - '\.parent\.parent'
-      - '\.parents\['
-      - 'uuid\.uuid[134568]\('
-      - '\buuid[134568]\(\)'
-      - '#\s*type:\s*ignore'
-      - '#\s*noqa'
-      - '\bcompatibility\b'
-  - paths: ['tests/']
-    patterns:
-      - ':\s*Any\b'
-      - '\bdict\[.*,\s*Any\]'
-      - '\bfallback\b'
-      - '\bstubs?\b'
-      - '\bmock\b'
-      - '\bsilent'
-      - '\.suppress'
-      - '\bgetattr\('
-      - '\bsetattr\('
-      - '\bhasattr\('
-      - '#\[allow\('
-      - 'unsafe\s*\{'
-      - '\blist\[object\]'
-      - '\bdict\[[^]]+,\s*object\]'
-      - '\blist\[dict\]'
-      - '\blist\[dict\[str,\s*object\]\]'
-      - '\bdict\[str,\s*list\[dict\[str,\s*object\]\]\]'
-      - '\|\s*object\b'
-      - '\blegacy\b'
-      - '\.parents\['
-      - 'reason=.*not implemented yet'
-      - 'eslint-disable'
-  - paths: ['.toml$']
-    patterns:
-      - '\bstubs?\b'
-      - '\bmock\b'
-  # The ASCII em-dash pattern ` -- ` is legitimate syntax in these
-  # contexts (cargo fmt -- --check; Makefile command separators; YAML
-  # key hint comments). Banning would break every shell / build file.
-  - paths: ['\.sh$', 'Makefile$', 'makefile$', '\.toml$', '\.yaml$', '\.yml$']
-    patterns:
-      - ' -- '
-  # The silent-swallow detector uses 'silent' as its subject matter -
-  # it detects silent failures, it is not a silent failure.
-  - paths: ['lib/check_silent_swallow.*\.py$', 'lib/checks_silent\.sh$']
-    patterns:
-      - '\bsilent'
-      - '\bfallback\b'
-      - '\.suppress'
-      - ' -- '
-      - '\bfallback\b'
-      - '\.suppress'
-      - ' -- '
-  # TOML parsing utility: dict[str, Any] is the correct return type
-  # for parsed TOML data before validation.
-  - paths: ['ci/check_duplicate_dependencies\.py$']
-    patterns:
-      - '\bdict\[.*,\s*Any\]'
-
-  # python3? is banned everywhere. Allowed exceptions:
-  #   - Shell/TOML/YAML/Makefile: bootstrap infra uses python-env dir names
-  #   - CI lib/ and tests/: language detection
-  #   - The banned-words config file itself defines the rule
-  - paths: ['\.sh$', '\.yaml$', '\.yml$', '\.toml$', 'Makefile$', '\.py$']
-    patterns:
-      - '\bpython3?\b'
-  - paths: ['lib/', 'tests/', 'scripts/']
-    patterns:
-      - '\bpython3?\b'
-  # Boot-layout checker quotes deprecated hook forms in advisory messages.
-  - paths:
-      - 'ci/check_boot_venv_layout\.py$'
-      - 'ci/_boot_layout_helpers\.py$'
-      - 'tests/unit/test_check_boot_venv_layout.*\.py$'
-    patterns:
-      - '\.venv/bin/python'
-  # OCI base image tag and interpreter path in the wiki production Containerfile.
-  - paths: ['web/Containerfile$']
-    patterns:
-      - '\bpython3?\b'
-
-  # Legitimate technical terms that share spelling with AI slop.
-  # The slop VERB/metaphor sense is caught by phrase patterns (e.g.
-  # "harness the power of", "navigate the complexit"). These
-  # exceptions cover the NOUN/technical sense only:
-  #   underscore  = the _ character (Python private convention)
-  #   harness     = test harness (decades-old testing term)
-  #   navigate    = UI/browser navigation (literal)
-  #   dynamic     = next/dynamic, dynamic imports, dynamic typing
-  - paths: ['.*']
-    patterns:
-      - '\bunderscore\b'
-      - '\bunderscores\b'
-      - '\bharness\b'
-      - '\bharnesses\b'
-      - '\bnavigate\b'
-      - '\bnavigates\b'
-      - '\bnavigating\b'
-      - '\bdynamic\b'
-
-  # AI safety policy data: "frontier AI" / "frontier models" is the
-  # established term in AI governance (Bletchley Declaration, etc.).
-  # "innovative" appears in the official URL slug of the Seoul
-  # Declaration. "value proposition" is a defined term in IEEE 7000.
-  - paths: ['web/src/data/standards\.json$']
-    patterns:
-      - '\bfrontier\b'
-      - '\binnovative\b'
-      - 'value proposition'
-  - paths:
-      - docs/audit-09\.08\.2026/
-    patterns:
-      - .*
-  - paths:
-      - ^docs/TODO-POLICY-EXEMPTION-REMEDIATION\.md$
-      - ^docs/TODO-REMEDIATION\.md$
-      - ^docs/audits/AUDIT-REMEDIATION-EXECUTION-FAILURE-2026-08-20\.md$
-      - ^docs/requirements/REQ-BANNED-PATTERN-MATCHING\.md$
-      - ^tests/unit/test_checks\.sh$
-    patterns:
-      - protected-system-interpreter
-  - paths:
-      - ^scripts/cleanup-precommit$
-    patterns:
-      - \blegacy\b
-banned:
-  # === LINTER/TYPE SUPPRESSION ===
-
-  - pattern: 'unsafe\s*\{'
-    reason: "No unsafe blocks. Use safe abstractions or re-architect."
+# Banned-pattern policy, schema v5 (final model).
+# Stable rule ids, declared modes, exact one-file-one-rule exemptions.
+version: 5.0.0
+rules:
+  - id: unsafe-s
+    mode: raw-regex
+    case: sensitive
+    pattern: unsafe\s*\{
+    reason: No unsafe blocks. Use safe abstractions or re-architect.
     category: linter-suppression
-  - pattern: 'mypy: ignore-errors'
-    reason: "Global mypy ignores forbidden. Fix the types."
+    scope: production
+  - id: mypy-ignore-errors
+    mode: raw-regex
+    case: sensitive
+    pattern: 'mypy: ignore-errors'
+    reason: Global mypy ignores forbidden. Fix the types.
     category: linter-suppression
-
-  - pattern: '#\s*type:\s*ignore'
-    reason: "Type ignoring forbidden. Fix the code or architecture."
+  - id: s-type-s-ignore
+    mode: raw-regex
+    case: sensitive
+    pattern: '#\s*type:\s*ignore'
+    reason: Type ignoring forbidden. Fix the code or architecture.
     category: linter-suppression
-
-  - pattern: '#\s*noqa'
-    reason: "Linter suppression forbidden. Fix the code style."
+  - id: s-noqa
+    mode: raw-regex
+    case: sensitive
+    pattern: '#\s*noqa'
+    reason: Linter suppression forbidden. Fix the code style.
     category: linter-suppression
-
-  - pattern: 'eslint-disable'
-    reason: "ESLint suppression forbidden. Fix the code."
+  - id: eslint-disable
+    mode: raw-regex
+    case: sensitive
+    pattern: eslint-disable
+    reason: ESLint suppression forbidden. Fix the code.
     category: linter-suppression
-
-  - pattern: 'eslint-disable-next-line'
-    reason: "ESLint suppression forbidden. Fix the code."
+    scope: production
+  - id: eslint-disable-next-line
+    mode: raw-regex
+    case: sensitive
+    pattern: eslint-disable-next-line
+    reason: ESLint suppression forbidden. Fix the code.
     category: linter-suppression
-
-  # === FORBIDDEN LAZY TYPE ANNOTATIONS ===
-  # These patterns catch code that avoids proper data models.
-  # Legitimate generics like list[str], dict[str, str], set[int] are ALLOWED.
-
-  # list[object]: the most useless type annotation possible
-  - pattern: '\blist\[object\]'
-    reason: "list[object] provides zero type safety. Use list[str] or a proper model."
+  - id: blist-object
+    mode: raw-regex
+    case: sensitive
+    pattern: \blist\[object\]
+    reason: list[object] provides zero type safety. Use list[str] or a proper model.
     category: deferred-types
-
-  # dict[str, object] / dict[K, object]: lazy untyped dict
-  - pattern: '\bdict\[[^]]+,\s*object\]'
-    reason: "dict[..., object] is a lazy untyped dict. Use TypedDict, Pydantic model, or dataclass."
+    scope: production
+  - id: bdict-s-object
+    mode: raw-regex
+    case: sensitive
+    pattern: \bdict\[[^]]+,\s*object\]
+    reason: dict[..., object] is a lazy untyped dict. Use TypedDict, Pydantic model, or dataclass.
     category: deferred-types
-
-  # dict[str, Any] / dict[K, Any]: lazy untyped dict
-  - pattern: '\bdict\[.*,\s*Any\]'
-    reason: "dict[..., Any] is a lazy untyped dict. Use TypedDict, Pydantic model, or dataclass."
+    scope: production
+  - id: bdict-s-any
+    mode: raw-regex
+    case: sensitive
+    pattern: \bdict\[.*,\s*Any\]
+    reason: dict[..., Any] is a lazy untyped dict. Use TypedDict, Pydantic model, or dataclass.
     category: deferred-types
-
-  # list[dict]: list of completely untyped dicts
-  - pattern: '\blist\[dict\]'
-    reason: "list[dict] has no type information. Use list[TypedDict] or list[Model]."
+    scope: production
+  - id: blist-dict
+    mode: raw-regex
+    case: sensitive
+    pattern: \blist\[dict\]
+    reason: list[dict] has no type information. Use list[TypedDict] or list[Model].
     category: deferred-types
-
-  # list[dict[str, object]]: nested lazy dicts
-  - pattern: '\blist\[dict\[str,\s*object\]\]'
-    reason: "list[dict[str, object]] passes untyped data. Define a proper model or TypedDict."
+    scope: production
+  - id: blist-dict-str-s
+    mode: raw-regex
+    case: sensitive
+    pattern: \blist\[dict\[str,\s*object\]\]
+    reason: list[dict[str, object]] passes untyped data. Define a proper model or TypedDict.
     category: deferred-types
-
-  # dict[str, list[dict[str, object]]]: deeply nested lazy dicts
-  - pattern: '\bdict\[str,\s*list\[dict\[str,\s*object\]\]\]'
-    reason: "dict[str, list[dict[str, object]]] passes untyped data. Define proper models."
+    scope: production
+  - id: bdict-str-s-list
+    mode: raw-regex
+    case: sensitive
+    pattern: \bdict\[str,\s*list\[dict\[str,\s*object\]\]\]
+    reason: dict[str, list[dict[str, object]]] passes untyped data. Define proper models.
     category: deferred-types
-
-  # | object: makes the entire union equivalent to object
-  - pattern: '\|\s*object\b'
-    reason: "Union with | object makes the whole type equivalent to object. Remove it or use a proper type."
+    scope: production
+  - id: s-object-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \|\s*object\b
+    reason: Union with | object makes the whole type equivalent to object. Remove it or use a proper type.
     category: deferred-types
-
-  # === AI SLOP / BUSINESS BULLSHIT ===
-  # Top AI-slop tells (2026 research): words LLMs overuse vs human writing.
-  # Sources: Kobak et al. 2024 (Science Advances), GPTZero, Crompty,
-  # HumanizeMyAI, LeadDev, Ozigi anti-slop validator. Banning these
-  # keeps commit messages, docs, and comments human.
-  - pattern: '\bdelve\b'
-    reason: "AI slop. Use look at, dig into, or examine."
+    scope: production
+  - id: bdelve-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bdelve\b
+    reason: AI slop. Use look at, dig into, or examine.
     category: ai-slop
-  - pattern: '\bdelving\b'
-    reason: "AI slop. Use looking, digging, or examining."
+  - id: bdelving-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bdelving\b
+    reason: AI slop. Use looking, digging, or examining.
     category: ai-slop
-  - pattern: '\btapestry\b'
-    reason: "AI slop metaphor. Use mix, range, or blend."
+  - id: btapestry-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \btapestry\b
+    reason: AI slop metaphor. Use mix, range, or blend.
     category: ai-slop
-  - pattern: '\brealm\b'
-    reason: "AI slop. Use area, field, or domain."
+  - id: brealm-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \brealm\b
+    reason: AI slop. Use area, field, or domain.
     category: ai-slop
-  - pattern: '\bleverage\b'
-    reason: "Business bullshit. Use use, apply, or build on."
+  - id: bleverage-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bleverage\b
+    reason: Business bullshit. Use use, apply, or build on.
     category: corporate-waffle
-  - pattern: '\bleverages\b'
-    reason: "Business bullshit. Use uses, applies, or builds on."
+  - id: bleverages-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bleverages\b
+    reason: Business bullshit. Use uses, applies, or builds on.
     category: corporate-waffle
-  - pattern: '\bleveraging\b'
-    reason: "Business bullshit. Use using, applying, or building on."
+  - id: bleveraging-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bleveraging\b
+    reason: Business bullshit. Use using, applying, or building on.
     category: corporate-waffle
-  - pattern: '\bsynerg'
-    reason: "Business bullshit. Use work together, combine, or reinforce."
+  - id: bsynerg
+    mode: raw-regex
+    case: sensitive
+    pattern: \bsynerg
+    reason: Business bullshit. Use work together, combine, or reinforce.
     category: corporate-waffle
-  - pattern: '\bholistic\b'
-    reason: "Business bullshit. Use full, complete, or end-to-end."
+  - id: bholistic-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bholistic\b
+    reason: Business bullshit. Use full, complete, or end-to-end.
     category: corporate-waffle
-  - pattern: '\bparadigm\b'
-    reason: "Business bullshit. Use model, pattern, or approach."
+  - id: bparadigm-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bparadigm\b
+    reason: Business bullshit. Use model, pattern, or approach.
     category: corporate-waffle
-  - pattern: '\bgroundbreaking\b'
-    reason: "AI slop hype. Use new, first, or name the specific advance."
+  - id: bgroundbreaking-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bgroundbreaking\b
+    reason: AI slop hype. Use new, first, or name the specific advance.
     category: parasite-terms
-  - pattern: '\brevolutionary\b'
-    reason: "AI slop hype. Use new, or name what specifically changed."
+  - id: brevolutionary-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \brevolutionary\b
+    reason: AI slop hype. Use new, or name what specifically changed.
     category: parasite-terms
-  - pattern: '\btransformative\b'
-    reason: "AI slop hype. Name what specifically changed."
+  - id: btransformative-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \btransformative\b
+    reason: AI slop hype. Name what specifically changed.
     category: parasite-terms
-  - pattern: '\binnovative\b'
-    reason: "AI slop hype. Use different, new, or better."
+  - id: binnovative-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \binnovative\b
+    reason: AI slop hype. Use different, new, or better.
     category: parasite-terms
-  - pattern: '\bcutting-edge\b'
-    reason: "AI slop hype. Use new, current, or name the advance."
+  - id: bcutting-edge-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bcutting-edge\b
+    reason: AI slop hype. Use new, current, or name the advance.
     category: parasite-terms
-  - pattern: '\bgame-changer\b'
-    reason: "AI slop hype. Name the specific impact."
+  - id: bgame-changer-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bgame-changer\b
+    reason: AI slop hype. Name the specific impact.
     category: parasite-terms
-  - pattern: '\bgame-changing\b'
-    reason: "AI slop hype. Name the specific impact."
+  - id: bgame-changing-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bgame-changing\b
+    reason: AI slop hype. Name the specific impact.
     category: parasite-terms
-  - pattern: '\bstate-of-the-art\b'
-    reason: "AI slop hype. Use current, or name the advance."
+  - id: bstate-of-the-art
+    mode: raw-regex
+    case: sensitive
+    pattern: \bstate-of-the-art\b
+    reason: AI slop hype. Use current, or name the advance.
     category: parasite-terms
-  - pattern: '\bseamless\b'
-    reason: "AI slop. Use smooth, easy, or name the integration point."
+  - id: bseamless-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bseamless\b
+    reason: AI slop. Use smooth, easy, or name the integration point.
     category: parasite-terms
-  - pattern: '\bseamlessly\b'
-    reason: "AI slop. Use smoothly, easily, or name the integration point."
+  - id: bseamlessly-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bseamlessly\b
+    reason: AI slop. Use smoothly, easily, or name the integration point.
     category: parasite-terms
-  - pattern: '\brobust\b'
-    reason: "AI slop. Use reliable, solid, tested, or thorough."
+  - id: brobust-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \brobust\b
+    reason: AI slop. Use reliable, solid, tested, or thorough.
     category: parasite-terms
-  - pattern: '\bempower\b'
-    reason: "Business bullshit. Use help, let, or allow."
+  - id: bempower-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bempower\b
+    reason: Business bullshit. Use help, let, or allow.
     category: corporate-waffle
-  - pattern: '\bempowers\b'
-    reason: "Business bullshit. Use helps, lets, or allows."
+  - id: bempowers-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bempowers\b
+    reason: Business bullshit. Use helps, lets, or allows.
     category: corporate-waffle
-  - pattern: '\bempowering\b'
-    reason: "Business bullshit. Use helping, letting, or allowing."
+  - id: bempowering-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bempowering\b
+    reason: Business bullshit. Use helping, letting, or allowing.
     category: corporate-waffle
-  - pattern: '\bunleash\b'
-    reason: "AI slop. Use start, open, or activate."
+  - id: bunleash-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bunleash\b
+    reason: AI slop. Use start, open, or activate.
     category: ai-slop
-  - pattern: '\bunlocks?\b'
-    reason: "AI slop. Use get, start, or open."
+  - id: bunlocks-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bunlocks?\b
+    reason: AI slop. Use get, start, or open.
     category: ai-slop
-  - pattern: '\bharness\b'
-    reason: "AI slop. Use use, direct, or tap into."
+  - id: bharnessing-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bharnessing\b
+    reason: AI slop. Use using, directing, or tapping into.
     category: ai-slop
-  - pattern: '\bharnesses\b'
-    reason: "AI slop. Use uses, directs, or taps into."
-    category: ai-slop
-  - pattern: '\bharnessing\b'
-    reason: "AI slop. Use using, directing, or tapping into."
-    category: ai-slop
-  - pattern: '\belevate\b'
-    reason: "Business bullshit. Use improve, raise, or strengthen."
+  - id: belevate-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \belevate\b
+    reason: Business bullshit. Use improve, raise, or strengthen.
     category: corporate-waffle
-  - pattern: '\belevates\b'
-    reason: "Business bullshit. Use improves, raises, or strengthens."
+  - id: belevates-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \belevates\b
+    reason: Business bullshit. Use improves, raises, or strengthens.
     category: corporate-waffle
-  - pattern: '\belevating\b'
-    reason: "Business bullshit. Use improving, raising, or strengthening."
+  - id: belevating-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \belevating\b
+    reason: Business bullshit. Use improving, raising, or strengthening.
     category: corporate-waffle
-  - pattern: '\bfoster\b'
-    reason: "AI slop. Use build, create, or develop."
+  - id: bfoster-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bfoster\b
+    reason: AI slop. Use build, create, or develop.
     category: ai-slop
-  - pattern: '\bfosters\b'
-    reason: "AI slop. Use builds, creates, or develops."
+  - id: bfosters-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bfosters\b
+    reason: AI slop. Use builds, creates, or develops.
     category: ai-slop
-  - pattern: '\bfostering\b'
-    reason: "AI slop. Use building, creating, or developing."
+  - id: bfostering-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bfostering\b
+    reason: AI slop. Use building, creating, or developing.
     category: ai-slop
-  - pattern: '\bcultivate\b'
-    reason: "AI slop. Use grow, develop, or invest in."
+  - id: bcultivate-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bcultivate\b
+    reason: AI slop. Use grow, develop, or invest in.
     category: ai-slop
-  - pattern: '\bnurture\b'
-    reason: "AI slop. Use support, invest in, or pay attention to."
+  - id: bnurture-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bnurture\b
+    reason: AI slop. Use support, invest in, or pay attention to.
     category: ai-slop
-  - pattern: '\bnavigate\b'
-    reason: "AI slop. Use handle, deal with, or work through."
-    category: ai-slop
-  - pattern: '\bnavigates\b'
-    reason: "AI slop. Use handles, deals with, or works through."
-    category: ai-slop
-  - pattern: '\bnavigating\b'
-    reason: "AI slop. Use handling, dealing with, or working through."
-    category: ai-slop
-  - pattern: '\butilize\b'
-    reason: "Business bullshit. Use use."
+  - id: butilize-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \butilize\b
+    reason: Business bullshit. Use use.
     category: corporate-waffle
-  - pattern: '\butilizes\b'
-    reason: "Business bullshit. Use uses."
+  - id: butilizes-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \butilizes\b
+    reason: Business bullshit. Use uses.
     category: corporate-waffle
-  - pattern: '\butilizing\b'
-    reason: "Business bullshit. Use using."
+  - id: butilizing-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \butilizing\b
+    reason: Business bullshit. Use using.
     category: corporate-waffle
-  - pattern: '\bfacilitate\b'
-    reason: "Business bullshit. Use help, run, or make easier."
+  - id: bfacilitate-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bfacilitate\b
+    reason: Business bullshit. Use help, run, or make easier.
     category: corporate-waffle
-  - pattern: '\bfacilitates\b'
-    reason: "Business bullshit. Use helps, runs, or makes easier."
+  - id: bfacilitates-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bfacilitates\b
+    reason: Business bullshit. Use helps, runs, or makes easier.
     category: corporate-waffle
-  - pattern: '\bfacilitating\b'
-    reason: "Business bullshit. Use helping, running, or making easier."
+  - id: bfacilitating-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bfacilitating\b
+    reason: Business bullshit. Use helping, running, or making easier.
     category: corporate-waffle
-  - pattern: '\bmoreover\b'
-    reason: "AI slop transition. Use also, and, or on top of that."
+  - id: bmoreover-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bmoreover\b
+    reason: AI slop transition. Use also, and, or on top of that.
     category: ai-slop
-  - pattern: '\bfurthermore\b'
-    reason: "AI slop transition. Use also, and, or on top of that."
+  - id: bfurthermore-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bfurthermore\b
+    reason: AI slop transition. Use also, and, or on top of that.
     category: ai-slop
-  - pattern: '\bnevertheless\b'
-    reason: "AI slop transition. Use still, but, or even so."
+  - id: bnevertheless-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bnevertheless\b
+    reason: AI slop transition. Use still, but, or even so.
     category: ai-slop
-  - pattern: '\bunderscore\b'
-    reason: "AI slop. Use show, prove, highlight, or make clear."
+  - id: bunderscoring-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bunderscoring\b
+    reason: AI slop. Use showing, proving, highlighting, or making clear.
     category: ai-slop
-  - pattern: '\bunderscores\b'
-    reason: "AI slop. Use shows, proves, highlights, or makes clear."
+  - id: bshowcase-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bshowcase\b
+    reason: AI slop. Use show, display, or present.
     category: ai-slop
-  - pattern: '\bunderscoring\b'
-    reason: "AI slop. Use showing, proving, highlighting, or making clear."
+  - id: bshowcases-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bshowcases\b
+    reason: AI slop. Use shows, displays, or presents.
     category: ai-slop
-  - pattern: '\bshowcase\b'
-    reason: "AI slop. Use show, display, or present."
+  - id: bshowcasing-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bshowcasing\b
+    reason: AI slop. Use showing, displaying, or presenting.
     category: ai-slop
-  - pattern: '\bshowcases\b'
-    reason: "AI slop. Use shows, displays, or presents."
+  - id: bintricate-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bintricate\b
+    reason: AI slop. Use detailed, complex, or specific.
     category: ai-slop
-  - pattern: '\bshowcasing\b'
-    reason: "AI slop. Use showing, displaying, or presenting."
-    category: ai-slop
-  - pattern: '\bintricate\b'
-    reason: "AI slop. Use detailed, complex, or specific."
-    category: ai-slop
-  - pattern: '\bpivotal\b'
-    reason: "AI slop. Use key, important, or central."
+  - id: bpivotal-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bpivotal\b
+    reason: AI slop. Use key, important, or central.
     category: parasite-terms
-  - pattern: '\bmultifaceted\b'
-    reason: "AI slop. Use varied, complex, or name the facets."
+  - id: bmultifaceted-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bmultifaceted\b
+    reason: AI slop. Use varied, complex, or name the facets.
     category: ai-slop
-  - pattern: '\bmyriad\b'
-    reason: "AI slop. Use many, lots of, or name them."
+  - id: bmyriad-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bmyriad\b
+    reason: AI slop. Use many, lots of, or name them.
     category: ai-slop
-  - pattern: '\bplethora\b'
-    reason: "AI slop. Use many, lots of, or name them."
+  - id: bplethora-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bplethora\b
+    reason: AI slop. Use many, lots of, or name them.
     category: ai-slop
-  - pattern: '\bunprecedented\b'
-    reason: "AI slop. Use new, first, or name the prior baseline."
+  - id: bunprecedented-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bunprecedented\b
+    reason: AI slop. Use new, first, or name the prior baseline.
     category: parasite-terms
-  - pattern: '\bunparalleled\b'
-    reason: "AI slop. Use unmatched, or name the comparison."
+  - id: bunparalleled-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bunparalleled\b
+    reason: AI slop. Use unmatched, or name the comparison.
     category: parasite-terms
-  - pattern: '\bparamount\b'
-    reason: "AI slop. Use top priority, critical, or essential."
+  - id: bparamount-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bparamount\b
+    reason: AI slop. Use top priority, critical, or essential.
     category: parasite-terms
-  - pattern: '\bbespoke\b'
-    reason: "Business bullshit. Use custom, tailored, or specific."
+  - id: bbespoke-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bbespoke\b
+    reason: Business bullshit. Use custom, tailored, or specific.
     category: corporate-waffle
-  - pattern: '\bactionable\b'
-    reason: "Business bullshit. Use concrete, specific, or practical."
+  - id: bactionable-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bactionable\b
+    reason: Business bullshit. Use concrete, specific, or practical.
     category: corporate-waffle
-  - pattern: '\bcomprehensive\b'
-    reason: "AI slop. Use complete, full, or thorough."
+  - id: bcomprehensive-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bcomprehensive\b
+    reason: AI slop. Use complete, full, or thorough.
     category: parasite-terms
-  - pattern: '\bvibrant\b'
-    reason: "AI slop. Use active, lively, or name the evidence."
+  - id: bvibrant-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bvibrant\b
+    reason: AI slop. Use active, lively, or name the evidence.
     category: parasite-terms
-  - pattern: '\bdynamic\b'
-    reason: "AI slop. Use active, changing, or name the behavior."
+  - id: bmeticulous-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bmeticulous\b
+    reason: AI slop. Use careful, thorough, or precise.
+    category: ai-slop
+  - id: bnuanced-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bnuanced\b
+    reason: AI slop. Use subtle, detailed, or explain the nuance.
+    category: ai-slop
+  - id: btestament-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \btestament\b
+    reason: AI slop. Use shows, proves, or demonstrates.
+    category: ai-slop
+  - id: bbeacon-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bbeacon\b
+    reason: AI slop metaphor. Use signal, guide, or example.
+    category: ai-slop
+  - id: bembark-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bembark\b
+    reason: AI slop. Use start, begin, or launch.
+    category: ai-slop
+  - id: bendeavor-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bendeavor\b
+    reason: AI slop. Use effort, project, or attempt.
+    category: ai-slop
+  - id: bproactive-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bproactive\b
+    reason: Business bullshit. Use anticipatory, or name the action.
+    category: corporate-waffle
+  - id: bscalable-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bscalable\b
+    reason: Business bullshit. Use grows with load, or name the capacity.
     category: parasite-terms
-  - pattern: '\bmeticulous\b'
-    reason: "AI slop. Use careful, thorough, or precise."
-    category: ai-slop
-  - pattern: '\bnuanced\b'
-    reason: "AI slop. Use subtle, detailed, or explain the nuance."
-    category: ai-slop
-  - pattern: '\btestament\b'
-    reason: "AI slop. Use shows, proves, or demonstrates."
-    category: ai-slop
-  - pattern: '\bbeacon\b'
-    reason: "AI slop metaphor. Use signal, guide, or example."
-    category: ai-slop
-  - pattern: '\bembark\b'
-    reason: "AI slop. Use start, begin, or launch."
-    category: ai-slop
-  - pattern: '\bendeavor\b'
-    reason: "AI slop. Use effort, project, or attempt."
-    category: ai-slop
-  - pattern: '\bproactive\b'
-    reason: "Business bullshit. Use anticipatory, or name the action."
+  - id: bstreamline-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bstreamline\b
+    reason: Business bullshit. Use simplify, speed up, or cut steps.
     category: corporate-waffle
-  - pattern: '\bscalable\b'
-    reason: "Business bullshit. Use grows with load, or name the capacity."
+  - id: bstreamlines-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bstreamlines\b
+    reason: Business bullshit. Use simplifies, speeds up, or cuts steps.
+    category: corporate-waffle
+  - id: bstreamlining-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bstreamlining\b
+    reason: Business bullshit. Use simplifying, speeding up, or cutting steps.
+    category: corporate-waffle
+  - id: bethos-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bethos\b
+    reason: Business bullshit. Use culture, values, or character.
+    category: corporate-waffle
+  - id: bzeitgeist-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bzeitgeist\b
+    reason: Business bullshit. Use trend, mood, or spirit of the times.
+    category: corporate-waffle
+  - id: bcornerstone-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bcornerstone\b
+    reason: AI slop metaphor. Use foundation, basis, or core.
+    category: ai-slop
+  - id: bhallmark-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bhallmark\b
+    reason: AI slop. Use sign, feature, or characteristic.
+    category: ai-slop
+  - id: bnexus-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bnexus\b
+    reason: AI slop. Use hub, link, or connection.
+    category: ai-slop
+  - id: bmosaic-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bmosaic\b
+    reason: AI slop metaphor. Use mix, patchwork, or collection.
+    category: ai-slop
+  - id: blabyrinth-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \blabyrinth\b
+    reason: AI slop metaphor. Use maze, tangle, or complex system.
+    category: ai-slop
+  - id: btrajectory-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \btrajectory\b
+    reason: AI slop. Use path, course, or direction.
+    category: ai-slop
+  - id: bfrontier-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bfrontier\b
+    reason: AI slop metaphor. Use edge, boundary, or new area.
+    category: ai-slop
+  - id: bwhilst-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bwhilst\b
+    reason: AI slop. Use while.
+    category: ai-slop
+  - id: bdeep-dive-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bdeep[ -]dive\b
+    reason: AI slop. Use examine, look at, or cover.
+    category: ai-slop
+  - id: bunpack-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bunpack\b
+    reason: AI slop. Use explain, break down, or cover.
+    category: ai-slop
+  - id: bshed-light-on-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bshed light on\b
+    reason: AI slop. Use explain, show, or clarify.
+    category: ai-slop
+  - id: bdisruptive-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bdisruptive\b
+    reason: Business bullshit. Use new, or name the structural change.
+    category: corporate-waffle
+  - id: bdisrupt-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bdisrupt\b
+    reason: Business bullshit. Use change, replace, or name the impact.
+    category: corporate-waffle
+  - id: bdisrupts-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bdisrupts\b
+    reason: Business bullshit. Use changes, replaces, or names the impact.
+    category: corporate-waffle
+  - id: bfrictionless-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bfrictionless\b
+    reason: Business bullshit. Use smooth, easy, or name what was removed.
     category: parasite-terms
-  - pattern: '\bstreamline\b'
-    reason: "Business bullshit. Use simplify, speed up, or cut steps."
+  - id: bmoat-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bmoat\b
+    reason: Business bullshit. Use barrier, advantage, or name the asset.
     category: corporate-waffle
-  - pattern: '\bstreamlines\b'
-    reason: "Business bullshit. Use simplifies, speeds up, or cuts steps."
+  - id: bflywheel-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bflywheel\b
+    reason: Business bullshit. Use feedback loop, or name the mechanism.
     category: corporate-waffle
-  - pattern: '\bstreamlining\b'
-    reason: "Business bullshit. Use simplifying, speeding up, or cutting steps."
+  - id: bagentic-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bagentic\b
+    reason: AI slop. Use autonomous, agent-driven, or name the behavior.
+    category: ai-slop
+  - id: bvibe-cod
+    mode: raw-regex
+    case: sensitive
+    pattern: \bvibe[ -]cod
+    reason: AI slop. Use AI-assisted coding, or describe the workflow.
+    category: ai-slop
+  - id: bai-powered-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bAI-powered\b
+    reason: Business bullshit. Name the model, task, and accuracy.
     category: corporate-waffle
-  - pattern: '\bethos\b'
-    reason: "Business bullshit. Use culture, values, or character."
+  - id: bai-native-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bAI-native\b
+    reason: Business bullshit. Name the model, dataset, and workflow.
     category: corporate-waffle
-  - pattern: '\bzeitgeist\b'
-    reason: "Business bullshit. Use trend, mood, or spirit of the times."
+  - id: bshift-left-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bshift[ -]left\b
+    reason: Business bullshit. Use test earlier, or name the specific move.
     category: corporate-waffle
-  - pattern: '\bcornerstone\b'
-    reason: "AI slop metaphor. Use foundation, basis, or core."
-    category: ai-slop
-  - pattern: '\bhallmark\b'
-    reason: "AI slop. Use sign, feature, or characteristic."
-    category: ai-slop
-  - pattern: '\bnexus\b'
-    reason: "AI slop. Use hub, link, or connection."
-    category: ai-slop
-  - pattern: '\bmosaic\b'
-    reason: "AI slop metaphor. Use mix, patchwork, or collection."
-    category: ai-slop
-  - pattern: '\blabyrinth\b'
-    reason: "AI slop metaphor. Use maze, tangle, or complex system."
-    category: ai-slop
-  - pattern: '\btrajectory\b'
-    reason: "AI slop. Use path, course, or direction."
-    category: ai-slop
-  - pattern: '\bfrontier\b'
-    reason: "AI slop metaphor. Use edge, boundary, or new area."
-    category: ai-slop
-  - pattern: '\bwhilst\b'
-    reason: "AI slop. Use while."
-    category: ai-slop
-  - pattern: '\bdeep[ -]dive\b'
-    reason: "AI slop. Use examine, look at, or cover."
-    category: ai-slop
-  - pattern: '\bunpack\b'
-    reason: "AI slop. Use explain, break down, or cover."
-    category: ai-slop
-  - pattern: '\bshed light on\b'
-    reason: "AI slop. Use explain, show, or clarify."
-    category: ai-slop
-  - pattern: '\bdisruptive\b'
-    reason: "Business bullshit. Use new, or name the structural change."
+  - id: b10x-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \b10x\b
+    reason: Business bullshit. Name the dimension and baseline.
     category: corporate-waffle
-  - pattern: '\bdisrupt\b'
-    reason: "Business bullshit. Use change, replace, or name the impact."
-    category: corporate-waffle
-  - pattern: '\bdisrupts\b'
-    reason: "Business bullshit. Use changes, replaces, or names the impact."
-    category: corporate-waffle
-  - pattern: '\bfrictionless\b'
-    reason: "Business bullshit. Use smooth, easy, or name what was removed."
+  - id: bunmissable-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bunmissable\b
+    reason: AI slop hype. Use important, or name why it matters.
     category: parasite-terms
-  - pattern: '\bmoat\b'
-    reason: "Business bullshit. Use barrier, advantage, or name the asset."
-    category: corporate-waffle
-  - pattern: '\bflywheel\b'
-    reason: "Business bullshit. Use feedback loop, or name the mechanism."
-    category: corporate-waffle
-  - pattern: '\bagentic\b'
-    reason: "AI slop. Use autonomous, agent-driven, or name the behavior."
-    category: ai-slop
-  - pattern: '\bvibe[ -]cod'
-    reason: "AI slop. Use AI-assisted coding, or describe the workflow."
-    category: ai-slop
-  - pattern: '\bAI-powered\b'
-    reason: "Business bullshit. Name the model, task, and accuracy."
-    category: corporate-waffle
-  - pattern: '\bAI-native\b'
-    reason: "Business bullshit. Name the model, dataset, and workflow."
-    category: corporate-waffle
-  - pattern: '\bshift[ -]left\b'
-    reason: "Business bullshit. Use test earlier, or name the specific move."
-    category: corporate-waffle
-  - pattern: '\b10x\b'
-    reason: "Business bullshit. Name the dimension and baseline."
-    category: corporate-waffle
-  - pattern: '\bunmissable\b'
-    reason: "AI slop hype. Use important, or name why it matters."
+  - id: beffortless-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \beffortless\b
+    reason: AI slop. Name what is hard about the alternative.
     category: parasite-terms
-  - pattern: '\beffortless\b'
-    reason: "AI slop. Name what is hard about the alternative."
-    category: parasite-terms
-  - pattern: '\bcatalyze\b'
-    reason: "AI slop. Use drive, spark, start, or trigger."
+  - id: bcatalyze-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bcatalyze\b
+    reason: AI slop. Use drive, spark, start, or trigger.
     category: ai-slop
-  - pattern: '\bcatalyzes\b'
-    reason: "AI slop. Use drives, sparks, starts, or triggers."
+  - id: bcatalyzes-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bcatalyzes\b
+    reason: AI slop. Use drives, sparks, starts, or triggers.
     category: ai-slop
-  - pattern: '\bamplify\b'
-    reason: "AI slop. Use increase, boost, or strengthen."
+  - id: bamplify-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bamplify\b
+    reason: AI slop. Use increase, boost, or strengthen.
     category: ai-slop
-  - pattern: '\bamplifies\b'
-    reason: "AI slop. Use increases, boosts, or strengthens."
+  - id: bamplifies-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bamplifies\b
+    reason: AI slop. Use increases, boosts, or strengthens.
     category: ai-slop
-  - pattern: '\bbolster\b'
-    reason: "AI slop. Use strengthen, support, or reinforce."
+  - id: bbolster-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bbolster\b
+    reason: AI slop. Use strengthen, support, or reinforce.
     category: ai-slop
-  - pattern: '\bbolsters\b'
-    reason: "AI slop. Use strengthens, supports, or reinforces."
+  - id: bbolsters-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bbolsters\b
+    reason: AI slop. Use strengthens, supports, or reinforces.
     category: ai-slop
-  - pattern: '\bspearhead\b'
-    reason: "Business bullshit. Use lead, drive, or head."
+  - id: bspearhead-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bspearhead\b
+    reason: Business bullshit. Use lead, drive, or head.
     category: corporate-waffle
-  - pattern: '\bspearheads\b'
-    reason: "Business bullshit. Use leads, drives, or heads."
+  - id: bspearheads-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bspearheads\b
+    reason: Business bullshit. Use leads, drives, or heads.
     category: corporate-waffle
-  - pattern: '\bunlock\b'
-    reason: "AI slop. Use get, start, or open."
+  - id: bunlock-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bunlock\b
+    reason: AI slop. Use get, start, or open.
     category: ai-slop
-  - pattern: '\bsmoke\b'
-    reason: "Business bullshit test branding. Use sanity check or basic check."
+  - id: bsmoke-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bsmoke\b
+    reason: Business bullshit test branding. Use sanity check or basic check.
     category: corporate-waffle
-  - pattern: '\bload-bearing\b'
-    reason: "Business bullshit metaphor. Use critical, essential, or core."
+  - id: bload-bearing-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bload-bearing\b
+    reason: Business bullshit metaphor. Use critical, essential, or core.
     category: corporate-waffle
-
-  # === AI SLOP PHRASES ===
-  - pattern: 'in today.s (fast-paced|modern|digital|ever-evolving)'
-    reason: "AI slop opener. Start with the actual point."
+  - id: in-today-s-fast
+    mode: raw-regex
+    case: sensitive
+    pattern: in today.s (fast-paced|modern|digital|ever-evolving)
+    reason: AI slop opener. Start with the actual point.
     category: ai-slop
-  - pattern: 'it is (worth noting|important to note|important to remember) that'
-    reason: "AI slop hedge. Just say the thing."
+  - id: it-is-worth-noting
+    mode: raw-regex
+    case: sensitive
+    pattern: it is (worth noting|important to note|important to remember) that
+    reason: AI slop hedge. Just say the thing.
     category: ai-slop
-  - pattern: "it's (worth noting|important to note|important to remember) that"
-    reason: "AI slop hedge. Just say the thing."
+  - id: it-s-worth-noting
+    mode: raw-regex
+    case: sensitive
+    pattern: it's (worth noting|important to note|important to remember) that
+    reason: AI slop hedge. Just say the thing.
     category: ai-slop
-  - pattern: 'in the realm of'
-    reason: "AI slop. Use in, or name the area directly."
+  - id: in-the-realm-of
+    mode: raw-regex
+    case: sensitive
+    pattern: in the realm of
+    reason: AI slop. Use in, or name the area directly.
     category: ai-slop
-  - pattern: 'when it comes to'
-    reason: "AI slop. Name the thing directly."
+  - id: when-it-comes-to
+    mode: raw-regex
+    case: sensitive
+    pattern: when it comes to
+    reason: AI slop. Name the thing directly.
     category: ai-slop
-  - pattern: 'at the end of the day'
-    reason: "AI slop hedge. Make the concluding statement directly."
+  - id: at-the-end-of
+    mode: raw-regex
+    case: sensitive
+    pattern: at the end of the day
+    reason: AI slop hedge. Make the concluding statement directly.
     category: ai-slop
-  - pattern: 'at its core'
-    reason: "AI slop. Use simply, basically, or just define it."
+  - id: at-its-core
+    mode: raw-regex
+    case: sensitive
+    pattern: at its core
+    reason: AI slop. Use simply, basically, or just define it.
     category: ai-slop
-  - pattern: 'plays a (crucial|vital|significant|key) role'
-    reason: "AI slop. Name the specific contribution."
+  - id: plays-a-crucial-vital
+    mode: raw-regex
+    case: sensitive
+    pattern: plays a (crucial|vital|significant|key) role
+    reason: AI slop. Name the specific contribution.
     category: ai-slop
-  - pattern: 'crucial role in shaping'
-    reason: "AI slop. Name what it actually shapes and how."
+  - id: crucial-role-in-shaping
+    mode: raw-regex
+    case: sensitive
+    pattern: crucial role in shaping
+    reason: AI slop. Name what it actually shapes and how.
     category: ai-slop
-  - pattern: 'navigate the complexit'
-    reason: "AI slop. Use deal with, handle, or work through."
+  - id: navigate-the-complexit
+    mode: raw-regex
+    case: sensitive
+    pattern: navigate the complexit
+    reason: AI slop. Use deal with, handle, or work through.
     category: ai-slop
-  - pattern: 'harness the power of'
-    reason: "AI slop. Use use, or name the specific capability."
+  - id: harness-the-power-of
+    mode: raw-regex
+    case: sensitive
+    pattern: harness the power of
+    reason: AI slop. Use use, or name the specific capability.
     category: ai-slop
-  - pattern: 'embark on a journey'
-    reason: "AI slop. Use start, begin, or launch."
+  - id: embark-on-a-journey
+    mode: raw-regex
+    case: sensitive
+    pattern: embark on a journey
+    reason: AI slop. Use start, begin, or launch.
     category: ai-slop
-  - pattern: 'unlock (your|its) potential'
-    reason: "AI slop. Name what becomes available."
+  - id: unlock-your-its-potential
+    mode: raw-regex
+    case: sensitive
+    pattern: unlock (your|its) potential
+    reason: AI slop. Name what becomes available.
     category: ai-slop
-  - pattern: 'bridge the gap'
-    reason: "Business bullshit. Name the two things and the connection."
+  - id: bridge-the-gap
+    mode: raw-regex
+    case: sensitive
+    pattern: bridge the gap
+    reason: Business bullshit. Name the two things and the connection.
     category: corporate-waffle
-  - pattern: 'move the needle'
-    reason: "Business bullshit. Name the metric and the change."
+  - id: move-the-needle
+    mode: raw-regex
+    case: sensitive
+    pattern: move the needle
+    reason: Business bullshit. Name the metric and the change.
     category: corporate-waffle
-  - pattern: 'low-hanging fruit'
-    reason: "Business bullshit. Name the easy wins specifically."
+  - id: low-hanging-fruit
+    mode: raw-regex
+    case: sensitive
+    pattern: low-hanging fruit
+    reason: Business bullshit. Name the easy wins specifically.
     category: corporate-waffle
-  - pattern: 'think outside the box'
-    reason: "Business bullshit. Describe the actual approach."
+  - id: think-outside-the-box
+    mode: raw-regex
+    case: sensitive
+    pattern: think outside the box
+    reason: Business bullshit. Describe the actual approach.
     category: corporate-waffle
-  - pattern: 'win-win'
-    reason: "Business bullshit. Name both benefits explicitly."
+  - id: win-win
+    mode: raw-regex
+    case: sensitive
+    pattern: win-win
+    reason: Business bullshit. Name both benefits explicitly.
     category: corporate-waffle
-  - pattern: 'best practices'
-    reason: "Business bullshit. Use what works, or name the practice."
+  - id: best-practices
+    mode: raw-regex
+    case: sensitive
+    pattern: best practices
+    reason: Business bullshit. Use what works, or name the practice.
     category: corporate-waffle
-  - pattern: 'value proposition'
-    reason: "Business bullshit. Use offer, or name the value."
+  - id: value-proposition
+    mode: raw-regex
+    case: sensitive
+    pattern: value proposition
+    reason: Business bullshit. Use offer, or name the value.
     category: corporate-waffle
-  - pattern: 'pain points'
-    reason: "Business bullshit. Use problems, frustrations, or what is broken."
+  - id: pain-points
+    mode: raw-regex
+    case: sensitive
+    pattern: pain points
+    reason: Business bullshit. Use problems, frustrations, or what is broken.
     category: corporate-waffle
-  - pattern: 'north star'
-    reason: "Business bullshit. Use goal, target, or primary objective."
+  - id: north-star
+    mode: raw-regex
+    case: sensitive
+    pattern: north star
+    reason: Business bullshit. Use goal, target, or primary objective.
     category: corporate-waffle
-  - pattern: 'double-edged sword'
-    reason: "AI slop. State the actual trade-off."
+  - id: double-edged-sword
+    mode: raw-regex
+    case: sensitive
+    pattern: double-edged sword
+    reason: AI slop. State the actual trade-off.
     category: ai-slop
-  - pattern: 'in conclusion'
-    reason: "AI slop. Cut it, or reframe the final point."
+  - id: in-conclusion
+    mode: raw-regex
+    case: sensitive
+    pattern: in conclusion
+    reason: AI slop. Cut it, or reframe the final point.
     category: ai-slop
-  - pattern: 'to summarize'
-    reason: "AI slop. Cut it; the reader already read it."
+  - id: to-summarize
+    mode: raw-regex
+    case: sensitive
+    pattern: to summarize
+    reason: AI slop. Cut it; the reader already read it.
     category: ai-slop
-  - pattern: 'to wrap things up'
-    reason: "AI slop. Cut it; the reader already read it."
+  - id: to-wrap-things-up
+    mode: raw-regex
+    case: sensitive
+    pattern: to wrap things up
+    reason: AI slop. Cut it; the reader already read it.
     category: ai-slop
-  - pattern: 'in summary'
-    reason: "AI slop. Cut it; the reader already read it."
+  - id: in-summary
+    mode: raw-regex
+    case: sensitive
+    pattern: in summary
+    reason: AI slop. Cut it; the reader already read it.
     category: ai-slop
-  - pattern: 'I hope this helps'
-    reason: "AI slop sign-off. Cut it entirely."
+  - id: i-hope-this-helps
+    mode: raw-regex
+    case: sensitive
+    pattern: I hope this helps
+    reason: AI slop sign-off. Cut it entirely.
     category: ai-slop
-  - pattern: 'feel free to reach out'
-    reason: "AI slop sign-off. Cut it entirely."
+  - id: feel-free-to-reach
+    mode: raw-regex
+    case: sensitive
+    pattern: feel free to reach out
+    reason: AI slop sign-off. Cut it entirely.
     category: ai-slop
-  - pattern: 'do not hesitate to contact'
-    reason: "AI slop sign-off. Cut it entirely."
+  - id: do-not-hesitate-to
+    mode: raw-regex
+    case: sensitive
+    pattern: do not hesitate to contact
+    reason: AI slop sign-off. Cut it entirely.
     category: ai-slop
-  - pattern: 'happy (to help|coding|hacking)'
-    reason: "AI slop sign-off. Cut it entirely."
+  - id: happy-to-help-coding
+    mode: raw-regex
+    case: sensitive
+    pattern: happy (to help|coding|hacking)
+    reason: AI slop sign-off. Cut it entirely.
     category: ai-slop
-  - pattern: 'best of luck'
-    reason: "AI slop sign-off. Cut it entirely."
+  - id: best-of-luck
+    mode: raw-regex
+    case: sensitive
+    pattern: best of luck
+    reason: AI slop sign-off. Cut it entirely.
     category: ai-slop
-  - pattern: 'great question'
-    reason: "AI slop sycophantic opener. Just answer."
+  - id: great-question
+    mode: raw-regex
+    case: sensitive
+    pattern: great question
+    reason: AI slop sycophantic opener. Just answer.
     category: ai-slop
-  - pattern: "that's a (fantastic|great|wonderful) point"
-    reason: "AI slop sycophantic opener. Respond directly."
+  - id: that-s-a-fantastic
+    mode: raw-regex
+    case: sensitive
+    pattern: that's a (fantastic|great|wonderful) point
+    reason: AI slop sycophantic opener. Respond directly.
     category: ai-slop
-  - pattern: 'as an AI language model'
-    reason: "Chatbot residue. Cut it entirely."
+  - id: as-an-ai-language
+    mode: raw-regex
+    case: sensitive
+    pattern: as an AI language model
+    reason: Chatbot residue. Cut it entirely.
     category: ai-slop
-  - pattern: 'certainly[!,]'
-    reason: "AI slop sycophantic opener. Cut it."
+  - id: certainly
+    mode: raw-regex
+    case: sensitive
+    pattern: certainly[!,]
+    reason: AI slop sycophantic opener. Cut it.
     category: ai-slop
-  - pattern: 'of course[!,]'
-    reason: "AI slop sycophantic opener. Cut it."
+  - id: of-course
+    mode: raw-regex
+    case: sensitive
+    pattern: of course[!,]
+    reason: AI slop sycophantic opener. Cut it.
     category: ai-slop
-  - pattern: 'absolutely[!,]'
-    reason: "AI slop sycophantic opener. Cut it."
+  - id: absolutely
+    mode: raw-regex
+    case: sensitive
+    pattern: absolutely[!,]
+    reason: AI slop sycophantic opener. Cut it.
     category: ai-slop
-
-  # === SILENT ERROR SWALLOWING ===
-  - pattern: '\bsilent'
-    reason: "No silent anything. Log errors or fail explicitly."
+  - id: bsilent
+    mode: raw-regex
+    case: sensitive
+    pattern: \bsilent
+    reason: No silent anything. Log errors or fail explicitly.
     category: quiet-errors
-
-  # === LEGACY/FALLBACK CODE ===
-  - pattern: '\bfallback\b'
-    reason: "No fallback code. Fix properly or fail explicitly."
+    scope: production
+  - id: bfallback-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bfallback\b
+    reason: No fallback code. Fix properly or fail explicitly.
     category: obsolete-paths
-
-  - pattern: '\bfalling\b'
-    reason: "Avoid 'falling back' patterns."
+    scope: production
+  - id: bfalling-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bfalling\b
+    reason: Avoid 'falling back' patterns.
     category: obsolete-paths
-
-  - pattern: '\bbackwards\b'
-    reason: "No backwards compatibility hacks."
+  - id: bbackwards-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bbackwards\b
+    reason: No backwards compatibility hacks.
     category: obsolete-paths
-
-  - pattern: '\bcompatibility\b'
-    reason: "No compatibility shims."
+  - id: bcompatibility-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bcompatibility\b
+    reason: No compatibility shims.
     category: obsolete-paths
-
-  - pattern: '\bdegradation\b'
-    reason: "No graceful degradation. Fail fast."
-    category: obsolete-paths
-
-  - pattern: '\blegacy\b'
-    reason: "No legacy code paths."
-    category: obsolete-paths
-
-  - pattern: '\bshims?\b'
-    reason: "No shim layers."
-    category: obsolete-paths
-
-  - pattern: '\bstubs?\b'
-    reason: "No stub implementations."
-    category: obsolete-paths
-
-  - pattern: '\bskeleton\b'
-    reason: "No skeleton code."
-    category: obsolete-paths
-
-  - pattern: '\bplaceholders?\b'
-    reason: "No placeholder code."
-    category: obsolete-paths
-
-  - pattern: '\bmock\b'
-    reason: "No mock objects in production code."
-    category: obsolete-paths
-
-  - pattern: '\blazy\b'
-    reason: "No lazy evaluation hacks."
-    category: obsolete-paths
-
-  - pattern: '\bmaybe\b'
-    reason: "No uncertain code paths."
-    category: obsolete-paths
-
-  # === SUPPRESSION PATTERNS ===
-  - pattern: '\.suppress'
-    reason: "No suppression of errors/warnings."
-    category: suppression
-
-  # === UNSAFE REFLECTION ===
-  - pattern: '\bgetattr\('
-    reason: "getattr is unsafe. Use explicit attribute access."
-    category: unsafe-reflection
-
-  - pattern: '\bsetattr\('
-    reason: "setattr is unsafe. Use explicit attribute assignment."
-    category: unsafe-reflection
-
-  - pattern: '\bhasattr\('
-    reason: "hasattr is unsafe. Use explicit checks or protocols."
-    category: unsafe-reflection
-
-  - pattern: '\.__dict__'
-    reason: "Direct __dict__ access forbidden. Use proper interfaces."
-    category: unsafe-reflection
-
-  - pattern: '\bvars\('
-    reason: "vars() is unsafe reflection."
-    category: unsafe-reflection
-
-  - pattern: '\bimportlib\b'
-    reason: "Dynamic imports forbidden. Use explicit imports."
-    category: unsafe-reflection
-
-  # === DATA CLASSES ===
-  - pattern: '@dataclass'
-    reason: "Use Pydantic models instead of dataclasses."
-    category: data-classes
-
-  # === TEST QUALITY ===
-  - pattern: '\bxfail\b'
-    reason: "No xfail tests. Fix the code, remove the test, or write a proper assertion."
-    category: test-quality
-
-  # === PATH SAFETY ===
-  - pattern: '/home/'
-    reason: "No hardcoded home paths. Use environment variables."
-    category: path-safety
-
-  - pattern: '\.parent\.parent'
-    reason: "Fragile path navigation. Use explicit paths."
-    category: path-safety
-
-  - pattern: '\.parents\['
-    reason: "Fragile path navigation. Use explicit paths."
-    category: path-safety
-
-  - pattern: '\.parent\.resolve'
-    reason: "Fragile path navigation. Use explicit paths."
-    category: path-safety
-
-  # === UUID (only uuid7 allowed) ===
-  - pattern: 'uuid\.uuid[134568]\('
-    reason: "Only uuid7 allowed. Use uuid_utils.uuid7()."
-    category: uuid
-
-  - pattern: '\buuid[134568]\(\)'
-    reason: "Only uuid7 allowed. Use uuid_utils.uuid7()."
-    category: uuid
-
-  # === CONTAINER VERSIONS ===
-  - pattern: ':latest\b'
-    reason: "Pin container versions. No :latest tags."
-    category: container-versions
-
-  # === DEPRECATED: bare python / python3 ===
-  - pattern: '\bpython3?\b'
-    reason: "Use uv run python for hermetic execution. No bare python/python3 calls."
-    category: deprecated-python
-
-  - pattern: '\.venv/bin/python'
-    reason: "Use uv run python (own repo) or uv run --project <path> --no-sync python (cross-repo). Never .venv/bin/python."
-    category: deprecated-python
-
-  # === POLICY INTEGRITY: catch-all pattern field sabotage ===
-  # Bare .* / .+ in a YAML `pattern:` field is a catch-all regex or exception
-  # key. Scoped per-file exemptions live in universal_exceptions or project
-  # banned_words_exceptions.yaml (never a repo-wide bypass).
-  - pattern: "pattern:\\s*'\\.\\*'"
-    reason: "Catch-all regex pattern '.*' in a pattern field. Use per-pattern scoped exceptions only."
-    category: policy-integrity
-  - pattern: 'pattern:\s*"\.\*"'
-    reason: "Same as single-quoted .* form. No catch-all pattern keys."
-    category: policy-integrity
-  - pattern: "pattern:\\s*'\\.\\+'"
-    reason: "Catch-all regex pattern '.+' evades the .* ban. Use per-pattern scoped exceptions only."
-    category: policy-integrity
-  - pattern: 'pattern:\s*"\.\+"'
-    reason: "Same as single-quoted .+ form. No catch-all pattern keys."
-    category: policy-integrity
-
-  # === SELF METHOD PATTERNS ===
-  - pattern: 'self\.get\('
-    reason: "Avoid dict-like self.get(). Use explicit attributes."
-    category: self-methods
-
-  - pattern: 'self\.set\('
-    reason: "Avoid dict-like self.set(). Use explicit attributes."
-    category: self-methods
-
-  # === SPECIAL CHARACTERS ===
-  # ASCII em-dash-as-punctuation in prose. Shell / Makefile / TOML /
-  # YAML paths exempted via universal_exceptions above because the same
-  # byte sequence is real syntax there (e.g. `cargo fmt -- --check`).
-  # The bare `--` rule previously here was ambiguous with CLI flags;
-  # the prose case is fully captured by the spaced form.
-  - pattern: ' -- '
-    reason: "ASCII em-dash punctuation forbidden. Use commas, colons, or parentheses."
-    category: special-chars
-  # Unicode em-dash (U+2014) and en-dash (U+2013). Non-ASCII typographic
-  # characters have no place in technical source code, documentation, or
-  # config files. Use ASCII punctuation: commas, colons, semicolons, or
-  # parentheses for em-dash; ASCII hyphen (-) for en-dash in ranges.
-  - pattern: '\u2014'
-    reason: "Unicode em-dash (U+2014) forbidden. Use commas, colons, or parentheses."
-    category: special-chars
-  - pattern: '\u2013'
-    reason: "Unicode en-dash (U+2013) forbidden. Use ASCII hyphen (-) for ranges."
-    category: special-chars
-  - pattern: \bfall back\b
-    reason: No fall back to resolution. Single explicit source or fail.
-    category: obsolete-paths
-  - pattern: \bdefaults? to\b
-    reason: No default-to resolution language. State the single source or the hard error.
-    category: obsolete-paths
-  - pattern: \bdefaulting to\b
-    reason: No defaulting behavior. Explicit logic or fail.
-    category: obsolete-paths
-  - pattern: \bbest[- ]?effort\b
-    reason: No best-effort operations. Succeed or fail explicitly.
-    category: obsolete-paths
-  - pattern: \bdegrade[sd]?\b
-    reason: No degraded operation. Fail fast.
-    category: obsolete-paths
-  - pattern: \bdegrading\b
-    reason: No degraded operation. Fail fast.
-    category: obsolete-paths
-  - pattern: \bgraceful(ly)?\b
+  - id: bdegradation-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bdegradation\b
     reason: No graceful degradation. Fail fast.
     category: obsolete-paths
-  - pattern: \bworkarounds?\b
+  - id: blegacy-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \blegacy\b
+    reason: No legacy code paths.
+    category: obsolete-paths
+    scope: production
+  - id: bshims-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bshims?\b
+    reason: No shim layers.
+    category: obsolete-paths
+  - id: bstubs-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bstubs?\b
+    reason: No stub implementations.
+    category: obsolete-paths
+    scope: production
+  - id: bskeleton-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bskeleton\b
+    reason: No skeleton code.
+    category: obsolete-paths
+  - id: bplaceholders-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bplaceholders?\b
+    reason: No placeholder code.
+    category: obsolete-paths
+  - id: bmock-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bmock\b
+    reason: No mock objects in production code.
+    category: obsolete-paths
+    scope: production
+  - id: blazy-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \blazy\b
+    reason: No lazy evaluation hacks.
+    category: obsolete-paths
+  - id: bmaybe-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bmaybe\b
+    reason: No uncertain code paths.
+    category: obsolete-paths
+  - id: suppress
+    mode: raw-regex
+    case: sensitive
+    pattern: \.suppress
+    reason: No suppression of errors/warnings.
+    category: suppression
+    scope: production
+  - id: bgetattr
+    mode: raw-regex
+    case: sensitive
+    pattern: \bgetattr\(
+    reason: getattr is unsafe. Use explicit attribute access.
+    category: unsafe-reflection
+    scope: production
+  - id: bsetattr
+    mode: raw-regex
+    case: sensitive
+    pattern: \bsetattr\(
+    reason: setattr is unsafe. Use explicit attribute assignment.
+    category: unsafe-reflection
+    scope: production
+  - id: bhasattr
+    mode: raw-regex
+    case: sensitive
+    pattern: \bhasattr\(
+    reason: hasattr is unsafe. Use explicit checks or protocols.
+    category: unsafe-reflection
+    scope: production
+  - id: dict
+    mode: raw-regex
+    case: sensitive
+    pattern: \.__dict__
+    reason: Direct __dict__ access forbidden. Use proper interfaces.
+    category: unsafe-reflection
+  - id: bvars
+    mode: raw-regex
+    case: sensitive
+    pattern: \bvars\(
+    reason: vars() is unsafe reflection.
+    category: unsafe-reflection
+  - id: bimportlib-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bimportlib\b
+    reason: Dynamic imports forbidden. Use explicit imports.
+    category: unsafe-reflection
+  - id: dataclass
+    mode: raw-regex
+    case: sensitive
+    pattern: '@dataclass'
+    reason: Use Pydantic models instead of dataclasses.
+    category: data-classes
+  - id: bxfail-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bxfail\b
+    reason: No xfail tests. Fix the code, remove the test, or write a proper assertion.
+    category: test-quality
+  - id: home
+    mode: raw-regex
+    case: sensitive
+    pattern: /home/
+    reason: No hardcoded home paths. Use environment variables.
+    category: path-safety
+  - id: parent-parent
+    mode: raw-regex
+    case: sensitive
+    pattern: \.parent\.parent
+    reason: Fragile path navigation. Use explicit paths.
+    category: path-safety
+  - id: parents
+    mode: raw-regex
+    case: sensitive
+    pattern: \.parents\[
+    reason: Fragile path navigation. Use explicit paths.
+    category: path-safety
+    scope: production
+  - id: parent-resolve
+    mode: raw-regex
+    case: sensitive
+    pattern: \.parent\.resolve
+    reason: Fragile path navigation. Use explicit paths.
+    category: path-safety
+  - id: uuid-uuid-134568
+    mode: raw-regex
+    case: sensitive
+    pattern: uuid\.uuid[134568]\(
+    reason: Only uuid7 allowed. Use uuid_utils.uuid7().
+    category: uuid
+  - id: buuid-134568
+    mode: raw-regex
+    case: sensitive
+    pattern: \buuid[134568]\(\)
+    reason: Only uuid7 allowed. Use uuid_utils.uuid7().
+    category: uuid
+  - id: latest-b
+    mode: raw-regex
+    case: sensitive
+    pattern: :latest\b
+    reason: Pin container versions. No :latest tags.
+    category: container-versions
+  - id: venv-bin-python
+    mode: raw-regex
+    case: sensitive
+    pattern: \.venv/bin/python
+    reason: Use uv run python (own repo) or uv run --project <path> --no-sync python (cross-repo). Never
+      .venv/bin/python.
+    category: deprecated-python
+  - id: pattern-s
+    mode: raw-regex
+    case: sensitive
+    pattern: pattern:\s*'\.\*'
+    reason: Catch-all regex pattern '.*' in a pattern field. Use per-pattern scoped exceptions only.
+    category: policy-integrity
+  - id: pattern-s-2
+    mode: raw-regex
+    case: sensitive
+    pattern: pattern:\s*"\.\*"
+    reason: Same as single-quoted .* form. No catch-all pattern keys.
+    category: policy-integrity
+  - id: pattern-s-3
+    mode: raw-regex
+    case: sensitive
+    pattern: pattern:\s*'\.\+'
+    reason: Catch-all regex pattern '.+' evades the .* ban. Use per-pattern scoped exceptions only.
+    category: policy-integrity
+  - id: pattern-s-4
+    mode: raw-regex
+    case: sensitive
+    pattern: pattern:\s*"\.\+"
+    reason: Same as single-quoted .+ form. No catch-all pattern keys.
+    category: policy-integrity
+  - id: self-get
+    mode: raw-regex
+    case: sensitive
+    pattern: self\.get\(
+    reason: Avoid dict-like self.get(). Use explicit attributes.
+    category: self-methods
+  - id: self-set
+    mode: raw-regex
+    case: sensitive
+    pattern: self\.set\(
+    reason: Avoid dict-like self.set(). Use explicit attributes.
+    category: self-methods
+  - id: rule
+    mode: raw-regex
+    case: sensitive
+    pattern: ' -- '
+    reason: ASCII em-dash punctuation forbidden. Use commas, colons, or parentheses.
+    category: special-chars
+    scope: docs
+  - id: u2014
+    mode: raw-regex
+    case: sensitive
+    pattern: \u2014
+    reason: Unicode em-dash (U+2014) forbidden. Use commas, colons, or parentheses.
+    category: special-chars
+  - id: u2013
+    mode: raw-regex
+    case: sensitive
+    pattern: \u2013
+    reason: Unicode en-dash (U+2013) forbidden. Use ASCII hyphen (-) for ranges.
+    category: special-chars
+  - id: bfall-back-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bfall back\b
+    reason: No fall back to resolution. Single explicit source or fail.
+    category: obsolete-paths
+  - id: bdefaults-to-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bdefaults? to\b
+    reason: No default-to resolution language. State the single source or the hard error.
+    category: obsolete-paths
+  - id: bdefaulting-to-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bdefaulting to\b
+    reason: No defaulting behavior. Explicit logic or fail.
+    category: obsolete-paths
+  - id: bbest-effort-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bbest[- ]?effort\b
+    reason: No best-effort operations. Succeed or fail explicitly.
+    category: obsolete-paths
+  - id: bdegrade-sd-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bdegrade[sd]?\b
+    reason: No degraded operation. Fail fast.
+    category: obsolete-paths
+  - id: bdegrading-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bdegrading\b
+    reason: No degraded operation. Fail fast.
+    category: obsolete-paths
+  - id: bgraceful-ly-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bgraceful(ly)?\b
+    reason: No graceful degradation. Fail fast.
+    category: obsolete-paths
+  - id: bworkarounds-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bworkarounds?\b
     reason: No workarounds. Fix the underlying problem.
     category: obsolete-paths
-  - pattern: \bfor now\b
+  - id: bfor-now-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bfor now\b
     reason: No for-now deferrals. Do it right or fail.
     category: obsolete-paths
-  - pattern: \bstopgap\b
+  - id: bstopgap-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bstopgap\b
     reason: No stopgap measures. Fix properly.
     category: obsolete-paths
-  - pattern: \bquick[- ]?hack\b
+  - id: bquick-hack-b
+    mode: raw-regex
+    case: sensitive
+    pattern: \bquick[- ]?hack\b
     reason: No quick hacks. Fix properly.
     category: obsolete-paths
-  - pattern: \$\(if \$\(wildcard
+  - id: if-wildcard
+    mode: raw-regex
+    case: fold
+    pattern: \$\(if \$\(wildcard
     reason: No wildcard-conditional tool resolution in Makefiles. Single absolute path or fail.
     category: obsolete-paths
-
+  - id: protected-bare-system-interpreter
+    mode: raw-regex
+    case: sensitive
+    pattern: (?<![^\s&|(`$])(?<!run )(?<!uv )(?<!UV )(?<!\) )(?<!env )(?<!no-sync )python3?(?:\.\d+)?(?![^\s])
+    reason: Use uv run python for hermetic execution. No bare python/python3 calls.
+    category: deprecated-python
+  - id: protected-system-interpreter
+    mode: raw-regex
+    case: fold
+    pattern: (?:^|[;&|]|\$\(|`|\b(?:if|elif|while|until|then|do)\s+)\s*!?\s*(?:(?:sudo|env|exec|nice|nohup|setsid|stdbuf|timeout|xargs)\s+)*(?:[A-Za-z_][A-Za-z0-9_]*=\S+\s+)*/(?:usr/)?bin/(?:python[0-9.]*|perl[0-9.]*|ruby[0-9.]*|node|nodejs|lua[0-9.]*|php[0-9.]*)\b
+    reason: Tracked text must use reviewed hermetic tooling, not a system interpreter.
+    category: deployment-integrity
+    non_exemptible: true
 directory_rules:
   tests:
-    # Hardware-specific tests may need conditional skipping
-    # Only ban explicit "not implemented" placeholders
-    - pattern: 'reason=.*not implemented yet'
-      reason: "Implement the test or delete it."
-      category: directory-rules
-
+  - id: tests-reason-not-implemented-yet
+    mode: raw-regex
+    case: sensitive
+    pattern: reason=.*not implemented yet
+    reason: Implement the test or delete it.
 filename_rules:
-  - pattern: '_v[0-9]+'
-    reason: "No versioned filenames. Use git."
-    category: filename-rules
-
-  - pattern: '_old\.'
-    reason: "No _old files. Delete or rename properly."
-    category: filename-rules
-
-  - pattern: '_new\.'
-    reason: "No _new files. Rename to final name."
-    category: filename-rules
-
-  - pattern: '_fixed\.'
-    reason: "No _fixed files. Replace original."
-    category: filename-rules
-
-  - pattern: '_temp\.'
-    reason: "No temp files in repo."
-    category: filename-rules
-
-  - pattern: '_tmp\.'
-    reason: "No tmp files in repo."
-    category: filename-rules
-
-  - pattern: '_backup\.'
-    reason: "No backup files. Use git."
-    category: filename-rules
-
-  - pattern: '_copy\.'
-    reason: "No copy files. Consolidate."
-    category: filename-rules
-
-  - pattern: '_final\.'
-    reason: "No _final files. Just use the real name."
-    category: filename-rules
-
-  - pattern: '\.(old|new|backup|bak|orig)$'
-    reason: "No backup extensions. Use git."
-    category: filename-rules
+  - id: filename-v-0-9
+    mode: filename
+    case: fold
+    pattern: _v[0-9]+
+    reason: No versioned filenames. Use git.
+  - id: filename-old
+    mode: filename
+    case: fold
+    pattern: _old\.
+    reason: No _old files. Delete or rename properly.
+  - id: filename-new
+    mode: filename
+    case: fold
+    pattern: _new\.
+    reason: No _new files. Rename to final name.
+  - id: filename-fixed
+    mode: filename
+    case: fold
+    pattern: _fixed\.
+    reason: No _fixed files. Replace original.
+  - id: filename-temp
+    mode: filename
+    case: fold
+    pattern: _temp\.
+    reason: No temp files in repo.
+  - id: filename-tmp
+    mode: filename
+    case: fold
+    pattern: _tmp\.
+    reason: No tmp files in repo.
+  - id: filename-backup
+    mode: filename
+    case: fold
+    pattern: _backup\.
+    reason: No backup files. Use git.
+  - id: filename-copy
+    mode: filename
+    case: fold
+    pattern: _copy\.
+    reason: No copy files. Consolidate.
+  - id: filename-final
+    mode: filename
+    case: fold
+    pattern: _final\.
+    reason: No _final files. Just use the real name.
+  - id: filename-old-new-backup-bak
+    mode: filename
+    case: fold
+    pattern: \.(old|new|backup|bak|orig)$
+    reason: No backup extensions. Use git.
+exceptions:
+  - rule: bdict-s-any
+    path: ^ci/check_duplicate_dependencies\.py$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bfallback-b
+    path: ^lib/check_silent_swallow\.py$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bfallback-b
+    path: ^lib/checks_silent\.sh$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^\.pre-commit-config\.yaml$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^lib/check_silent_swallow\.py$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^lib/check_silent_swallow_ansible\.py$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^lib/check_silent_swallow_base\.py$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^lib/check_silent_swallow_js\.py$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^lib/check_silent_swallow_python\.py$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^lib/check_silent_swallow_shell\.py$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^lib/check_silent_swallow_system\.py$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^lib/checks_silent\.sh$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bstubs-b
+    path: ^mypy\.toml$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: protected-bare-system-interpreter
+    path: ^web/Containerfile$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: rule
+    path: ^lib/check_silent_swallow\.py$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: rule
+    path: ^lib/checks_silent\.sh$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: suppress
+    path: ^lib/check_silent_swallow\.py$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: suppress
+    path: ^lib/checks_silent\.sh$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: u2014
+    path: ^AGENTS\.md$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: venv-bin-python
+    path: ^ci/_boot_layout_helpers\.py$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: venv-bin-python
+    path: ^ci/check_boot_venv_layout\.py$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: venv-bin-python
+    path: ^tests/unit/test_check_boot_venv_layout_precommit\.py$
+    rationale: File's defined role requires quoting this rule.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.

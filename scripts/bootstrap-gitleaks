@@ -26,7 +26,7 @@ set -euo pipefail
 # Supply-chain pinning: SHA256 verification is MANDATORY and always on.
 # The checksum is fetched at runtime from the checksums.txt sidecar file
 # published alongside the tarballs on the GitHub release page. No hardcoded
-# hashes are used -- the sidecar is the trusted source of truth, fetched
+# hashes are used: the sidecar is the trusted source of truth, fetched
 # from the same release origin as the tarball.
 
 _SELF="${BASH_SOURCE[0]:-$0}"
@@ -109,7 +109,7 @@ main() {
 
     # Mandatory SHA256 verification: fetch the checksums.txt sidecar from
     # the same GitHub release URL as the tarball. The sidecar contains
-    # lines of "<hash>  <filename>" -- we extract the line matching our
+    # lines of "<hash>  <filename>": we extract the line matching our
     # tarball name and compare the hash against sha256sum of the download.
     # No hardcoded hashes.
     local checksums_url="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"

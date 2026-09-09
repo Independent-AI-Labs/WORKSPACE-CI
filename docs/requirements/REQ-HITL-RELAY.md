@@ -70,7 +70,7 @@ grants, or supervise local execution.
 | LIMIT-2 | Oversized input MUST be rejected before full allocation or persistence.                                                                                 |
 | READY-1 | `/healthz` reports process liveness only.                                                                                                               |
 | READY-2 | `/readyz` is successful only when policy, SQLite, audit, TLS identity, agent trust, signing-key mapping, and Keycloak verification material are usable. |
-| READY-3 | No degraded mode may approve a request.                                                                                                                 |
+| READY-3 | No restricted mode may approve a request.                                                                                                                 |
 
 ## 7. Excluded Architecture
 

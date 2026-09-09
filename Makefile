@@ -44,7 +44,7 @@ DEPLOY_ANSIBLE_PLAYBOOK := $(abspath ../../.boot-linux/bin/ansible-playbook)
 # exported PATH (the guard drops that export before the recipe runs).
 # Single source: the boot-bin uv by ABSOLUTE path. Bare `uv` is never
 # resolved (the guard resets PATH in every recipe shell). On a fresh
-# clone the file does not exist yet: warn loudly at parse time; python
+# clone the file does not exist yet: warn loudly at parse time; Python
 # targets fail until `make install-python-deps` bootstraps it.
 UV := $(BOOT_BIN)/uv
 ifeq ($(wildcard $(UV)),)
@@ -157,7 +157,7 @@ bootstrap: preflight install-boot-tools install-osv-scanner ## Build candidate-l
 	:
 
 .PHONY: install-deps
-install-deps: install-boot-tools install-pythons install-python-deps install-gitleaks install-osv-scanner install-cloc install-moon install-ansible install-node install-web-deps ## Install boot tools + python pool + .venv deps + gitleaks + osv-scanner + cloc + moon + ansible + node + web deps
+install-deps: install-boot-tools install-pythons install-python-deps install-gitleaks install-osv-scanner install-cloc install-moon install-ansible install-node install-web-deps ## Install boot tools + Python pool + .venv deps + gitleaks + osv-scanner + cloc + moon + ansible + node + web deps
 
 .PHONY: install-uv
 install-uv: ## Bootstrap uv into $(BOOT_NAME)/bin/ (idempotent)
@@ -311,7 +311,18 @@ test-python: ## Run Python tests only (no moon caching)
 
 .PHONY: check-push
 check-push: ## Single-pass pre-push gate running ruff lint, mypy, shell unit tests, pytest with unit coverage, and web/ JS quality (eslint + tsc + vitest) in one invocation. Eliminates the previous redundancy where the same tests ran two to three times across separate targets. Fails the push if any lint, type, test, or coverage threshold check does not pass.
-	$(MAKE) _lint-impl && $(MAKE) _type-check-impl && $(MAKE) _test-push-impl
+	$(MAKE) _policy-impl && $(MAKE) _lint-impl && $(MAKE) _type-check-impl && $(MAKE) _test-push-impl
+
+.PHONY: _policy-impl
+_policy-impl:
+	CI_CONFIG_DIR=config $(UV) run python lib/check_policy_integrity.py
+	CI_CONFIG_DIR=config CI_SCAN_ROOT=$(CURDIR) $(UV) run python -m ci.effective_exemptions
+	$(MAKE) check-generated
+
+.PHONY: check-generated
+check-generated: ## Verify generated policy-derived data is current and deterministic
+	$(MAKE) extract-hook-sources extract-script-sources
+	git diff --exit-code -- web/src/data/hook-sources.json web/src/data/script-sources.json
 
 .PHONY: _test-push-impl
 # The runners are SOURCED, not executed: the workspace shell guard
@@ -483,7 +494,7 @@ wiki-tls-undeploy: ## Remove Let's Encrypt renewal timer
 
 .PHONY: clean
 clean: ## Remove build artifacts
-	rm -rf -- build/ dist/ ./*.egg-info
+	rm -rf build/ dist/ ./*.egg-info
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 

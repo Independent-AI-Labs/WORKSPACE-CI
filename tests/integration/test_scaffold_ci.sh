@@ -311,6 +311,11 @@ EOF
     grep -q 'makefile_contract.mk' "$consumer/Makefile" || { echo "missing contract include"; return 1; }
     grep -q 'CI_DIR' "$consumer/Makefile" || { echo "missing CI_DIR"; return 1; }
     grep -q 'reinstall-hooks' "$consumer/Makefile" || { echo "missing reinstall-hooks ref"; return 1; }
+    # FR-SC-7.9: hook installation is root-only; install/sync must not chain it.
+    if grep -qE '^(install|install-ci|sync):[^#]*install-hooks' "$consumer/Makefile"; then
+        echo "install/sync target chains install-hooks (user-owned hook path)"
+        return 1
+    fi
 }
 _run_test "scaffold_makefile: contract targets present" test_scaffold_makefile_contract
 

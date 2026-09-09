@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# rewrite-history -- Strip blocked patterns from commit messages.
+# rewrite-history: Strip blocked patterns from commit messages.
 # Reads patterns from config/blocked_commit_patterns.yaml (same as hooks).
 #
 # SAFE BY DEFAULT: dry-run unless --execute is passed.
@@ -60,7 +60,7 @@ export PATH="$_GIT_TMPBIN:$PATH"
 hash -r
 trap 'rm -rf "$_GIT_TMPBIN"' EXIT
 
-# -- Defaults --
+# Defaults
 _config="${CI_CONFIG_DIR}/blocked_commit_patterns.yaml"
 _base=""
 _execute=0
@@ -85,7 +85,7 @@ done
 
 [[ -f "$_config" ]] || { ci_fail "Config not found: $_config"; exit 1; }
 
-# -- Load patterns --
+# Load patterns
 _patterns=()
 while IFS= read -r _line; do
     if [[ "$_line" =~ pattern:[[:space:]]*[\"\']?(.+)[\"\']?$ ]]; then
@@ -108,7 +108,7 @@ for _p in "${_patterns[@]}"; do
     _combined="${_combined}${_p}"
 done
 
-# -- Determine commit range --
+# Determine commit range
 if [[ -n "$_base" ]]; then
     _range="${_base}..HEAD"
 else
@@ -131,7 +131,7 @@ if [[ -z "$_commits" ]]; then
     exit 0
 fi
 
-# -- Scan for offending commits --
+# Scan for offending commits
 _offending=()
 _offending_subjects=()
 while IFS= read -r _sha; do
@@ -152,7 +152,7 @@ if [[ ${#_offending[@]} -eq 0 ]]; then
     exit 0
 fi
 
-# -- Report --
+# Report
 echo ""
 ci_info "Found ${#_offending[@]} commit(s) with blocked patterns (out of $_total):"
 echo ""
@@ -161,13 +161,13 @@ for _s in "${_offending_subjects[@]}"; do
 done
 echo ""
 
-# -- Dry-run stops here --
+# Dry-run stops here
 if [[ $_execute -eq 0 ]]; then
     ci_info "Dry-run mode. Pass --execute to rewrite."
     exit 1
 fi
 
-# -- Safety checks before rewrite --
+# Safety checks before rewrite
 
 # Dirty worktree?
 if [[ -n "$(git diff --stat)" || -n "$(git diff --cached --stat)" ]]; then
@@ -187,13 +187,13 @@ if [[ $_yes -eq 0 ]]; then
     fi
 fi
 
-# -- Create backup --
+# Create backup
 _timestamp="$(date +%Y%m%d-%H%M%S)"
 _backup_ref="refs/backup/pre-rewrite-${_timestamp}"
 git update-ref "$_backup_ref" HEAD || { ci_fail "Failed to create backup ref"; exit 1; }
 ci_pass "Backup created: $_backup_ref"
 
-# -- Rewrite --
+# Rewrite
 ci_info "Rewriting commit messages..."
 
 # FILTER_BRANCH_SQUELCH_WARNING suppresses the "this is dangerous" nag
@@ -215,7 +215,7 @@ git filter-branch --msg-filter "
 local _cleanup_rc=0
 git for-each-ref --format='delete %(refname)' refs/original/ | git update-ref --stdin || _cleanup_rc=$?
 
-# -- Verify (only HEAD, not --all which includes backup refs) --
+# Verify (only HEAD, not --all which includes backup refs)
 _remaining=0
 _verify_commits=""
 if [[ -n "$_base" ]]; then

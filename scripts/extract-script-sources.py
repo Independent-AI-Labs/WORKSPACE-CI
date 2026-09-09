@@ -5,7 +5,7 @@ Reads scripts/manifest.yaml to find all script entries, then reads
 each script file and extracts:
   - The file's docstring or comment header (as the docstring field)
   - The full file content (as the source field)
-  - The language (python or bash, detected from extension/shebang)
+  - The language (Python or Bash, detected from extension/shebang)
 
 Output: web/src/data/script-sources.json
 

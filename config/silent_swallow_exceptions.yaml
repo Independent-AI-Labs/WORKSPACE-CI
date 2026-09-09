@@ -1,1 +1,177 @@
-exceptions: []
+# Per-project silent-swallow exceptions, final model: one anchored
+# exact file per entry with full provenance. No prefixes, no wildcards.
+exceptions:
+  - path: ^tests/integration/test_blocked_patterns\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/integration/test_config_overrides\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/integration/test_dead_code\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/integration/test_dead_code_real\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/integration/test_deletion_consumers\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/integration/test_dependency_checker_integration\.py$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/integration/test_e2e_checks\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/integration/test_fail_closed\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/integration/test_hook_index_lock_repro\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/integration/test_scaffold_ci\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/integration/test_security_disclosure\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/integration/test_silent_swallow\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/run_tests_integration\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/run_tests_unit\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/test_check_unstaged\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/test_helpers\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/test_rewrite_history\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/unit/scaffold/test_scaffold_ci\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/unit/scaffold/test_scaffold_ci_force\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/unit/scaffold/test_scaffold_ci_gen\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/unit/test_banned_scan\.py$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/unit/test_cve_scan\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/unit/test_guard_build\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/unit/test_portable_shell\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/unit/test_run_deploy_ci\.sh$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/unit/test_silent_swallow_patterns\.py$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/unit/test_silent_swallow_prod_catalog\.py$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^tests/unit/test_silent_swallow_python_capture\.py$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.
+  - path: ^res/ansible/compose\.yml$
+    rationale: Scanner-test fixture file deliberately exercising error-swallow patterns; content is quoted
+      test data.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when fixture data is split into non-executable data files.

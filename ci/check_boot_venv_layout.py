@@ -11,7 +11,7 @@ Checks performed:
 1. moon.yml exists (INFO + early-exit if absent).
 2. Parse + validate moon.yml::project.inherited_boot_dirs.
 3. Each inherited_boot_dirs entry resolves to a project root (OK/INFO/WARN).
-4. Existing inherited boot dirs checked for world-writable mode (WARN).
+4. Existing inherited boot dirs checked for containment, ownership, and mode.
 5. moon.yml::dependsOn contains the moon project id for each
    inherited_boot_dirs entry (WARN).
 6. .pre-commit-config.yaml entry refs resolve to pyproject.toml + venv.
@@ -32,6 +32,9 @@ from ci._boot_layout_helpers import (
     MoonYml,
 )
 from ci._boot_layout_helpers import (
+    boot_composition_issue as _boot_composition_issue,
+)
+from ci._boot_layout_helpers import (
     derive_moon_id_from_inherited as _derive_moon_id_from_inherited,
 )
 from ci._boot_layout_helpers import (
@@ -39,9 +42,6 @@ from ci._boot_layout_helpers import (
 )
 from ci._boot_layout_helpers import (
     emit_summary as _emit_summary,
-)
-from ci._boot_layout_helpers import (
-    is_world_writable as _is_world_writable,
 )
 from ci._boot_layout_helpers import (
     load_yaml as _load_yaml,
@@ -135,12 +135,12 @@ def _check_inherited_boot_dirs(
                 )
             )
             continue
-        if _is_world_writable(boot_bin):
+        composition_issue = _boot_composition_issue(resolved_project, boot_bin)
+        if composition_issue is not None:
             findings.append(
                 (
                     "WARN",
-                    f"inherited_boot_dirs entry {entry!r}: boot bin dir"
-                    " is world-writable (security risk per NFR-3.2)",
+                    f"inherited_boot_dirs entry {entry!r}: {composition_issue}",
                 )
             )
             continue
@@ -195,8 +195,8 @@ def _check_precommit_venv_python_refs(project_dir: Path) -> list[tuple[str, str]
         (
             "WARN",
             f".pre-commit-config.yaml line {line_no}:"
-            " use uv run python or uv run --project <path> --no-sync"
-            " python -m ci.<check> (not .venv/bin/python)",
+            " use uv run python or uv run --project <path>"
+            " --no-sync python -m ci.<check> (not .venv/bin/python)",
         )
         for line_no in _scan_precommit_venv_python_refs(pcc_path)
     )

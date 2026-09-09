@@ -31,7 +31,7 @@ set -euo pipefail
 #
 # System-deps phase covers system packages. Entries with bootstrap_script
 # (hermetic install path) are flagged as bootstrap-needed and SKIPPED by the
-# install phase -- a separate bootstrap phase (install-boot-tools) owns
+# install phase: a separate bootstrap phase (install-boot-tools) owns
 # hermetic installs.
 
 _SELF="${BASH_SOURCE[0]:-$0}"
@@ -502,7 +502,7 @@ do_install() {
 }
 
 do_brew_install() {
-    [[ ${#missing_brew_pkgs[@]} -eq 0 ]] && { log_info "Nothing to install -- all brew dependencies satisfied."; return 0; }
+    [[ ${#missing_brew_pkgs[@]} -eq 0 ]] && { log_info "Nothing to install: all brew dependencies satisfied."; return 0; }
     if [[ -z "$BREW" ]]; then
         log_warn "Homebrew not found; cannot install: ${missing_brew_pkgs[*]}"
         log_warn "Run 'make init' first to bootstrap Homebrew."
@@ -520,7 +520,7 @@ do_brew_install() {
 }
 
 do_apt_install() {
-    [[ ${#missing_apt_pkgs[@]} -eq 0 ]] && { log_info "Nothing to install -- all apt dependencies satisfied."; return 0; }
+    [[ ${#missing_apt_pkgs[@]} -eq 0 ]] && { log_info "Nothing to install: all apt dependencies satisfied."; return 0; }
     probe_apt
     local installable=() pkg
     for pkg in "${missing_apt_pkgs[@]}"; do

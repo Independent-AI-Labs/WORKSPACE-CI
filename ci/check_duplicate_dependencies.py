@@ -9,9 +9,9 @@ Intentionally duplicated deps can be excluded via
 config/duplicate_dependency_excludes.yaml.
 
 Usage:
-    python -m ci.check_duplicate_dependencies
-    python -m ci.check_duplicate_dependencies --json
-    python -m ci.check_duplicate_dependencies --workspace-root /path/to/root
+    uv run python -m ci.check_duplicate_dependencies
+    uv run python -m ci.check_duplicate_dependencies --json
+    uv run python -m ci.check_duplicate_dependencies --workspace-root /path/to/root
 """
 
 from __future__ import annotations

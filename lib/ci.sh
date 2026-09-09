@@ -130,7 +130,7 @@ CI_BOOT_DIR="$CI_PROJECT_ROOT/$CI_BOOT_NAME"
 # ci_sha256 <file>
 #   Prints the SHA-256 hash (lowercase hex, no filename) of <file>.
 #   Tries sha256sum (GNU coreutils / Darwin port), then shasum -a 256
-#   (macOS built-in), then python3 as last resort. Returns 1 if all fail.
+#   (macOS built-in). Returns 1 if both fail.
 ci_sha256() {
     local file="$1"
     if [[ ! -r "$file" ]]; then
@@ -141,10 +141,8 @@ ci_sha256() {
         sha256sum "$file" | awk '{print $1}'
     elif _sha_path="$(command -v shasum 2>&1)"; then
         shasum -a 256 "$file" | awk '{print $1}'
-    elif _sha_path="$(command -v python3 2>&1)"; then
-        python3 -c "import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$file"
     else
-        echo "ci_sha256: no checksum tool available (sha256sum, shasum, python3)" >&2
+        echo "ci_sha256: no checksum tool available (sha256sum, shasum)" >&2
         return 1
     fi
 }
@@ -417,7 +415,7 @@ ci_run_python_checker() {
 #   entries, no trailing colon: caller prepends ":$PATH").
 #
 #   Then reads moon.yml at <start-dir> (if present) for
-#   project.inherited_boot_dirs -- a list of PROJECT-ROOT paths (not
+#   project.inherited_boot_dirs: a list of PROJECT-ROOT paths (not
 #   boot-dir paths). Each entry is resolved to a project root, then
 #   /$CI_BOOT_NAME/bin is appended and checked for existence. Valid
 #   entries are prepended AFTER the walk-up results so declared
@@ -436,11 +434,13 @@ ci_resolve_boot_path() {
     local start="$1" walk accum="" _boot_name="${CI_BOOT_NAME:-$(ci_boot_name)}"
     walk="$start"
     while [[ "$walk" != "/" && "$walk" != "." ]]; do
-        if [[ -d "$walk/$_boot_name/python-env/bin" ]]; then
-            accum="$walk/$_boot_name/python-env/bin:$accum"
-        fi
-        if [[ -d "$walk/$_boot_name/bin" ]]; then
-            accum="$walk/$_boot_name/bin:$accum"
+        if [[ -d "$walk/$_boot_name" ]] && _ci_boot_dir_is_composable "$walk" "$walk/$_boot_name"; then
+            if [[ -d "$walk/$_boot_name/python-env/bin" ]]; then
+                accum="$walk/$_boot_name/python-env/bin:$accum"
+            fi
+            if [[ -d "$walk/$_boot_name/bin" ]]; then
+                accum="$walk/$_boot_name/bin:$accum"
+            fi
         fi
         walk="$(dirname "$walk")"
     done
@@ -456,7 +456,8 @@ ci_resolve_boot_path() {
                 entry="${entry%/}"
                 [[ -z "$entry" ]] && continue
                 resolved_project="$(cd "$start" && cd "$entry" && pwd -P)" || continue
-                if [[ -d "$resolved_project/$_boot_name/bin" ]]; then
+                if [[ -d "$resolved_project/$_boot_name/bin" ]] && \
+                   _ci_boot_dir_is_composable "$resolved_project" "$resolved_project/$_boot_name"; then
                     accum="$resolved_project/$_boot_name/bin:$accum"
                 fi
             done
@@ -476,7 +477,8 @@ ci_resolve_tool_path() {
     # dir: skip the walk and go straight to PATH resolution.
     walk="$start"
     while [[ -n "$walk" && "$walk" != "/" && "$walk" != "." ]]; do
-        if [[ -x "$walk/$_boot_name/bin/$tool" ]]; then
+        if [[ -x "$walk/$_boot_name/bin/$tool" ]] && \
+           _ci_boot_dir_is_composable "$walk" "$walk/$_boot_name"; then
             printf '%s\n' "$walk/$_boot_name/bin/$tool"
             return 0
         fi

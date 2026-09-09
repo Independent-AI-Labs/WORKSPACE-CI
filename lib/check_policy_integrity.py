@@ -1,183 +1,175 @@
 #!/usr/bin/env python3
-"""Non-exemptible structural policy-integrity validation.
+"""Non-exemptible structural policy-integrity validation (schema v5).
 
-Validates the STRUCTURE of banned_words.yaml and per-project
-banned_words_exceptions.yaml against the exemption rules in
-docs/requirements/REQ-BANNED-PATTERN-MATCHING.md:
+Validates the STRUCTURE of banned_words.yaml, banned_words_exceptions_v5.yaml,
+and file_classifications.yaml against REQ-BANNED-PATTERN-MATCHING §15:
 
-  1. No catch-all exemption patterns (.* and regex equivalents).
-  2. One exact anchored file and one exact rule per exemption entry.
-  3. No extension-wide, basename-wide, directory-wide, recursive, or
-     alternation path scopes.
-  4. No exemptions targeting deployment, bootstrap, hook-generation,
-     Ansible, or lifecycle implementation paths.
-  5. Every exemption path matches exactly one tracked regular file.
+  1. Every rule has a stable unique kebab-case id and a declared mode.
+  2. Every exemption names exactly one rule id and one anchored exact
+     repository-relative file path, with rationale, owner, review date,
+     and removal condition.
+  3. Project exemption paths match exactly one tracked regular file of
+     the repository that owns the config.
+  4. Classification manifest entries match exactly one tracked file.
 
-Legacy broad entries are grandfathered through an exact-digest baseline
-(config/policy_integrity_baseline.yaml). Any baseline change (added,
-removed, or modified broad entry) fails closed and requires a reviewed
-baseline update that only shrinks. This runs BEFORE ordinary exemptions
-load, so writable policy content cannot disable it.
-
+This checker contains no directory or extension lists: enforcement is
+purely structural. It is independent of the scanner loader by design.
 Exits 0 if policy structure is intact, 1 otherwise.
 """
 
 from __future__ import annotations
 
-import hashlib
+import os
 import re
 import subprocess
 import sys
-from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
 
 import yaml
 
-from ci.paths import resolve_config_path
+from ci.banned_scan import model
 
-CATCH_ALL_PATTERNS = re.compile(r"^\(\?\^?\)??\.(\*|\+)$|^\[\^\]\*$|^\[\\s\\S\]\*$")
-FORBIDDEN_SCOPES = re.compile(
-    r"(?:^|/)(?:scripts|res/ansible|lib|bootstrap|hitl)(?:/|$)"
-    r"|^Makefile$|^makefile$"
-    r"|^\.pre-commit-config\.yaml$"
-    r"|^(?:[^^]|.{0,40}?)scripts/"
-)
-BASELINE_KEYS = ("universal", "project")
+_ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+_CLASS_ENTRY_KEYS = {"class", "validated_by", "owner"}
+_CLASSES = ("binary", "generated", "lock", "reference", "fixture", "policy-definition")
 
 
-def _has_broad_chars(path: str) -> bool:
-    return any(c in path for c in "*+[]{}|(") or ".*" in path or ".+" in path
-
-
-def _entry_digest(entry: Mapping[str, Any]) -> str:
-    normalized = yaml.safe_dump(
-        {
-            "paths": sorted(entry.get("paths") or []),
-            "patterns": sorted(entry.get("patterns") or []),
-        },
-        sort_keys=True,
-        default_flow_style=False,
+def _fail(messages: list[str]) -> int:
+    print("policy-integrity: structural violations found:", file=sys.stderr)
+    for m in messages:
+        print(f"  {m}", file=sys.stderr)
+    print(
+        "policy-integrity: exemptions must be one exact file + one rule id "
+        "with full provenance; classification entries must be exact files.",
+        file=sys.stderr,
     )
-    return hashlib.sha256(normalized.encode()).hexdigest()
+    return 1
 
 
-_BROAD_PATH_CHARS = (".*", ".+", "[", "]", "{", "}", "|", "(?:")
-
-
-def _is_broad(entry: Mapping[str, Any]) -> bool:
-    """True when the entry violates any structural exemption rule."""
-    paths = entry.get("paths") or []
-    patterns = entry.get("patterns") or []
-    if not paths or not patterns:
-        return True
-    if len(paths) != 1 or len(patterns) != 1:
-        return True
-    pat = str(patterns[0])
-    if CATCH_ALL_PATTERNS.match(pat) or pat in {".*", ".+"}:
-        return True
-    path = str(paths[0])
-    if not path.startswith("^") or not path.endswith("$"):
-        return True
-    if any(m in path for m in _BROAD_PATH_CHARS):
-        return True
-    return bool(FORBIDDEN_SCOPES.search(path.lstrip("^").rstrip("$")))
-
-
-def _load_baseline() -> dict[str, list[str]] | None:
-    baseline_path = Path(
-        resolve_config_path("policy_integrity_baseline", required=False)
-    )
-    if not baseline_path.is_file():
-        return None
-    with open(baseline_path) as f:
-        data: Any = yaml.safe_load(f) or {}
-    return {k: [str(d) for d in data.get(k) or []] for k in BASELINE_KEYS}
-
-
-def _tracked_files() -> set[str]:
-    """Tracked files via git; empty set outside a repository."""
+def _tracked_files(root: Path) -> set[str]:
     try:
         proc = subprocess.run(
-            ["git", "ls-files", "-z"],
+            ["git", "-C", str(root), "ls-files", "-z"],
             capture_output=True,
             check=True,
             timeout=60,
         )
     except (OSError, subprocess.SubprocessError) as exc:
         print(f"policy-integrity: git ls-files unavailable: {exc}", file=sys.stderr)
-        return set()
-    return {p.decode() for p in proc.stdout.split(b"\0") if p}
+        _msg = 1
+        raise SystemExit(_msg) from exc
+    return {
+        p.decode("utf-8", errors="surrogateescape")
+        for p in proc.stdout.split(b"\0")
+        if p
+    }
 
 
-def _check_entries(
-    entries: list[Mapping[str, Any]],
-    source: str,
-    baseline: dict[str, list[str]],
+def _check_project_exceptions(
+    exc_path: Path,
+    repo_root: Path,
     violations: list[str],
 ) -> None:
-    tracked = _tracked_files()
-    for entry in entries:
-        digest = _entry_digest(entry)
-        broad = _is_broad(entry)
-        if broad and digest not in baseline.get(source, []):
-            violations.append(
-                f"{source}: broad exemption entry not in reviewed baseline "
-                f"(digest {digest[:12]}): paths={entry.get('paths')} "
-                f"patterns={entry.get('patterns')}"
-            )
-        if broad:
+    if not exc_path.is_file():
+        return
+    tracked = _tracked_files(repo_root)
+    try:
+        raw = yaml.safe_load(exc_path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError) as exc:
+        violations.append(f"{exc_path}: unreadable: {exc}")
+        return
+    for i, entry in enumerate(raw.get("exceptions") or []):
+        where = f"{exc_path.name} exceptions[{i}]"
+        path = entry.get("path") if isinstance(entry, dict) else None
+        if not isinstance(path, str):
+            violations.append(f"{where}: missing exact path")
             continue
-        for raw in entry.get("paths") or []:
-            path = str(raw).strip("^$")
-            if not path or _has_broad_chars(path):
-                continue
-            matches = [t for t in tracked if t == path or re.fullmatch(raw, t)]
-            if len(matches) != 1:
-                violations.append(
-                    f"{source}: exemption path matches {len(matches)} tracked "
-                    f"files (must be exactly 1): {raw}"
-                )
+        matches = [t for t in tracked if re.fullmatch(path, t)]
+        if len(matches) != 1:
+            violations.append(
+                f"{where}: path matches {len(matches)} tracked files "
+                f"(must be exactly 1): {path}"
+            )
+
+
+def _check_classifications(
+    manifest_path: Path, repo_root: Path, violations: list[str]
+) -> None:
+    if not manifest_path.is_file():
+        return
+    tracked = _tracked_files(repo_root)
+    try:
+        raw = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError) as exc:
+        violations.append(f"classification manifest unreadable: {exc}")
+        return
+    files = raw.get("files") or {}
+    for fpath, entry in files.items():
+        where = f"classifications.files[{fpath!r}]"
+        if not isinstance(entry, dict) or entry.get("class") not in _CLASSES:
+            violations.append(f"{where}: class must be one of {_CLASSES}")
+            continue
+        unknown = sorted(set(entry) - _CLASS_ENTRY_KEYS)
+        if unknown:
+            violations.append(f"{where}: unknown key(s) {unknown}")
+        if entry.get("class") in ("generated", "lock") and not entry.get(
+            "validated_by"
+        ):
+            violations.append(f"{where}: generated/lock entries require validated_by")
+        matches = [t for t in tracked if t == fpath]
+        if len(matches) != 1:
+            violations.append(
+                f"{where}: entry must name exactly one tracked file "
+                f"(matches {len(matches)}): {fpath}"
+            )
 
 
 def main() -> int:
     violations: list[str] = []
+    config_dir = Path(os.environ.get("CI_CONFIG_DIR", "config"))
+    repo_root = config_dir.parent
+
     try:
-        baseline = _load_baseline()
-        if baseline is None:
-            # Bootstrap state: the artifact predates the baseline config.
-            # The gate activates only once a reviewed deploy ships it;
-            # present-but-mismatched baselines still fail closed below.
-            print("policy-integrity: baseline config absent (pre-activation)")
-            return 0
-        bw_path = Path(resolve_config_path("banned_words"))
-        with open(bw_path) as f:
-            bw: Any = yaml.safe_load(f) or {}
-        _check_entries(
-            bw.get("universal_exceptions") or [], "universal", baseline, violations
+        policy = model.load_universal(config_dir)
+    except model.PolicyError as exc:
+        return _fail([f"banned_words.yaml: {exc}"])
+
+    try:
+        model.load_project_exceptions(
+            policy,
+            config_dir / "banned_words_exceptions_v5.yaml",
+            "config-dir",
         )
-        project_exc = bw_path.parent / "banned_words_exceptions.yaml"
-        if project_exc.is_file():
-            with open(project_exc) as f:
-                pex: Any = yaml.safe_load(f) or {}
-            _check_entries(pex.get("exceptions") or [], "project", baseline, violations)
-    except (OSError, ValueError, yaml.YAMLError) as exc:
-        print(f"policy-integrity: failed to load policy: {exc}", file=sys.stderr)
-        return 1
+    except model.PolicyError as exc:
+        violations.append(str(exc))
+    _check_project_exceptions(
+        config_dir / "banned_words_exceptions_v5.yaml",
+        config_dir.parent,
+        violations,
+    )
+    scan_root = os.environ.get("CI_SCAN_ROOT", "").strip()
+    if scan_root and Path(scan_root) != config_dir.parent:
+        consumer_exc = Path(scan_root) / "config" / "banned_words_exceptions_v5.yaml"
+        try:
+            model.load_project_exceptions(policy, consumer_exc, "consumer")
+        except model.PolicyError as exc:
+            violations.append(str(exc))
+        _check_project_exceptions(consumer_exc, Path(scan_root), violations)
+
+    _check_classifications(
+        (Path(scan_root) if scan_root else config_dir.parent)
+        / "config"
+        / "file_classifications.yaml",
+        Path(scan_root) if scan_root else config_dir.parent,
+        violations,
+    )
 
     if violations:
-        print("policy-integrity: structural violations found:", file=sys.stderr)
-        for v in violations:
-            print(f"  {v}", file=sys.stderr)
-        print(
-            "policy-integrity: broad exemptions are frozen; shrink the policy and "
-            "update config/policy_integrity_baseline.yaml through review.",
-            file=sys.stderr,
-        )
-        return 1
+        return _fail(violations)
     print("policy-integrity: policy structure intact")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    _msg = main()
+    raise SystemExit(_msg)

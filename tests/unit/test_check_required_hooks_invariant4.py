@@ -113,7 +113,7 @@ def test_invariant4_flags_missing_python_module(tmp_path: Path) -> None:
     )
     issues = _run_invariant_4_entries(manifest, quiet=True, package_root=tmp_path)
     assert issues == [
-        "hook 'ghostmod' entry references python module"
+        "hook 'ghostmod' entry references python-module"
         " 'ci.check_ghost_module' but it does not exist"
     ]
 

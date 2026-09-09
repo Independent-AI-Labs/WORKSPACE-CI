@@ -1,384 +1,101 @@
-#!/usr/bin/env python3
-"""workspace-ci banned-words scanner.
+"""Final-model banned-pattern scanner entry (schema v5).
 
-Reads banned_words.yaml + banned_words_exceptions.yaml via PyYAML,
-scans all tracked files for banned patterns, emits violations.
+Emits one block per finding:
 
-Exits 0 if no violations, 1 otherwise.
+    path:line:col
+      Rule: <stable id>
+      Pattern: ...
+      Reason: ...
+      > matched snippet
 
-Self-contained: requires PyYAML (already a project dependency).
-Invoked from lib/checks_core.sh::ci_check_banned_words.
-
-Replaces the bash + AWK implementation (lib/parse_banned_words.awk +
-lib/parse_exceptions.awk + 170-line ci_check_banned_words shell
-function) which spawned ~33,000 subprocesses under PRoot (58 patterns
-x 96 files x ~6 procs/iteration), taking 5+ minutes. This Python
-implementation does zero subprocess spawns for pattern matching
-(one git ls-files call for file discovery) and completes in <1s.
+Exits 0 when clean, 1 on any violation or fail-closed input/policy error.
 """
 
+from __future__ import annotations
+
 import os
-import re
-import subprocess
 import sys
 from pathlib import Path
-from typing import Any
 
-import yaml
-
-from ci.paths import resolve_config_path, validate_exemption_file
-
-_NULL_STDIN = subprocess.DEVNULL
-_SYSTEM_INTERPRETER_INVOCATION_RE = re.compile(
-    r"(?:^|[;&|]|\$\(|`|\b(?:if|elif|while|until|then|do)\s+)\s*!?\s*"
-    r"(?:(?:sudo|env|exec|nice|nohup|setsid|stdbuf|timeout|xargs)\s+)*"
-    r"(?:[A-Za-z_][A-Za-z0-9_]*=\S+\s+)*"
-    r"/(?:usr/)?bin/(?:python[0-9.]*|perl[0-9.]*|ruby[0-9.]*|node|nodejs|"
-    r"lua[0-9.]*|php[0-9.]*)\b",
-    re.IGNORECASE,
-)
-_SYSTEM_INTERPRETER_PATTERN = "protected-system-interpreter"
-_SYSTEM_INTERPRETER_REASON = (
-    "Tracked text must use reviewed hermetic tooling, not a system interpreter."
-)
+from ci.banned_scan import classify, discover, engine, model
+from ci.paths import ExemptionFileError, validate_exemption_file
 
 
-def _scan_root() -> Path | None:
-    """Repo root to scan (sibling hooks set CI_SCAN_ROOT before ci_uv_run)."""
-    raw = os.environ.get("CI_SCAN_ROOT", "").strip()
-    return Path(raw) if raw else None
-
-
-def _merge_exceptions(exc_map: dict[str, list[str]], exc_path: Path) -> None:
-    """Load a banned_words_exceptions.yaml file and merge into exc_map.
-
-    Provenance is validated fail-closed (root-owned regular file) before
-    the file is honored; a missing file is skipped only when nothing
-    exists at the path.
-    """
-    if not exc_path.is_file():
-        return
-    validate_exemption_file(exc_path, "banned_words_exceptions.yaml")
-    with open(exc_path) as f:
-        exc_data: Any = yaml.safe_load(f) or {}
-    for exc in exc_data.get("exceptions") or []:
-        pattern = exc.get("pattern", "")
-        paths = exc.get("paths") or []
-        if pattern and paths:
-            exc_map.setdefault(str(pattern), []).extend(paths)
-
-
-def _load_config() -> tuple[
-    list[dict[str, str]],
-    dict[str, list[dict[str, str]]],
-    list[dict[str, str]],
-    dict[str, list[str]],
-]:
-    """Load banned_words.yaml + banned_words_exceptions.yaml.
-
-    Returns (banned, directory_rules, filename_rules, exc_map).
-    exc_map: pattern -> [path_regex, ...] (universal + project).
-    Supports '.*' as a wildcard: if '.*' is a key, its paths
-    exempt matching files from ALL patterns.
-
-    Exceptions are loaded from two sources (matching the prior bash
-    implementation's behaviour):
-    1. CI_CONFIG_DIR/banned_words_exceptions.yaml: CI's own exceptions
-    2. config/banned_words_exceptions.yaml relative to CWD: per-project
-       exceptions (each repo has its own). Skipped if it resolves to the
-       same file as #1 (avoids double-loading when running from CI itself).
-    """
-    bw_path = resolve_config_path("banned_words")
-    with open(bw_path) as f:
-        bw: Any = yaml.safe_load(f) or {}
-
-    banned: list[dict[str, str]] = bw.get("banned") or []
-    raw_dir: Any = bw.get("directory_rules") or {}
-    directory_rules: dict[str, list[dict[str, str]]] = {}
-    for dir_key, rules in raw_dir.items():
-        directory_rules[str(dir_key)] = rules or []
-    filename_rules: list[dict[str, str]] = bw.get("filename_rules") or []
-
-    exc_map: dict[str, list[str]] = {}
-
-    for exc in bw.get("universal_exceptions") or []:
-        paths = exc.get("paths") or []
-        for pattern in exc.get("patterns") or []:
-            exc_map.setdefault(str(pattern), []).extend(paths)
-
-    ci_exc_path = resolve_config_path("banned_words_exceptions", required=False)
-    _merge_exceptions(exc_map, ci_exc_path)
-
-    root = _scan_root()
-    project_exc_path = (
-        root / "config" / "banned_words_exceptions.yaml"
-        if root is not None
-        else Path("config") / "banned_words_exceptions.yaml"
-    )
-    if project_exc_path.resolve() != ci_exc_path.resolve():
-        _merge_exceptions(exc_map, project_exc_path)
-
-    return banned, directory_rules, filename_rules, exc_map
-
-
-def _is_exempt(
-    filepath: str,
-    pattern: str,
-    exc_map: dict[str, list[str]],
-) -> bool:
-    """Check if (filepath, pattern) is exempted.
-
-    Checks both the exact pattern key and the '.*' wildcard.
-    The '.*' wildcard exempts matching files from ALL patterns,
-    fixing a bug in the prior bash implementation where the
-    '.*' key in the exception map was a dead entry (exact key
-    match never matched any banned pattern).
-    """
-    wildcard_paths = exc_map.get(".*")
-    if wildcard_paths:
-        for pr in wildcard_paths:
-            if re.search(pr, filepath):
-                return True
-    paths = exc_map.get(pattern)
-    if not paths:
-        return False
-    return any(re.search(pr, filepath) for pr in paths)
-
-
-def _is_exact_exempt(
-    filepath: str,
-    pattern: str,
-    exc_map: dict[str, list[str]],
-) -> bool:
-    """Allow protected-rule exemptions only for one exact anchored file."""
-    for path_pattern in exc_map.get(pattern) or []:
-        if not (path_pattern.startswith("^") and path_pattern.endswith("$")):
-            continue
-        body = path_pattern[1:-1]
-        unescaped = re.sub(r"\\.", "", body)
-        if re.search(r"[.*+?()[\]{}|]", unescaped):
-            continue
-        if re.fullmatch(path_pattern, filepath):
-            return True
-    return False
-
-
-def _get_files(argv_files: list[str]) -> list[str]:
-    """Get file list from argv or git ls-files."""
-    if argv_files:
-        return argv_files
-    root = _scan_root()
-    git_cmd = [
-        "git",
-        "ls-files",
-        "--cached",
-        "--others",
-        "--exclude-standard",
-    ]
-    if root is not None:
-        git_cmd = ["git", "-C", str(root), *git_cmd[1:]]
-    try:
-        result = subprocess.run(
-            git_cmd,
-            capture_output=True,
-            text=True,
-            stdin=_NULL_STDIN,
-            check=True,
-        )
-    except subprocess.CalledProcessError as exc:
-        sys.stderr.write(f"git ls-files failed (exit {exc.returncode})")
-        if exc.stderr:
-            sys.stderr.write(f": {exc.stderr}")
-        sys.stderr.write("\n")
-        return []
-    if result.stderr:
-        sys.stderr.write(f"git ls-files: {result.stderr}")
-    return [f for f in result.stdout.splitlines() if f]
-
-
-def _compile_rules(
-    rules: list[dict[str, str]],
-) -> list[tuple[re.Pattern[str], str, str]]:
-    """Compile pattern+reason rules into (regex, pattern, reason)."""
-    compiled: list[tuple[re.Pattern[str], str, str]] = []
-    for rule in rules:
-        pattern = rule.get("pattern", "")
-        reason = rule.get("reason", "")
-        if not isinstance(pattern, str) or not pattern:
-            continue
-        if not isinstance(reason, str):
-            reason = str(reason)
-        try:
-            compiled.append((re.compile(pattern), pattern, reason))
-        except re.error as exc:
-            sys.stderr.write(
-                f"WARNING: Skipping invalid pattern: '{pattern}' ({exc})\n"
-            )
-    return compiled
-
-
-def _emit(
-    filepath: str,
-    line_num: int,
-    pattern: str,
-    reason: str,
-    content: str,
-) -> None:
-    """Print a violation in the ci_error format."""
-    print(f"{filepath}:{line_num}")
-    print(f"  Pattern: {pattern}")
-    print(f"  Reason:  {reason}")
-    snippet = content.rstrip()[:80]
+def _report(f: engine.Finding) -> None:
+    loc = f"{f.path}:{f.line}:{f.col}" if f.line else f.path
+    print(loc)
+    print(f"  Rule:    {f.rule.id}")
+    print(f"  Pattern: {f.rule.pattern}")
+    print(f"  Reason:  {f.rule.reason}")
+    snippet = f.matched.replace("\n", "\\n")[:80]
     if snippet:
         print(f"  > {snippet}")
 
 
-def _scan_filename_rules(
-    filepath: str,
-    bn: str,
-    c_filename: list[tuple[re.Pattern[str], str, str]],
-    exc_map: dict[str, list[str]],
-) -> int:
-    """Scan filename against filename rules. Returns error count."""
-    errors = 0
-    for rgx, pat, rsn in c_filename:
-        if _is_exempt(filepath, pat, exc_map):
-            continue
-        if rgx.search(bn):
-            _emit(filepath, 0, pat, rsn, bn)
-            errors += 1
-    return errors
-
-
-def _scan_line_rules(
-    filepath: str,
-    lines: list[str],
-    compiled: list[tuple[re.Pattern[str], str, str]],
-    exc_map: dict[str, list[str]],
-) -> int:
-    """Scan file lines against compiled rules. Returns error count."""
-    errors = 0
-    for rgx, pat, rsn in compiled:
-        if _is_exempt(filepath, pat, exc_map):
-            continue
-        for i, line in enumerate(lines, 1):
-            if rgx.search(line):
-                _emit(filepath, i, pat, rsn, line)
-                errors += 1
-    return errors
-
-
-def _scan_directory_rules(
-    filepath: str,
-    lines: list[str],
-    c_dir: dict[str, list[tuple[re.Pattern[str], str, str]]],
-    exc_map: dict[str, list[str]],
-) -> int:
-    """Scan file against directory-specific rules. Returns error count."""
-    errors = 0
-    for dk, compiled in c_dir.items():
-        if not (filepath.startswith(f"{dk}/") or f"/{dk}/" in filepath):
-            continue
-        errors += _scan_line_rules(filepath, lines, compiled, exc_map)
-    return errors
-
-
-def _resolve_scan_path(filepath: str) -> Path:
-    """Resolve a git-relative path; prefer CI_SCAN_ROOT over process cwd."""
-    root = _scan_root()
-    if root is not None:
-        return root / filepath
-    return Path(filepath)
-
-
-def _scan_file(
-    filepath: str,
-    c_banned: list[tuple[re.Pattern[str], str, str]],
-    c_dir: dict[str, list[tuple[re.Pattern[str], str, str]]],
-    c_filename: list[tuple[re.Pattern[str], str, str]],
-    exc_map: dict[str, list[str]],
-) -> int:
-    """Scan a single file for banned patterns. Returns error count."""
-    scan_path = _resolve_scan_path(filepath)
-    if not scan_path.is_file():
-        return 0
-
-    bn = filepath.rsplit("/", 1)[-1] if "/" in filepath else filepath
-
-    errors = _scan_filename_rules(filepath, bn, c_filename, exc_map)
+def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    config_dir = Path(os.environ.get("CI_CONFIG_DIR", "config"))
+    root = discover.scan_root()
 
     try:
-        with open(scan_path, errors="replace") as f:
-            lines = f.readlines()
-    except OSError as exc:
-        sys.stderr.write(f"WARNING: Cannot read {filepath}: {exc}\n")
-        return errors
-
-    for line_num, line in enumerate(lines, 1):
-        if _SYSTEM_INTERPRETER_INVOCATION_RE.search(line) and not _is_exact_exempt(
-            filepath, _SYSTEM_INTERPRETER_PATTERN, exc_map
-        ):
-            _emit(
-                filepath,
-                line_num,
-                _SYSTEM_INTERPRETER_PATTERN,
-                _SYSTEM_INTERPRETER_REASON,
-                line,
-            )
-            errors += 1
-
-    errors += _scan_directory_rules(filepath, lines, c_dir, exc_map)
-    errors += _scan_line_rules(filepath, lines, c_banned, exc_map)
-    return errors
-
-
-def _compile_dir_rules(
-    directory_rules: dict[str, list[dict[str, str]]],
-) -> dict[str, list[tuple[re.Pattern[str], str, str]]]:
-    """Compile directory rules into a dict of (regex, pattern, reason)."""
-    c_dir: dict[str, list[tuple[re.Pattern[str], str, str]]] = {}
-    for dk, rules in directory_rules.items():
-        c_dir[dk] = _compile_rules(rules)
-    return c_dir
-
-
-def main() -> int:
-    argv_files = sys.argv[1:]
-
-    bw_path = resolve_config_path("banned_words")
-    if not bw_path.is_file():
-        sys.stderr.write(f"Config not found: {bw_path}\n")
+        policy = model.load_universal(config_dir)
+        project_exc: dict[str, list[model.ExceptionEntry]] = {}
+        for exc_file in {
+            config_dir / "banned_words_exceptions_v5.yaml",
+            root / "config" / "banned_words_exceptions_v5.yaml",
+        }:
+            if exc_file.is_file():
+                try:
+                    validate_exemption_file(exc_file, "banned_words_exceptions_v5.yaml")
+                except ExemptionFileError as exc:
+                    print(f"banned-words: {exc}", file=sys.stderr)
+                    return 1
+            loaded = model.load_project_exceptions(policy, exc_file, str(exc_file))
+            for rule_id, entries in loaded.items():
+                bucket = project_exc.setdefault(rule_id, [])
+                for entry in entries:
+                    if any(entry.path == prior.path for prior in bucket):
+                        print(
+                            f"banned-words: duplicate exception rule={rule_id} "
+                            f"path={entry.path}",
+                            file=sys.stderr,
+                        )
+                        return 1
+                    bucket.append(entry)
+        classes = classify.load(root)
+    except (model.PolicyError, classify.ClassificationError) as exc:
+        print(f"banned-words: policy invalid: {exc}", file=sys.stderr)
         return 1
 
-    (
-        banned,
-        directory_rules,
-        filename_rules,
-        exc_map,
-    ) = _load_config()
-
-    files = _get_files(argv_files)
-    if not files:
-        print("No banned patterns found.")
-        return 0
-
+    files = discover.tracked_files(argv, root)
     print(f"Scanning {len(files)} file(s) for banned patterns...")
 
-    c_banned = _compile_rules(banned)
-    c_dir = _compile_dir_rules(directory_rules)
-    c_filename = _compile_rules(filename_rules)
+    findings: list[engine.Finding] = []
+    for rel in files:
+        if not (root / rel).is_file():
+            continue
+        try:
+            findings.extend(engine.scan_file(rel, root, policy, project_exc, classes))
+        except engine.InputError as exc:
+            print(
+                f"{rel}: input failed strict validation: {exc}",
+                file=sys.stderr,
+            )
+            print(
+                f"banned-words: fail closed on unreadable or invalid text",
+                file=sys.stderr,
+            )
+            return 1
 
-    errors = 0
-    for filepath in files:
-        errors += _scan_file(filepath, c_banned, c_dir, c_filename, exc_map)
-
-    if errors > 0:
-        print(f"\n{errors} banned pattern(s) found.")
+    for f in findings:
+        _report(f)
+    if findings:
+        print(f"\n{len(findings)} banned pattern(s) found.")
         return 1
-
     print("No banned patterns found.")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    _msg = main()
+    raise SystemExit(_msg)

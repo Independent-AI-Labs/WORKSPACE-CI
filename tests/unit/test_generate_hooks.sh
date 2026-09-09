@@ -69,4 +69,4 @@ test_generate_hooks_refuses_missing_python_module() {
 }
 
 _run_test "generate-hooks refuses unresolved shell entry" test_generate_hooks_refuses_unresolved_shell_entry
-_run_test "generate-hooks refuses missing python module" test_generate_hooks_refuses_missing_python_module
+_run_test "generate-hooks refuses missing python-module" test_generate_hooks_refuses_missing_python_module

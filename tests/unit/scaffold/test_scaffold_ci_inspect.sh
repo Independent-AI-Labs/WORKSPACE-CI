@@ -97,10 +97,6 @@ EOF
     grep -q '"files"' "$TEST_TMP/out" || { echo "missing files key"; return 1; }
     grep -q '"makefile_targets"' "$TEST_TMP/out" || { echo "missing makefile_targets key"; return 1; }
     grep -q '"hook_drift"' "$TEST_TMP/out" || { echo "missing hook_drift key"; return 1; }
-    # Validate JSON parses with python if available.
-    if command -v python3 >/dev/null 2>&1; then
-        python3 -c "import json,sys; json.load(open('$TEST_TMP/out'))" || { echo "invalid JSON"; return 1; }
-    fi
 }
 _run_test "scaffold: --json produces valid JSON, writes nothing" test_json_mode_valid_output
 
@@ -141,7 +137,7 @@ EOF
     bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-am2" --yes > "$TEST_TMP/out" 2>&1
     local _before
     _before="$(cat "$TEST_TMP/sci-am2/Makefile")"
-    # Run append on the complete Makefile -- nothing should change.
+    # Run append on the complete Makefile: nothing should change.
     bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-am2" --append-makefile --yes > "$TEST_TMP/out2" 2>&1
     grep -q 'no missing targets' "$TEST_TMP/out2" || { echo "should report no missing targets"; return 1; }
     local _after

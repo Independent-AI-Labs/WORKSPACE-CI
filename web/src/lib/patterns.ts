@@ -31,19 +31,21 @@ export function classifyPattern(
   const category = resolveCategory(entry, scope)
 
   return {
+    id: entry.id,
     pattern: entry.pattern,
     reason: entry.reason,
     category,
     categoryLabel: getCategoryLabel(category),
     scope,
     directory,
+    ruleScope: entry.scope ?? 'all',
   }
 }
 
 export function classifyAll(config: BannedWordsConfig): ClassifiedPattern[] {
   const results: ClassifiedPattern[] = []
 
-  for (const entry of config.banned ?? []) {
+  for (const entry of config.rules ?? []) {
     results.push(classifyPattern(entry, 'content'))
   }
 

@@ -1,0 +1,35 @@
+# Schema for file_classifications.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+# Consumed by the wiki's ConfigFieldTable component (SPEC-WIKI.md §10.7).
+config: file_classifications
+description: "Exact-file classification manifest: reviewed structural roots (test/doc) and exact per-file classes that replace wildcard content exemptions."
+fields:
+  - path: test_roots
+    type: list<string>
+    description: "Path segments whose presence classifies a file as a test path; only ordinary rules with declared scope 'production' consult them. Non-exemptible rules never do."
+
+  - path: doc_roots
+    type: list<string>
+    description: "Path prefixes classified as documentation; consulted only by ordinary rules with declared scope 'docs'."
+
+  - path: doc_files
+    type: list<string>
+    description: "Exact files classified as documentation in addition to doc_roots."
+
+  - path: files
+    type: map
+    description: "Exact tracked-file classifications. Every entry must name exactly one tracked regular file; policy-integrity validates cardinality."
+
+  - path: files.<path>.class
+    type: string
+    required: true
+    description: "One of: binary, generated, lock, reference, fixture, policy-definition. Content rules are skipped for classified files; filename rules still apply."
+
+  - path: files.<path>.validated_by
+    type: string
+    description: "Deterministic verification command (required for generated and lock classes), e.g. a regeneration plus git-diff-exit-code check."
+
+  - path: files.<path>.owner
+    type: string
+    description: "Accountable owner of the classification."

@@ -48,7 +48,7 @@ execution, credential, sudo, or GUARD client.
 | ID     | Requirement                                                                                                                                    |
 | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | FAIL-1 | PDP errors MUST remain errors; they MUST NOT become empty successful feeds or successful decisions.                                            |
-| FAIL-2 | Missing live connectivity MUST show degraded state and disable decisions.                                                                      |
+| FAIL-2 | Missing live connectivity MUST show restricted state and disable decisions.                                                                    |
 | A11Y-1 | Decision controls, status, errors, focus behavior, labels, and keyboard operation MUST meet the existing web-component accessibility contract. |
 | A11Y-2 | Status MUST not rely on color alone and dynamic errors MUST be announced.                                                                      |
 

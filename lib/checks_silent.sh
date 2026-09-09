@@ -83,9 +83,9 @@ ci_check_silent_swallow() {
     fi
 
     # Read per-project exceptions from config/silent_swallow_exceptions.yaml.
-    # Format mirrors banned_words_exceptions.yaml:
-    #   exceptions:
-    #     - paths: ['public/vendor/', 'other/path']
+    # Final model (v5): every entry is one anchored exact file path with full
+    # provenance, mirroring banned_words_exceptions_v5.yaml. No prefix matching,
+    # no directory-wide skips, no hardcoded exemptions.
     # Provenance is validated fail-closed (root-owned regular file).
     local -a _exc_paths=()
     local _exc_cfg="config/silent_swallow_exceptions.yaml"
@@ -96,14 +96,11 @@ ci_check_silent_swallow() {
     if [[ -f "$_exc_cfg" ]]; then
         local _exc_tmp
         _exc_tmp="$(mktemp)"
-        # Guard schema requires list-of-maps:
-        #   - paths:
-        #       - path/to/file
-        # Accept quoted or unquoted scalar path items. The top-level
-        # "- paths:" map marker is skipped below.
-        sed -n -E "s/^[[:space:]]*-[[:space:]]*['\"]?([^'\"]+)['\"]?[[:space:]]*$/\1/p" "$_exc_cfg" > "$_exc_tmp"
+        # Each entry carries its exact path on a dedicated "path: ^...$" line
+        # (first key of the entry, so possibly "- path: ..."); plain scalar
+        # extraction keeps parsing inside reviewed bash tooling.
+        sed -n -E "s/^[[:space:]]*-?[[:space:]]*path:[[:space:]]*['\"]?(\^.*\\\$)['\"]?[[:space:]]*\$/\1/p" "$_exc_cfg" > "$_exc_tmp"
         while IFS= read -r _pat; do
-            [[ "$_pat" == *: ]] && continue
             [[ -n "$_pat" ]] && _exc_paths+=("$_pat")
         done < "$_exc_tmp"
         rm -f "$_exc_tmp"
@@ -113,19 +110,14 @@ ci_check_silent_swallow() {
     local cand_tmp text_tmp
     cand_tmp="$(mktemp)"
     text_tmp="$(mktemp)"
-    local file _excluded _pat
+    local file
     while IFS= read -r file; do
         [[ -z "$file" || ! -f "$file" ]] && continue
-        # Default exemptions: tests may contain deliberate error patterns;
-        # compose.yml has pre-existing patterns fixed incrementally.
-        case "$file" in
-            tests/*) continue ;;
-            res/ansible/compose.yml) continue ;;
-        esac
-        # Per-project exemptions from config/silent_swallow_exceptions.yaml
-        _excluded=0
+        # Per-project exact-file exemptions only; every other tracked text
+        # file is scanned (no directory or extension skips exist).
+        local _excluded=0 _pat
         for _pat in "${_exc_paths[@]}"; do
-            if [[ "$file" == "$_pat"* ]]; then
+            if [[ "$file" =~ $_pat ]]; then
                 _excluded=1
                 break
             fi

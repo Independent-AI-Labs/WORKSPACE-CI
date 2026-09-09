@@ -38,6 +38,12 @@ Deployment construction resolves it from `/opt/workspace-ci` inside the private
 mount namespace, where that path is a bind mount of the physical candidate.
 Protected runtime commands resolve it from `/opt/workspace-ci` on the host.
 
+General development commands may compose other project boot directories from
+`moon.yml::project.inherited_boot_dirs`. Composition resolves every declared
+project and boot directory physically, rejects symlink escapes, requires the
+project and boot directories to share an owner, and rejects world-writable
+directories. Protected hooks do not use this general composed path.
+
 The Makefile fixes `BOOT_NAME` and `BOOT_BIN`; environment and command-line
 assignment cannot replace them for protected operations. Tools are invoked by
 absolute path.

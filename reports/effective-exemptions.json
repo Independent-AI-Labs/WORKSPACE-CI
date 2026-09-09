@@ -1,0 +1,1043 @@
+{
+  "schema": 1,
+  "policy_digest": "9a740a21ecd81459298631ae142a63eca74b046b0c3632c44f7425db4113a1d1",
+  "rule_count": 225,
+  "exemption_count": 66,
+  "classification_count": 51,
+  "exemptions": [
+    {
+      "source": "project",
+      "rule": "bcompatibility-b",
+      "path": "^docs/audits/AUDIT-CAPABILITY-LOSS-2026-08-23\\.md$",
+      "file": "docs/audits/AUDIT-CAPABILITY-LOSS-2026-08-23.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "bdict-s-any",
+      "path": "^ci/check_duplicate_dependencies\\.py$",
+      "file": "ci/check_duplicate_dependencies.py",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "belevate-b",
+      "path": "^docs/specifications/SPEC-HITL-GUARD\\.md$",
+      "file": "docs/specifications/SPEC-HITL-GUARD.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "bfallback-b",
+      "path": "^lib/check_fallback_resolution\\.py$",
+      "file": "lib/check_fallback_resolution.py",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "bfallback-b",
+      "path": "^lib/check_silent_swallow\\.py$",
+      "file": "lib/check_silent_swallow.py",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "bfallback-b",
+      "path": "^lib/checks_silent\\.sh$",
+      "file": "lib/checks_silent.sh",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "bfallback-b",
+      "path": "^web-components/src/components/ErrorBoundary\\.tsx$",
+      "file": "web-components/src/components/ErrorBoundary.tsx",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "blegacy-b",
+      "path": "^scripts/cleanup-precommit$",
+      "file": "scripts/cleanup-precommit",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "blegacy-b",
+      "path": "^web/package\\.json$",
+      "file": "web/package.json",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "blegacy-b",
+      "path": "^web/src/components/wiki/playground/CodeEditor\\.tsx$",
+      "file": "web/src/components/wiki/playground/CodeEditor.tsx",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "blegacy-b",
+      "path": "^web/src/data/script-sources\\.json$",
+      "file": "web/src/data/script-sources.json",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "bsilent",
+      "path": "^\\.pre-commit-config\\.yaml$",
+      "file": ".pre-commit-config.yaml",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "bsilent",
+      "path": "^config/silent_swallow_exceptions\\.schema\\.yaml$",
+      "file": "config/silent_swallow_exceptions.schema.yaml",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "bsilent",
+      "path": "^docs/TODO-REMEDIATION\\.md$",
+      "file": "docs/TODO-REMEDIATION.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "bsilent",
+      "path": "^docs/audits/AUDIT-POLICY-EXEMPTION-CLASSIFICATION-2026-08-21\\.md$",
+      "file": "docs/audits/AUDIT-POLICY-EXEMPTION-CLASSIFICATION-2026-08-21.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "bsilent",
+      "path": "^docs/audits/AUDIT-POLICY-V5-ACTIVATION-2026-09-06\\.md$",
+      "file": "docs/audits/AUDIT-POLICY-V5-ACTIVATION-2026-09-06.md",
+      "match_count": 1,
+      "rationale": "Quotes the gate name in activation transcripts",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-07",
+      "removal": "When transcripts are reworded."
+    },
+    {
+      "source": "project",
+      "rule": "bsilent",
+      "path": "^docs/audits/AUDIT-REMEDIATION-EXECUTION-FAILURE-2026-08-20\\.md$",
+      "file": "docs/audits/AUDIT-REMEDIATION-EXECUTION-FAILURE-2026-08-20.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "bsilent",
+      "path": "^docs/requirements/REQ-SCAFFOLD-CI\\.md$",
+      "file": "docs/requirements/REQ-SCAFFOLD-CI.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "bsilent",
+      "path": "^docs/specifications/SPEC-SCAFFOLD-CI\\.md$",
+      "file": "docs/specifications/SPEC-SCAFFOLD-CI.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "bsilent",
+      "path": "^docs/specifications/SPEC-WIKI\\.md$",
+      "file": "docs/specifications/SPEC-WIKI.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "bsilent",
+      "path": "^lib/check_silent_swallow\\.py$",
+      "file": "lib/check_silent_swallow.py",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "bsilent",
+      "path": "^lib/check_silent_swallow_ansible\\.py$",
+      "file": "lib/check_silent_swallow_ansible.py",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "bsilent",
+      "path": "^lib/check_silent_swallow_base\\.py$",
+      "file": "lib/check_silent_swallow_base.py",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "bsilent",
+      "path": "^lib/check_silent_swallow_js\\.py$",
+      "file": "lib/check_silent_swallow_js.py",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "bsilent",
+      "path": "^lib/check_silent_swallow_python\\.py$",
+      "file": "lib/check_silent_swallow_python.py",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "bsilent",
+      "path": "^lib/check_silent_swallow_shell\\.py$",
+      "file": "lib/check_silent_swallow_shell.py",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "bsilent",
+      "path": "^lib/check_silent_swallow_system\\.py$",
+      "file": "lib/check_silent_swallow_system.py",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "bsilent",
+      "path": "^lib/checks_silent\\.sh$",
+      "file": "lib/checks_silent.sh",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "bsilent",
+      "path": "^scripts/extract-swallow-source\\.py$",
+      "file": "scripts/extract-swallow-source.py",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "bsilent",
+      "path": "^web/src/data/hook-sources\\.json$",
+      "file": "web/src/data/hook-sources.json",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "bsilent",
+      "path": "^web/src/data/swallow-detectors\\.json$",
+      "file": "web/src/data/swallow-detectors.json",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "bsilent",
+      "path": "^web/src/lib/card-adapters\\.ts$",
+      "file": "web/src/lib/card-adapters.ts",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "bsilent",
+      "path": "^web/src/lib/search-data\\.ts$",
+      "file": "web/src/lib/search-data.ts",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "bsilent",
+      "path": "^web/src/lib/yaml-loader\\.ts$",
+      "file": "web/src/lib/yaml-loader.ts",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "bskeleton-b",
+      "path": "^docs/requirements/REQ-BANNED-PATTERN-MATCHING\\.md$",
+      "file": "docs/requirements/REQ-BANNED-PATTERN-MATCHING.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "bstubs-b",
+      "path": "^mypy\\.toml$",
+      "file": "mypy.toml",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "protected-bare-system-interpreter",
+      "path": "^docs/TODO-REMEDIATION\\.md$",
+      "file": "docs/TODO-REMEDIATION.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "protected-bare-system-interpreter",
+      "path": "^docs/audits/AUDIT-EXEMPTION-DATA-MODEL-2026-09-05\\.md$",
+      "file": "docs/audits/AUDIT-EXEMPTION-DATA-MODEL-2026-09-05.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "protected-bare-system-interpreter",
+      "path": "^docs/requirements/REQ-BANNED-PATTERN-MATCHING\\.md$",
+      "file": "docs/requirements/REQ-BANNED-PATTERN-MATCHING.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "protected-bare-system-interpreter",
+      "path": "^tests/unit/scaffold/test_scaffold_ci\\.sh$",
+      "file": "tests/unit/scaffold/test_scaffold_ci.sh",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "protected-bare-system-interpreter",
+      "path": "^web/Containerfile$",
+      "file": "web/Containerfile",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "protected-bare-system-interpreter",
+      "path": "^web/src/components/wiki/playground/CodeEditor\\.tsx$",
+      "file": "web/src/components/wiki/playground/CodeEditor.tsx",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "rule",
+      "path": "^docs/audits/AUDIT-POLICY-V5-ACTIVATION-2026-09-06\\.md$",
+      "file": "docs/audits/AUDIT-POLICY-V5-ACTIVATION-2026-09-06.md",
+      "match_count": 1,
+      "rationale": "Quotes the rule while documenting its scoping",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-07",
+      "removal": "When quoting ends."
+    },
+    {
+      "source": "project",
+      "rule": "rule",
+      "path": "^docs/requirements/REQ-PORTABILITY\\.md$",
+      "file": "docs/requirements/REQ-PORTABILITY.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "rule",
+      "path": "^docs/specifications/SPEC-PORTABILITY\\.md$",
+      "file": "docs/specifications/SPEC-PORTABILITY.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "rule",
+      "path": "^lib/check_silent_swallow\\.py$",
+      "file": "lib/check_silent_swallow.py",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "rule",
+      "path": "^lib/checks_silent\\.sh$",
+      "file": "lib/checks_silent.sh",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "rule",
+      "path": "^scripts/deploy-ci$",
+      "file": "scripts/deploy-ci",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "rule",
+      "path": "^scripts/reinstall-hooks$",
+      "file": "scripts/reinstall-hooks",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "rule",
+      "path": "^scripts/rewrite-history$",
+      "file": "scripts/rewrite-history",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "rule",
+      "path": "^scripts/run-candidate-namespace$",
+      "file": "scripts/run-candidate-namespace",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "rule",
+      "path": "^scripts/verify-immutable$",
+      "file": "scripts/verify-immutable",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "rule",
+      "path": "^scripts/verify-immutable-batch$",
+      "file": "scripts/verify-immutable-batch",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "rule",
+      "path": "^web/src/data/hook-sources\\.json$",
+      "file": "web/src/data/hook-sources.json",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "rule",
+      "path": "^web/src/data/script-sources\\.json$",
+      "file": "web/src/data/script-sources.json",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "suppress",
+      "path": "^lib/check_silent_swallow\\.py$",
+      "file": "lib/check_silent_swallow.py",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "suppress",
+      "path": "^lib/checks_silent\\.sh$",
+      "file": "lib/checks_silent.sh",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "u2014",
+      "path": "^AGENTS\\.md$",
+      "file": "AGENTS.md",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "venv-bin-python",
+      "path": "^ci/_boot_layout_helpers\\.py$",
+      "file": "ci/_boot_layout_helpers.py",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "venv-bin-python",
+      "path": "^ci/check_boot_venv_layout\\.py$",
+      "file": "ci/check_boot_venv_layout.py",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "venv-bin-python",
+      "path": "^docs/TODO-REMEDIATION\\.md$",
+      "file": "docs/TODO-REMEDIATION.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "venv-bin-python",
+      "path": "^docs/audits/AUDIT-DEPLOYMENT-DEADLOCK-2026-08-19\\.md$",
+      "file": "docs/audits/AUDIT-DEPLOYMENT-DEADLOCK-2026-08-19.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "venv-bin-python",
+      "path": "^docs/audits/AUDIT-EXEMPTION-DATA-MODEL-2026-09-05\\.md$",
+      "file": "docs/audits/AUDIT-EXEMPTION-DATA-MODEL-2026-09-05.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "venv-bin-python",
+      "path": "^docs/audits/AUDIT-POLICY-EXEMPTION-CLASSIFICATION-2026-08-21\\.md$",
+      "file": "docs/audits/AUDIT-POLICY-EXEMPTION-CLASSIFICATION-2026-08-21.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "venv-bin-python",
+      "path": "^docs/audits/AUDIT-REMEDIATION-EXECUTION-FAILURE-2026-08-20\\.md$",
+      "file": "docs/audits/AUDIT-REMEDIATION-EXECUTION-FAILURE-2026-08-20.md",
+      "match_count": 1,
+      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "universal",
+      "rule": "venv-bin-python",
+      "path": "^tests/unit/test_check_boot_venv_layout_precommit\\.py$",
+      "file": "tests/unit/test_check_boot_venv_layout_precommit.py",
+      "match_count": 1,
+      "rationale": "File's defined role requires quoting this rule.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-05",
+      "removal": "Remove when the file no longer quotes the rule."
+    }
+  ],
+  "classifications": [
+    {
+      "file": "config/banned_words.schema.yaml",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "config/banned_words.yaml",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "config/banned_words_exceptions.yaml",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "config/banned_words_exceptions_v5.yaml",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "config/exemption_files.yaml",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "config/file_classifications.yaml",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "config/required_hooks.schema.yaml",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "config/required_hooks.yaml",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "config/silent_swallow_exceptions.schema.yaml",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "config/silent_swallow_exceptions.yaml",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "config/silent_swallow_patterns.schema.yaml",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "config/silent_swallow_patterns.yaml",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "config/standards.schema.yaml",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "config/standards.yaml",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "config/wiki_labels.yaml",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "docs/TODO-POLICY-EXEMPTION-REMEDIATION.md",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "docs/TODO-REMEDIATION.md",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "docs/audits/AUDIT-DEPLOY-TOOL-INVENTORY-2026-09-06.md",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "docs/audits/AUDIT-REMEDIATION-EXECUTION-FAILURE-2026-08-20.md",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "docs/proposals/PROPOSAL-SHELL-GUARD-INTERPRETER-COVERAGE-2026-09-06.md",
+      "class": "policy-definition",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "package-lock.json",
+      "class": "lock",
+      "validated_by": "lockfile sync checks",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "reports/effective-exemptions.json",
+      "class": "generated",
+      "validated_by": "ci.check_effective_exemptions --check",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "res/LOGO.png",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "tests/integration/test_e2e_checks.sh",
+      "class": "fixture",
+      "validated_by": "focused scanner test suites",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "tests/unit/test_banned_words.sh",
+      "class": "fixture",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "tests/unit/test_checks.sh",
+      "class": "fixture",
+      "validated_by": "focused scanner test suites",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "tests/web/lib/patterns.test.ts",
+      "class": "fixture",
+      "validated_by": "focused scanner test suites",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "uv.lock",
+      "class": "lock",
+      "validated_by": "lockfile sync checks",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/LOGO.png",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/LOGO_DARK_THEME.png",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/LOGO_LIGHT_THEME.png",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/standards/bletchley-declaration.pdf",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/standards/china-interim-measures-genai.pdf",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/standards/coe-framework-convention-ai.pdf",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/standards/eu-ai-act-2024-1689.pdf",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/standards/g7-hiroshima-code-of-conduct.pdf",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/standards/nist-ai-600-1-genai-profile.pdf",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/standards/nist-ai-rmf-1.0.pdf",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/standards/oecd-ai-principles.pdf",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/standards/seoul-declaration.pdf",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/standards/singapore-model-ai-gov-framework.pdf",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/standards/singapore-model-ai-gov-genai.pdf",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/standards/un-governing-ai-for-humanity.pdf",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/standards/unesco-ai-ethics-recommendation.pdf",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/standards/us-ai-bill-of-rights.pdf",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/public/standards/us-eo-14110-ai.pdf",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/res/LOGO.png",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/res/LOGO_DARK_THEME.png",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/res/LOGO_LIGHT_THEME.png",
+      "class": "binary",
+      "validated_by": "",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/src/data/hook-sources.json",
+      "class": "generated",
+      "validated_by": "make extract-hook-sources extract-script-sources && git diff --exit-code",
+      "owner": "workspace-ci"
+    },
+    {
+      "file": "web/src/data/script-sources.json",
+      "class": "generated",
+      "validated_by": "make extract-hook-sources extract-script-sources && git diff --exit-code",
+      "owner": "workspace-ci"
+    }
+  ]
+}

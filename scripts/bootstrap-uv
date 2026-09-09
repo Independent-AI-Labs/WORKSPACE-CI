@@ -27,7 +27,7 @@
 # Supply-chain pinning: SHA256 verification is MANDATORY and always on.
 # The checksum is fetched at runtime from the .sha256 sidecar file
 # published alongside the tarball on the GitHub release page. No hardcoded
-# hashes are used -- the sidecar is the trusted source of truth, fetched
+# hashes are used: the sidecar is the trusted source of truth, fetched
 # from the same release origin as the tarball.
 
 set -euo pipefail

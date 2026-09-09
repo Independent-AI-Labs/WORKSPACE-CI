@@ -7,6 +7,27 @@ Policy and exemption hardening is tracked separately in
 `docs/TODO-POLICY-EXEMPTION-REMEDIATION.md`; both ledgers are mandatory for
 completion.
 
+## Root-Only Hook Installation (2026-08-31; supersedes H5 rationale)
+
+- [x] `reinstall-hooks` non-root branch deleted: it previously generated
+      user-owned, mutable hooks; it now refuses non-root invocation with
+      exit 1 and a `sudo make install-hooks` diagnostic. Hooks are only
+      ever installed root-owned and immutable. There is no user-owned
+      hook installation path.
+- [x] WORKSPACE-VM `ALLOW_UNLOCKED=1` bypass removed (introduced by
+      `07a2c91` as the "H5 fix", which re-created the exact hole it
+      claimed to close): umbrella `install`/`install-ci` no longer touch
+      hooks; `install-hooks` and `install-hooks-recursive` are root-only
+      with no override.
+- [x] Consumer contract updated: `templates/Makefile.consumer` `install`
+      and `sync` no longer chain `install-hooks`; FR-SC-7.9 added;
+      REQ-SCAFFOLD-CI acceptance #6 now asserts non-root refusal.
+- [ ] After deploy: run `sudo make install-hooks-recursive` and verify
+      `guard reconcile` reports zero immutable-flag warnings in every
+      consumer repo; verify a non-root `make install-hooks` refusal in
+      one consumer with execution evidence.
+
+
 ## Fail-Open Gate Audit (2026-08-24; full-transcript evidence)
 
 - [x] FO-1 coverage gate: pytest printed `FAIL Required test coverage of
@@ -78,24 +99,25 @@ completion.
 
 ## Hook-Entry Integrity (deadlock prevention; 2026-08-24 portable_shell incident)
 
-- [ ] Generation-time refusal: `scripts/generate-hooks` resolves every
-      `config/required_hooks.yaml` `entry:` (shell: `declare -F` after
-      sourcing `lib/checks.sh`; python: `python -m` import probe) before
-      rendering; refuse to emit a hook with an unresolvable entry.
-- [ ] Commit-time verification: `ci/check_required_hooks_present.py`
-      verifies every catalog entry resolves in the sourced lib; a tree
-      that drops a function while keeping its catalog entry cannot
-      commit (runs in source pre-commit and in candidate `check-push`,
-      hence also blocks deploy).
-- [ ] Tests: entry-dropped-but-catalog-kept fails generation and the
-      self-check; restored entry passes both.
-- [ ] Root-cause record: the `a37d062`-era `lib/checks_files.sh` refactor
+- [x] Generation-time refusal: `scripts/generate-hooks:43-83` resolves every
+      `config/required_hooks.yaml` `entry:` (shell functions against
+      `lib/*.sh` definitions; python modules as files/dirs) before rendering
+      and exits 1 on any unresolvable entry ("entry integrity" pass).
+- [x] Commit-time verification: `ci/check_required_hooks_present.py:344-416`
+      (Invariant 4 entries) verifies every catalog entry resolves in the
+      sourced lib; runs in source pre-commit and in candidate `check-push`,
+      hence also blocks deploy.
+- [x] Tests: `tests/unit/test_check_required_hooks_invariant4.py` (10 cases:
+      entry-dropped-but-catalog-kept flagged for shell and python kinds,
+      accepted when present, safety coherence).
+- [x] Root-cause record: the `a37d062`-era `lib/checks_files.sh` refactor
       dropped `ci_check_portable_shell` while `required_hooks.yaml:118`
       and `.pre-commit-config.yaml` kept it; the `000a754` deploy shipped
       the broken hook; every commit then failed at
       `check-portable-shell`. Function restored in tree 2026-08-24
-      (pending commit); deployed copy still broken until the one-time
-      unblock below.
+      (landed with the later commits); deployed copy verified resolved at
+      `/opt/workspace-ci/lib/checks_files.sh:323` (2026-09-05 read-only
+      check).
 
 ## Invariant 4 Extension: Safety-Marked Catalog Fields (done 2026-08-24)
 
@@ -115,13 +137,15 @@ completion.
 
 ## One-Time Deadlock Unblock (operator)
 
-- [ ] Operator lands the staged working-tree fix (restored
-      `ci_check_portable_shell` in `lib/checks_files.sh`, restored
-      `tests/unit/test_deploy_ci.py`, message at
-      `/tmp/opencode/pdf-msg.txt`) via root-path commit or `/opt`
-      hand-patch, then `sudo make deploy-ci`.
-- [ ] After the fix deploy: verify `check-portable-shell` resolves in
-      `/opt/workspace-ci/lib/checks_files.sh` and a clean commit passes.
+- [x] Superseded: the staged working-tree fix landed through the normal
+      guarded flow (subsequent commits and deployments `d956844`/`bc6c0b0`/
+      `e005d53`/`0862eca`); the referenced message file
+      `/tmp/opencode/pdf-msg.txt` no longer exists and no `/opt`
+      hand-patch was required.
+- [x] After the fix deploy: `check-portable-shell` verified resolved in
+      `/opt/workspace-ci/lib/checks_files.sh:323` (read-only check,
+      2026-09-05); commits `d956844`/`bc6c0b0` passed the deployed hook
+      chain.
 
 ## Capability-Loss Restoration (AUDIT-CAPABILITY-LOSS-2026-08-23 backlog)
 
@@ -130,24 +154,29 @@ completion.
 - [x] Restore `tests/unit/test_bootstrap_rust.py` with
       enter-candidate-namespace lockdown-assertion allowlist (`88587a6`).
 - [x] Restore `tests/unit/test_podman_guard.py` unchanged (`3e09957`).
-- [ ] Restore `tests/unit/test_deploy_ci.py` reconciled to the
-      namespace-runner build architecture (staged in tree; blocked on the
-      one-time unblock).
-- [ ] Restore `tests/integration/test_dependency_checker_integration.py`.
-- [ ] Restore `scripts/cleanup-precommit` as a documented operator-only
-      tool plus its traps test (GATEWAY consumer was removed with the
-      `clean-precommit` target).
-- [ ] Restore the scaffold-ci subsystem (`scripts/scaffold-ci`,
+- [x] Restore `tests/unit/test_deploy_ci.py` reconciled to the
+      namespace-runner build architecture (present in tree; the former
+      "blocked on the one-time unblock" state is resolved).
+- [x] Restore `tests/integration/test_dependency_checker_integration.py`
+      (present in tree).
+- [x] Restore `scripts/cleanup-precommit` as a documented operator-only
+      tool plus its traps test (`tests/unit/test_cleanup_precommit.sh`;
+      GATEWAY consumer was removed with the `clean-precommit` target).
+- [x] Restore the scaffold-ci subsystem (`scripts/scaffold-ci`,
       `lib/scaffold_lib.sh`, `lib/scaffold_analyze.sh`) deleted in
-      `f7422dc`; consumer scaffolding vacuum was filled by the stale
-      `../CI` clone when GATEWAY's config was regenerated 2026-08-22.
-- [ ] Write `docs/audits/AUDIT-CAPABILITY-LOSS-2026-08-23.md`: systematic
-      old `projects/CI` vs new tree differential; classify every
-      divergence superseded / dead-reference / dropped-capability.
-- [ ] Root-cause record: the rewritten-history rewriter's guard bypass
+      `f7422dc`; all three present in tree (worktree carries the
+      HITL-terminology updates to `lib/scaffold_analyze.sh`); consumer
+      scaffolding vacuum was filled by the stale `../CI` clone when
+      GATEWAY's config was regenerated 2026-08-22.
+- [x] Write `docs/audits/AUDIT-CAPABILITY-LOSS-2026-08-23.md`: systematic
+      old `projects/CI` vs new tree differential; every divergence
+      classified superseded / dead-reference / dropped-capability
+      (F-1 through F-4 plus pattern summary and open items).
+- [x] Root-cause record: the rewritten-history rewriter's guard bypass
       (PATH prepend to real git) is doubly defeated as agent (shell-guard
-      PATH normalization; `git.original` 0700 root); document the tool as
-      operator-only.
+      PATH normalization; `git.original` 0700 root); documented
+      operator-only in `docs/audits/AUDIT-CAPABILITY-LOSS-2026-08-23.md`
+      and the `scripts/rewrite-history` header.
 
 ## Pre-Commit Index-Snapshot Semantics (2026-08-24 finding)
 
@@ -314,12 +343,25 @@ completion.
 - [x] Remove system Python from deployed-root unsealing before atomic exchange in `scripts/deploy-ci`; replaced by native `attr_root -i` plus `mv -T` rename publication (same-filesystem rename is an allowed publication form).
 - [x] Remove system Python from atomic directory exchange in `scripts/deploy-ci`; replaced by two `mv -T` renames with guarded previous-artifact removal.
 - [x] Remove system Python from final deployed-root sealing in `scripts/deploy-ci`; replaced by native `attr_root +i`.
-- [ ] Preserve the two deployed-`uv --project /opt/workspace-ci --no-sync python` runtime checks as hermetic final-artifact verification.
+- [x] Preserve the two deployed-`uv --project /opt/workspace-ci --no-sync python`
+      runtime checks as hermetic final-artifact verification (present at
+      `scripts/deploy-ci:218` and `res/ansible/deploy-ci.yml:70`).
 - [x] Identify why banned-word scanning missed system Python: blanket `python3?` exceptions cover all `.sh`/`.py` files and all `scripts/` paths.
-- [ ] Remove blanket `python3?` exceptions for `.sh`, `.py`, and `scripts/` from banned-word policy.
-- [ ] Replace blanket Python exceptions with exact path-scoped exceptions only for justified language detection, documentation, generated data, and bootstrap directory names.
+- [x] Remove blanket `python3?` exceptions for `.sh`, `.py`, and `scripts/`
+      from banned-word policy (2026-09-05 grep evidence: every remaining
+      `python3?`-family entry is an anchored exact single-file exemption
+      (4 universal + 5 project) plus the rule definition itself at
+      `config/banned_words.yaml:985`; no extension-wide, `lib/`, `tests/`,
+      or `scripts/` entry remains).
+- [x] Replace blanket Python exceptions with exact path-scoped exceptions
+      only for justified language detection, documentation, generated data,
+      and bootstrap layout assertions (exact files: REQ/TODO/audit docs,
+      `web/Containerfile$`, `AGENTS.md`, scaffold test, CodeEditor.tsx,
+      boot-layout checker files; the stale in-file comment above the old
+      block at `config/banned_words.yaml:128-131` is superseded by the
+      single-cut replacement).
 - [ ] Complete the authoritative scanner and exemption items in `docs/TODO-POLICY-EXEMPTION-REMEDIATION.md`; do not duplicate their completion state here.
-- [x] Add a policy-integrity test that rejects extension-wide or directory-wide exceptions for the deprecated-Python category (`tests/unit/test_policy_integrity.py`, 13 tests, wired as mandatory `check-policy-integrity` hook in `d956844`).
+- [x] Add a policy-integrity test that rejects extension-wide or directory-wide exceptions for the deprecated-Python category (`tests/unit/test_policy_integrity.py`, 13 tests, wired as mandatory `check-policy-integrity` hook in `d956844`). Correction 2026-09-05: the hook is wired in `.pre-commit-config.yaml` but still NOT registered in root-owned `config/required_hooks.yaml`; registration is the remaining root-only piece tracked in TODO-POLICY-EXEMPTION-REMEDIATION P0 item 18.
 - [ ] Edit root-owned banned-word policy only through the guarded YAML interface and regenerate scanner documentation data.
 - [x] Enable native Bash execution tracing in `scripts/deploy-ci` so commands appear when executed.
 - [x] Keep deployment stdout and stderr directed to the actively tailed per-run log.
@@ -457,11 +499,20 @@ completion.
          root-owned; bootstrap verified checksum-true against the
          pin). Gate-gap candidate: nothing verifies the installed
          boot-dir tool versions against the pin minimums.
-- [ ] Ledger the WORKSPACE-GUARD yaml-edit splice defect: cannot append
+- [x] Ledger the WORKSPACE-GUARD yaml-edit splice defect: cannot append
       to indentless block sequences (discovered 2026-08-25 against
       `policy_integrity_baseline.yaml`; splice inserts at key-indent+2
-      and its verification re-parse fails). Track as WORKSPACE-GUARD
+      and its verification re-parse fails). Tracked as WORKSPACE-GUARD
       issue; our generator now emits indented sequences.
+      RESOLVED 2026-09-06 as tool-enforced (generator discipline alone
+      already failed once against the v5 policy flip):
+      `workspace-yaml-edit` gained `check` (unprivileged syntax +
+      schema + shape preflight) and `format` (audited, verified,
+      idempotent reindent), every mutating intent now refuses
+      indentless targets with a specific error before any transform
+      (SPEC-YAML-EDIT §3.7, operator ruling 2026-09-06), and the
+      compiled-in schemas for banned/silent exception files follow the
+      v5 entry shape. Guard tests 88/88.
 - [ ] Stale `../CI` tree disposition (operator decision): unreferenced
       by anything live since the GATEWAY regeneration; reconcile or
       remove.

@@ -253,3 +253,12 @@ hooks:
     applicable_to:
       - any
     safety: true
+  - id: check-policy-integrity
+    kind: shell
+    entry: ci_check_policy_integrity
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    applicable_to:
+      - any

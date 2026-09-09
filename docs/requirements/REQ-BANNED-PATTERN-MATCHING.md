@@ -255,10 +255,16 @@ as arbitrary nested encodings.
    are forbidden.
 9. Exemption paths MUST undergo the same path normalization as scanned files.
 10. Non-exemptible rules remain active for every case, separator, escaped, and
-   path variant.
+    path variant.
 11. Exemption matching zero files or multiple files MUST fail policy integrity.
 12. A rename or move MUST invalidate the old exemption and require a new exact
-    reviewed entry.
+     reviewed entry.
+13. Project exemptions MUST live in the generation-named file
+    `config/banned_words_exceptions_v5.yaml`. A breaking policy-generation
+    cut MUST use the expand-contract transition of
+    DECISION-POLICY-GENERATION-TRANSITION-2026-09-08: the unversioned file
+    bridges the old schema for exactly one commit window and is deleted by
+    the contract commit immediately after the new generation deploys.
 
 ## 16. Regex Integrity
 
@@ -305,8 +311,29 @@ classification, never from a hardcoded directory name.
 5. Maximum time and memory budgets MUST be documented from measured runs.
 6. Exceeding a resource budget MUST fail closed with a specific diagnostic.
 
-## 19. Acceptance
+## 19. Effective-Exemption Receipt
 
+1. The checker MUST provide a deterministic generator that resolves every
+   universal and project exemption against the tracked file tree and emits a
+   machine-readable report: for each exemption, its identity (source, rule ID,
+   path) and its resolved target file; plus policy digest and counts.
+2. The generated report MUST be committed as a reviewed artifact
+   (`reports/effective-exemptions.json`). It is a receipt, never a policy
+   surface: it MUST contain nothing that is not derivable from the YAML policy
+   plus the tracked file list, and it MUST never be hand-edited.
+3. The protected gate MUST regenerate the resolution and fail on any delta
+   against the committed artifact: exemption added, exemption removed, or
+   exemption target changed (rename/move/new match). This is the
+   generated-artifact drift-check pattern (regenerate + diff against committed
+   output), the same mechanism as lockfile enforcement and codegen sync gates.
+4. The artifact file MUST be classified `generated` in the file-classification
+   manifest so content scanning skips machine-produced content whose truth
+   lives in the YAML source.
+5. Regeneration MUST refuse to write when the live resolution has violations
+   (exemption matching zero or more than one tracked file); regeneration after
+   human review is the only way the receipt changes.
+
+## 20. Acceptance
 Acceptance tests MUST prove:
 
 1. case variants cannot evade any normalized rule;
@@ -332,4 +359,7 @@ Acceptance tests MUST prove:
 15. newly introduced directory names require no checker update;
 16. no hardcoded protected-directory allowlist exists in checker code or policy.
 17. every exemption entry resolves to one tracked regular file and one rule ID;
-18. no exemption entry contains a list of files or rules.
+18. no exemption entry contains a list of files or rules;
+19. regenerating the receipt after an exemption-affecting change without review
+    fails the drift check, and committing the regenerated receipt in the same
+    change passes it.

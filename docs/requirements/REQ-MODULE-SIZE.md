@@ -3,8 +3,8 @@
 **Status:** Active blank-slate requirement
 
 The module-size gate applies to the WORKSPACE-CI source tree only. It does not
-define policies for other projects, active policy generations, compatibility
-inputs, or prior policy records.
+define policies for other projects, active policy generations, prior-install
+support inputs, or prior policy records.
 
 ## Limits
 
@@ -21,7 +21,7 @@ positional narrowing, missing or unreadable candidates, symlink escapes,
 malformed policy YAML, unknown fields, duplicate keys, and invalid limits.
 
 The policy file is parsed strictly as part of candidate verification. The
-checker returns stable diagnostics and never silently skips a candidate.
+checker returns stable diagnostics and never skips a candidate unlogged.
 
 ## Acceptance
 

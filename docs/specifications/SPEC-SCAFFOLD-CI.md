@@ -25,7 +25,7 @@
 - [`lib/makefile_contract.mk`](../../lib/makefile_contract.mk): the contract the generated `Makefile` MUST satisfy
 - [`templates/quality_exceptions.template.yaml`](../../templates/quality_exceptions.template.yaml): existing template; `scaffold-ci` renders it per-consumer
 - `templates/project_enforcement.template.yaml`: the workspace-level tier registry referenced by the original design; removed with the enforcement-tier collapse (f7422dc era) and not restored. The profile `tier` field now selects strict/poc/vendored behavior directly
-- AGENTS.md S5 (shell-first), S6 (precision edits), S13 (no unlogged degradation), S14 (shell strict mode): absolute constraints on the generator implementation
+- AGENTS.md S5 (shell-first), S6 (precision edits), S13 (no unlogged quality loss), S14 (shell strict mode): absolute constraints on the generator implementation
 
 ---
 
@@ -36,11 +36,11 @@
 Today, consumer projects (WORKSPACE-GUARD, WORKSPACE-VM, the freshly-created
 WORKSPACE-GATEWAY) integrate with WORKSPACE-CI by **hand-writing** two files:
 
-- `.pre-commit-config.yaml` -- a list of `repo: local` hooks, each with a
+- `.pre-commit-config.yaml`: a list of `repo: local` hooks, each with a
   path-specific `entry:` (e.g. `bash -c 'source ../CI/lib/checks.sh && ...'`
   for projects immediately under `projects/`, vs
   `bash -c 'source ../../CI/lib/checks.sh && ...'` for nested grandschildren).
-- `Makefile` -- a hand-written contract Makefile with the 10 mandatory targets
+- `Makefile`: a hand-written contract Makefile with the 10 mandatory targets
   from `lib/makefile_contract.mk` (`init`, `install`, `install-ci`,
   `install-hooks`, `sync`, `check`, `lint`, `type-check`, `test`, `clean`,
   `preflight`).
@@ -48,7 +48,7 @@ WORKSPACE-GATEWAY) integrate with WORKSPACE-CI by **hand-writing** two files:
 The two files share a hidden invariant: the relative path from the consumer
 to `projects/CI`. Every `entry:` in the YAML and every `CI_DIR` assignment
 in the Makefile must encode that path consistently. There is no validator
-for this invariant today -- drift is detected only at runtime, often as
+for this invariant today: drift is detected only at runtime, often as
 `source: no such file` failures in the middle of a developer's `git commit`.
 
 Config files compound the problem. Per-project-overridable configs
@@ -67,16 +67,16 @@ plus a **CI profile YAML** (declaring desired hooks, stage, ordering, project
 languages, and enforcement tier) and emits a complete, consistent CI
 integration package:
 
-1. **`ci-profile.yaml`** (lives at the consumer's repo root) -- the canonical
+1. **`ci-profile.yaml`** (lives at the consumer's repo root): the canonical
    per-project declaration of "what CI gates I want and in what order."
-2. **`.pre-commit-config.yaml`** -- generated from the profile, with all
+2. **`.pre-commit-config.yaml`**: generated from the profile, with all
    relative paths computed from the consumer-to-CI offset.
-3. **`Makefile`** -- generated with full contract targets; language-specific
+3. **`Makefile`**: generated with full contract targets; language-specific
    targets (`lint`, `type-check`, `test`) are vacuous pass targets with `TODO` comments
    the consumer fills in.
-4. **`config/` directory** -- the six per-project-overridable config files
+4. **`config/` directory**: the six per-project-overridable config files
    copied from CI defaults as starting seeds.
-5. **`quality_exceptions.yaml`** -- rendered from the existing template with
+5. **`quality_exceptions.yaml`**: rendered from the existing template with
    the project name substituted.
 
 The generator is **idempotent and force-aware**: rerunning it with
@@ -98,7 +98,8 @@ exits non-zero with a list of the files it refused to overwrite.
 
 `scaffold-ci` produces the **input** for `generate-hooks`. It does NOT
 replace `generate-hooks`. The two scripts are independent: a consumer can
-re-run `make install-hooks` (which calls `generate-hooks`) without
+re-run `make install-hooks` (which calls `reinstall-hooks`, root-only:
+hooks are installed root-owned and immutable) without
 re-running `scaffold-ci`, and vice versa.
 
 ### 1.3 Scope
@@ -138,7 +139,7 @@ re-running `scaffold-ci`, and vice versa.
   in-scope files (§1.2). `.gitignore` management is the consumer's
   responsibility.
 - Copy of the global (non-overridable) configs:
-  `banned_words.yaml`, `banned_words_exceptions.yaml`, `schemas`,
+  `banned_words.yaml`, `banned_words_exceptions_v5.yaml`, `schemas`,
   `blocked_commit_patterns.yaml`, `required_hooks.yaml`,
   `silent_swallow_patterns.yaml`, `sensitive_files.yaml`,
   `boot_layout.yaml`. These belong to CI; consumers MUST NOT shadow them.
@@ -229,14 +230,14 @@ overrides:
 
 | Field | Type | Required | Default | Notes |
 |-------|------|----------|---------|-------|
-| `version` | int | yes | -- | MUST be `1`. Future profiles bump this. |
-| `project` | string | yes | -- | Rendered into `quality_exceptions.yaml::project`. Used by the compliance checker to label violations. May contain alphanumerics, `_`, `-`, `.`. No whitespace. |
-| `languages` | list[str] | yes | -- | Each entry in {any, python, rust, node}. `any` is exclusive (cannot coexist with others). |
-| `tier` | string | yes | -- | One of {strict, poc, vendored}. |
-| `hooks` | map | yes (unless tier=vendored) | -- | Map keyed by stage name. Stage keys: `pre-commit`, `commit-msg`, `pre-push`. Any other key is a validation failure. |
+| `version` | int | yes | n/a | MUST be `1`. Future profiles bump this. |
+| `project` | string | yes | n/a | Rendered into `quality_exceptions.yaml::project`. Used by the compliance checker to label violations. May contain alphanumerics, `_`, `-`, `.`. No whitespace. |
+| `languages` | list[str] | yes | n/a | Each entry in {any, python, rust, node}. `any` is exclusive (cannot coexist with others). |
+| `tier` | string | yes | n/a | One of {strict, poc, vendored}. |
+| `hooks` | map | yes (unless tier=vendored) | n/a | Map keyed by stage name. Stage keys: `pre-commit`, `commit-msg`, `pre-push`. Any other key is a validation failure. |
 | `hooks.<stage>` | list[str] | no | `[]` | Each entry MUST be a hook ID present in `config/required_hooks.yaml`. |
 | `overrides` | map | no | `{}` | Keys are hook IDs; values are partial hook metadata dicts. Allowed override fields: `entry`, `files`, `exclude`, `always_run`, `pass_filenames`. Any other field is a validation failure. |
-| `overrides.<id>.entry` | string | no | inherited | Full entry string as it will appear in `.pre-commit-config.yaml`. The generator does NOT mutate it -- it writes it verbatim. Caller is responsible for embedding the correct relative path. |
+| `overrides.<id>.entry` | string | no | inherited | Full entry string as it will appear in `.pre-commit-config.yaml`. The generator does NOT mutate it: it writes it verbatim. Caller is responsible for embedding the correct relative path. |
 
 ### 3.4 Ordering Semantics
 
@@ -261,17 +262,17 @@ that order; the generator emits them in that order.
 It contains every hook from the master list, organised by stage, in the
 recommended order:
 
-1. **Safety hooks first within `pre-commit`** -- every hook with
+1. **Safety hooks first within `pre-commit`**: every hook with
    `safety: true` and `mandatory: true` appears before any non-safety
    hook in that stage.
-2. **Strict-tier mandatory hooks second** -- `mandatory: true AND
+2. **Strict-tier mandatory hooks second**: `mandatory: true AND
    safety: false`.
-3. **Exemptable / heuristic hooks third** -- `mandatory: false`.
+3. **Exemptable / heuristic hooks third**: `mandatory: false`.
 
 The template's only decoration is comments:
 
 ```yaml
-# ci-profile.template.yaml -- reference profile generated from
+# ci-profile.template.yaml: reference profile generated from
 # config/required_hooks.yaml by `scripts/scaffold-ci --emit-template`.
 # Copy this to <consumer>/ci-profile.yaml and trim per-project.
 # DO NOT edit this template by hand; regenerate it via
@@ -288,7 +289,7 @@ not a runtime input.
 
 The validator runs in five phases BEFORE any file is written. Failure in
 any phase exits non-zero BEFORE touching disk (per AGENTS.md Rule 13 --
-no unlogged degradation, partial writes are forbidden).
+no unlogged quality loss, partial writes are forbidden).
 
 ### 4.1 Phase A: Schema Parse
 
@@ -296,12 +297,12 @@ Read the supplied profile YAML. If the file does not exist or contains
 no top-level `version: 1` key, fail with `ci_fail` and exit 1. The awk
 parser (`lib/parse_hook_yaml.awk`) emits FS-delimited records; the bash
 driver collects them into shell variables. No Python dependency (per
-AGENTS.md Rule 5 -- shell-first for CI hooks).
+AGENTS.md Rule 5: shell-first for CI hooks).
 
 ### 4.2 Phase B: Required Fields
 
 Validate presence of: `version`, `project`, `languages`, `tier`, `hooks`
-(unless `tier: vendored`, in which case `hooks` is forbidden -- its
+(unless `tier: vendored`, in which case `hooks` is forbidden: its
 presence is a validation failure, signalling the profile author may have
 intended `strict`). Fail on first missing field with a list of all
 missing fields in the diagnostic (collect-then-fail, not fail-on-first,
@@ -315,7 +316,7 @@ for a better developer experience).
   rust, node}. The sentinel `any` MUST NOT coexist with other language
   entries (fail with diagnostic).
 - `project` MUST match `^[A-Za-z0-9][A-Za-z0-9_.-]*$` (alphanumeric start
-  plus limited punctuation -- never whitespace, never shell metacharacters).
+  plus limited punctuation: never whitespace, never shell metacharacters).
 - Stage keys under `hooks` MUST ⊆ {pre-commit, commit-msg, pre-push}.
   Anything else is a validation failure.
 - Each entry in a stage list MUST be a string (not number, not list).
@@ -426,9 +427,9 @@ phase E: if tier == vendored: exit 0
 
 ### 5.1 Inputs
 
-- `$CONSUMER_DIR` -- the path passed via `--consumer`. MUST be a directory.
+- `$CONSUMER_DIR`: the path passed via `--consumer`. MUST be a directory.
   Trailing slashes stripped before use.
-- `$CI_ROOT` -- the absolute path to `projects/CI` (computed by the script
+- `$CI_ROOT`: the absolute path to `projects/CI` (computed by the script
   as the parent of the script's own location: `_CI_ROOT="$(cd "$(dirname
   "$0")/.." && pwd)"`, identical to the pattern in `generate-hooks` line 9).
 
@@ -450,16 +451,16 @@ Examples:
 - The `Makefile::CI_DIR` assignment:
   `CI_DIR := $(abspath $(REPO_ROOT)/<REL_CI>)`
 - The `Makefile::install-hooks` recipe:
-  `bash <REL_CI>/scripts/generate-hooks`
+  `bash <REL_CI>/scripts/reinstall-hooks`
 
 `realpath --relative-to` is POSIX extension `realpath(1)` behaviour. It is
 available in coreutils >= 8.23 (already required by the workspace; the
 existing `generate-hooks` script at line 53 uses the same call). For
 defensiveness, if `realpath` is missing, the script fails fast with:
 ```
-FAILED: realpath(1) not found -- install coreutils >= 8.23.
+FAILED: realpath(1) not found: install coreutils >= 8.23.
 ```
-No unlogged degradation to `readlink -f` heuristic (per Rule 13).
+No unlogged quality loss to `readlink -f` heuristic (per Rule 13).
 
 ### 5.3 Why Not Just Compute from `git rev-parse --show-toplevel`?
 
@@ -510,14 +511,14 @@ The hook `kind` from `required_hooks.yaml` determines the `entry:` form:
 | `shell` | `bash -c 'source <REL_CI>/lib/checks.sh && <entry>'` |
 | `shell_inline` | `<entry>` (already complete; the entry IS the inline command) |
 | `shell_with_arg` (commit-msg stage) | `bash -c 'source <REL_CI>/lib/checks.sh && <entry> "$1"' --` |
-| `python_module` | `<REL_CI>/.venv/bin/python -m <entry>` |
-| `python_module_files` | `<REL_CI>/.venv/bin/python -m <entry> "$@"` (pass_filenames: true) |
+| `python_module` | `uv run --project <REL_CI> --no-sync python -m <entry>` |
+| `python_module_files` | `uv run --project <REL_CI> --no-sync python -m <entry> "$@"` (pass_filenames: true) |
 | `makefile_target` | `make <entry>` (the consumer's Makefile owns the implementation; no path injection needed) |
 
 The relative path `<REL_CI>` is substitute into the shell-source entries
 only. `makefile_target` entries run `make <target>` from the consumer's
 repo root (`$GIT_ROOT`), and the consumer's own Makefile resolves
-`CI_DIR` internally -- no `entry:` rewrite is needed.
+`CI_DIR` internally: no `entry:` rewrite is needed.
 
 ### 6.3 Override Application
 
@@ -538,7 +539,7 @@ generated `.pre-commit-config.yaml` (after override application):
 - `always_run`
 - `files` (if present)
 - `exclude` (if present)
-- `stages` is NOT emitted -- the generator groups hooks by stage as in
+- `stages` is NOT emitted: the generator groups hooks by stage as in
   `ci-profile.yaml`'s `hooks:` map, producing the same effect via the
   `stage` positional in the manifest. The existing `generate-hooks` parser
   already supports both forms (single `stages: [pre-push]` and grouped
@@ -551,7 +552,7 @@ generated `.pre-commit-config.yaml` (after override application):
   No generation occurs.
 - If a hook entry template references an unknown `kind`, the script fails
   with the offending hook ID and the unrecognised `kind` value. New kinds
-  require a code change to `scaffold-ci` (§6.2) -- adding entries to
+  require a code change to `scaffold-ci` (§6.2): adding entries to
   `required_hooks.yaml` is insufficient.
 - If the profile's `protobuf-style` schema validation encounters a YAML
   parse error, the script surfaces the `awk` parser's line number with the
@@ -601,14 +602,14 @@ help: ## Show this help
 .PHONY: preflight init install install-ci install-deps install-hooks sync
 preflight: ## Verify environment
 	@test -d "$(CI_DIR)" || { echo "ERROR: CI directory not found at $(CI_DIR)" >&2; exit 1; }
-	@test -f "$(CI_DIR)/scripts/generate-hooks" || { echo "ERROR: generate-hooks missing" >&2; exit 1; }
+	@test -f "$(CI_DIR)/scripts/reinstall-hooks" || { echo "ERROR: reinstall-hooks missing" >&2; exit 1; }
 	@echo "✓ Preflight OK"
 
 init: ## Install system-level dependencies
 	@echo "TODO: implement per-project system dependencies."
 	@:
 
-install: install-deps install-hooks ## Full install: deps + hooks
+install: install-deps ## Full install: deps (hooks install separately, root-only: sudo make install-hooks)
 	@:
 
 install-ci: install-deps ## CI install: deps only, no hooks
@@ -618,10 +619,10 @@ install-deps: ## Install project dependencies
 	@echo "TODO: implement per-project dependency install (uv sync / npm ci / cargo build)."
 	@:
 
-install-hooks: ## (Re)generate native git hooks
-	bash $(CI_DIR)/scripts/generate-hooks
+install-hooks: ## Install native git hooks (root-only: root-owned, immutable)
+	bash $(CI_DIR)/scripts/reinstall-hooks
 
-sync: install-deps install-hooks ## Sync deps + reinstall hooks
+sync: install-deps ## Sync deps (hooks install separately, root-only: sudo make install-hooks)
 	@:
 
 # =============================================================================
@@ -630,22 +631,18 @@ sync: install-deps install-hooks ## Sync deps + reinstall hooks
 .PHONY: check lint type-check test check-push clean clean-precommit
 
 check: lint type-check test ## Run all quality gates
-	@echo "TODO: wire lint+type-check+test implementations; this target passes vacuously."
+	@echo "TODO: wire lint+type-check+test implementations."
 
-lint: ## Lint -- TODO: implement (ruff / eslint / clippy -- see CI/Makefile for examples)
-	@echo "TODO: lint target: exit 0 (vacuous pass)."
+lint: ## Lint
 	@:
 
-type-check: ## Type-check -- TODO: implement (mypy / tsc / cargo check)
-	@echo "TODO: type-check target: exit 0 (vacuous pass)."
+type-check: ## Type-check
 	@:
 
-test: ## Test -- TODO: implement (pytest / vitest / cargo test)
-	@echo "TODO: test target: exit 0 (vacuous pass)."
+test: ## Test
 	@:
 
-check-push: ## Pre-push quality gate -- TODO: implement
-	@echo "TODO: check-push target: exit 0 (vacuous pass)."
+check-push: ## Pre-push quality gate
 	@:
 
 # =============================================================================
@@ -664,8 +661,9 @@ clean-precommit: ## Remove pre-commit framework traces
 The vacuous `lint`, `type-check`, and `test` targets each have `@:` (the
 bash no-op) as their recipe body, which exits 0. `make check` chains
 `lint && type-check && test`, all of which exit 0, so `make check` exits
-0. This is intentional: a brand-new project can immediately run `make
-install-hooks` and commit without picking up CI's strictness. The
+0. This is intentional: a brand-new project can immediately commit without
+picking up CI's strictness until the operator installs hooks via the
+root-only path (`sudo make install-hooks`). The
 consumer INCREMENTS in real implementations, replacing each `@:` with a
 real recipe. The `TODO:` comments are highly visible (echoed during the
 run), so the consumer cannot accidentally ship a vacuous target to production
@@ -680,7 +678,7 @@ for late-but-easy opt-in.
 
 The generated Makefile `-include`s `$(CI_DIR)/lib/makefile_contract.mk`
 which provides `make contract-check`. The contract validator only checks
-target PRESENCE via `make -n <target>` -- it does not inspect the recipe.
+target PRESENCE via `make -n <target>`: it does not inspect the recipe.
 Stubs satisfy the contract by definition (target is defined, `make -n`
 exits 0).
 
@@ -703,7 +701,7 @@ The following six files are copied from `CI/config/` into `<consumer>/config/`:
 
 ### 8.2 Why These Six (and No Others)
 
-These six are the per-project-OVERRIDABLE configs -- checkers read
+These six are the per-project-OVERRIDABLE configs: checkers read
 `<consumer>/config/<file>` first and use CI's stock file when absent.
 The remaining CI configs (`banned_words.yaml`, `silent_swallow_patterns.yaml`,
 `sensitive_files.yaml`, `blocked_commit_patterns.yaml`,
@@ -711,7 +709,7 @@ The remaining CI configs (`banned_words.yaml`, `silent_swallow_patterns.yaml`,
 POLICY shared across all consumers; copying them into each consumer would
 create unmanaged shadow-copies that drift.
 
-`boot_layout.yaml` is intentionally NOT scaffolded -- it lives at the
+`boot_layout.yaml` is intentionally NOT scaffolded: it lives at the
 WORKSPACE-VM root and at repos with their own `.boot-linux/` (per
 SPEC-BOOT-LAYOUT §4.1). Only repos that own a `boot_dir` need it; the
 generator therefore leaves `boot_layout.yaml` to the consumer's
@@ -875,7 +873,7 @@ lines starting with TAB) is appended to the existing file. A marker
 comment is inserted before the appended blocks:
 
 ```makefile
-# -- Appended by scaffold-ci --append-makefile [<timestamp>] --
+# Appended by scaffold-ci --append-makefile [<timestamp>]
 ```
 
 Targets present in both the template and the existing Makefile are
@@ -1104,7 +1102,7 @@ and assert filesystem state:
   - `<temp>/quality_exceptions.yaml` exists and contains
     `project: <project-name>`.
   - `<temp>/ci-profile.yaml` UNCHANGED by the run (the script never
-    mutates the profile file -- only the staged-down to auto-inserted
+    mutates the profile file: only the staged-down to auto-inserted
     hooks is captured in runtime state, not on disk).
 - **`scaffold_dry_run`**: same setup, with `--dry-run`; assert NO file
   was created in `<temp>` and stdout contains the header block for each
@@ -1128,7 +1126,7 @@ registered in `required_hooks.yaml`'s compliance check? NO --
 `scaffold-ci` is a Makefile target, not a git hook. It does not appear
 in `.pre-commit-config.yaml` and is not validated by
 `check_required_hooks_present`. Its manifest entry IS validated
-(optionally) by a future stricter manifest checker -- currently
+(optionally) by a future stricter manifest checker: currently
 `check_required_hooks_present` only validates the manifest exists; it
 does not check individual entries.
 
@@ -1151,7 +1149,7 @@ does not check individual entries.
 
 - [ ] Author `CI/scripts/scaffold-ci` implementing §11. Strict-mode
   compliant. Sources `lib/ci.sh`. Uses `lib/parse_hook_yaml.awk`.
-- [ ] Implement Phase A-E validation (§4) -- fail-fast, no partial
+- [ ] Implement Phase A-E validation (§4): fail-fast, no partial
   write.
 - [ ] Implement all six generation outputs (`.pre-commit-config.yaml`,
   `Makefile`, six `config/` files with post-processing, one
@@ -1194,19 +1192,20 @@ does not check individual entries.
    so `check` exits 0. The chain order matches the existing CI
    Makefile's own `check` target (lines 110-113). If the consumer wants
    `check` to run only lint + test (skip type-check), they edit their
-   own Makefile -- the generator never regenerates it without `--force`.
+   own Makefile: the generator never regenerates it without `--force`.
 
 3. **Python module hook entry form: direct venv or `uv run --project`?**
-   SPEC §6.2 table: `<REL_CI>/.venv/bin/python -m <entry>`. Direct venv
-   path, NOT `uv run --project`. Rationale: `uv run --project` is for
-   cross-project invocation (e.g., WORKSPACE-GUARD invoking CI's Python
-   check); the direct-venv path is simpler and matches CI's own
-   `.pre-commit-config.yaml` line 121
-   (`.venv/bin/python -m ci.check_markdown_docs`). WORKSPACE-GUARD uses
-   `uv run --project ../CI` (its `.pre-commit-config.yaml` line 52)
-   because it has no Python project of its own; consumers that DO have
-   Python deps need the direct venv path. The `overrides` block lets a
-   consumer opt into the `uv run` form if they want it.
+   `uv run --project <REL_CI> --no-sync python -m <entry>`, per the
+   §6.2 table. The direct-venv interpreter form was removed:
+   it couples hooks to one generated link and violates the hermetic
+   execution policy (the banned direct-venv interpreter pattern;
+   remediation recorded in `docs/TODO-REMEDIATION.md`). `uv run
+   --project` matches CI's own `.pre-commit-config.yaml`
+   (`uv run python -m ci.check_markdown_docs`) and the deployed
+   protected-hook form (`/opt/workspace-ci/.boot-linux/bin/uv run
+   --project /opt/workspace-ci --no-sync python -m ci.<check>`). The
+   `overrides` block lets a consumer override the entry if they want
+   another form.
 
 4. **Should `scaffold-ci` add the six config files to a `scaffolded`
    manifest the consumer can check-in?** SPEC: no. Each consumer tracks
@@ -1217,7 +1216,7 @@ does not check individual entries.
 
 5. **Should `scaffold-ci` add a `.gitignore` entry to the consumer
    so scaffolded files don't get accidentally committed?** SPEC: no.
-   The whole purpose is to commit them -- they're the CI contract. The
+   The whole purpose is to commit them: they're the CI contract. The
    only thing that SHOULD be gitignored is `ci-profile.yaml` if the
    consumer wants machine-local tier profiles, but that's a per-project
    decision the generator leaves to the consumer.
@@ -1228,7 +1227,7 @@ does not check individual entries.
    machine-local tier overrides (e.g., developer-laptop vs CI runner),
    they use the existing `project_enforcement.yaml` mechanism (which IS
    gitignored per `templates/project_enforcement.template.yaml` lines
-   1-7) -- `ci-profile.yaml` is the per-repo source of truth.
+   1-7): `ci-profile.yaml` is the per-repo source of truth.
 
 7. **What happens if a consumer reorders mandatory hooks?** SPEC §4.5:
    the generator never reorders user-declared hooks. If a profile puts
@@ -1254,8 +1253,8 @@ does not check individual entries.
 
 10. **What if a consumer wants NO checks at all?** SPEC: use
     `tier: vendored` in `ci-profile.yaml`. The generator exits 0 and
-    writes nothing. The consumer's `make install-hooks` will then find
-    no `.pre-commit-config.yaml` and `generate-hooks` already handles
+    writes nothing. The consumer's `sudo make install-hooks` will then
+    find no `.pre-commit-config.yaml` and `generate-hooks` already handles
     that case (it emits no hooks). For partial opt-out (some checks,
     not all), use `tier: poc`.
 
@@ -1279,12 +1278,12 @@ hold (see REQ-SCAFFOLD-CI.md for full FR/NFR numbering):
   scaffold → `generate-hooks` → inspect `.git/hooks/*`).
 - **NFR-1**: The generator is pure bash + awk (no Python). Sourced
   libraries restricted to `lib/ci.sh`.
-- **NFR-2**: No silent degradation. Every failure prints a diagnostic and
+- **NFR-2**: No silent quality loss. Every failure prints a diagnostic and
   exits non-zero. `--force` does not overwrite unannounced
   `quality_exceptions.yaml` or already-customised `config/` files.
 - **NFR-3**: Shell strict-mode compliant. No `| head`/`| tail` pipes;
   `PIPESTATUS[0]` captured on the line following every pipeline. No
-  bare `.` source -- only `source ... || exit N`.
+  bare `.` source: only `source ... || exit N`.
 - **NFR-4**: No banned words per `config/banned_words.yaml`
   (per `banned_words.yaml`) in the
   implementation.
@@ -1308,12 +1307,12 @@ integration by:
    `languages: [rust]` (gateway is Rust Proxy-Wasm + Rust sidecars +
    Lua plugins; no Python), `tier: strict`, trim the hook list to the
    applicable-given-Rust set (drop `check-init-files`,
-   `check-py-not-executable`, `check-no-dead-imports` -- Python-only).
+   `check-py-not-executable`, `check-no-dead-imports`: Python-only).
 3. `make -C projects/CI scaffold-ci CONSUMER=projects/WORKSPACE-GATEWAY`
 4. Verify the generated `.pre-commit-config.yaml` references `../CI`
    correctly.
-5. Run `make -C projects/WORKSPACE-GATEWAY install-hooks` (which calls
-   `generate-hooks`).
+5. Run `sudo make -C projects/WORKSPACE-GATEWAY install-hooks` (which calls
+   `reinstall-hooks`; root-only, hooks land root-owned and immutable).
 6. Commit the five generated files plus the now-permanent
    `ci-profile.yaml`.
 

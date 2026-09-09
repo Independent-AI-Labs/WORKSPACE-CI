@@ -21,7 +21,7 @@ and container files, followed by manual review of every hit in context.
 | `scripts/bootstrap-{uv,npm,moon,osv-scanner,gitleaks,cloc,rust}` | `trap rm -rf "$tmp"` on self-created `mktemp -d` | Own temp dirs, exit-trap scoped |
 | `scripts/code-stats` | `trap rm -rf "$_tmpdir"` | Own temp dir |
 | `lib/guard-install.sh:408` | `rm -rf "$tmpdir"` | Self-created temp dir |
-| `tests/**` and `tests/test_helpers.sh` | `rm -rf "$TEST_TMP"`, mock dirs | Self-created test temp dirs |
+| `tests/**` and `tests/test_helpers.sh` | `rm -rf "$TEST_TMP"`, fixture dirs | Self-created test temp dirs |
 
 ### Deliberate deployment lifecycle operations (root-owned, fixed paths)
 

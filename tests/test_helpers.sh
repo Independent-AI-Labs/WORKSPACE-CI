@@ -46,11 +46,25 @@ _restore_configs() {
             banned_words.yaml|coverage_thresholds.yaml|file_length_limits.yaml)
                 cp "$f" "$_ci_dir/config/$bn"
                 ;;
+            # Project exemptions are fixture-owned; classifications are
+            # copied from the real repo so scope/classification behavior
+            # matches production in the temp workspace. The v4 bridge file
+            # is fixture-owned too (empty) so temp workspaces never scan
+            # bridge content.
+            banned_words_exceptions.yaml|banned_words_exceptions_v5.yaml)
+                printf 'exceptions: []\n' > "$_ci_dir/config/$bn"
+                ;;
+            file_classifications.yaml)
+                cp "$f" "$_ci_dir/config/$bn"
+                ;;
             *)
                 ln -s "$f" "$_ci_dir/config/$bn"
                 ;;
         esac
     done
+    # Classification manifest default for repos without one.
+    [[ -e "$_ci_dir/config/file_classifications.yaml" ]] || \
+        cp "$PROJECT_DIR/config/file_classifications.yaml" "$_ci_dir/config/file_classifications.yaml"
 }
 
 _link_lib_files() {
@@ -195,12 +209,12 @@ _source_lib() {
 # _stub_exemption_provenance: neutralize the root-owned
 # provenance gate for tests. Tmp-workspace config files are symlinks/copies
 # owned by the test user, so they can never satisfy it. Mirrors the
-# monkeypatch fixtures used by the python unit tests. No shell test asserts
+# monkeypatch fixtures used by the Python unit tests. No shell test asserts
 # provenance behavior. Must be re-applied after every `source lib/checks.sh`.
 _stub_exemption_provenance() {
     ci_validate_exemption_file() { return 0; }
 
-    # Same stub for python checker subprocesses: auto-imported sitecustomize
+    # Same stub for Python checker subprocesses: auto-imported sitecustomize
     # patches ci.paths.validate_exemption_file when ci is importable.
     local _site="$TEST_TMP/testsite"
     if [[ ! -f "$_site/sitecustomize.py" ]]; then

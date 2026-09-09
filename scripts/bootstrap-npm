@@ -26,7 +26,7 @@
 # Supply-chain pinning: SHA256 verification is MANDATORY and always on.
 # The checksum is fetched at runtime from the SHASUMS256.txt file
 # published alongside the release on nodejs.org. No hardcoded hashes
-# are used -- the sidecar is the trusted source of truth, fetched from
+# are used: the sidecar is the trusted source of truth, fetched from
 # the same origin as the tarball.
 #
 # CI_PROJECT_ROOT (this repo's own root) is delegated to lib/ci.sh. Per

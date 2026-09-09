@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# audit-workspace -- Discover all git repos under a root and report status.
+# audit-workspace: Discover all git repos under a root and report status.
 # Reports: working tree state, remote sync, CI integration level.
 #
 # Usage: audit-workspace [ROOT]
@@ -56,7 +56,7 @@ if [[ -f "$_blocked_config" ]]; then
     done < "$_blocked_config"
 fi
 
-# -- Discover repos --
+# Discover repos
 _repos=()
 _gitdirs=()
 ci_capture_pipe _gitdirs 'find "$1" -name ".git" -type d | sort' "$_ROOT"
@@ -80,7 +80,7 @@ _fully_integrated=0
 _total_score=0
 _max_possible=0
 
-# -- Helper: relative time --
+# Helper: relative time
 _age() {
     local ts="$1"
     local now
@@ -95,7 +95,7 @@ _age() {
     fi
 }
 
-# -- Audit each repo --
+# Audit each repo
 for _repo in "${_repos[@]}"; do
     _rel="${_repo#"$_ROOT"/}"
     [[ "$_repo" == "$_ROOT" ]] && _rel="(root)"
@@ -235,7 +235,7 @@ for _repo in "${_repos[@]}"; do
     [[ $_score -eq $_max ]] && _fully_integrated=$((_fully_integrated + 1))
 done
 
-# -- Summary --
+# Summary
 echo ""
 echo "==========================================="
 ci_info "Workspace: $_ROOT"

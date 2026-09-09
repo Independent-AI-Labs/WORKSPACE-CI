@@ -167,19 +167,19 @@ describe('classifyPattern', () => {
 
 describe('classifyAll', () => {
   const config: BannedWordsConfig = {
-    version: '4.0.0',
-    banned: [
-      { pattern: 'eslint-disable', reason: 'ESLint suppression forbidden.', category: 'linter-suppression' },
-      { pattern: '\\blegacy\\b', reason: 'No legacy code paths.', category: 'obsolete-paths' },
-      { pattern: '\\bdelve\\b', reason: 'AI slop.', category: 'ai-slop' },
+    version: '5.0.0',
+    rules: [
+      { id: 'eslint-disable', mode: 'raw-regex', case: 'sensitive', pattern: 'eslint-disable', reason: 'ESLint suppression forbidden.', category: 'linter-suppression' },
+      { id: 'legacy-word', mode: 'raw-regex', case: 'sensitive', pattern: '\\blegacy\\b', reason: 'No legacy code paths.', category: 'obsolete-paths' },
+      { id: 'delve-word', mode: 'raw-regex', case: 'sensitive', pattern: '\\bdelve\\b', reason: 'AI slop.', category: 'ai-slop' },
     ],
     directory_rules: {
       tests: [
-        { pattern: 'reason=.*not implemented', reason: 'Implement the test.' },
+        { id: 'tests-not-implemented', mode: 'raw-regex', case: 'sensitive', pattern: 'reason=.*not implemented', reason: 'Implement the test.' },
       ],
     },
     filename_rules: [
-      { pattern: '_v[0-9]+', reason: 'No versioned filenames.' },
+      { id: 'filename-versioned', mode: 'filename', case: 'fold', pattern: '_v[0-9]+', reason: 'No versioned filenames.' },
     ],
   }
 
@@ -204,16 +204,22 @@ describe('classifyAll', () => {
     expect(dirPattern?.directory).toBe('tests')
   })
 
-  it('reads category from banned entries', () => {
+  it('reads category from rule entries', () => {
     const results = classifyAll(config)
     const slopPattern = results.find((p) => p.pattern === '\\bdelve\\b')
     expect(slopPattern?.category).toBe('ai-slop')
   })
 
+  it('carries the stable rule id', () => {
+    const results = classifyAll(config)
+    const slopPattern = results.find((p) => p.pattern === '\\bdelve\\b')
+    expect(slopPattern?.id).toBe('delve-word')
+  })
+
   it('handles empty config', () => {
     const results = classifyAll({
-      version: '4.0.0',
-      banned: [],
+      version: '5.0.0',
+      rules: [],
     })
     expect(results).toHaveLength(0)
   })

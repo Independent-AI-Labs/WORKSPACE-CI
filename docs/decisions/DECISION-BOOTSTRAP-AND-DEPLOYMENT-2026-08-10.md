@@ -51,7 +51,7 @@ Linux. macOS retains `.boot-macos` development support.
 ### D-004: Clean installation is the only lifecycle
 
 There are no prior releases, tags, branches, consumers, parallel operators, or
-compatibility obligations to preserve. Bootstrap installs from the exact
+support obligations toward prior installs to preserve. Bootstrap installs from the exact
 reviewed `origin/main` tree into a fresh deployment. The current filesystem
 state is not a recovery target and is not carried forward as a backup.
 
@@ -73,7 +73,7 @@ activated only after the fresh deployment passes verification.
 
 ### D-007: Remove the previous methodology
 
-The previous deployment methodology, migration path, compatibility layer,
+The previous deployment methodology, migration path, support layer,
 backup path, selector history, rollback path, recovery path, and consumer
 support are not requirements. They must be deleted from active documentation,
 source, configuration, and tests. Other workspace projects may break.

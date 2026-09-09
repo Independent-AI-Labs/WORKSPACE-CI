@@ -62,7 +62,7 @@ their own generation's gates. History remains forward-only (Article III
    sidechannel for unreviewed code into `/opt`.
 2. **Working tree untouched.** The candidate is constructed by fetching the
    rev into the candidate from the source repository's objects; the working
-   checkout is never moved backwards (§12 and the guard both forbid it).
+   checkout is never rewound (§12 and the guard both forbid it).
    The current `HEAD == origin/main` precondition becomes
    `REV is an ancestor of origin/main`.
 3. **Per-generation verification.** The candidate at `REV` runs that

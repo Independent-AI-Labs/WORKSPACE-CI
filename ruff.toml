@@ -8,3 +8,6 @@ select = [
 [lint.per-file-ignores]
 # The structural lock comparator accumulates independent diagnostics by design.
 "ci/dependency_locks.py" = ["C901", "PLR0911", "PLR0912", "PLR0915"]
+# The confusables table is intentionally built FROM ambiguous-Unicode
+# lookalikes (REQ 11.6); RUF001 would flag its whole contents.
+"ci/banned_scan/normalize.py" = ["RUF001"]

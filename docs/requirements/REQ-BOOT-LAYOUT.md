@@ -46,12 +46,27 @@ to REQ-DEPLOYMENT.
 15. Acceptance MUST execute the boot interpreter and required environments
     through the final pathname during isolated construction and after the exact
     candidate-to-deployed pathname transition.
+16. A source-checkout `.boot-linux` or `.boot-macos` MUST be owned and writable
+    by the checkout owner and MUST NOT be world-writable.
+17. Projects MAY compose tools from another project root through
+    `moon.yml::project.inherited_boot_dirs`. The resolver appends the current
+    platform boot name and `bin` directory.
+18. An inherited boot directory MUST remain physically contained beneath its
+    declared project root. The project root, boot root, and composed executable
+    directories MUST have the same owner and MUST NOT be world-writable.
+19. Protected hooks and guard operations MUST resolve tools directly from the
+    verified `/opt/workspace-ci` artifact. They MUST NOT consume a general
+    composed path containing user-owned checkout boot directories.
+20. Local installation MUST reject root execution and foreign-owned or
+    non-writable checkout boot directories. It MUST NOT repair ownership or
+    recommend elevated execution.
 
 ## 3. Acceptance
 
-Tests MUST prove platform naming, checkout-local resolution, fixed protected
-resolution, candidate placement, digest and executable verification, no path
-override, no HOME escape, no symlink escape, ownership/mode enforcement, and
-final immutable sealing through REQ-DEPLOYMENT.
+Tests MUST prove platform naming, checkout-local resolution, inherited boot
+precedence and containment, fixed protected resolution, candidate placement,
+digest and executable verification, no path override, no HOME escape, no
+symlink escape, ownership/mode enforcement, and final immutable sealing through
+REQ-DEPLOYMENT.
 The deployment acceptance also covers candidate-path injection into symlinks,
 virtual-environment configuration, and generated entrypoints.

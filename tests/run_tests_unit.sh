@@ -14,6 +14,7 @@ source "$TESTS_DIR/test_helpers.sh"
 _required_unit_tests=(
     test_core.sh
     test_checks.sh
+    test_banned_words.sh
     test_checks_secrets.sh
     test_checks_dead_code.sh
     test_cve_scan.sh
@@ -24,6 +25,7 @@ _required_unit_tests=(
     test_verify_immutable.sh
     test_deploy_ci_rev.sh
     test_cleanup_precommit.sh
+    test_guard_build.sh
     scaffold/test_scaffold_ci.sh
     scaffold/test_scaffold_ci_force.sh
     scaffold/test_scaffold_ci_gen.sh
@@ -39,6 +41,7 @@ done
 # Run unit test suites
 source "$TESTS_DIR/unit/test_core.sh"
 source "$TESTS_DIR/unit/test_checks.sh"
+source "$TESTS_DIR/unit/test_banned_words.sh"
 source "$TESTS_DIR/unit/test_checks_secrets.sh"
 source "$TESTS_DIR/unit/test_checks_dead_code.sh"
 source "$TESTS_DIR/unit/test_cve_scan.sh"
@@ -49,6 +52,7 @@ source "$TESTS_DIR/unit/test_generate_hooks.sh"
 source "$TESTS_DIR/unit/test_verify_immutable.sh"
 source "$TESTS_DIR/unit/test_deploy_ci_rev.sh"
 source "$TESTS_DIR/unit/test_cleanup_precommit.sh"
+source "$TESTS_DIR/unit/test_guard_build.sh"
 source "$TESTS_DIR/unit/scaffold/test_scaffold_ci.sh"
 source "$TESTS_DIR/unit/scaffold/test_scaffold_ci_force.sh"
 source "$TESTS_DIR/unit/scaffold/test_scaffold_ci_gen.sh"

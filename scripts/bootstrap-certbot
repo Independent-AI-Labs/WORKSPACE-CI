@@ -27,7 +27,7 @@ main() {
     local target_dir tool_dir python_dir uv_bin boot_bin
     boot_bin="${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/bin"
     # Containment: everything lives inside the boot dir. A root-locked boot
-    # bin is not a reason to escape to .local -- it means the operator must
+    # bin is not a reason to escape to .local: it means the operator must
     # run this with elevation. Boot dir only, by design.
     target_dir="${UV_TOOL_BIN_DIR:-${boot_bin}}"
     tool_dir="${UV_TOOL_DIR:-${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/uv-tools}"
@@ -35,12 +35,12 @@ main() {
     uv_bin="${boot_bin}/uv"
 
     if [[ ! -x "$uv_bin" ]]; then
-        _log "ERROR: uv not found at $uv_bin -- run 'make install-boot-tools' first"
+        _log "ERROR: uv not found at $uv_bin: run 'make install-boot-tools' first"
         return 1
     fi
 
     if [[ ! -w "$target_dir" ]]; then
-        _log "ERROR: $target_dir not writable -- boot dir is root-locked; run elevated: sudo make install-certbot"
+        _log "ERROR: $target_dir not writable: boot dir is root-locked; run elevated: sudo make install-certbot"
         return 1
     fi
 

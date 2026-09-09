@@ -43,7 +43,7 @@ ci_scan_vulnerabilities() {
     : > "$output"
     (
         ulimit -f 2048
-        ulimit -v 1048576
+        ulimit -v 2097152
         timeout --signal=TERM --kill-after=5s 120s "$scanner" "${args[@]}"
     ) 2> "$errors" || rc=$?
     size="$(wc -c < "$output")"

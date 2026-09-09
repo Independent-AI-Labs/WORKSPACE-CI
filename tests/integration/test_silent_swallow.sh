@@ -45,7 +45,7 @@ EOF
     git add bad.py
     ! ci_check_silent_swallow
 }
-_run_test "silent: e2e blocks staged python silent except" test_silent_e2e_blocks_staged_violation
+_run_test "silent: e2e blocks staged Python silent-except" test_silent_e2e_blocks_staged_violation
 
 test_silent_e2e_passes_with_clean_diff() {
     _setup_silent_repo
@@ -119,8 +119,11 @@ test_silent_e2e_honors_map_schema_exception() {
     rm -f config/silent_swallow_exceptions.yaml
     cat > config/silent_swallow_exceptions.yaml <<'EOF'
 exceptions:
-  - paths:
-      - ansible/playbooks/intentional-register.yml
+  - path: ^ansible/playbooks/intentional-register\.yml$
+    rationale: Intentional buffered register for control flow
+    owner: workspace-ci
+    review_date: "2026-09-07"
+    removal: When the playbook changes
 EOF
     cat > ansible/playbooks/intentional-register.yml <<'EOF'
 - name: Intentionally buffer command result for control flow

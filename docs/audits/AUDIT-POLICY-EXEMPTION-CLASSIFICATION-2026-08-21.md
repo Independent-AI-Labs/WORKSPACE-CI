@@ -27,9 +27,9 @@ commit and push.
 | 10 | install-e2e/test register-extension paths -> `.venv/bin/python` | Layout assertions | Baseline; exact files |
 | 11 | `workspace/config/` -> listed patterns | Config quoting own rules | Baseline |
 | 12 | `tests/` -> listed patterns | Test-quality rules on fixtures | CRITICAL (directory-wide executable tests); shrink first |
-| 13 | `.toml`/`.sh`/`Makefile`/`.yaml` -> ` -- ` | Legitimate syntax | KEEP (real syntax), but scope via baseline until narrowed |
+| 13 | `.toml`/`.sh`/`Makefile`/`.yaml` -> spaced double-dash | Legitimate syntax | KEEP (real syntax), but scope via baseline until narrowed |
 | 14 | silent-swallow detector files -> `\bsilent` etc. | Subject-matter terms | KEEP (detector's own domain language) |
-| 15 | `ci/check_duplicate_dependencies.py` -> `dict[..., Any]` | Correct TOML-parse return type | KEEP |
+| 15 | `ci/check_duplicate_dependencies.py` -> `dict` returning `Any` | Correct TOML-parse return type | KEEP |
 | 16 | `.sh/.yaml/.toml/Makefile/.py` -> system-interpreter pattern | Bootstrap dir names + language detection | CRITICAL (extension-wide; hid deployment system-Python); shrink first |
 | 17 | `lib/`, `tests/`, `scripts/` -> system-interpreter pattern | Language detection | CRITICAL (directory-wide; hid all 8 system-interpreter deployment calls); shrink first |
 | 18 | boot-layout checker files -> `.venv/bin/python` | Advisory messages quoting old forms | Baseline; exact files |

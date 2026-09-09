@@ -5,13 +5,13 @@
 # from the official source (https://brew.sh) and then brew-installs the
 # essential GNU/Linux-equivalent tools that the CI toolkit needs:
 #
-#   bash         -- bash 5.x (macOS ships 3.2, which lacks `local -n`
+#   bash:          bash 5.x (macOS ships 3.2, which lacks `local -n`
 #                  namerefs used by lib/ci.sh::ci_capture_lines)
-#   coreutils    -- realpath, sha256sum, ghead, gtail, etc. (non-prefixed
+#   coreutils:     realpath, sha256sum, ghead, gtail, etc. (non-prefixed
 #                  via libexec/gnubin)
-#   gnu-sed      -- GNU sed (macOS ships BSD sed which breaks `t` label)
-#   findutils    -- GNU find (macOS ships BSD find)
-#   pkg-config   -- library detection for native builds
+#   gnu-sed:       GNU sed (macOS ships BSD sed which breaks `t` label)
+#   findutils:     GNU find (macOS ships BSD find)
+#   pkg-config:    library detection for native builds
 #
 # After install, the gnubin directories are available at:
 #   /opt/homebrew/opt/coreutils/libexec/gnubin

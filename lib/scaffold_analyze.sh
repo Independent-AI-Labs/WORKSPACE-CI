@@ -465,7 +465,7 @@ _scl_append_makefile() {
             rm -f "$_mf_target.append.tmp"
         else
             _scl_backup "$_mf_target" "$_make_backup" _backups_written
-            printf '\n# -- Appended by scaffold-ci --append-makefile [%s] --\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$_mf_target"
+            printf '\n# Appended by scaffold-ci --append-makefile [%s]\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$_mf_target"
             cat "$_mf_target.append.tmp" >> "$_mf_target"
             rm -f "$_mf_target.append.tmp"
             _generated+=("Makefile (appended: ${_missing_tgts[*]})")

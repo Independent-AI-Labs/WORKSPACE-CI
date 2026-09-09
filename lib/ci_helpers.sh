@@ -41,6 +41,50 @@ ci_has_cmd() {
     return 0
 }
 
+_ci_path_uid() {
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        stat -f '%u' "$1"
+    else
+        stat -c '%u' "$1"
+    fi
+}
+
+_ci_path_mode() {
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        stat -f '%Lp' "$1"
+    else
+        stat -c '%a' "$1"
+    fi
+}
+
+_ci_boot_dir_is_composable() {
+    local project="$1" boot="$2" project_real boot_real project_uid path
+    project_real="$(cd "$project" && pwd -P)" || return 1
+    boot_real="$(cd "$boot" && pwd -P)" || return 1
+    case "$boot_real/" in
+        "$project_real/"*) ;;
+        *) echo "WARNING: boot directory escapes project root: $boot" >&2; return 1 ;;
+    esac
+    project_uid="$(_ci_path_uid "$project_real")" || return 1
+    for path in "$boot" "$boot/bin" "$boot/python-env/bin"; do
+        [[ -e "$path" ]] || continue
+        case "$(cd "$path" && pwd -P)/" in
+            "$project_real/"*) ;;
+            *) echo "WARNING: boot path escapes project root: $path" >&2; return 1 ;;
+        esac
+        if [[ "$(_ci_path_uid "$path")" != "$project_uid" ]]; then
+            echo "WARNING: boot path owner differs from project owner: $path" >&2
+            return 1
+        fi
+        local mode
+        mode="$(_ci_path_mode "$path")" || return 1
+        if (( (8#$mode & 2) != 0 )); then
+            echo "WARNING: boot path is world-writable: $path" >&2
+            return 1
+        fi
+    done
+}
+
 # ci_uv_bin: resolve uv from exactly one source: the CI installation
 # boot dir. Tool installs belong to the CI installation (this lib), not
 # the consuming project, so resolve the lib's physical location; a

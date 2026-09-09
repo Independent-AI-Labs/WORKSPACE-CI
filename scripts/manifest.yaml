@@ -135,7 +135,7 @@ scripts:
   - id: check-boot-venv-layout
     path: ci/check_boot_venv_layout.py
     summary: Non-blocking audit of boot_layout.yaml + moon.yml + .pre-commit-config.yaml --project refs.
-    usage: python -m ci.check_boot_venv_layout [PROJECT_DIR]
+    usage: uv run python -m ci.check_boot_venv_layout [PROJECT_DIR]
     category: compliance
     args:
       - { name: PROJECT_DIR, description: "Project to audit (default: current directory)" }

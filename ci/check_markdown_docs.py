@@ -7,7 +7,7 @@ verification and --all-md for scanning every tracked markdown file in the
 repo.
 
 Usage:
-    python -m ci.check_markdown_docs [PATHS...]
+    uv run python -m ci.check_markdown_docs [PATHS...]
         [--check-remote] [--timeout 5.0] [--json] [--ignore GLOB]
         [--fail-on error|warning|any] [--all-md]
 

@@ -61,16 +61,16 @@ repos:
         pass_filenames: false
         always_run: true
 
-      - id: check-banned-words
-        name: Check Banned Words
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_banned_words'"
+      - id: check-policy-integrity
+        name: Check Policy Integrity (non-exemptible)
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_policy_integrity'"
         language: system
         pass_filenames: false
         always_run: true
 
-      - id: check-policy-integrity
-        name: Check Policy Integrity (non-exemptible)
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_policy_integrity'"
+      - id: check-banned-words
+        name: Check Banned Words
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_banned_words'"
         language: system
         pass_filenames: false
         always_run: true

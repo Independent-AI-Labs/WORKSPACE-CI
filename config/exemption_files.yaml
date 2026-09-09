@@ -11,20 +11,25 @@
 version: 1
 files:
   - path: config/silent_swallow_exceptions.yaml
-    default_content: |
-      exceptions: []
+    default_content: 'exceptions: []
+
+      '
   - path: config/banned_words_exceptions.yaml
-    default_content: |
-      exceptions: []
+    default_content: 'exceptions: []
+
+      '
+  - path: config/banned_words_exceptions_v5.yaml
+    default_content: 'exceptions: []
+
+      '
   - path: config/sensitive_files_exceptions.yaml
-    default_content: |
-      safe_exceptions:
-        - .markdown_docs_exceptions.yaml
+    default_content: "safe_exceptions:\n  - .markdown_docs_exceptions.yaml\n"
   - path: quality_exceptions.yaml
     default_source: templates/quality_exceptions.template.yaml
   - path: .markdown_docs_exceptions.yaml
-    default_content: |
-      exceptions: []
+    default_content: 'exceptions: []
+
+      '
   - path: config/coverage_thresholds.yaml
     default_source: config/coverage_thresholds.yaml
   - path: config/file_length_limits.yaml

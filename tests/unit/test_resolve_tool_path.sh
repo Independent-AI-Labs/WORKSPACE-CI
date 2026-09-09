@@ -23,6 +23,42 @@ test_resolve_tool_path_walks_up() {
     return 0
 }
 
+test_resolve_boot_path_inherits_owned_project_boot() {
+    _setup_tmpdir
+    local _consumer="$TEST_TMP/workspace/consumer"
+    local _provider="$TEST_TMP/workspace/provider"
+    mkdir -p "$_consumer" "$_provider/.boot-linux/bin"
+    cat > "$_consumer/moon.yml" <<EOF
+project:
+  inherited_boot_dirs:
+    - '$_provider'
+EOF
+    _source_lib
+    local _resolved
+    _resolved="$(ci_resolve_boot_path "$_consumer")"
+    _teardown_tmpdir
+    [[ "$_resolved" == *"$_provider/.boot-linux/bin"* ]]
+}
+
+test_resolve_boot_path_rejects_symlink_escape() {
+    _setup_tmpdir
+    local _consumer="$TEST_TMP/workspace/consumer"
+    local _provider="$TEST_TMP/workspace/provider"
+    local _external="$TEST_TMP/external"
+    mkdir -p "$_consumer" "$_provider" "$_external/bin"
+    ln -s "$_external" "$_provider/.boot-linux"
+    cat > "$_consumer/moon.yml" <<EOF
+project:
+  inherited_boot_dirs:
+    - '$_provider'
+EOF
+    _source_lib
+    local _resolved
+    _resolved="$(ci_resolve_boot_path "$_consumer")"
+    _teardown_tmpdir
+    [[ "$_resolved" != *"$_provider/.boot-linux/bin"* ]]
+}
+
 test_resolve_cloudflared_honors_env() {
     _setup_tmpdir
     local _bin="$TEST_TMP/fake-cloudflared"
@@ -74,7 +110,10 @@ echo "=== resolve tool path tests ==="
 _RESOLVE_OUT="$(mktemp)"
 _RESOLVE_ERR="$(mktemp)"
 
-for t in test_resolve_tool_path_walks_up test_resolve_cloudflared_honors_env \
+for t in test_resolve_tool_path_walks_up \
+         test_resolve_boot_path_inherits_owned_project_boot \
+         test_resolve_boot_path_rejects_symlink_escape \
+         test_resolve_cloudflared_honors_env \
          test_resolve_cloudflared_script_walks_up; do
     _TESTS_RUN=$((_TESTS_RUN + 1))
     _rc=0

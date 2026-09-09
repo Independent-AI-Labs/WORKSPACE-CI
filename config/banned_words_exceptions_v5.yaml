@@ -1,0 +1,267 @@
+# Per-project exceptions, schema v5 (final model): one rule id +
+# one anchored exact file per entry, with full provenance.
+exceptions:
+  - rule: bcompatibility-b
+    path: ^docs/audits/AUDIT-CAPABILITY-LOSS-2026-08-23\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: belevate-b
+    path: ^docs/specifications/SPEC-HITL-GUARD\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bfallback-b
+    path: ^lib/check_fallback_resolution\.py$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bfallback-b
+    path: ^web-components/src/components/ErrorBoundary\.tsx$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: blegacy-b
+    path: ^scripts/cleanup-precommit$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: blegacy-b
+    path: ^web/package\.json$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: blegacy-b
+    path: ^web/src/components/wiki/playground/CodeEditor\.tsx$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: blegacy-b
+    path: ^web/src/data/script-sources\.json$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^config/silent_swallow_exceptions\.schema\.yaml$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^docs/TODO-REMEDIATION\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^docs/audits/AUDIT-POLICY-EXEMPTION-CLASSIFICATION-2026-08-21\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^docs/audits/AUDIT-REMEDIATION-EXECUTION-FAILURE-2026-08-20\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^docs/requirements/REQ-SCAFFOLD-CI\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^docs/specifications/SPEC-SCAFFOLD-CI\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^docs/specifications/SPEC-WIKI\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^scripts/extract-swallow-source\.py$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^web/src/data/hook-sources\.json$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^web/src/data/swallow-detectors\.json$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^web/src/lib/card-adapters\.ts$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^web/src/lib/search-data\.ts$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bsilent
+    path: ^web/src/lib/yaml-loader\.ts$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: bskeleton-b
+    path: ^docs/requirements/REQ-BANNED-PATTERN-MATCHING\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: protected-bare-system-interpreter
+    path: ^docs/TODO-REMEDIATION\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: protected-bare-system-interpreter
+    path: ^docs/audits/AUDIT-EXEMPTION-DATA-MODEL-2026-09-05\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: protected-bare-system-interpreter
+    path: ^docs/requirements/REQ-BANNED-PATTERN-MATCHING\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: protected-bare-system-interpreter
+    path: ^tests/unit/scaffold/test_scaffold_ci\.sh$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: protected-bare-system-interpreter
+    path: ^web/src/components/wiki/playground/CodeEditor\.tsx$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: rule
+    path: ^docs/requirements/REQ-PORTABILITY\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: rule
+    path: ^docs/specifications/SPEC-PORTABILITY\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: rule
+    path: ^scripts/deploy-ci$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: rule
+    path: ^scripts/reinstall-hooks$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: rule
+    path: ^scripts/rewrite-history$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: rule
+    path: ^scripts/run-candidate-namespace$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: rule
+    path: ^scripts/verify-immutable$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: rule
+    path: ^scripts/verify-immutable-batch$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: rule
+    path: ^web/src/data/hook-sources\.json$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: rule
+    path: ^web/src/data/script-sources\.json$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: venv-bin-python
+    path: ^docs/TODO-REMEDIATION\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: venv-bin-python
+    path: ^docs/audits/AUDIT-DEPLOYMENT-DEADLOCK-2026-08-19\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: venv-bin-python
+    path: ^docs/audits/AUDIT-EXEMPTION-DATA-MODEL-2026-09-05\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: venv-bin-python
+    path: ^docs/audits/AUDIT-POLICY-EXEMPTION-CLASSIFICATION-2026-08-21\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: venv-bin-python
+    path: ^docs/audits/AUDIT-REMEDIATION-EXECUTION-FAILURE-2026-08-20\.md$
+    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
+    owner: workspace-ci
+    review_date: '2026-09-05'
+    removal: Remove when the file no longer quotes the rule.
+  - rule: rule
+    path: ^docs/audits/AUDIT-POLICY-V5-ACTIVATION-2026-09-06\.md$
+    rationale: Quotes the rule while documenting its scoping
+    owner: workspace-ci
+    review_date: '2026-09-07'
+    removal: When quoting ends.
+  - rule: bsilent
+    path: ^docs/audits/AUDIT-POLICY-V5-ACTIVATION-2026-09-06\.md$
+    rationale: Quotes the gate name in activation transcripts
+    owner: workspace-ci
+    review_date: '2026-09-07'
+    removal: When transcripts are reworded.

@@ -112,7 +112,7 @@ EOF
     bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-dcp" > "$TEST_TMP/out" 2>&1
     grep -q 'scan_paths: \[ci\]' "$TEST_TMP/sci-dcp/config/dead_code.yaml" || { echo "missing scan_paths [ci]"; return 1; }
 }
-_run_test "scaffold: dead_code python gets []" test_scaffold_dead_code_python
+_run_test "scaffold: dead_code for Python gets []" test_scaffold_dead_code_python
 
 test_scaffold_generates_qe() {
     mkdir -p "$TEST_TMP/sci-qe"
@@ -276,9 +276,9 @@ EOF
     cd "$PROJECT_DIR"
     bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-pm" > "$TEST_TMP/out" 2>&1
     grep -q 'uv run --project' "$TEST_TMP/sci-pm/.pre-commit-config.yaml" || { echo "missing uv python module entry"; return 1; }
-    grep -q 'python -m ci.check_required_hooks_present' "$TEST_TMP/sci-pm/.pre-commit-config.yaml" || { echo "missing python module entry"; return 1; }
+    grep -q 'no-sync python -m ci.check_required_hooks_present' "$TEST_TMP/sci-pm/.pre-commit-config.yaml" || { echo "missing python-module entry"; return 1; }
 }
-_run_test "scaffold: python_module renders venv python entry" test_scaffold_entry_python_module
+_run_test "scaffold: python_module renders the hermetic runner entry" test_scaffold_entry_python_module
 
 test_scaffold_entry_shell_with_arg() {
     mkdir -p "$TEST_TMP/sci-swa"

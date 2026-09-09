@@ -39,7 +39,7 @@ export default async function HooksPage() {
       <h1>Hook Reference</h1>
       <p className="page-intro">
         Required git hooks organized by stage (pre-commit, commit-msg,
-        pre-push) and kind (shell, python module, makefile target).
+        pre-push) and kind (shell, Python module, makefile target).
       </p>
       {manifest.hooks.length === 0 ? (
         <p className="empty-state">

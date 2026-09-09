@@ -1,0 +1,171 @@
+# Exact-file classifications (reviewed). Roots are structural facts
+# used only by ordinary rules' declared scope; non-exemptible rules
+# apply to every tracked text file regardless of classification.
+test_roots:
+  - tests/
+doc_roots:
+  - docs/
+doc_files:
+  - README.md
+files:
+  config/banned_words.schema.yaml:
+    class: policy-definition
+    owner: workspace-ci
+  config/banned_words.yaml:
+    class: policy-definition
+    owner: workspace-ci
+  config/banned_words_exceptions.yaml:
+    class: policy-definition
+    owner: workspace-ci
+  config/exemption_files.yaml:
+    class: policy-definition
+    owner: workspace-ci
+  config/file_classifications.yaml:
+    class: policy-definition
+    owner: workspace-ci
+  config/required_hooks.schema.yaml:
+    class: policy-definition
+    owner: workspace-ci
+  config/required_hooks.yaml:
+    class: policy-definition
+    owner: workspace-ci
+  config/silent_swallow_exceptions.schema.yaml:
+    class: policy-definition
+    owner: workspace-ci
+  config/silent_swallow_exceptions.yaml:
+    class: policy-definition
+    owner: workspace-ci
+  config/silent_swallow_patterns.schema.yaml:
+    class: policy-definition
+    owner: workspace-ci
+  config/silent_swallow_patterns.yaml:
+    class: policy-definition
+    owner: workspace-ci
+  config/standards.schema.yaml:
+    class: policy-definition
+    owner: workspace-ci
+  config/standards.yaml:
+    class: policy-definition
+    owner: workspace-ci
+  config/wiki_labels.yaml:
+    class: policy-definition
+    owner: workspace-ci
+  docs/TODO-POLICY-EXEMPTION-REMEDIATION.md:
+    class: policy-definition
+    owner: workspace-ci
+  docs/TODO-REMEDIATION.md:
+    class: policy-definition
+    owner: workspace-ci
+  docs/audits/AUDIT-REMEDIATION-EXECUTION-FAILURE-2026-08-20.md:
+    class: policy-definition
+    owner: workspace-ci
+  package-lock.json:
+    class: lock
+    validated_by: lockfile sync checks
+    owner: workspace-ci
+  res/LOGO.png:
+    class: binary
+    owner: workspace-ci
+  tests/integration/test_e2e_checks.sh:
+    class: fixture
+    owner: workspace-ci
+    validated_by: focused scanner test suites
+  tests/unit/test_checks.sh:
+    class: fixture
+    owner: workspace-ci
+    validated_by: focused scanner test suites
+  tests/web/lib/patterns.test.ts:
+    class: fixture
+    owner: workspace-ci
+    validated_by: focused scanner test suites
+  uv.lock:
+    class: lock
+    validated_by: lockfile sync checks
+    owner: workspace-ci
+  web/public/LOGO.png:
+    class: binary
+    owner: workspace-ci
+  web/public/LOGO_DARK_THEME.png:
+    class: binary
+    owner: workspace-ci
+  web/public/LOGO_LIGHT_THEME.png:
+    class: binary
+    owner: workspace-ci
+  web/public/standards/bletchley-declaration.pdf:
+    class: binary
+    owner: workspace-ci
+  web/public/standards/china-interim-measures-genai.pdf:
+    class: binary
+    owner: workspace-ci
+  web/public/standards/coe-framework-convention-ai.pdf:
+    class: binary
+    owner: workspace-ci
+  web/public/standards/eu-ai-act-2024-1689.pdf:
+    class: binary
+    owner: workspace-ci
+  web/public/standards/g7-hiroshima-code-of-conduct.pdf:
+    class: binary
+    owner: workspace-ci
+  web/public/standards/nist-ai-600-1-genai-profile.pdf:
+    class: binary
+    owner: workspace-ci
+  web/public/standards/nist-ai-rmf-1.0.pdf:
+    class: binary
+    owner: workspace-ci
+  web/public/standards/oecd-ai-principles.pdf:
+    class: binary
+    owner: workspace-ci
+  web/public/standards/seoul-declaration.pdf:
+    class: binary
+    owner: workspace-ci
+  web/public/standards/singapore-model-ai-gov-framework.pdf:
+    class: binary
+    owner: workspace-ci
+  web/public/standards/singapore-model-ai-gov-genai.pdf:
+    class: binary
+    owner: workspace-ci
+  web/public/standards/un-governing-ai-for-humanity.pdf:
+    class: binary
+    owner: workspace-ci
+  web/public/standards/unesco-ai-ethics-recommendation.pdf:
+    class: binary
+    owner: workspace-ci
+  web/public/standards/us-ai-bill-of-rights.pdf:
+    class: binary
+    owner: workspace-ci
+  web/public/standards/us-eo-14110-ai.pdf:
+    class: binary
+    owner: workspace-ci
+  web/res/LOGO.png:
+    class: binary
+    owner: workspace-ci
+  web/res/LOGO_DARK_THEME.png:
+    class: binary
+    owner: workspace-ci
+  web/res/LOGO_LIGHT_THEME.png:
+    class: binary
+    owner: workspace-ci
+  web/src/data/hook-sources.json:
+    class: generated
+    owner: workspace-ci
+    validated_by: make extract-hook-sources extract-script-sources && git diff --exit-code
+  web/src/data/script-sources.json:
+    class: generated
+    owner: workspace-ci
+    validated_by: make extract-hook-sources extract-script-sources && git diff --exit-code
+  docs/audits/AUDIT-DEPLOY-TOOL-INVENTORY-2026-09-06.md:
+    class: policy-definition
+    owner: workspace-ci
+  docs/proposals/PROPOSAL-SHELL-GUARD-INTERPRETER-COVERAGE-2026-09-06.md:
+    class: policy-definition
+    owner: workspace-ci
+  tests/unit/test_banned_words.sh:
+    class: fixture
+    owner: workspace-ci
+  reports/effective-exemptions.json:
+    class: generated
+    validated_by: ci.effective_exemptions --check
+    owner: workspace-ci
+  config/banned_words_exceptions_v5.yaml:
+    class: policy-definition
+    owner: workspace-ci

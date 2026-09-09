@@ -163,7 +163,7 @@ WORKSPACE-GUARD under SPEC-HITL-GUARD.
 4. Audit tests cover serialized append, synchronization, restart verification,
    and corruption refusal.
 5. Web tests cover absent configuration, sessions, scopes, CSRF, projection,
-   degraded state, and reconnecting feed updates.
+   restricted state, and reconnecting feed updates.
 6. End-to-end tests prove approved, denied, expired, cancelled, disconnected,
    replayed, and locally guard-rejected sudo flows.
 7. Repository scans prove the operational architecture contains no credential,

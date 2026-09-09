@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# compliance-report -- Run deep compliance audit.
+# compliance-report: Run deep compliance audit.
 #
 # Usage:
 #   compliance-report [PROJECT_DIR]     Audit a single project
@@ -96,9 +96,9 @@ if [[ "${1:-}" == "--recursive" ]]; then
     echo ""
 
     if [[ $_total_violations -eq 0 ]]; then
-        ci_pass "WORKSPACE: ${_agg_pct}% -- $_tier"
+        ci_pass "WORKSPACE: ${_agg_pct}% | $_tier"
     else
-        ci_fail "WORKSPACE: ${_agg_pct}% -- $_tier -- $_total_violations total violation(s)"
+        ci_fail "WORKSPACE: ${_agg_pct}% | $_tier | $_total_violations total violation(s)"
     fi
     echo "=============================================="
 

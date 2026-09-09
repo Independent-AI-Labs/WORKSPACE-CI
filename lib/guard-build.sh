@@ -63,8 +63,9 @@ _guard_cargo_release_build() {
     if cargo "$@" 2>"$err_file"; then
         rm -f "$err_file"
         return 0
+    else
+        rc=$?
     fi
-    rc=$?
     if [[ -s "$err_file" ]] && grep -q 'Cannot emit physreg copy' "$err_file"; then
         log_warn "rustc LLVM error; retrying with CARGO_BUILD_JOBS=1"
         rm -f "$err_file"
@@ -114,7 +115,13 @@ build_guard_binary() {
             return 1
         fi
     fi
-    if [[ -n "$preset_cargo_home" ]]; then
+    if [[ $EUID -eq 0 ]]; then
+        rust_home="$_guard_dir/target/cargo-home"
+        mkdir -p "$rust_home" || {
+            log_error "Cannot create root release Cargo home: $rust_home"
+            return 1
+        }
+    elif [[ -n "$preset_cargo_home" ]]; then
         local _mk_err _mk_rc=0
         _mk_err="$(mktemp)"
         mkdir -p "$preset_cargo_home" 2>"$_mk_err" || _mk_rc=$?
@@ -273,7 +280,7 @@ build_guard_binary() {
     log_info "Wrote build-mode marker: ${GUARD_BIN}.mode ($GUARD_BUILD_MODE)"
 
     # When invoked under sudo (operator: `sudo --preserve-env=HOME,SSH_AUTH_SOCK
-    # make build-guard`), cargo writes target/ as root -- and it STAYS
+    # make build-guard`), cargo writes target/ as root: and it STAYS
     # root-owned by design (root-gated release builds, item 17). Agent
     # dev loops use CARGO_TARGET_DIR=target/agent and never touch the
     # root-owned release target tree, so there is nothing to re-home.
