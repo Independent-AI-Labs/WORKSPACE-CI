@@ -37,7 +37,7 @@ from ci.paths import resolve_config_path
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _SCRIPTS_DIR.parent
-_LIB_DIR = Path(os.environ.get("CI_LIB_DIR") or str(_REPO_ROOT / "lib"))
+_LIB_DIR = _REPO_ROOT / "lib"
 _CI_DIR = Path(os.environ.get("CI_CI_DIR") or str(_REPO_ROOT / "ci"))
 _OUTPUT_DIR = Path(
     os.environ.get("CI_WEB_DATA_DIR") or str(_REPO_ROOT / "web" / "src" / "data")
@@ -115,13 +115,11 @@ def extract_shell_function(entry: str) -> dict[str, str | None] | None:
                 continue
 
             source = "\n".join(body)
-            if _REPO_ROOT in sh_file.parents:
-                rel_path = str(sh_file.relative_to(_REPO_ROOT))
-            else:
-                # Protected hooks set CI_LIB_DIR to the sealed artifact; its
-                # lib/ mirrors this repo (artifact == origin/main), so record
-                # the in-repo path for the extracted source.
-                rel_path = f"lib/{sh_file.name}"
+            # Extraction always reads the repo's own lib/: the wiki JSON
+            # documents THIS tree's hook sources. CI_LIB_DIR may point at the
+            # sealed artifact, whose lib only mirrors the repo after the next
+            # deploy, so it is deliberately ignored here.
+            rel_path = f"lib/{sh_file.name}"
             docstring = _extract_leading_comments(lines, i)
 
             return {
