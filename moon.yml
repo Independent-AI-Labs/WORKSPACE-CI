@@ -1,18 +1,18 @@
 # yaml-language-server: $schema=https://moonrepo.dev/schemas/project.json
 #
-# moon project config for ci.
+# moon project config for workspace-ci.
 # Per-repo tasks live in the Makefile.
 
 $schema: 'https://moonrepo.dev/schemas/project.json'
 
 project:
-  name: 'ci'
+  name: 'workspace-ci'
   description: 'CI hooks, banned-pattern checks, coverage gates'
   # Boot-layout inheritance: project-root paths whose $CI_BOOT_NAME/bin
   # should be prepended to PATH via ci_resolve_boot_path(). Entries are
-  # project roots (e.g. '../CI'), NOT boot-dir paths. The resolver
+  # project roots (e.g. '../WORKSPACE-GUARD'), NOT boot-dir paths. The resolver
   # appends /$CI_BOOT_NAME/bin at runtime → platform-aware.
-  # CI is the root: no inherited boot dirs.
+  # WORKSPACE-CI is the root: no inherited boot dirs.
   inherited_boot_dirs: []
 
 language: 'python'
