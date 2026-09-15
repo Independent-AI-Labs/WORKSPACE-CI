@@ -265,3 +265,33 @@ exceptions:
     owner: workspace-ci
     review_date: '2026-09-07'
     removal: When transcripts are reworded.
+  - rule: brealm-b
+    path: ^TRACKING\-NAMESPACE\-MIGRATION\.md$
+    rationale: Migration tracker - quotes rule names and platform terms to document the renames and their removal rationale.
+    owner: workspace-ci
+    review_date: '2026-09-14'
+    removal: Remove when the tracker is archived.
+  - rule: blegacy-b
+    path: ^TRACKING\-NAMESPACE\-MIGRATION\.md$
+    rationale: Migration tracker - quotes rule names and platform terms to document the renames and their removal rationale.
+    owner: workspace-ci
+    review_date: '2026-09-14'
+    removal: Remove when the tracker is archived.
+  - rule: bstubs-b
+    path: ^TRACKING\-NAMESPACE\-MIGRATION\.md$
+    rationale: Migration tracker - quotes rule names and platform terms to document the renames and their removal rationale.
+    owner: workspace-ci
+    review_date: '2026-09-14'
+    removal: Remove when the tracker is archived.
+  - rule: bsilent
+    path: ^TRACKING\-NAMESPACE\-MIGRATION\.md$
+    rationale: Migration tracker - quotes rule names and platform terms to document the renames and their removal rationale.
+    owner: workspace-ci
+    review_date: '2026-09-14'
+    removal: Remove when the tracker is archived.
+  - rule: protected-bare-system-interpreter
+    path: ^TRACKING\-NAMESPACE\-MIGRATION\.md$
+    rationale: Migration tracker - quotes rule names and platform terms to document the renames and their removal rationale.
+    owner: workspace-ci
+    review_date: '2026-09-14'
+    removal: Remove when the tracker is archived.
