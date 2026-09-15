@@ -2,7 +2,7 @@
   "schema": 1,
   "policy_digest": "9a740a21ecd81459298631ae142a63eca74b046b0c3632c44f7425db4113a1d1",
   "rule_count": 225,
-  "exemption_count": 66,
+  "exemption_count": 71,
   "classification_count": 50,
   "exemptions": [
     {
@@ -85,6 +85,17 @@
     {
       "source": "project",
       "rule": "blegacy-b",
+      "path": "^TRACKING\\-NAMESPACE\\-MIGRATION\\.md$",
+      "file": "TRACKING-NAMESPACE-MIGRATION.md",
+      "match_count": 1,
+      "rationale": "Migration tracker - quotes rule names and platform terms to document the renames and their removal rationale.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-14",
+      "removal": "Remove when the tracker is archived."
+    },
+    {
+      "source": "project",
+      "rule": "blegacy-b",
       "path": "^scripts/cleanup-precommit$",
       "file": "scripts/cleanup-precommit",
       "match_count": 1,
@@ -125,6 +136,28 @@
       "owner": "workspace-ci",
       "review_date": "2026-09-05",
       "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "brealm-b",
+      "path": "^TRACKING\\-NAMESPACE\\-MIGRATION\\.md$",
+      "file": "TRACKING-NAMESPACE-MIGRATION.md",
+      "match_count": 1,
+      "rationale": "Migration tracker - quotes rule names and platform terms to document the renames and their removal rationale.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-14",
+      "removal": "Remove when the tracker is archived."
+    },
+    {
+      "source": "project",
+      "rule": "bsilent",
+      "path": "^TRACKING\\-NAMESPACE\\-MIGRATION\\.md$",
+      "file": "TRACKING-NAMESPACE-MIGRATION.md",
+      "match_count": 1,
+      "rationale": "Migration tracker - quotes rule names and platform terms to document the renames and their removal rationale.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-14",
+      "removal": "Remove when the tracker is archived."
     },
     {
       "source": "universal",
@@ -391,6 +424,17 @@
       "removal": "Remove when the file no longer quotes the rule."
     },
     {
+      "source": "project",
+      "rule": "bstubs-b",
+      "path": "^TRACKING\\-NAMESPACE\\-MIGRATION\\.md$",
+      "file": "TRACKING-NAMESPACE-MIGRATION.md",
+      "match_count": 1,
+      "rationale": "Migration tracker - quotes rule names and platform terms to document the renames and their removal rationale.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-14",
+      "removal": "Remove when the tracker is archived."
+    },
+    {
       "source": "universal",
       "rule": "bstubs-b",
       "path": "^mypy\\.toml$",
@@ -400,6 +444,17 @@
       "owner": "workspace-ci",
       "review_date": "2026-09-05",
       "removal": "Remove when the file no longer quotes the rule."
+    },
+    {
+      "source": "project",
+      "rule": "protected-bare-system-interpreter",
+      "path": "^TRACKING\\-NAMESPACE\\-MIGRATION\\.md$",
+      "file": "TRACKING-NAMESPACE-MIGRATION.md",
+      "match_count": 1,
+      "rationale": "Migration tracker - quotes rule names and platform terms to document the renames and their removal rationale.",
+      "owner": "workspace-ci",
+      "review_date": "2026-09-14",
+      "removal": "Remove when the tracker is archived."
     },
     {
       "source": "project",
