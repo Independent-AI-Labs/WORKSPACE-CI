@@ -129,11 +129,36 @@ Moon link kept per operator.
 8. Commits (after 1-5): PORTAL, RP, DATAOPS, STREAMS namespace+migration
    commits, then push
 
+## Commit state (2026-09-16)
+
+- PUSHED: GATEWAY, WEB-CONTENT, SPA, STREAMS (`fc9c128`, `6265210`),
+  WORLD-GENERATION, PORTAL (`43598a1`, `bd458e7`), umbrella (`3d9b16d`),
+  WORKSPACE-CI (`05db2a7`, `c2bba94`), DATAOPS (`fd519ae`, `7366087`,
+  `24b740c` - silent-swallow remediation, dead-code activation,
+  cryptography/setuptools OSV bumps).
+- DEFERRED by operator: RP commit ("leave RP as is, will be committed
+  later") - foreign `docs/REQ-REVIEW-2026.md` rides with banned-word
+  hits; everything else prepped (hooks, cargo-deny, rustls 0.23.45).
+- DATAOPS config waves landed: dead_code scan_paths ci -> dataops (was a
+  no-op), dependency_excludes cleaned, coverage floor 50 -> 75,
+  silent-swallow v5 empty, sensitive + .markdown_docs_exceptions.yaml,
+  file_classifications test_roots + policy-definition entries,
+  dead_code ignored_names (9 framework-invisible names).
+
+## CI-source follow-ups (separate work)
+
+- bare-interpreter regex should recognize `uv run --no-project python3`
+  (3 PORTAL exemptions pending on it).
+- `make lock-exemptions` documented but not implemented.
+- hook generation must emit escaped quotes correctly.
+- `lib/checks_dead_code.sh` prints "advisory; does not block the push"
+  but returns 1 on findings - message/behavior mismatch.
+- `ci_scan_vulnerabilities` deletes the scanner JSON via a RETURN trap,
+  so OSV failures print no advisory detail.
+
 ## Notes
 
 - Historical filenames quoted in `docs/proposals/MIGRATION-*.md` are left
   as accurate record of deleted files (frozen migration transcripts).
 - `portal.ami-remote.work` FQDN and himalaya `--branch ami` remain
   functional until DNS/branch renames land (items 6-7).
-- CI-source follow-up (separate): bare-interpreter regex should recognize
-  `uv run --no-project python3` (3 PORTAL exemptions pending on it).
