@@ -18,7 +18,7 @@ const OUT_PATH = path.resolve(WEB_DIR, 'src', 'data', 'grafana-dashboards.json')
 const CHECK_ONLY = process.argv.includes('--check')
 
 const DEFAULT_QUERY =
-  'orgId=1&from=now-30d&to=now&timezone=browser&var-model=$__all&var-api_key=$__all&refresh=5s'
+  'orgId=1&from=now-90d&to=now&timezone=browser&var-model=$__all&var-api_key=$__all&refresh=5s'
 
 function abort(message) {
   console.error(message)

@@ -115,7 +115,7 @@ describe('appendGrafanaEmbedParams', () => {
     expect(u.searchParams.get('theme')).toBe('dark')
     expect(u.searchParams.getAll('kiosk')).toEqual(['true'])
     expect(u.searchParams.get('orgId')).toBe('1')
-    expect(u.searchParams.get('from')).toBe('now-30d')
+    expect(u.searchParams.get('from')).toBe('now-90d')
     expect(u.searchParams.get('to')).toBe('now')
   })
 
