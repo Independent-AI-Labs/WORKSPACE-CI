@@ -14,6 +14,18 @@
       "source": "WORKSPACE-GATEWAY/conf/grafana/dashboards/gateway-cost-usage.json"
     },
     {
+      "title": "Gateway Model Experience",
+      "path": "/d/gateway-model-experience/gateway-model-experience",
+      "query": "orgId=1&from=now-90d&to=now&timezone=browser&var-model=$__all&var-api_key=$__all&var-rejection_mode=$__all&refresh=5s",
+      "source": "WORKSPACE-GATEWAY/conf/grafana/dashboards/gateway-model-experience.json"
+    },
+    {
+      "title": "Gateway Model Performance",
+      "path": "/d/gateway-model-performance/gateway-model-performance",
+      "query": "orgId=1&from=now-90d&to=now&timezone=browser&var-model=$__all&var-api_key=$__all&refresh=5s",
+      "source": "WORKSPACE-GATEWAY/conf/grafana/dashboards/gateway-model-performance.json"
+    },
+    {
       "title": "Gateway Operations & Health",
       "path": "/d/gateway-ops-health/gateway-operations-and-health",
       "query": "orgId=1&from=now-90d&to=now&timezone=browser&var-model=$__all&var-api_key=$__all&refresh=5s",

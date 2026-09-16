@@ -8,9 +8,21 @@ interface GatewayTabsProps {
   dashboards: GrafanaDashboardConfig[]
 }
 
+function trimSharedPrefix(titles: string[]): string[] {
+  if (titles.length < 2) return titles
+  let prefix = titles[0]
+  for (const t of titles.slice(1)) {
+    while (prefix && !t.startsWith(prefix)) prefix = prefix.slice(0, -1)
+  }
+  const cut = prefix.lastIndexOf(' ')
+  if (cut <= 0) return titles
+  return titles.map((t) => t.slice(cut + 1))
+}
+
 export function GatewayTabs({ dashboards }: GatewayTabsProps) {
   const [activeIndex, setActiveIndex] = useState(0)
   const active = dashboards[activeIndex]
+  const labels = trimSharedPrefix(dashboards.map((d) => d.title))
 
   return (
     <div className="gateway-tabs">
@@ -23,7 +35,7 @@ export function GatewayTabs({ dashboards }: GatewayTabsProps) {
             className={'gateway-tabs__tab' + (i === activeIndex ? ' is-active' : '')}
             onClick={() => setActiveIndex(i)}
           >
-            {d.title}
+            {labels[i]}
           </button>
         ))}
       </div>
