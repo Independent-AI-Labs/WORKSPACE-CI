@@ -3,14 +3,17 @@
 
 # Absolute cargo from CI's boot dir: the shell guard resets PATH on
 # every exec, so a bare `cargo` cannot be found and cargo could not
-# locate rustc/rustfmt/clippy-driver anyway. Prefix the boot bin dir on
-# PATH per invocation (same pattern as WORKSPACE-GUARD's Makefile).
+# locate rustc/rustfmt/clippy-driver anyway. PATH puts /usr/bin first:
+# the boot bin also shadows cc/gcc/ld with a musl-native toolchain that
+# cannot link host glibc binaries (rust-lld: undefined symbol
+# gnu_get_libc_version), which breaks every cargo build script. This was
+# latent until the 2026-09-14 reboot wiped the /tmp cargo cache.
 _OS := $(shell uname -s)
 _BOOT_NAME := $(if $(filter Darwin,$(_OS)),.boot-macos,.boot-linux)
 CARGO_BOOT_BIN := $(abspath ../..)/$(_BOOT_NAME)/bin
 RUSTUP_BOOT_HOME := $(abspath ../..)/$(_BOOT_NAME)/rust
 CARGO_CACHE_HOME := /tmp/workspace-ci-cargo-$(shell id -u)
-CARGO := RUSTUP_HOME="$(RUSTUP_BOOT_HOME)" CARGO_HOME="$(CARGO_CACHE_HOME)" PATH="$(CARGO_BOOT_BIN):$$PATH" $(CARGO_BOOT_BIN)/cargo
+CARGO := RUSTUP_HOME="$(RUSTUP_BOOT_HOME)" CARGO_HOME="$(CARGO_CACHE_HOME)" CC=/usr/bin/cc CXX=/usr/bin/c++ PATH="/usr/bin:/bin:$(CARGO_BOOT_BIN)" $(CARGO_BOOT_BIN)/cargo
 
 .DEFAULT_GOAL := help
 
