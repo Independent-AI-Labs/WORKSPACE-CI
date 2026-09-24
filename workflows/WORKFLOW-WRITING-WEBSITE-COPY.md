@@ -1,8 +1,9 @@
 # Workflow: Writing Website Copy
 
 Team workflow for visitor-facing prose in workspace repos and the WORKSPACE-CI
-wiki. Not a style guide for technical README bodies or API docs: a checklist for
-heroes, footers, branding strings, and README catalogue blurbs.
+wiki: a checklist for heroes, footers, branding strings, and README catalogue
+blurbs. Technical README bodies are covered by
+[WORKFLOW-WRITING-README.md](WORKFLOW-WRITING-README.md).
 
 Canonical path: `/opt/workspace-ci/workflows/WORKFLOW-WRITING-WEBSITE-COPY.md`
 
@@ -86,6 +87,12 @@ Do not ship these in visitor-facing copy:
 | Pattern                                                                  | Why                                                                           |
 | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
 | Em dash as a punchline connector                                         | Reads like AI slide deck; use a period, semicolon, or rewrite as one sentence |
+| Antithesis (`X, not Y`, `X rather than Y`, `X instead of Y`)             | Asserts by contrast and reads as generated copy; state the positive fact     |
+| Meta lead-ins (`This guide is the map:`, `N decisions shape...`)         | Describes the copy instead of being it; delete                               |
+| Empty qualifiers (`one`, `single`, `only`, `exactly`, `actual`, `whole`) | Dilutes the sentence; cut or replace with `a` / `the`                        |
+| Praise or editorial claims (`cannot be skipped`, `rides`, `never fought`) | Opinion; state the mechanism                                                |
+| Misnamed controls (`code gates`)                                         | Use the owning repo's term (`safety and quality gates`)                      |
+| Unregistered repos in a federated overview                               | List only repositories in `workspace/config/workspace-clones.yaml`          |
 | Closing taglines (`side by side`, `all in one place`, `every guardrail`) | Adds nothing after the list; sounds like stock marketing                      |
 | `The unified wiki for…` leading article + stacked features               | Weak opener; prefer direct `Unified wiki for…` or `A single wiki for…`        |
 | Triple adjectives in a hero                                              | Save precision for the page that owns the feature                             |
@@ -99,6 +106,11 @@ Do not ship these in visitor-facing copy:
 | Colon/comma feature dumps after the product name                         | `Product: A, B, C, D, …`                                                      |
 | Shorthand that understates supported backends                            | Match README/config tables, not one vendor label                              |
 | Too telegraphic                                                          | Catalogue blurbs need UVP depth, not tagline length                           |
+
+The full prose rules (contrast constructions, lead-ins, empty qualifiers,
+praise) live in
+[WORKFLOW-WRITING-README.md](WORKFLOW-WRITING-README.md#prose-style-technical-body)
+and apply to hero and catalogue copy too.
 
 ## Word choice (WORKSPACE-CI wiki hero)
 
@@ -152,6 +164,7 @@ from code and config.
 - [ ] No em dashes
 - [ ] No closing tagline after a comma list
 - [ ] No words from the banned table
+- [ ] No antithesis, meta lead-ins, empty qualifiers, or praise
 - [ ] Read aloud in under 10 seconds
 - [ ] `web/branding.yaml` `name` and `footer_tagline` stay consistent with hero tone
 - [ ] Tests/fixtures updated if `branding.yaml` strings changed
@@ -165,6 +178,7 @@ from code and config.
 - [ ] Provider/backend list matches README or config (not shorthand)
 - [ ] No implementation bragging in the intro
 - [ ] No feature-inventory or parallel verb-chain patterns
+- [ ] No antithesis, meta lead-ins, empty qualifiers, or praise
 - [ ] No em dashes; read aloud in under 12 seconds
 
 ## AI / agent instructions
@@ -175,7 +189,8 @@ When asked to rewrite wiki marketing copy or README catalogue intros:
 2. **Research the target repo** (README, features, config, recent commits)
    before proposing copy.
 3. Propose **at most two sentences** for heroes and catalogue blurbs.
-4. Show the banned-pattern diff (what you removed and why).
+4. Show the banned-pattern diff (what you removed and why), including any
+   antithesis, meta lead-in, empty qualifier, or praise you stripped.
 5. Use worked examples for tone and structure; do not copy product names into
    unrelated repos.
 6. Do not lead catalogue intros with sample deployments; put them last in
@@ -215,15 +230,15 @@ Problems: weak opener, over-long feature names, em-dash tagline, slogan ending.
 ### WORKSPACE-GATEWAY: approved catalogue intro
 
 ```
-Apache APISIX gateway for shared LLM traffic with per-tenant keys, spend
-limits, and PII redaction. Cloud backends run through ai-proxy or relay
-configuration, including OpenAI, Anthropic, Gemini, Bedrock, and others,
-with usage, cost, and health tracked in ClickHouse and Grafana; this repo
-ships sample routes to OpenCode and llamafile.
+**WORKSPACE-GATEWAY** relays shared LLM traffic through Apache APISIX with
+per-tenant virtual keys, spend limits, and PII redaction. It speaks each
+provider's native protocol, with usage, cost, and health tracked in ClickHouse
+and Grafana; this repo ships sample routes to OpenCode Go and Zen, Kimi, Z.ai,
+Anthropic, OpenAI, Alibaba Token Plan, and a local llamafile.
 ```
 
-Sentence 1 = category + tenant controls + PII. Sentence 2 = backend breadth,
-telemetry, samples last.
+Sentence 1 = category + mechanism + tenant controls + PII. Sentence 2 =
+native-protocol breadth + telemetry, sample routes last.
 
 ### WORKSPACE-GATEWAY: rejected catalogue intros
 
@@ -242,11 +257,44 @@ for ClickHouse.
 
 Problems: parallel verb pipeline, no UVP in sentence 1, reads like a runbook.
 
+```
+A self-hosted LLM gateway that puts one OpenAI-compatible endpoint in front
+of every model provider.
+```
+
+Problems: factually wrong. The relay routes are native-protocol passthroughs
+(Anthropic, OpenAI, Kimi, Z.ai, Alibaba), not one normalised format; `ai-proxy`
+is absent by design.
+
+```
+A multi-tenant LLM gateway, built as APISIX plugins with no sidecar on the
+request path.
+```
+
+Problems: implementation bragging (`no sidecar`, plugin stack) in the catalogue
+blurb; mechanism detail belongs in architecture docs, and this sentence states
+no UVP.
+
 ### WORKSPACE-GATEWAY: research notes (that repo only)
 
-When editing WORKSPACE-GATEWAY copy, verify against its Supported Providers
-table: `ai-proxy` / `ai-proxy-multi` vs relay routes; do not write
-"OpenAI-compatible only."
+Verify provider and mechanism claims against `conf/apisix.yaml` and
+`conf/providers/*.yaml`, never from memory or a sibling repo:
+
+- **No `ai-proxy`.** `tests/config/test_config_yaml.sh` asserts `ai-proxy` and
+  `ai-proxy-multi` are absent. Routes are relay configs (`upstream` +
+  `proxy-rewrite`); do not write "through ai-proxy".
+- **Native-protocol passthrough.** Each route relays the provider's own API
+  unchanged, with no format translation; do not write "OpenAI-compatible only"
+  or "one OpenAI-compatible endpoint".
+- **Roster (18 routes).** OpenCode Go (`/opencode`, `/opencode_federated`),
+  OpenCode Zen (`/opencode_zen`), Kimi (`/kimi`, `/kimi-key`,
+  `/kimi_federated`), Z.ai (`/zai-key`), Anthropic (`/anthropic`,
+  `/anthropic-device`), OpenAI (`/openai`), Alibaba Token Plan (`/token-plan`,
+  `/token-plan-cn`), and a local llamafile (`/llamafile`). No Gemini, Bedrock,
+  or xAI.
+- Tenant controls, telemetry, and dashboards are inventoried in the `## Features`
+  table and `## Configuration`: the intro names them, it does not enumerate
+  them.
 
 ### WORKSPACE-GUARD: approved catalogue intro shape
 

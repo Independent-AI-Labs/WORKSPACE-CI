@@ -13,3 +13,8 @@ diagrams in any workspace repo.
 Each workflow has generic rules up front and **Worked examples** at the end
 (from WORKSPACE-CI, WORKSPACE-GATEWAY, WORKSPACE-GUARD, etc.). Examples
 illustrate the rules; they are not extra requirements for unrelated repos.
+
+The plain-language rules in
+[WORKFLOW-WRITING-README.md](WORKFLOW-WRITING-README.md#prose-style-technical-body)
+(no contrast constructions, meta lead-ins, empty qualifiers, or praise) apply to
+every workflow's prose.

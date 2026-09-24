@@ -66,10 +66,18 @@ artifact, then install protected hooks as a separate step.
 | [`specifications/SPEC-HITL-GUARD.md`](specifications/SPEC-HITL-GUARD.md)                       | WORKSPACE-GUARD HITL client integration                                            |
 | [`specifications/SPEC-WEB-COMPONENTS.md`](specifications/SPEC-WEB-COMPONENTS.md)               | Shared web-component package implementation                                        |
 
+### runbooks/ - operational runbooks (RUNBOOK-*)
+
+| Document                                                                   | Scope                                                                                          |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [`runbooks/RUNBOOK-INTEGRATION.md`](runbooks/RUNBOOK-INTEGRATION.md)       | User-owned infrastructure for governing digital workspaces: capabilities, trust model, deployment, gates, policy, AI traffic, isolation, identity, audit  |
+| [`runbooks/RUNBOOK-HOOKS.md`](runbooks/RUNBOOK-HOOKS.md)                   | Protected hook deployment and reviewed-ancestor rollback                                       |
+
 ## Reading order for newcomers
 
 1. [`decisions/DECISION-BOOTSTRAP-AND-DEPLOYMENT-2026-08-10.md`](decisions/DECISION-BOOTSTRAP-AND-DEPLOYMENT-2026-08-10.md) and [`decisions/DECISION-SHELL-PYTHON-BOUNDARY-2026-08-18.md`](decisions/DECISION-SHELL-PYTHON-BOUNDARY-2026-08-18.md) - accepted human decisions.
 2. [`../README.md`](../README.md) - what workspace-ci is and how to install it.
-3. [`requirements/REQ-BOOT-LAYOUT.md`](requirements/REQ-BOOT-LAYOUT.md) + [`specifications/SPEC-BOOT-LAYOUT.md`](specifications/SPEC-BOOT-LAYOUT.md) - deployment boot layout.
-4. [`requirements/REQ-DEPENDENCY-VALIDATION.md`](requirements/REQ-DEPENDENCY-VALIDATION.md) + [`specifications/SPEC-DEPENDENCY-VALIDATION.md`](specifications/SPEC-DEPENDENCY-VALIDATION.md) - deterministic validation.
-5. [`requirements/REQ-WIKI.md`](requirements/REQ-WIKI.md) + [`specifications/SPEC-WIKI.md`](specifications/SPEC-WIKI.md) - the wiki web UI.
+3. [`runbooks/RUNBOOK-INTEGRATION.md`](runbooks/RUNBOOK-INTEGRATION.md) - the federated stack end to end: bring-up, deployment, guard, and onboarding.
+4. [`requirements/REQ-BOOT-LAYOUT.md`](requirements/REQ-BOOT-LAYOUT.md) + [`specifications/SPEC-BOOT-LAYOUT.md`](specifications/SPEC-BOOT-LAYOUT.md) - deployment boot layout.
+5. [`requirements/REQ-DEPENDENCY-VALIDATION.md`](requirements/REQ-DEPENDENCY-VALIDATION.md) + [`specifications/SPEC-DEPENDENCY-VALIDATION.md`](specifications/SPEC-DEPENDENCY-VALIDATION.md) - deterministic validation.
+6. [`requirements/REQ-WIKI.md`](requirements/REQ-WIKI.md) + [`specifications/SPEC-WIKI.md`](specifications/SPEC-WIKI.md) - the wiki web UI.

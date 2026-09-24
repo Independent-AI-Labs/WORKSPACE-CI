@@ -21,7 +21,7 @@
 }
 
 .hero--dynamic {
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-6);
 }
 
 @media (max-width: 2559px) and (max-height: 1439px) {
@@ -29,6 +29,10 @@
     padding: var(--space-1) var(--space-3);
     transition: padding 300ms ease;
     cursor: pointer;
+  }
+
+  .hero--dynamic:hover {
+    padding: var(--space-2) var(--space-4);
   }
 
   .hero--dynamic .hero__subtitle {
@@ -39,8 +43,7 @@
       font-size 300ms ease;
   }
 
-  .hero--dynamic:hover .hero__subtitle,
-  .hero--dynamic:focus-within .hero__subtitle {
+  .hero--dynamic.hero--expanded .hero__subtitle {
     line-height: var(--leading-relaxed);
     font-size: var(--text-base);
   }
@@ -56,13 +59,11 @@
       margin 300ms ease;
   }
 
-  .hero--dynamic:hover,
-  .hero--dynamic:focus-within {
+  .hero--dynamic.hero--expanded {
     padding: var(--space-4) var(--wiki-inset-x);
   }
 
-  .hero--dynamic:hover .hero__title,
-  .hero--dynamic:focus-within .hero__title {
+  .hero--dynamic.hero--expanded .hero__title {
     opacity: 1;
     max-height: 4rem;
     margin: 0 0 var(--space-2) 0;
@@ -73,8 +74,7 @@
       font-size: calc(var(--text-sm) * 0.9);
     }
 
-    .hero--dynamic:hover .hero__subtitle,
-    .hero--dynamic:focus-within .hero__subtitle {
+    .hero--dynamic.hero--expanded .hero__subtitle {
       font-size: var(--text-sm);
     }
   }

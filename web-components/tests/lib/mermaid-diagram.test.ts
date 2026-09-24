@@ -70,6 +70,31 @@ describe('mountMermaidDiagram', () => {
     ctrl.destroy()
   })
 
+  it('scales a tall diagram down to the height cap instead of clipping it', async () => {
+    const frame = makeFrame('graph TD\nA-->B')
+    const pre = frame.querySelector<HTMLElement>('pre.mermaid')!
+    Object.defineProperty(pre, 'clientWidth', { value: 400, configurable: true })
+    const ctrl = mountMermaidDiagram(frame)
+    await ctrl.render(fakeRunner('<svg viewBox="0 0 100 4000"><rect/></svg>'))
+    const svg = svgOf(frame)
+    const maxHeight = Math.round(window.innerHeight * 0.7)
+    expect(svg.style.width).toBe('auto')
+    expect(svg.style.height).toBe(`${maxHeight}px`)
+    ctrl.destroy()
+  })
+
+  it('leaves a diagram that fits within the cap at full width', async () => {
+    const frame = makeFrame('graph TD\nA-->B')
+    const pre = frame.querySelector<HTMLElement>('pre.mermaid')!
+    Object.defineProperty(pre, 'clientWidth', { value: 400, configurable: true })
+    const ctrl = mountMermaidDiagram(frame)
+    await ctrl.render(fakeRunner('<svg viewBox="0 0 100 20"><rect/></svg>'))
+    const svg = svgOf(frame)
+    expect(svg.style.width).not.toBe('auto')
+    expect(svg.style.height).toBe('auto')
+    ctrl.destroy()
+  })
+
   it('does not mark ready when runner produces no svg', async () => {
     const frame = makeFrame('graph TD\nA-->B')
     const ctrl = mountMermaidDiagram(frame)

@@ -53,6 +53,27 @@ const TOOLBAR_ACTIONS: ToolbarAction[] = [
 
 const COPIED_RESET_MS = 2000
 
+// Fraction of the window height a rendered diagram may occupy. The SVG is
+// scaled down to fit this cap (aspect ratio preserved), so a tall graph stays
+// whole and readable instead of becoming an arbitrarily tall block.
+const VIEWPORT_MAX_HEIGHT_RATIO = 0.7
+
+// SVG width/height attributes often carry percentages that fight the fit; only
+// absolute values are useful for the intrinsic aspect ratio.
+function stripPercentDimensions(target: SVGSVGElement): void {
+  const widthAttr = target.getAttribute('width')
+  const heightAttr = target.getAttribute('height')
+  if (widthAttr?.includes('%')) target.removeAttribute('width')
+  if (heightAttr?.includes('%')) target.removeAttribute('height')
+}
+
+function viewportContentWidth(pre: HTMLElement): number {
+  const style = getComputedStyle(pre)
+  const paddingLeft = parseFloat(style.paddingLeft) || 0
+  const paddingRight = parseFloat(style.paddingRight) || 0
+  return Math.max(0, pre.clientWidth - paddingLeft - paddingRight)
+}
+
 function buildToolbar(): HTMLDivElement {
   const toolbar = document.createElement('div')
   toolbar.className = 'mermaid-toolbar'
@@ -103,21 +124,30 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
   pre.setAttribute('role', 'group')
   pre.setAttribute('aria-label', 'Diagram viewport, Ctrl+scroll to zoom, drag to pan')
 
-  function fitSvgToContainer(target: SVGSVGElement): void {
+  function fitSvgToContainer(target: SVGSVGElement, targetBase: ViewBox): void {
     target.style.display = 'block'
     target.style.transform = ''
     target.style.transformOrigin = ''
+    target.style.maxWidth = '100%'
     target.style.removeProperty('width')
     target.style.removeProperty('height')
-    target.style.maxWidth = '100%'
-    target.style.height = 'auto'
     target.style.margin = '0 auto'
-    // Mermaid often emits width/height="100%", which stretches the canvas and
-    // pins the drawing to the top-left. Prefer the viewBox/CSS dimensions.
-    const widthAttr = target.getAttribute('width')
-    const heightAttr = target.getAttribute('height')
-    if (widthAttr?.includes('%')) target.removeAttribute('width')
-    if (heightAttr?.includes('%')) target.removeAttribute('height')
+    stripPercentDimensions(target)
+
+    const width = viewportContentWidth(pre)
+    if (width <= 0 || targetBase.w <= 0 || targetBase.h <= 0) {
+      target.style.height = 'auto'
+      return
+    }
+    const heightAtFullWidth = (width * targetBase.h) / targetBase.w
+    const maxHeight = Math.round(window.innerHeight * VIEWPORT_MAX_HEIGHT_RATIO)
+    if (heightAtFullWidth > maxHeight) {
+      // Tall graph: scale it down by height so the whole drawing fits the cap.
+      target.style.width = 'auto'
+      target.style.height = `${maxHeight}px`
+      return
+    }
+    target.style.height = 'auto'
   }
 
   function syncPannableState(): void {
@@ -127,8 +157,8 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
   function syncSvg(): void {
     svg = pre.querySelector<SVGSVGElement>('svg')
     if (!svg) return
-    fitSvgToContainer(svg)
     base = deriveBaseViewBox(svg)
+    fitSvgToContainer(svg, base)
     // Preserve any source-supplied viewBox. The source usually sets one
     // matching base, but in case the platform injected a partial one before
     // we touched it we prefer the parsed value if present, else derive.
@@ -140,7 +170,7 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
 
     if (!resizeObserver && 'ResizeObserver' in window) {
       resizeObserver = new ResizeObserver(() => {
-        if (svg) fitSvgToContainer(svg)
+        if (svg) fitSvgToContainer(svg, base)
       })
       resizeObserver.observe(frame)
     }

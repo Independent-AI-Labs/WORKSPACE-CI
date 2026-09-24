@@ -2,10 +2,9 @@
 
 Team workflow for technical README bodies in workspace repos: structure,
 subsystem sections, installation catalogs, contribution contracts, and how
-diagrams and tables fit together. Not marketing copy (see
-[WORKFLOW-WRITING-WEBSITE-COPY.md](WORKFLOW-WRITING-WEBSITE-COPY.md)) and not
-diagram syntax alone (see
-[WORKFLOW-CREATING-DIAGRAMS.md](WORKFLOW-CREATING-DIAGRAMS.md)).
+diagrams and tables fit together. Marketing copy is covered by
+[WORKFLOW-WRITING-WEBSITE-COPY.md](WORKFLOW-WRITING-WEBSITE-COPY.md); Mermaid
+syntax by [WORKFLOW-CREATING-DIAGRAMS.md](WORKFLOW-CREATING-DIAGRAMS.md).
 
 Canonical path: `/opt/workspace-ci/workflows/WORKFLOW-WRITING-README.md`
 
@@ -353,14 +352,84 @@ File paths are OK **inside** a label when they are the actual operator surface
 
 ## Prose style (technical body)
 
+Write flat, factual sentences. State what something is or does, then stop.
+
 - Complete sentences; prefer short paragraphs over bullet dumps.
-- Link specs with descriptive markdown links, not bare paths.
+- Use descriptive markdown links for specs.
 - Use **sample** framing for repo-specific routes or deployments (`In this
-sample, ...`), not "production-only" claims.
+  sample, ...`).
 - No Unicode em-dash or en-dash in markdown (CI `check-banned-words`); use
   comma, colon, or ASCII hyphen.
-- Do not paste troubleshooting encyclopedias. One-line failure hints belong in
-  specs or runbooks; README links there.
+- One-line failure hints belong in specs or runbooks; README links there.
+
+### Banned contrast constructions
+
+The `X, not Y` shape asserts by contrast and reads as generated copy. Rewrite to
+the positive fact.
+
+| Do not write | Write instead |
+| --- | --- |
+| `X, not Y` (`Enforced, not documented.`) | `Enforcement lives in code.` |
+| `X rather than Y` | The sentence for X alone |
+| `X instead of Y` | The sentence for X alone |
+| `The rules are data, not code.` | `The gates read their rules from configuration files.` |
+| Paired rhetorical clauses (`Cloud X ... local Y ...`) | State each mechanism once |
+
+### Banned lead-ins
+
+Delete the sentence. The heading, table, or command that follows carries the
+content.
+
+- `This guide is the map: ...`
+- `Three decisions shape how the stack works:`
+- `Two rules follow from the table:`
+- `The sections below cover ...`
+- `Bring-up is staged so that ...`
+- `In this section we ...`
+
+### Cut qualifiers that add nothing
+
+| Remove | Use |
+| --- | --- |
+| `one`, `single` (`reads one config file`) | `a` (`reads a config file`) |
+| `only` (`the only deployment contract`) | `the` |
+| `exactly` (`exactly one trust domain`) | `a` |
+| `actual`, `real` (`the actual command`) | delete |
+| `whole`, `entire` (`the whole tree`) | delete |
+| `in one pass`, `each at a different moment` | delete |
+| `running` (`a running program`) | `a program` |
+
+Keep qualifiers that carry scope or a constraint: `every AI call`, `per-tenant`,
+`forward-only`, `read-only`, `no hooks installed`. If removing the word changes
+a fact, keep it.
+
+### Cut boast and editorial
+
+No claims about robustness, discipline, or guarantees. State the mechanism.
+
+| Do not write | Why |
+| --- | --- |
+| `Compliance holds without relying on anyone's discipline.` | Opinion; the mechanism already proves it |
+| `so a hook cannot be skipped` | Claim; describe what the guard does |
+| `a dirty tree rides the next commit` | Idiom; use `uncommitted changes are included in the next commit` |
+| `never fought`, `stays governed`, `sits in front of` | Editorial verbs; use the plain verb |
+| `and its guarantees` | Selling; drop the clause |
+
+### Name things as they are
+
+Match the owning repo README and config. Do not invent categories, and do not
+understate a subsystem.
+
+| Product | Description |
+| --- | --- |
+| CI checks | safety and quality gates, not "code gates" |
+| WORKSPACE-GATEWAY | AI gateway that authenticates, limits, redacts, and records, not just a proxy |
+| WORKSPACE-VM | brings the workspace together into auditable sandboxed environments for agents and services |
+| WORKSPACE-GUARD | git, shell, binary, and home guards at the syscall boundary |
+
+In a federated overview, name only the repositories registered in
+`workspace/config/workspace-clones.yaml`. Leave unregistered and opt-in projects
+out of the list.
 
 ## Navigation map
 
@@ -405,13 +474,19 @@ documents contributor workflows explicitly. Agents load workflows by default.
 - [ ] No installer-chain diagrams masquerading as architecture
 - [ ] Multi-path diagrams use decision spine + single outcome node
 - [ ] Legend is in-Mermaid `subgraph`, same shape vocabulary as sibling diagrams
-- [ ] Node labels are operator-facing phrases, not internal module names
-- [ ] Benchmarks are pointers, not diagrammed pipelines
+- [ ] Node labels use operator-facing phrases
+- [ ] Benchmarks stay as prose plus a link to their README
 - [ ] No troubleshooting dump; no incident citations in operator steps
 - [ ] Contribution contract lists real `make` targets and links `/opt/workspace-ci/`
 - [ ] Navigation map matches repo layout
 - [ ] Diagrams render (mermaid.live or GitHub preview); fences paired correctly
 - [ ] No em-dash or en-dash in edited markdown
+- [ ] No `X, not Y` / `rather than` / `instead of` constructions
+- [ ] No meta lead-ins (`This guide is...`, `N decisions shape...`, `The sections below...`)
+- [ ] No unnecessary qualifiers (`one`, `single`, `only`, `exactly`, `actual`, `whole`, `in one pass`)
+- [ ] No boast or editorial claims; each sentence states a fact or an action
+- [ ] Product and control names match the owning repo
+- [ ] Federated overview names only registered repositories
 - [ ] `make check` / link checks pass when applicable
 
 ## AI / agent instructions
@@ -435,8 +510,13 @@ When asked to create or edit a technical README:
    (one profile per run).
 7. Put enumerations in tables; put processing structure in diagrams.
 8. Move deep content to specs; replace with links.
-9. Do not add workflow doc links to user-facing README unless asked.
-10. Do not commit or push unless the user explicitly asks.
+9. **Strip banned prose** (see Prose style): contrast constructions, meta
+   lead-ins, empty qualifiers, praise, and editorial verbs. Report what you
+   removed.
+10. Verify product and control names against the owning repo; in a federated
+    overview, list only repositories in `workspace/config/workspace-clones.yaml`.
+11. Do not add workflow doc links to user-facing README unless asked.
+12. Do not commit or push unless the user explicitly asks.
 
 ## Worked example: WORKSPACE-VM
 

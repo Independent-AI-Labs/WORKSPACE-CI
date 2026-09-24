@@ -58,7 +58,7 @@ Responsive behavior is owned by
 | `/llm-gateway`              | Live gateway observability                   | branding, project registry, Grafana discovery and health              |
 | `/static-analysis`          | Static-analysis section                      | route manifest and section state                                      |
 | `/playground`               | Client-side pattern tester                   | banned-pattern configuration and wiki labels                          |
-| `/integration-guide`        | Integration runbook                          | `docs/runbooks/RUNBOOK-HOOKS.md`                                      |
+| `/integration-guide`        | Integration guide                            | `docs/runbooks/RUNBOOK-INTEGRATION.md`                                |
 
 Next.js parenthesized route groups MAY organize these routes without changing
 

@@ -299,6 +299,7 @@ make check-guard-host-exec
 | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | [`workflows/README.md`](workflows/README.md)                                                 | Agent/contributor workflows: website copy, architecture diagrams                                         |
 | [`docs/README.md`](docs/README.md)                                                           | Documentation hub (requirements, specifications, runbooks)                                               |
+| [`docs/runbooks/RUNBOOK-INTEGRATION.md`](docs/runbooks/RUNBOOK-INTEGRATION.md)               | User-owned infrastructure for governing digital workspaces: capabilities, trust model, deployment, gates, policy, AI traffic, isolation, identity, audit  |
 | [`docs/runbooks/RUNBOOK-HOOKS.md`](docs/runbooks/RUNBOOK-HOOKS.md)                           | Clean hook generation and protected installation                                                         |
 | [`docs/requirements/REQ-PORTABILITY.md`](docs/requirements/REQ-PORTABILITY.md)               | Shell portability contract: process-substitution ban, temp-file capture helpers                          |
 | [`docs/decisions/DECISION-SHELL-PYTHON-BOUNDARY-2026-08-18.md`](docs/decisions/DECISION-SHELL-PYTHON-BOUNDARY-2026-08-18.md) | Implementation ownership across shell, CLI tools, and Python |

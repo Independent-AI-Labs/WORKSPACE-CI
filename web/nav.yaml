@@ -173,7 +173,7 @@ pages:
   - id: page-integration
     title: Integration Guide
     section: Pages
-    content: Integration guide
+    content: 'Fully user-owned infrastructure for governing digital workspaces: trust model, deployment, quality gates, policy, AI traffic, isolation, identity, and audit'
     href: /integration-guide
     nav:
       label: Integration Guide
@@ -181,5 +181,17 @@ pages:
       divider: true
     keywords:
       - integration
+      - onboarding
+      - user-owned
+      - digital workspace
+      - workspace
+      - governance
+      - quality gates
+      - policy
+      - audit
+      - identity
+      - isolation
+      - gateway
+      - guard
+      - hooks
       - ci
-      - setup

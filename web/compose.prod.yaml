@@ -15,6 +15,9 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://localhost,https://127.0.0.1}
       # Unset = auto-derive https://<request-host>/grafana per request (same-origin iframes).
       GRAFANA_BASE_URL: ${GRAFANA_BASE_URL:-}
+      # Server-side health probe goes through the local edge proxy (never
+      # gw-edge directly): the app holds no Grafana trust-path network access.
+      GRAFANA_INTERNAL_HEALTH_URL: ${GRAFANA_INTERNAL_HEALTH_URL:-http://wiki-nginx/grafana/api/health}
       WIKI_HOME_LANDING_ENABLED: ${WIKI_HOME_LANDING_ENABLED:-true}
       WIKI_DEV_PORT: ${WIKI_DEV_PORT:-4000}
       WORKSPACE_WEB_CONTENT_ROOT: /workspace/WORKSPACE-WEB-CONTENT
@@ -26,7 +29,6 @@ services:
       - wiki-feedback:/workspace/CI/web/data/feedback
     networks:
       - wiki
-      - gateway
     restart: unless-stopped
 
   wiki-nginx:
@@ -35,8 +37,11 @@ services:
     depends_on:
       - wiki-app
     networks:
-      - wiki
-      - gateway
+      wiki: {}
+      gw-edge:
+        # Pinned: Grafana's auth-proxy whitelist trusts exactly this address
+        # (GRAFANA_EDGE_CIDR=10.99.60.2/32). See RUNBOOK-EDGE-PROXY.
+        ipv4_address: 10.99.60.2
     ports:
       - "${WIKI_HTTP_PORT:-8080}:80"
       - "${WIKI_HTTPS_PORT:-8443}:443"
@@ -57,6 +62,6 @@ volumes:
 
 networks:
   wiki:
-  gateway:
+  gw-edge:
     external: true
-    name: docker_gateway
+    name: docker_gw-edge
