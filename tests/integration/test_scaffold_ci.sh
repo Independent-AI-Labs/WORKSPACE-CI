@@ -212,7 +212,7 @@ EOF
     local rc=0
     bash "$_SCI_SCRIPT" --consumer "$consumer" > "$TEST_TMP/out" 2>&1 || rc=$?
     [[ $rc -ne 0 ]] || { echo "expected non-zero exit"; return 1; }
-    grep -q 'not registered' "$TEST_TMP/out" || { echo "missing not-registered message"; return 1; }
+    grep -q 'not in required_hooks.yaml and not present' "$TEST_TMP/out" || { echo "missing not-present message"; return 1; }
 }
 _run_test "scaffold_unknown_hook: fails with diagnostic" test_scaffold_unknown_hook
 
