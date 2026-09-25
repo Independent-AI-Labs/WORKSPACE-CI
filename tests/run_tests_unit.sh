@@ -27,6 +27,7 @@ _required_unit_tests=(
     test_cleanup_precommit.sh
     test_guard_build.sh
     scaffold/test_scaffold_ci.sh
+    scaffold/test_scaffold_ci_custom.sh
     scaffold/test_scaffold_ci_force.sh
     scaffold/test_scaffold_ci_gen.sh
     scaffold/test_scaffold_ci_inspect.sh
@@ -54,6 +55,7 @@ source "$TESTS_DIR/unit/test_deploy_ci_rev.sh"
 source "$TESTS_DIR/unit/test_cleanup_precommit.sh"
 source "$TESTS_DIR/unit/test_guard_build.sh"
 source "$TESTS_DIR/unit/scaffold/test_scaffold_ci.sh"
+source "$TESTS_DIR/unit/scaffold/test_scaffold_ci_custom.sh"
 source "$TESTS_DIR/unit/scaffold/test_scaffold_ci_force.sh"
 source "$TESTS_DIR/unit/scaffold/test_scaffold_ci_gen.sh"
 source "$TESTS_DIR/unit/scaffold/test_scaffold_ci_inspect.sh"

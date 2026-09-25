@@ -31,6 +31,8 @@ if ! source "$_CI_ROOT/lib/scaffold_lib.sh"; then
 fi
 
 _PARSER="$_CI_ROOT/lib/parse_hook_yaml.awk"
+_PARSER_PC="$_CI_ROOT/lib/parse_precommit_config.awk"
+_PARSER_BLOCKS="$_CI_ROOT/lib/extract_local_hooks.awk"
 _QE_TEMPLATE="$_CI_ROOT/templates/quality_exceptions.template.yaml"
 _config_overrides=""
 
@@ -333,6 +335,35 @@ while IFS= read -r _rline; do
     _reg_files["$_rid"]="$_rfiles"
 done <<< "$_registry_parsed"
 
+# ── Lift custom hooks from the existing .pre-commit-config.yaml ────────────
+# Any hook whose id is not in required_hooks.yaml is consumer-local: a project
+# hook, a tool runner, a check not yet promoted to the registry. Those must
+# survive a re-scaffold untouched, so their YAML blocks are copied verbatim
+# (fields the field parser ignores included) and merged after the generated
+# hooks. Registered hooks are never lifted (the profile + mandatory set define
+# them); customising a registered hook is expressed through profile overrides.
+# The `_cus_ids` set below holds only synthetic custom hooks: unregistered ids
+# the profile defines purely via overrides, with no existing block to lift.
+_cus_ids=(); _cus_name=(); _cus_entry=(); _cus_stage=()
+_cus_pass=(); _cus_always=(); _cus_files=(); _cus_exclude=()
+_cus_args=(); _cus_types=(); _cus_advisory=()
+declare -A _cus_seen=()
+_cus_blocks=""
+_existing_pc="$_consumer/.pre-commit-config.yaml"
+if [[ -f "$_existing_pc" ]]; then
+    _reg_ids_str=""
+    for _rid in "${!_reg_id[@]}"; do _reg_ids_str+=" $_rid"; done
+    _custom_parsed="$(awk -f "$_PARSER_PC" "$_existing_pc")"
+    while IFS=$'\034' read -r _cid _cname _centry _cstage _cpass _calways _cfiles _cexclude _cargs _ctypes _cadvisory; do
+        [[ -n "$_cid" ]] || continue
+        [[ -n "${_reg_id[$_cid]:-}" ]] && continue
+        _cus_seen["$_cid"]=1
+    done <<< "$_custom_parsed"
+    if [[ ${#_cus_seen[@]} -gt 0 ]]; then
+        _cus_blocks="$(awk -v reg_ids="$_reg_ids_str" -f "$_PARSER_BLOCKS" "$_existing_pc")"
+    fi
+fi
+
 # ── Phase D: Hook ID Resolution ────────────────────────────────────────────
 _d_errors=()
 _d_warnings=()
@@ -340,11 +371,26 @@ _d_warnings=()
 _scl_validate_ids() {
     local stage="$1"; shift
     local -n _arr="_pf_hooks_$stage"
-    local _id _app _found _w _lang
+    local _id _app _found _w _lang _ov_entry _oi
     for _id in "${_arr[@]:-}"; do
         if [[ -z "$_id" ]]; then continue; fi
         if [[ -z "${_reg_id[$_id]:-}" ]]; then
-            _d_errors+=("hook '$_id' in stage '$stage' is not registered in required_hooks.yaml")
+            # Not in the registry: acceptable when it is a consumer-local hook
+            # lifted from the existing config, or fully defined via an override.
+            if [[ -n "${_cus_seen[$_id]:-}" ]]; then
+                continue
+            fi
+            _ov_entry=""
+            for _oi in "${!_pf_override_ids[@]}"; do
+                if [[ "${_pf_override_ids[$_oi]}" == "$_id" && "${_pf_override_fields[$_oi]}" == "entry" ]]; then
+                    _ov_entry="${_pf_override_values[$_oi]}"
+                fi
+            done
+            if [[ -n "$_ov_entry" ]]; then
+                _d_warnings+=("hook '$_id' is not in required_hooks.yaml; using its override entry as a custom hook")
+                continue
+            fi
+            _d_errors+=("hook '$_id' in stage '$stage' is not in required_hooks.yaml and not present in the existing .pre-commit-config.yaml; add its definition via an override or leave it out")
             continue
         fi
         _app="${_reg_applicable[$_id]}"
@@ -379,6 +425,39 @@ fi
 for _w in "${_d_warnings[@]:-}"; do
     if [[ -z "$_w" ]]; then continue; fi
     ci_warn "$_w"
+done
+
+# Synthesize unregistered ids the profile defines purely through overrides
+# (no pre-existing hook to lift). Validation above guaranteed an entry value.
+for _syn_pair in "pre-commit:pre_commit" "commit-msg:commit_msg" "pre-push:pre_push"; do
+    _syn_stage="${_syn_pair%%:*}"
+    _syn_var="${_syn_pair#*:}"
+    declare -n _syn_arr="_pf_hooks_$_syn_var"
+    for _syn_id in "${_syn_arr[@]:-}"; do
+        [[ -n "$_syn_id" ]] || continue
+        [[ -n "${_reg_id[$_syn_id]:-}" ]] && continue
+        [[ -n "${_cus_seen[$_syn_id]:-}" ]] && continue
+        _syn_entry=""; _syn_name=""; _syn_files=""
+        _syn_pf="false"; _syn_ar="true"
+        for _si in "${!_pf_override_ids[@]}"; do
+            if [[ "${_pf_override_ids[$_si]}" == "$_syn_id" ]]; then
+                case "${_pf_override_fields[$_si]}" in
+                    entry)          _syn_entry="${_pf_override_values[$_si]}" ;;
+                    name)           _syn_name="${_pf_override_values[$_si]}" ;;
+                    pass_filenames) _syn_pf="${_pf_override_values[$_si]}" ;;
+                    always_run)     _syn_ar="${_pf_override_values[$_si]}" ;;
+                    files)          _syn_files="${_pf_override_values[$_si]}" ;;
+                esac
+            fi
+        done
+        [[ -n "$_syn_name" ]] || _syn_name="$_syn_id"
+        _cus_ids+=("$_syn_id"); _cus_name+=("$_syn_name"); _cus_entry+=("$_syn_entry")
+        _cus_stage+=("$_syn_stage"); _cus_pass+=("$_syn_pf"); _cus_always+=("$_syn_ar")
+        _cus_files+=("$_syn_files"); _cus_exclude+=(""); _cus_args+=("")
+        _cus_types+=(""); _cus_advisory+=("false")
+        _cus_seen["$_syn_id"]=1
+    done
+    unset -n _syn_arr
 done
 
 # ── Phase E: Mandatory-Hook Completeness ───────────────────────────────────

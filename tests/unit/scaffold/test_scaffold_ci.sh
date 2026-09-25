@@ -345,7 +345,7 @@ EOF
     local rc=0
     bash scripts/scaffold-ci --consumer "$TEST_TMP/sci-test" > "$TEST_TMP/out" 2>&1 || rc=$?
     [[ $rc -ne 0 ]] || { echo "expected failure"; return 1; }
-    grep -q 'not registered' "$TEST_TMP/out" || { echo "wrong error message"; return 1; }
+    grep -q 'not in required_hooks.yaml and not present' "$TEST_TMP/out" || { echo "wrong error message"; return 1; }
 }
 _run_test "validate: unknown hook ID fails" test_validate_unknown_hook
 

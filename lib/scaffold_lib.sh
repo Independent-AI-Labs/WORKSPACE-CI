@@ -5,6 +5,9 @@
 # Sourced global vars expected: REL_CI, _pf_project, _pf_tier,
 # _pf_languages, _pf_override_ids, _pf_override_fields,
 # _pf_override_values, _reg_*, _PARSER, _QE_TEMPLATE, _CONFIG_DIR.
+# Custom-hook vars (lifted from the existing config): _cus_ids, _cus_name,
+# _cus_entry, _cus_stage, _cus_pass, _cus_always, _cus_files, _cus_exclude,
+# _cus_args, _cus_types, _cus_advisory.
 
 # ── Backup a file before overwrite ─────────────────────────────────────────
 # _scl_backup <path> <make_backup_flag> <nameref_array>
@@ -18,6 +21,37 @@ _scl_backup() {
     local _bak="${_path}.scaffold-bak.$(date +%s)"
     cp -p "$_path" "$_bak"
     _arr+=("$_bak")
+}
+
+# ── Escape a value for a double-quoted YAML scalar ─────────────────────────
+_scl_yaml_dq() {
+    local _s="$1"
+    _s="${_s//\\/\\\\}"
+    _s="${_s//\"/\\\"}"
+    printf '%s' "$_s"
+}
+
+# ── Look up an override value for <hook-id> <field> ────────────────────────
+# Prints the value and returns 0 when present, returns 1 otherwise.
+_scl_override_lookup() {
+    local _hid="$1" _field="$2" _i
+    for _i in "${!_pf_override_ids[@]}"; do
+        if [[ "${_pf_override_ids[$_i]}" == "$_hid" && "${_pf_override_fields[$_i]}" == "$_field" ]]; then
+            printf '%s' "${_pf_override_values[$_i]}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# ── Resolve <hook-id> <field> to its override or a default ─────────────────
+_scl_resolve() {
+    local _hid="$1" _field="$2" _default="$3" _v
+    if _v="$(_scl_override_lookup "$_hid" "$_field")"; then
+        printf '%s' "$_v"
+    else
+        printf '%s' "$_default"
+    fi
 }
 
 # ── Render a hook's entry string ───────────────────────────────────────────
@@ -83,8 +117,14 @@ _scl_gen_precommit() {
         local -n _sarr="_pf_hooks_$_vname"
         for _hid in "${_sarr[@]:-}"; do
             if [[ -z "$_hid" ]]; then continue; fi
-            local _name="${_hid//-/ }"
-            _name="$(echo "$_name" | awk '{for(i=1;i<=NF;i++)$i=toupper(substr($i,1,1))substr($i,2)}1')"
+            # Custom hooks are rendered by the lift loop below; the registry
+            # renderer only knows registry kinds.
+            [[ -n "${_reg_id[$_hid]:-}" ]] || continue
+            local _name
+            if ! _name="$(_scl_override_lookup "$_hid" name)"; then
+                _name="${_hid//-/ }"
+                _name="$(echo "$_name" | awk '{for(i=1;i<=NF;i++)$i=toupper(substr($i,1,1))substr($i,2)}1')"
+            fi
             local _entry; _entry="$(_scl_render_entry "$_hid")"
             local _pf; _pf="$(_scl_get_field "$_hid" pass_filenames "true")"
             local _ar; _ar="$(_scl_get_field "$_hid" always_run "false")"
@@ -102,6 +142,52 @@ _scl_gen_precommit() {
                 printf '        files: %s\n' "\"$_files\""
             fi
         done
+    done
+    # Consumer-local hook blocks lifted verbatim from the existing config.
+    if [[ -n "${_cus_blocks:-}" ]]; then
+        printf '%s\n' "$_cus_blocks"
+    fi
+    # Synthetic custom hooks: unregistered ids the profile defines through
+    # overrides, with no pre-existing block to lift.
+    local _ci _cid _cstage _cname _centry _cpf _car _cfiles _cexclude _cargs _ctypes _cadvisory
+    for _ci in "${!_cus_ids[@]}"; do
+        _cid="${_cus_ids[$_ci]}"
+        [[ -n "$_cid" ]] || continue
+        [[ -n "${_reg_id[$_cid]:-}" ]] && continue
+        _cstage="${_cus_stage[$_ci]:-pre-commit}"
+        _cname="$(_scl_resolve "$_cid" name "${_cus_name[$_ci]}")"
+        _centry="$(_scl_resolve "$_cid" entry "${_cus_entry[$_ci]}")"
+        _cpf="$(_scl_resolve "$_cid" pass_filenames "${_cus_pass[$_ci]:-true}")"
+        _car="$(_scl_resolve "$_cid" always_run "${_cus_always[$_ci]:-false}")"
+        _cfiles="$(_scl_resolve "$_cid" files "${_cus_files[$_ci]:-}")"
+        _cexclude="${_cus_exclude[$_ci]:-}"
+        _cargs="${_cus_args[$_ci]:-}"
+        _ctypes="${_cus_types[$_ci]:-}"
+        _cadvisory="${_cus_advisory[$_ci]:-false}"
+        printf '      - id: %s\n' "$_cid"
+        printf '        name: %s\n' "\"$(_scl_yaml_dq "$_cname")\""
+        printf '        entry: %s\n' "\"$(_scl_yaml_dq "$_centry")\""
+        printf '        language: system\n'
+        printf '        pass_filenames: %s\n' "$_cpf"
+        printf '        always_run: %s\n' "$_car"
+        if [[ "$_cstage" != "pre-commit" ]]; then
+            printf '        stages: [%s]\n' "${_cstage// /, }"
+        fi
+        if [[ -n "$_cfiles" ]]; then
+            printf '        files: %s\n' "\"$(_scl_yaml_dq "$_cfiles")\""
+        fi
+        if [[ -n "$_cexclude" ]]; then
+            printf '        exclude: %s\n' "\"$(_scl_yaml_dq "$_cexclude")\""
+        fi
+        if [[ -n "$_cargs" ]]; then
+            printf '        args: [%s]\n' "${_cargs// /, }"
+        fi
+        if [[ -n "$_ctypes" ]]; then
+            printf '        types_or: [%s]\n' "${_ctypes// /, }"
+        fi
+        if [[ "$_cadvisory" == "true" ]]; then
+            printf '        advisory: true\n'
+        fi
     done
 }
 
