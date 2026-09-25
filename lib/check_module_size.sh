@@ -39,7 +39,10 @@ ci_check_module_size() {
     local root
     root="$(git rev-parse --show-toplevel)" || return 1
     local source_files=() candidates=()
-    ci_capture_lines candidates -- git ls-files --cached
+    # Index scan, not a staged subset: ci_check_unstaged stages the whole
+    # tree before this guard runs, so every repository file (tracked and
+    # newly added) is present here. The guard takes no file arguments.
+    ci_capture_lines candidates -- git ls-files --cached --exclude-standard
     local candidate ext is_source
     for candidate in "${candidates[@]}"; do
         is_source=0

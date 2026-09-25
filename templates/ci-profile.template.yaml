@@ -12,23 +12,25 @@ languages: [python]
 tier: strict
 hooks:
   pre-commit:
-    - block-sensitive-files
     - gitleaks
+    - block-sensitive-files
     - check-unstaged
     - ci-check-error-swallow
     - check-coverage-no-devolution
-    - check-banned-words
     - check-portable-shell
     - check-file-length
     - check-required-hooks-present
     - ci-lint
     - ci-type-check
     - check-dependency-versions
-    - check-markdown-docs
-    - check-resolution-shapes
     - check-module-size
     - check-npm-lock-sync
     - check-policy-integrity
+    - check-banned-words
+    - check-resolution-shapes
+    - check-init-files
+    - check-py-not-executable
+    - check-markdown-docs
     - check-boot-venv-layout
     - check-duplicate-dependencies
   commit-msg:
@@ -40,6 +42,6 @@ hooks:
     - check-dead-code
     - osv-scan
 
-# Total hooks: 25 (pre-commit=19 commit-msg=2 pre-push=4)
-# Generated: 2026-09-25T05:13:03Z
+# Total hooks: 27 (pre-commit=21 commit-msg=2 pre-push=4)
+# Generated: 2026-09-25T06:38:26Z
 # Source: config/required_hooks.yaml

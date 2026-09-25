@@ -117,12 +117,6 @@ export function HookList({
                           <dd>{hook.files}</dd>
                         </div>
                       )}
-                      {hook.files_types && (
-                        <div>
-                          <dt>File types</dt>
-                          <dd>{hook.files_types.join(', ')}</dd>
-                        </div>
-                      )}
                     </dl>
                   }
                 />

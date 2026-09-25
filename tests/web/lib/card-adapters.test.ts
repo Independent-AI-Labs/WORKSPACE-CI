@@ -30,7 +30,6 @@ const labels: WikiLabelsConfig = {
     shell_inline: 'Shell (inline)',
     shell_with_arg: 'Shell (with arg)',
     python_module: 'Python Module',
-    python_module_files: 'Python Module (files)',
     makefile_target: 'Makefile Target',
   },
   standard_types: {

@@ -316,11 +316,11 @@ _registry_parsed="$(awk -v mode=registry -f "$_PARSER" "$_REGISTRY")" || {
 }
 
 declare -A _reg_id _reg_kind _reg_entry _reg_stage _reg_pass_fn _reg_always
-declare -A _reg_mandatory _reg_safety _reg_applicable _reg_files _reg_files_types
+declare -A _reg_mandatory _reg_safety _reg_applicable _reg_files
 
 while IFS= read -r _rline; do
     if [[ -z "$_rline" ]]; then continue; fi
-    IFS=$'\034' read -r _rid _rkind _rentry _rstage _rpass _ralways _rmand _rsafety _rapp _rfiles _rftypes <<< "$_rline"
+    IFS=$'\034' read -r _rid _rkind _rentry _rstage _rpass _ralways _rmand _rsafety _rapp _rfiles <<< "$_rline"
     _reg_id["$_rid"]=1
     _reg_kind["$_rid"]="$_rkind"
     _reg_entry["$_rid"]="$_rentry"
@@ -331,7 +331,6 @@ while IFS= read -r _rline; do
     _reg_safety["$_rid"]="$_rsafety"
     _reg_applicable["$_rid"]="$_rapp"
     _reg_files["$_rid"]="$_rfiles"
-    _reg_files_types["$_rid"]="$_rftypes"
 done <<< "$_registry_parsed"
 
 # ── Phase D: Hook ID Resolution ────────────────────────────────────────────

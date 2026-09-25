@@ -71,8 +71,8 @@ test_generate_hooks_refuses_missing_python_module() {
 _run_test "generate-hooks refuses unresolved shell entry" test_generate_hooks_refuses_unresolved_shell_entry
 _run_test "generate-hooks refuses missing python-module" test_generate_hooks_refuses_missing_python_module
 
-test_generate_hooks_passes_staged_files() {
-    local root="$TEST_TMP/staged-hooks" output="$TEST_TMP/staged-generated"
+test_generate_hooks_refuses_filename_passing() {
+    local root="$TEST_TMP/fnpass-hooks" output="$TEST_TMP/fnpass-generated"
     mkdir -p "$root" "$output"
     git -C "$root" init -q
     cat > "$root/.pre-commit-config.yaml" <<'EOF'
@@ -86,12 +86,10 @@ repos:
         stages: [pre-commit]
         types_or: [markdown]
 EOF
-    (cd "$root" && bash "$PROJECT_DIR/scripts/generate-hooks" --output-dir "$output")
-    grep -q "git diff --cached --name-only --diff-filter=ACMR" "$output/pre-commit" || { echo "missing staged-file capture"; return 1; }
-    grep -q "\$_hook_files" "$output/pre-commit" || { echo "missing file argument expansion"; return 1; }
-    if grep -q '"$@"' "$output/pre-commit"; then
-        echo "unresolved \$@ reached generated hook"
-        return 1
-    fi
+    local out rc=0
+    out="$(cd "$root" && bash "$PROJECT_DIR/scripts/generate-hooks" --output-dir "$output" 2>&1)" || rc=$?
+    [[ $rc -ne 0 ]] || { echo "expected refusal for filename-passing entry"; return 1; }
+    echo "$out" | grep -q 'prohibited' || { echo "missing prohibition diagnostic"; return 1; }
+    [[ ! -f "$output/pre-commit" ]] || { echo "hook written despite refusal"; return 1; }
 }
-_run_test "generate-hooks passes staged files for python_module_files" test_generate_hooks_passes_staged_files
+_run_test "generate-hooks refuses filename-passing entries" test_generate_hooks_refuses_filename_passing

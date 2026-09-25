@@ -211,10 +211,12 @@ def test_cli_all_md_scans_tracked_files(tmp_path: Path) -> None:
     assert rc == 1  # broken.md has a bad anchor
 
 
-def test_cli_paths_required_without_all_md() -> None:
-    """No paths and no --all-md → error."""
-    rc = run([])
-    assert rc == 1
+def test_cli_no_paths_scans_all() -> None:
+    """No paths and no --all-md → scan the whole tracked tree."""
+    with patch("ci.check_markdown_docs._discover_all_md", return_value=[]) as discover:
+        rc = run([])
+    assert rc == 0
+    discover.assert_called_once()
 
 
 def test_cli_ignore_pattern(tmp_path: Path) -> None:

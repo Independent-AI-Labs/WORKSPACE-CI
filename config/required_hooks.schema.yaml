@@ -24,11 +24,6 @@ fields:
     required: true
     description: "Stable hook identifier; matches the '# === Hook: <id> ===' marker in generated .git/hooks/* files."
 
-  - path: hooks[].kind
-    type: string
-    required: true
-    description: "Hook implementation kind: shell | shell_inline | shell_with_arg | python_module | python_module_files | makefile_target."
-
   - path: hooks[].entry
     type: string
     required: true
@@ -38,14 +33,6 @@ fields:
     type: string
     required: true
     description: "Git hook stage: pre-commit | commit-msg | pre-push."
-
-  - path: hooks[].pass_filenames
-    type: boolean
-    description: "Whether staged filenames are passed as arguments to the hook entry."
-
-  - path: hooks[].always_run
-    type: boolean
-    description: "Whether the hook runs unconditionally, even when no files are staged."
 
   - path: hooks[].mandatory
     type: boolean
@@ -60,6 +47,13 @@ fields:
     type: string
     description: "Optional path pattern that scopes the hook (pass-through to the rendered hook)."
 
-  - path: hooks[].files_types
-    type: list<string>
-    description: "File type filters for python_module_files hooks (e.g. [markdown]). Only matching staged files are passed."
+  - path: hooks[].pass_filenames
+    type: boolean
+    description: Whether filenames are passed as arguments to the hook entry. Input scope is always the full tracked and untracked tree, never the staged subset.
+  - path: hooks[].always_run
+    type: boolean
+    description: Whether the hook runs unconditionally. Content checks run on every invocation regardless of staged state.
+  - path: hooks[].kind
+    type: string
+    required: true
+    description: Hook implementation kind (shell, shell_inline, shell_with_arg, python_module, makefile_target).

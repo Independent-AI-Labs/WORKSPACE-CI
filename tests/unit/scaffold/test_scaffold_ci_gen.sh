@@ -369,7 +369,7 @@ EOF
 }
 _run_test "scaffold: seeds config/file_classifications.yaml" test_scaffold_seeds_file_classifications
 
-test_scaffold_markdown_types_or() {
+test_scaffold_markdown_scans_all() {
     mkdir -p "$TEST_TMP/sci-md"
     cat > "$TEST_TMP/sci-md/ci-profile.yaml" <<'EOF'
 version: 1
@@ -381,9 +381,37 @@ hooks:
 EOF
     cd "$PROJECT_DIR"
     bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-md" > "$TEST_TMP/out" 2>&1
-    grep -q 'types_or: \[markdown\]' "$TEST_TMP/sci-md/.pre-commit-config.yaml" || { echo "missing types_or markdown"; return 1; }
+    grep -q 'python -m ci.check_markdown_docs' "$TEST_TMP/sci-md/.pre-commit-config.yaml" || { echo "markdown hook missing flag-free entry"; return 1; }
+    grep -q 'check_remote: true' "$TEST_TMP/sci-md/config/markdown_docs.yaml" || { echo "markdown remote checks not enabled in config"; return 1; }
+    if grep -q 'types_or' "$TEST_TMP/sci-md/.pre-commit-config.yaml"; then
+        echo "types_or must not be emitted (staged-scope remnant)"
+        return 1
+    fi
 }
-_run_test "scaffold: markdown hook emits types_or" test_scaffold_markdown_types_or
+_run_test "scaffold: markdown hook scans all files" test_scaffold_markdown_scans_all
+
+test_scaffold_no_staged_narrowing() {
+    mkdir -p "$TEST_TMP/sci-narrow"
+    cat > "$TEST_TMP/sci-narrow/ci-profile.yaml" <<'EOF'
+version: 1
+project: narrow-test
+tier: strict
+languages: [any]
+hooks:
+  pre-commit: [check-unstaged]
+EOF
+    cd "$PROJECT_DIR"
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-narrow" > "$TEST_TMP/out" 2>&1
+    if grep -q 'pass_filenames: true' "$TEST_TMP/sci-narrow/.pre-commit-config.yaml"; then
+        echo "generated hook requests staged filenames"
+        return 1
+    fi
+    if grep -q 'files_types' "$TEST_TMP/sci-narrow/.pre-commit-config.yaml"; then
+        echo "generated hook carries files_types scope"
+        return 1
+    fi
+}
+_run_test "scaffold: no hook narrows scope to staged files" test_scaffold_no_staged_narrowing
 
 test_scaffold_makefile_not_at_silent() {
     mkdir -p "$TEST_TMP/sci-at"

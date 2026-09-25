@@ -11,14 +11,10 @@
 #   id          : stable hook id; matches the # === Hook: <id> === marker in
 #                  generated .git/hooks/* files.
 #   kind        : shell | shell_inline | shell_with_arg | python_module |
-#                  python_module_files | makefile_target.
-#                  shell:          entry is a bash function (args = staged files).
 #                  shell_inline:   entry is a literal bash command string.
 #                  shell_with_arg: entry is a bash function taking one arg
 #                                  (the commit-msg file): used by commit-msg hooks.
 #                  python_module:        entry is a dotted module path (run as module).
-#                  python_module_files:  entry is a module path + pass_filenames
-#                                        (staged files passed as CLI args).
 #                  makefile_target: entry is a make target name.
 #   entry       : bash function name | python module path | make target name | inline command.
 #   stage       : pre-commit | commit-msg | pre-push.
@@ -58,15 +54,6 @@ hooks:
     stage: pre-commit
     pass_filenames: false
     always_run: true
-    mandatory: true
-    applicable_to: [any]
-
-  - id: check-banned-words
-    kind: shell
-    entry: ci_check_banned_words
-    stage: pre-commit
-    pass_filenames: false
-    always_run: false
     mandatory: true
     applicable_to: [any]
 
@@ -197,24 +184,6 @@ hooks:
     mandatory: false
     applicable_to: [python]
 
-  - id: check-markdown-docs
-    kind: python_module_files
-    entry: ci.check_markdown_docs --check-remote
-    stage: pre-commit
-    pass_filenames: true
-    always_run: false
-    files_types: [markdown]
-    mandatory: true
-    applicable_to: [any]
-  - id: check-resolution-shapes
-    kind: shell
-    entry: ci_check_fallback_resolution
-    stage: pre-commit
-    pass_filenames: false
-    always_run: false
-    mandatory: true
-    applicable_to:
-      - any
   - id: check-module-size
     kind: shell
     entry: ci_check_module_size
@@ -233,16 +202,6 @@ hooks:
     mandatory: true
     applicable_to:
       - any
-  - id: block-sensitive-files
-    kind: shell
-    entry: ci_block_sensitive_files
-    stage: pre-commit
-    pass_filenames: true
-    always_run: false
-    mandatory: true
-    applicable_to:
-      - any
-    safety: true
   - id: gitleaks
     kind: shell
     entry: ci_scan_secrets
@@ -256,6 +215,61 @@ hooks:
   - id: check-policy-integrity
     kind: shell
     entry: ci_check_policy_integrity
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    applicable_to:
+      - any
+  - id: block-sensitive-files
+    kind: shell
+    entry: ci_block_sensitive_files
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    applicable_to:
+      - any
+    safety: true
+  - id: check-banned-words
+    kind: shell
+    entry: ci_check_banned_words
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    applicable_to:
+      - any
+  - id: check-resolution-shapes
+    kind: shell
+    entry: ci_check_fallback_resolution
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    applicable_to:
+      - any
+  - id: check-init-files
+    kind: shell
+    entry: ci_check_init_files
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    applicable_to:
+      - any
+  - id: check-py-not-executable
+    kind: shell
+    entry: ci_check_py_not_executable
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    applicable_to:
+      - any
+  - id: check-markdown-docs
+    kind: python_module
+    entry: ci.check_markdown_docs
     stage: pre-commit
     pass_filenames: false
     always_run: true

@@ -204,9 +204,8 @@ test_parser_registry_kinds() {
     echo "$out" | grep -q $'\034python_module\034' || { echo "missing python_module kind"; return 1; }
     echo "$out" | grep -q $'\034makefile_target\034' || { echo "missing makefile_target kind"; return 1; }
     echo "$out" | grep -q $'\034shell_with_arg\034' || { echo "missing shell_with_arg kind"; return 1; }
-    echo "$out" | grep -q $'\034python_module_files\034' || { echo "missing python_module_files kind"; return 1; }
 }
-_run_test "parser_registry: all kinds present" test_parser_registry_kinds
+_run_test "parser_registry: active kinds present" test_parser_registry_kinds
 
 test_parser_registry_stages() {
     local out

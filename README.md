@@ -131,8 +131,8 @@ Scope describes which files the check scans when triggered. Checks marked
 | Co-authored / agent attribution in push range                                                                        | pre-push            | git history                                           |
 | Dead code candidates (`dangle`, 13 languages, **advisory**)                                                          | pre-push            | git-tracked sources per `dead_code.yaml` `scan_paths` |
 
-Every check has configurable `always_run` / `files:` / `stages:` / `types_or:`
-gates in `.pre-commit-config.yaml` and an enforcement tier (`strict` / `poc` /
+Every check has configurable `always_run` / `files:` / `stages:` gates in
+`.pre-commit-config.yaml` and an enforcement tier (`strict` / `poc` /
 `vendored`) resolved via `project_enforcement.yaml`. POC tier runs only
 secrets, sensitive files, banned words, and commit hygiene; vendored tier
 installs no hooks.

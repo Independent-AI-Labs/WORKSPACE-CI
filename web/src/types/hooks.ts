@@ -3,7 +3,6 @@ export type HookKind =
   | 'shell_inline'
   | 'shell_with_arg'
   | 'python_module'
-  | 'python_module_files'
   | 'makefile_target'
 
 export type HookStage = 'pre-commit' | 'commit-msg' | 'pre-push'
@@ -16,7 +15,6 @@ export interface HookRecord {
   pass_filenames: boolean
   always_run: boolean
   files?: string
-  files_types?: string[]
   mandatory: boolean
   safety: boolean
   applicable_to: string[]

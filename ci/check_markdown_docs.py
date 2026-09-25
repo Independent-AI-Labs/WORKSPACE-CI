@@ -365,23 +365,28 @@ def _discover_all_md(ignore: list[str]) -> list[Path]:
     """Discover all .md files tracked by git in the current repo."""
     try:
         result = subprocess.run(
-            ["git", "ls-files", "*.md"],
+            [
+                "git",
+                "ls-files",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+                "*.md",
+                "*.markdown",
+                "*.mdown",
+            ],
             capture_output=True,
             text=True,
             check=True,
         )
-    except FileNotFoundError:
+        if result.stderr:
+            sys.stderr.write(result.stderr)
+    except (OSError, subprocess.SubprocessError) as exc:
         print(
-            f"{YELLOW}error:{RESET} git not found",
+            f"{YELLOW}error:{RESET} git ls-files failed: {exc}",
             file=sys.stderr,
         )
-        return []
-    except subprocess.CalledProcessError as exc:
-        print(
-            f"{YELLOW}error:{RESET} git ls-files failed: {exc.stderr.strip()}",
-            file=sys.stderr,
-        )
-        return []
+        raise SystemExit(1) from exc
 
     cwd = Path.cwd()
     files: list[Path] = []
@@ -411,16 +416,13 @@ def run(argv: list[str] | None = None) -> int:
     check_remote = args.check_remote or config.check_remote
     timeout = args.timeout if args.timeout != DEFAULT_HTTP_TIMEOUT else config.timeout
 
-    if args.all_md:
+    if args.all_md or not args.paths:
         files = _discover_all_md(ignore)
         if not files:
             if not args.json_output:
                 print(f"{DIM}No markdown files found in repository.{RESET}")
             return 0
     else:
-        if not args.paths:
-            print(f"{RED}error:{RESET} provide PATHS or --all-md", file=sys.stderr)
-            return 1
         files = _iter_md_files(args.paths, ignore)
         if not files:
             if not args.json_output:

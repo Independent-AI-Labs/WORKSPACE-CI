@@ -50,6 +50,13 @@ _entry_unresolved=0
 _written_stages=()
 while IFS=$'\034' read -r _e_id _e_name _e_entry _e_rest; do
     [[ -n "$_e_id" ]] || continue
+    # Filename-passing entries are prohibited: a check must discover the
+    # full tracked+untracked tree itself, never receive a file list (which
+    # pre-commit would narrow to the changed subset).
+    if [[ "$_e_entry" == *'"$@'* ]]; then
+        ci_fail "Hook '$_e_id' entry passes filenames (\"\$@\"), which is prohibited; the check must discover the full tree."
+        _entry_unresolved=1
+    fi
     # grep exits 1 when an entry has no shell-function token (make
     # targets, python-modules, bare commands); that is expected.
     _e_fns=""
@@ -156,22 +163,6 @@ for _stage in pre-commit commit-msg pre-push; do
             h_cmd="${h_entry//bash -c/\"\$BASH\" -c}"
             h_cmd="${h_cmd//uv run python -m ci./\/opt\/workspace-ci\/.boot-linux\/bin\/uv run --project \/opt\/workspace-ci --no-sync python -m ci.}"
             [[ -n "$h_args" ]] && h_cmd="$h_cmd $h_args"
-            # Native git hooks receive no file arguments from git. Hooks
-            # declared as python_module_files render a trailing "$@"; resolve
-            # the staged file list here and pass it explicitly, filtered by
-            # the hook's files_types tag (types_or in .pre-commit-config.yaml).
-            h_pass_files=0
-            h_pathspec=""
-            if [[ "$h_cmd" == *'"$@"'* ]]; then
-                h_pass_files=1
-                h_cmd="${h_cmd//\"\$@\"/}"
-                for _ht in $h_types; do
-                    case "$_ht" in
-                        markdown) h_pathspec="$h_pathspec -- '*.md' '*.markdown' '*.mdown'" ;;
-                        *) ci_fail "Hook '$h_id': unsupported files_types tag '$_ht'"; exit 1 ;;
-                    esac
-                done
-            fi
             printf '# === Hook: %s ===\n' "$h_id"
             printf 'ci_info "Running: %s..."\n' "$h_name"
             if [[ "$h_advisory" == "true" ]]; then
@@ -184,16 +175,7 @@ for _stage in pre-commit commit-msg pre-push; do
             elif [[ "$_stage" == commit-msg ]]; then
                 printf '%s "$1" || { ci_fail "%s"; exit 1; }\n' "$h_cmd" "$h_name"
             else
-                if [[ "$h_pass_files" -eq 1 ]]; then
-                    printf '_hook_files="$(git diff --cached --name-only --diff-filter=ACMR%s)"\n' "$h_pathspec"
-                    printf 'if [[ -z "$_hook_files" ]]; then\n'
-                    printf '    ci_info "%s: no matching staged files"\n' "$h_name"
-                    printf 'else\n'
-                    printf '    %s $_hook_files || { ci_fail "%s"; exit 1; }\n' "$h_cmd" "$h_name"
-                    printf 'fi\n'
-                else
-                    printf '%s || { ci_fail "%s"; exit 1; }\n' "$h_cmd" "$h_name"
-                fi
+                printf '%s || { ci_fail "%s"; exit 1; }\n' "$h_cmd" "$h_name"
             fi
         done <<< "$_stage_hooks"
     } > "$_tmp"

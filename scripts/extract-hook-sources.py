@@ -7,7 +7,7 @@ the source code and a human-readable description of each hook's entrypoint:
   - shell / shell_inline / shell_with_arg:  bash function body via
     brace-matching in lib/checks*.sh files. Description from the
     ``# --- <func> ---`` comment block after the marker.
-  - python_module / python_module_files:    main() function via AST
+  - python_module:                          main() function via AST
     from ci/<module>.py (falls back to module-level docstring + all
     top-level defs). Description from the module-level docstring
     (first paragraph).
@@ -224,7 +224,7 @@ def extract_source(hook: dict) -> dict[str, str | None] | None:
 
     if kind in ("shell", "shell_inline", "shell_with_arg"):
         return extract_shell_function(entry)
-    if kind in ("python_module", "python_module_files"):
+    if kind == "python_module":
         return extract_python_main(entry)
     if kind == "makefile_target":
         return extract_makefile_target(entry)
@@ -292,7 +292,7 @@ def extract_description(hook: dict) -> str:
 
     if kind in ("shell", "shell_inline", "shell_with_arg"):
         return extract_shell_description(entry)
-    if kind in ("python_module", "python_module_files"):
+    if kind == "python_module":
         return extract_python_description(entry)
     if kind == "makefile_target":
         return extract_makefile_description(entry)

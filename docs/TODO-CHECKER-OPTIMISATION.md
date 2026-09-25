@@ -81,12 +81,13 @@ and 18 are mandatory.
 
 - [ ] Use one NUL-delimited `git ls-files` process per scan, as required by
   REQ-BANNED-PATTERN-MATCHING section 13.
-- [ ] Pass an explicit file list from hook callers when their contract permits
-  staged-file-only enforcement; retain mandatory full-repository scans for
-  path-independent and push acceptance rules.
-- [ ] Measure staged-only versus full-tree behavior before changing hook scope;
-  optimisation MUST NOT weaken newly-created, renamed, or unstaged-file
-  enforcement.
+- [ ] Pass an explicit full-tree file list from hook callers
+  (`git ls-files --cached --others --exclude-standard`); staged-file-only
+  enforcement is forbidden for every content check, and remains only where a
+  check is inherently commit-scoped (index integrity, coverage no-devolution,
+  deletion/dead-import guards, commit-message checks).
+- [ ] Optimisation MUST NOT weaken newly-created, renamed, or unstaged-file
+  enforcement: scope is fixed at the full tracked+untracked tree.
 - [ ] Classify exact binary, generated, lock, fixture, and reference files before
   text decoding; run their dedicated validators instead of normalized content
   matching.

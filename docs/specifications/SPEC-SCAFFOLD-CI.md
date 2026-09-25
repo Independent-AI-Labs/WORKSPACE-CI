@@ -541,16 +541,20 @@ The hook `kind` from `required_hooks.yaml` determines the `entry:` form:
 | `shell_inline` | `<entry>` (already complete; the entry IS the inline command) |
 | `shell_with_arg` (commit-msg stage) | `bash -c 'source <REL_CI>/lib/checks.sh && <entry> "$1"' --` |
 | `python_module` | `uv run --project <REL_CI> --no-sync python -m <entry>` |
-| `python_module_files` | `uv run --project <REL_CI> --no-sync python -m <entry> "$@"` (pass_filenames: true; the registry's `files_types` is emitted as `types_or`) |
 | `makefile_target` | `make <entry>` (the consumer's Makefile owns the implementation; no path injection needed) |
 
-Native git hooks receive no file arguments from git, so `generate-hooks`
-resolves the trailing `"$@"` itself: for an entry containing `"$@"` it
-captures the staged file list with a diff-filtered
-`git diff --cached --name-only` invocation limited to a pathspec derived
-from the hook's `types_or` tag, then passes the result explicitly. Only
-`markdown` is defined today. A hook with no matching staged files is
-skipped, not failed.
+**Scope rule: hooks always see all files, never the staged subset.** Native
+git hooks receive no file arguments from git. Each check discovers the full
+tracked+untracked file set itself (`git ls-files --cached --others
+--exclude-standard`) on every invocation. Filename-passing entries (`"$@"`)
+are refused at generation because under the pre-commit framework they would
+receive only the changed subset. Staged-status narrowing (`git diff
+--cached`) is forbidden: a content check must examine every tracked and
+untracked file on every run, regardless of what triggered the commit.
+Checks that are inherently commit-scoped (`check-unstaged`, coverage
+no-devolution, deletion-consumer and dead-import guards, commit-message and
+co-author checks) inspect the index/commit/range by design and are exempt
+from this rule.
 
 The relative path `<REL_CI>` is substitute into the shell-source entries
 only. `makefile_target` entries run `make <target>` from the consumer's

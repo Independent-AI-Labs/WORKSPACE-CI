@@ -10,7 +10,6 @@ hook_kinds:
   shell_inline: Shell (inline)
   shell_with_arg: Shell (with arg)
   python_module: Python module
-  python_module_files: Python module (files)
   makefile_target: Makefile target
 
 standard_types:

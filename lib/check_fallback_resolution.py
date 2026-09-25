@@ -65,7 +65,10 @@ def _git(args: list[str], cwd: Path | None = None) -> str:
 
 
 def _tracked_files(root: Path) -> list[str]:
-    out = _git(["ls-files"], cwd=root)
+    out = _git(
+        ["ls-files", "--cached", "--others", "--exclude-standard"],
+        cwd=root,
+    )
     return [ln for ln in out.splitlines() if ln.strip()]
 
 

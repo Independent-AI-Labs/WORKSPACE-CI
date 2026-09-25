@@ -178,19 +178,24 @@ ci_compliance_score() {
             _cs_skip "R5" "ci-check-push (no test directory)"
         fi
 
-        # R6: check-markdown-docs must be wired with --check-remote.
+        # R6: check-markdown-docs must be wired with remote checks enabled,
+        # either via the --check-remote flag or config/markdown_docs.yaml
+        # check_remote: true (the generated entry is flag-free).
         if grep -q 'check-markdown-docs' "$_precommit"; then
-            local _md_entry
+            local _md_entry _md_cfg
             _md_entry="$(grep -A2 'check-markdown-docs' "$_precommit")"
-            if echo "$_md_entry" | grep -q -- '--check-remote'; then
-                _cs_pass "R6" "check-markdown-docs wired with --check-remote"
+            _md_cfg="$project_dir/config/markdown_docs.yaml"
+            if echo "$_md_entry" | grep -q -- '--check-remote' \
+                || { [[ -f "$_md_cfg" ]] \
+                     && grep -qE '^[[:space:]]*check_remote:[[:space:]]*true' "$_md_cfg"; }; then
+                _cs_pass "R6" "check-markdown-docs wired; remote checks enabled"
             else
-                _cs_fail "R6" "check-markdown-docs wired but missing --check-remote" \
-                    "Add --check-remote flag to the check-markdown-docs entry"
+                _cs_fail "R6" "check-markdown-docs wired but remote checks not enabled" \
+                    "Set check_remote: true in config/markdown_docs.yaml or pass --check-remote"
             fi
         else
             _cs_fail "R6" "check-markdown-docs not wired" \
-                "Add check-markdown-docs hook to .pre-commit-config.yaml (type: markdown, entry: uv run python -m ci.check_markdown_docs --check-remote)"
+                "Add check-markdown-docs hook to .pre-commit-config.yaml"
         fi
     fi
 

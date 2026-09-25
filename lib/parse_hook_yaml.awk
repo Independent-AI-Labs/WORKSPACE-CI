@@ -6,7 +6,7 @@
 # Mode "registry": Parse required_hooks.yaml hooks list.
 #   Output: One line per hook, fields separated by \034 (ASCII FS):
 #     id \034 kind \034 entry \034 stage \034 pass_filenames \034 always_run
-#          \034 mandatory \034 safety \034 applicable_to \034 files \034 files_types
+#          \034 mandatory \034 safety \034 applicable_to \034 files
 #
 # Mode "profile": Parse ci-profile.yaml.
 #   Output: Structured records prefixed by type tag:
@@ -62,7 +62,6 @@ mode == "registry" {
         next
     }
     if (/^[[:space:]]+files:/)          { files = scalar(); next }
-    if (/^[[:space:]]+files_types:/)    { files_types = inline_list(); next }
 }
 
 # ── Profile mode ───────────────────────────────────────────────────────────
@@ -162,15 +161,15 @@ END {
 
 function flush_hook() {
     if (id == "") return
-    printf "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n", \
+    printf "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n", \
         id, sep, kind, sep, entry, sep, stage, sep, \
         pass_filenames, sep, always_run, sep, mandatory, sep, \
-        safety, sep, applicable_to, sep, files, sep, files_types
+        safety, sep, applicable_to, sep, files
     id = ""
     kind = ""; entry = ""; stage = ""
     pass_filenames = "true"; always_run = "false"
     mandatory = "true"; safety = "false"
-    applicable_to = ""; files = ""; files_types = ""
+    applicable_to = ""; files = ""
     in_applicable = 0
     in_hook = 0
 }

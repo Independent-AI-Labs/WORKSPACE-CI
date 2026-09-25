@@ -41,8 +41,6 @@ _scl_render_entry() {
             printf "bash -c 'source %s/lib/checks.sh && %s \"\$1\"' --" "$REL_CI" "$_entry" ;;
         python_module)
             printf "uv run --project %s --no-sync python -m %s" "$REL_CI" "$_entry" ;;
-        python_module_files)
-            printf "uv run --project %s --no-sync python -m %s \"\$@\"" "$REL_CI" "$_entry" ;;
         makefile_target)
             printf "make %s" "$_entry" ;;
         *)
@@ -65,7 +63,6 @@ _scl_get_field() {
         pass_filenames) printf '%s' "${_reg_pass_fn[$_hid]:-$_default}" ;;
         always_run)     printf '%s' "${_reg_always[$_hid]:-$_default}" ;;
         files)          printf '%s' "${_reg_files[$_hid]:-}" ;;
-        files_types)    printf '%s' "${_reg_files_types[$_hid]:-}" ;;
         *)              printf '%s' "$_default" ;;
     esac
 }
@@ -92,7 +89,6 @@ _scl_gen_precommit() {
             local _pf; _pf="$(_scl_get_field "$_hid" pass_filenames "true")"
             local _ar; _ar="$(_scl_get_field "$_hid" always_run "false")"
             local _files; _files="$(_scl_get_field "$_hid" files "")"
-            local _types; _types="$(_scl_get_field "$_hid" files_types "")"
             printf '      - id: %s\n' "$_hid"
             printf '        name: %s\n' "\"$_name\""
             printf '        entry: %s\n' "\"$_entry\""
@@ -104,9 +100,6 @@ _scl_gen_precommit() {
             fi
             if [[ -n "$_files" ]]; then
                 printf '        files: %s\n' "\"$_files\""
-            fi
-            if [[ -n "$_types" ]]; then
-                printf '        types_or: [%s]\n' "$_types"
             fi
         done
     done

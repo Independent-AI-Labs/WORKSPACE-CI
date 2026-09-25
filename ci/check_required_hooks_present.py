@@ -51,7 +51,6 @@ class HookEntry(BaseModel):
     pass_filenames: bool = True
     applicable_to: list[str] = Field(default_factory=lambda: ["any"])
     files: list[str] = Field(default_factory=list)
-    files_types: list[str] = Field(default_factory=list)
 
 
 class HooksManifest(BaseModel):
@@ -122,7 +121,7 @@ def _load_quality_exceptions(project_dir: Path) -> QualityExceptions | None:
     return QualityExceptions.model_validate(loaded)
 
 
-_PYTHON_HOOK_KINDS = frozenset({"python_module", "python_module_files"})
+_PYTHON_HOOK_KINDS = frozenset({"python_module"})
 
 
 def _check_manifest_completeness(
