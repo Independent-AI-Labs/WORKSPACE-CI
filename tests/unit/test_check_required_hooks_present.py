@@ -37,6 +37,10 @@ def _write_manifest(workspace: Path, hooks: list[dict[str, object]]) -> None:
     cfg.write_text(yaml.safe_dump({"version": 1, "hooks": hooks}))
 
 
+def _use_manifest(workspace: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CI_CONFIG_DIR", str(workspace / "config"))
+
+
 def _make_repo_with_hooks(
     parent: Path,
     name: str,
@@ -258,7 +262,10 @@ def _setup_strict_repo_with_full_contract(workspace: Path, name: str) -> Path:
     return project
 
 
-def test_main_passes_for_strict_compliant_project(tmp_path: Path) -> None:
+def test_main_passes_for_strict_compliant_project(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     root = _make_workspace(tmp_path)
     _write_manifest(
         root,
@@ -280,22 +287,31 @@ def test_main_passes_for_strict_compliant_project(tmp_path: Path) -> None:
             dict(_SAFETY_HOOK),
         ],
     )
+    _use_manifest(root, monkeypatch)
     project = _setup_strict_repo_with_full_contract(root, "X")
     assert main(["--project", str(project), "--quiet"]) == EXIT_OK
 
 
-def test_main_fails_when_quality_exceptions_missing(tmp_path: Path) -> None:
+def test_main_fails_when_quality_exceptions_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     root = _make_workspace(tmp_path)
     _write_manifest(root, [])
+    _use_manifest(root, monkeypatch)
     project = root / "projects" / "X"
     (project / ".git" / "hooks").mkdir(parents=True)
     assert main(["--project", str(project), "--quiet"]) == EXIT_VIOLATION
 
 
-def test_main_fails_when_builtin_marker_missing(tmp_path: Path) -> None:
+def test_main_fails_when_builtin_marker_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Invariant 3: rendered hooks must carry the compliance blocks."""
     root = _make_workspace(tmp_path)
     _write_manifest(root, [])
+    _use_manifest(root, monkeypatch)
     project = _setup_strict_repo_with_full_contract(root, "X")
     hook = project / ".git" / "hooks" / "pre-commit"
     hook.write_text(
@@ -309,6 +325,7 @@ def test_main_fails_when_builtin_marker_missing(tmp_path: Path) -> None:
 
 def test_main_fails_when_mandatory_hook_marker_missing(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Invariant 3: applicable mandatory hooks must be rendered."""
     root = _make_workspace(tmp_path)
@@ -324,6 +341,7 @@ def test_main_fails_when_mandatory_hook_marker_missing(
             },
         ],
     )
+    _use_manifest(root, monkeypatch)
     project = _setup_strict_repo_with_full_contract(root, "X")
     hook = project / ".git" / "hooks" / "pre-commit"
     hook.write_text(hook.read_text().replace("# === Hook: ci-lint ===\n", ""))
@@ -332,6 +350,7 @@ def test_main_fails_when_mandatory_hook_marker_missing(
 
 def test_main_passes_when_nonmandatory_hook_unrendered(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Invariant 3: optional hooks are not required in rendered hooks."""
     root = _make_workspace(tmp_path)
@@ -348,16 +367,32 @@ def test_main_passes_when_nonmandatory_hook_unrendered(
             dict(_SAFETY_HOOK),
         ],
     )
+    _use_manifest(root, monkeypatch)
     project = _setup_strict_repo_with_full_contract(root, "X")
     assert main(["--project", str(project), "--quiet"]) == EXIT_OK
 
 
-def test_main_returns_infra_error_when_no_workspace(tmp_path: Path) -> None:
-    assert main(["--project", str(tmp_path), "--quiet"]) == EXIT_INFRA_ERROR
-
-
-def test_main_returns_infra_error_when_no_manifest(tmp_path: Path) -> None:
+def test_main_returns_infra_error_when_no_manifest(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     root = _make_workspace(tmp_path)
+    _use_manifest(root, monkeypatch)
+    project = root / "projects" / "X"
+    project.mkdir(parents=True)
+    assert main(["--project", str(project), "--quiet"]) == EXIT_INFRA_ERROR
+
+
+def test_main_ignores_workspace_ancestor_manifest(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The manifest comes from the CI config dir, never a workspace ancestor."""
+    root = _make_workspace(tmp_path)
+    _write_manifest(root, [dict(_SAFETY_HOOK)])
+    empty = tmp_path / "empty-config"
+    empty.mkdir()
+    monkeypatch.setenv("CI_CONFIG_DIR", str(empty))
     project = root / "projects" / "X"
     project.mkdir(parents=True)
     assert main(["--project", str(project), "--quiet"]) == EXIT_INFRA_ERROR
@@ -366,6 +401,7 @@ def test_main_returns_infra_error_when_no_manifest(tmp_path: Path) -> None:
 def test_main_emits_ok_lines_when_not_quiet(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = _make_workspace(tmp_path)
     _write_manifest(
@@ -381,6 +417,7 @@ def test_main_emits_ok_lines_when_not_quiet(
             dict(_SAFETY_HOOK),
         ],
     )
+    _use_manifest(root, monkeypatch)
     project = _setup_strict_repo_with_full_contract(root, "X")
     rc = main(["--project", str(project)])
     assert rc == EXIT_OK
@@ -388,9 +425,13 @@ def test_main_emits_ok_lines_when_not_quiet(
     assert "[OK]" in captured.out
 
 
-def test_main_accepts_workspace_root(tmp_path: Path) -> None:
+def test_main_accepts_workspace_root(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     root = _make_workspace(tmp_path)
     _write_manifest(root, [dict(_SAFETY_HOOK)])
+    _use_manifest(root, monkeypatch)
     (root / "quality_exceptions.yaml").write_text(
         yaml.safe_dump({"version": 1, "project": "ROOT", "exceptions": []}),
     )

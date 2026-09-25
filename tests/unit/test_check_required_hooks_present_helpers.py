@@ -8,7 +8,6 @@ from pathlib import Path
 import yaml
 
 from ci.check_required_hooks_present import (
-    _find_workspace_root,
     _load_manifest,
     _load_quality_exceptions,
 )
@@ -19,18 +18,6 @@ def _make_workspace(tmp_path: Path) -> Path:
     (root / "ci").mkdir(parents=True)
     (root / "config").mkdir()
     return root
-
-
-def test_find_workspace_root_finds_manifest(tmp_path: Path) -> None:
-    root = _make_workspace(tmp_path)
-    (root / "config" / "required_hooks.yaml").write_text("hooks: []\n")
-    project = root / "projects" / "project"
-    project.mkdir(parents=True)
-    assert _find_workspace_root(project) == root
-
-
-def test_find_workspace_root_returns_none_when_missing(tmp_path: Path) -> None:
-    assert _find_workspace_root(tmp_path) is None
 
 
 def test_load_manifest_parses(tmp_path: Path) -> None:
@@ -44,13 +31,13 @@ def test_load_manifest_parses(tmp_path: Path) -> None:
             }
         )
     )
-    manifest = _load_manifest(root)
+    manifest = _load_manifest(root / "config")
     assert manifest is not None
     assert [hook.id for hook in manifest.hooks] == ["h1"]
 
 
 def test_load_manifest_returns_none_when_missing(tmp_path: Path) -> None:
-    assert _load_manifest(_make_workspace(tmp_path)) is None
+    assert _load_manifest(_make_workspace(tmp_path) / "config") is None
 
 
 def test_load_quality_exceptions_returns_none_when_missing(tmp_path: Path) -> None:

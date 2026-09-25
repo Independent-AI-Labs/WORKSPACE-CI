@@ -3,6 +3,11 @@
 project across three invariants. Ensures every check_*.py module is
 registered in required_hooks.yaml and quality_exceptions.yaml is schema-valid.
 
+The manifest is loaded from the CI config directory (``CI_CONFIG_DIR``: the
+sealed artifact ``/opt/workspace-ci/config`` at hook time), never from a
+workspace ancestor. WORKSPACE-CI is the single source of truth for the hook
+registry.
+
 Exit codes: 0 = all invariants hold, 1 = violation, 2 = infrastructure error.
 """
 
@@ -17,12 +22,13 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
+from ci.paths import find_config_dir
+
 EXIT_OK = 0
 EXIT_VIOLATION = 1
 EXIT_INFRA_ERROR = 2
 
 REASON_MIN_LEN = 20
-WORKSPACE_MARKERS = (".boot-linux", ".boot-macos")
 
 RED = "\033[91m"
 YELLOW = "\033[93m"
@@ -81,28 +87,26 @@ class QualityExceptions(BaseModel):
     exceptions: list[ExceptionEntry] = Field(default_factory=list)
 
 
-def _find_workspace_root(start: Path) -> Path | None:
-    """Walk up from start looking for workspace markers.
+def _ci_root() -> Path:
+    """Directory holding the CI package (source checkout or sealed artifact)."""
+    return Path(__file__).resolve().parent.joinpath("..").resolve()
 
-    Recognized markers (any one suffices):
-    - ``.boot-linux/`` directory (original workspace layout)
-    - ``config/required_hooks.yaml`` file (flat single-repo layout where
-      the project directory IS the workspace root)
+
+def _resolve_config_dir() -> Path:
+    """Resolve the CI config directory.
+
+    ``CI_CONFIG_DIR`` (exported by lib/ci.sh, or set by the Makefile) is the
+    single authority; when the environment is absent, the CI package's own
+    ``config/`` is used. The manifest is never read from a workspace ancestor.
     """
-    cur = start.resolve()
-    boot_candidate: Path | None = None
-    while cur != cur.parent:
-        has_boot_dir = (cur / ".boot-linux").is_dir() or (cur / ".boot-macos").is_dir()
-        if has_boot_dir:
-            boot_candidate = cur
-        if (cur / "config" / "required_hooks.yaml").is_file():
-            return cur
-        cur = cur.parent
-    return boot_candidate
+    try:
+        return find_config_dir()
+    except FileNotFoundError:
+        return _ci_root() / "config"
 
 
-def _load_manifest(workspace_root: Path) -> HooksManifest | None:
-    path = workspace_root / "config" / "required_hooks.yaml"
+def _load_manifest(config_dir: Path) -> HooksManifest | None:
+    path = config_dir / "required_hooks.yaml"
     if not path.is_file():
         return None
     loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -279,14 +283,16 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 
 def _run_invariant_1_manifest(
     project_name: str,
-    workspace_root: Path,
+    project_dir: Path,
     manifest: HooksManifest,
     *,
     quiet: bool,
 ) -> list[str]:
-    if not (workspace_root / "scripts" / "generate-hooks").is_file():
+    # Only the CI source repository carries the ci/ package the manifest must
+    # register; consumers have no scripts/generate-hooks and skip this.
+    if not (project_dir / "scripts" / "generate-hooks").is_file():
         return []
-    issues = _check_manifest_completeness(workspace_root, manifest)
+    issues = _check_manifest_completeness(project_dir, manifest)
     if not issues and not quiet:
         _emit("OK", "manifest registers every check_*.py")
     return issues
@@ -419,16 +425,12 @@ def main(argv: list[str] | None = None) -> int:
     args = _build_arg_parser().parse_args(argv)
 
     project_dir = args.project.resolve()
-    workspace_root = _find_workspace_root(project_dir)
-    if workspace_root is None:
-        print(
-            f"{RED}error:{RESET} cannot find workspace root from {project_dir}",
-        )
-        return EXIT_INFRA_ERROR
-
-    manifest = _load_manifest(workspace_root)
+    manifest = _load_manifest(_resolve_config_dir())
     if manifest is None:
-        print(f"{RED}error:{RESET} required_hooks.yaml not found in workspace")
+        print(
+            f"{RED}error:{RESET} required_hooks.yaml not found in CI config "
+            f"{_resolve_config_dir()}",
+        )
         return EXIT_INFRA_ERROR
 
     project_name = project_dir.name
@@ -439,7 +441,7 @@ def main(argv: list[str] | None = None) -> int:
     issues.extend(
         _run_invariant_1_manifest(
             project_name,
-            workspace_root,
+            project_dir,
             manifest,
             quiet=args.quiet,
         ),
