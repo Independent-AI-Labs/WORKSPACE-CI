@@ -46,7 +46,7 @@ endif
 # fails closed for root under the guard and yields an empty root.
 _CONSUMER_MK := $(abspath $(lastword $(MAKEFILE_LIST)))
 REPO_ROOT := $(patsubst %/,%,$(dir $(_CONSUMER_MK)))
-CI_DIR := $(abspath $(REPO_ROOT)/__REL_CI__)
+CI_DIR := $(if $(filter /%,__REL_CI__),__REL_CI__,$(abspath $(REPO_ROOT)/__REL_CI__))
 
 -include $(CI_DIR)/lib/makefile_contract.mk
 
@@ -55,7 +55,7 @@ CI_DIR := $(abspath $(REPO_ROOT)/__REL_CI__)
 # =============================================================================
 .PHONY: help
 help: ## Show this help
-	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+	grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # =============================================================================
@@ -63,29 +63,29 @@ help: ## Show this help
 # =============================================================================
 .PHONY: preflight init install install-ci install-deps install-hooks sync
 preflight: ## Verify environment
-	@test -d "$(CI_DIR)" || { echo "ERROR: CI directory not found at $(CI_DIR)" >&2; exit 1; }
-	@test -f "$(CI_DIR)/scripts/reinstall-hooks" || { echo "ERROR: reinstall-hooks missing" >&2; exit 1; }
-	@echo "Preflight OK"
+	test -d "$(CI_DIR)" || { echo "ERROR: CI directory not found at $(CI_DIR)" >&2; exit 1; }
+	test -f "$(CI_DIR)/scripts/reinstall-hooks" || { echo "ERROR: reinstall-hooks missing" >&2; exit 1; }
+	echo "Preflight OK"
 
 init: ## Install system-level dependencies
-	@echo "TODO: implement per-project system dependencies."
-	@:
+	echo "TODO: implement per-project system dependencies."
+	:
 
 install: install-deps ## Full install: deps (hooks install separately, root-only: sudo make install-hooks)
-	@:
+	:
 
 install-ci: install-deps ## CI install: deps only, no hooks
-	@:
+	:
 
 install-deps: ## Install project dependencies
-	@echo "TODO: implement per-project dependency install."
-	@:
+	echo "TODO: implement per-project dependency install."
+	:
 
 install-hooks: ## Install native git hooks (root-only: root-owned, immutable)
 	$(SCRIPT_BASH) $(CI_DIR)/scripts/reinstall-hooks
 
 sync: install-deps ## Sync deps (hooks install separately, root-only: sudo make install-hooks)
-	@:
+	:
 
 # =============================================================================
 # Quality Gates
@@ -93,26 +93,26 @@ sync: install-deps ## Sync deps (hooks install separately, root-only: sudo make 
 .PHONY: check lint type-check test check-push clean clean-precommit
 
 check: lint type-check test ## Run all quality gates
-	@echo "TODO: wire lint+type-check+test implementations."
+	echo "TODO: wire lint+type-check+test implementations."
 
 lint: ## Lint
-	@:
+	:
 
 type-check: ## Type-check
-	@:
+	:
 
 test: ## Test
-	@:
+	:
 
 check-push: ## Pre-push quality gate
-	@:
+	:
 
 # =============================================================================
 # Cleanup
 # =============================================================================
 clean: ## Remove build artifacts
-	@echo "TODO: implement per-project clean."
-	@:
+	echo "TODO: implement per-project clean."
+	:
 
 clean-precommit: ## Remove pre-commit framework traces
 	$(SCRIPT_BASH) $(CI_DIR)/scripts/cleanup-precommit

@@ -200,7 +200,7 @@ root-owned and immutable; there is no user-owned hook installation path).
 | FR-SC-6.1 | The generated file MUST follow the EXACT structure of WORKSPACE-GUARD's existing `.pre-commit-config.yaml`: a single `repos:` block containing one `- repo: local` entry with a flat `hooks:` YAML list of `- id:` blocks. |
 | FR-SC-6.2 | Each hook's `entry:` MUST be rendered according to its `kind` from `required_hooks.yaml` per the table in SPEC §6.2. Specifically: `shell` → `bash -c 'source <REL_CI>/lib/checks.sh && <entry>'`; `shell_inline` → verbatim `<entry>`; `shell_with_arg` → `bash -c 'source <REL_CI>/lib/checks.sh && <entry> "$1"' --`; `python_module` → `uv run --project <REL_CI> --no-sync python -m <entry>`; `python_module_files` → `uv run --project <REL_CI> --no-sync python -m <entry> "$@"`; `makefile_target` → `make <entry>` (no `<REL_CI>` substitution). |
 | FR-SC-6.3 | The relative path `<REL_CI>` MUST be substituted into shell-source `entry:` templates only. `makefile_target` entries run from the consumer's repo root and rely on the consumer's own `Makefile` to resolve `CI_DIR` internally. |
-| FR-SC-6.4 | The fields `pass_filenames`, `always_run`, `files`, `exclude` MUST be copied verbatim from `required_hooks.yaml` (after override application). |
+| FR-SC-6.4 | The fields `pass_filenames`, `always_run`, `files`, `exclude` MUST be copied verbatim from `required_hooks.yaml` (after override application). A hook's `files_types` MUST be emitted as `types_or` so `generate-hooks` can filter the staged file list it passes to `python_module_files` hooks. |
 | FR-SC-6.5 | Overrides from the profile's `overrides:` block MUST be applied BEFORE the path-substitution rule. If the user supplies an `entry:` override, the generator uses it verbatim (no `<REL_CI>` substitution). The user is responsible for embedding the correct relative path in the override. |
 | FR-SC-6.6 | The file MUST be preceded by a comment block documenting: the generator source path, the timestamp, the tier and languages, and the re-generation command. |
 | FR-SC-6.7 | If `required_hooks.yaml` is missing, the generator MUST fail fast with `FAILED: config/required_hooks.yaml not found at <CI_ROOT>/config/.`. No generation occurs. |
@@ -213,8 +213,8 @@ root-owned and immutable; there is no user-owned hook installation path).
 | ID | Requirement |
 |----|-------------|
 | FR-SC-7.1 | The generated `Makefile` MUST define all 10 mandatory targets from `lib/makefile_contract.mk`: `init`, `install`, `install-ci`, `install-hooks`, `sync`, `check`, `lint`, `type-check`, `test`, `clean`, `preflight`. |
-| FR-SC-7.2 | The generated `Makefile` MUST `-include $(CI_DIR)/lib/makefile_contract.mk` where `CI_DIR := $(abspath $(REPO_ROOT)/<REL_CI>)`. This provides `make contract-check` and validates the 10 targets' presence via `make -n`. |
-| FR-SC-7.3 | The language-specific targets (`lint`, `type-check`, `test`, `check-push`) MUST be vacuous pass targets with `@:` recipe bodies and `TODO` echo diagnostics. They MUST exit 0 so `make check` passes out-of-the-box on a brand-new project. |
+| FR-SC-7.2 | The generated `Makefile` MUST `-include $(CI_DIR)/lib/makefile_contract.mk` where `CI_DIR := $(if $(filter /%,<REL_CI>),<REL_CI>,$(abspath $(REPO_ROOT)/<REL_CI>))`, so an absolute `/opt/workspace-ci` path is used as-is. This provides `make contract-check` and validates the 10 targets' presence via `make -n`. |
+| FR-SC-7.3 | The language-specific targets (`lint`, `type-check`, `test`, `check-push`) MUST be vacuous pass targets with `:` recipe bodies and `TODO` echo diagnostics. Recipes MUST NOT use the `@` silent prefix (`make-at-silent` forbids it). They MUST exit 0 so `make check` passes out-of-the-box on a brand-new project. |
 | FR-SC-7.4 | The `install-hooks` target MUST call `$(SCRIPT_BASH) $(CI_DIR)/scripts/reinstall-hooks` so root-owned hooks are regenerated through the operator-safe path. |
 | FR-SC-7.5 | The `clean-precommit` target MUST call `bash $(CI_DIR)/scripts/cleanup-precommit`. |
 | FR-SC-7.6 | The generator MUST NOT generate `moon.yml` (per SPEC §1.3: out of scope). |
@@ -237,6 +237,7 @@ root-owned and immutable; there is no user-owned hook installation path).
 | FR-SC-8.7 | When a destination file exists AND its contents differ from the canonical CI default AND `--force` is NOT set, the generator MUST skip with a `ci_warn` listing the file. The generator MUST NOT overwrite unannounced a customised config. |
 | FR-SC-8.8 | When a destination file exists AND its contents differ from the canonical default AND `--force` IS set, the generator MUST overwrite and MUST print a summary of overwritten files at the end so the consumer can `git diff` and re-apply local edits. |
 | FR-SC-8.9 | After every copy, the generator MUST verify the destination file is byte-equal to its source (modulo FR-SC-8.3 / FR-SC-8.4 substitutions). If the copy is corrupted (e.g., disk full), the generator MUST fail fast, list the affected path, and exit non-zero. |
+| FR-SC-8.10 | The generator MUST seed `<consumer>/config/file_classifications.yaml` from `CI/templates/file_classifications.template.yaml` when absent, and MUST NEVER overwrite it. Every seeded entry MUST name exactly one tracked file (`config/banned_words_exceptions_v5.yaml`, `config/file_classifications.yaml`, both `policy-definition`), so `check-policy-integrity` passes on the first commit and the scaffolded `config/banned_words_exceptions_v5.yaml` does not trip the filename rule. |
 
 ### 2.6 Generated `quality_exceptions.yaml`
 
@@ -256,9 +257,9 @@ root-owned and immutable; there is no user-owned hook installation path).
 |----|-------------|
 | FR-SC-10.1 | `scaffold-ci --emit-template` MUST regenerate `CI/templates/ci-profile.template.yaml` from `CI/config/required_hooks.yaml` and exit. |
 | FR-SC-10.2 | The template MUST group hooks by stage (`pre-commit`, `commit-msg`, `pre-push`). Within each stage, hooks MUST be sorted: `safety: true` first, then `mandatory: true` and `safety: false`, then `mandatory: false` (exemptable). Within each tier, the registry's declaring order MUST be preserved (stable sort). |
-| FR-SC-10.3 | Each hook in the template MUST be a bare string (`- <id>`), no inline metadata. The template is a starting point, not a runtime config. |
+| FR-SC-10.3 | The template MUST be a valid profile header (`version`, `project`, `languages`, `tier`, `hooks:`) plus bare-string hook lists (`- <id>`), no inline hook metadata. `languages` MUST be the union of every hook's `applicable_to` tag (hooks tagged `any` apply to all), so the template scaffolds verbatim before trimming. |
 | FR-SC-10.4 | The template MUST include a header comment block explaining: source, regeneration command, and the "DO NOT edit by hand" warning. The template MUST include a footer comment block with totals N (pre-commit=A, commit-msg=B, pre-push=C), timestamp, and source. |
-| FR-SC-10.5 | `--emit-template` MUST ignore all other flags (`--consumer`, `--profile`, `--force`, `--dry-run`). It MUST NOT touch disk beyond the single template file. |
+| FR-SC-10.5 | `--emit-template` MUST ignore the scaffolding flags (`--consumer`, `--profile`, `--force-*`). `--dry-run` MUST print the rendered template without writing. It MUST NOT touch disk beyond the single template file. |
 
 ### 2.8 Makefile Target and Manifest
 
@@ -375,7 +376,7 @@ The feature is accepted when ALL of the following hold:
    `CI/templates/ci-profile.template.yaml` and the regenerated file
    matches the committed version modulo the timestamp footer.
 5. For a temp fake consumer directory under `/tmp`, `make -C projects/CI
-   scaffold-ci CONSUMER=<temp>` writes all five in-scope files
+   scaffold-ci CONSUMER=<temp>` writes all in-scope files
    (`.pre-commit-config.yaml`, `Makefile`, `config/coverage_thresholds.yaml`,
    `config/file_length_limits.yaml`, `config/dead_code.yaml`,
    `config/dependency_excludes.yaml`,

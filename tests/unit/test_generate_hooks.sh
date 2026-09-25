@@ -70,3 +70,28 @@ test_generate_hooks_refuses_missing_python_module() {
 
 _run_test "generate-hooks refuses unresolved shell entry" test_generate_hooks_refuses_unresolved_shell_entry
 _run_test "generate-hooks refuses missing python-module" test_generate_hooks_refuses_missing_python_module
+
+test_generate_hooks_passes_staged_files() {
+    local root="$TEST_TMP/staged-hooks" output="$TEST_TMP/staged-generated"
+    mkdir -p "$root" "$output"
+    git -C "$root" init -q
+    cat > "$root/.pre-commit-config.yaml" <<'EOF'
+repos:
+  - repo: local
+    hooks:
+      - id: md-docs
+        name: Markdown Docs
+        entry: "uv run python -m ci.check_markdown_docs --check-remote \"$@\""
+        language: system
+        stages: [pre-commit]
+        types_or: [markdown]
+EOF
+    (cd "$root" && bash "$PROJECT_DIR/scripts/generate-hooks" --output-dir "$output")
+    grep -q "git diff --cached --name-only --diff-filter=ACMR" "$output/pre-commit" || { echo "missing staged-file capture"; return 1; }
+    grep -q "\$_hook_files" "$output/pre-commit" || { echo "missing file argument expansion"; return 1; }
+    if grep -q '"$@"' "$output/pre-commit"; then
+        echo "unresolved \$@ reached generated hook"
+        return 1
+    fi
+}
+_run_test "generate-hooks passes staged files for python_module_files" test_generate_hooks_passes_staged_files

@@ -101,10 +101,15 @@ if [[ $_emit_template -eq 1 ]]; then
         ci_fail "Failed to parse required_hooks.yaml"; exit 1
     }
     declare -a _tpl_pc=() _tpl_cm=() _tpl_pp=()
+    declare -A _tpl_lang_seen=()
     _seq=0
     while IFS= read -r _rl; do
         if [[ -z "$_rl" ]]; then continue; fi
         IFS=$'\034' read -r _rid _rk _re _rs _rpf _ra _rm _rsaf _rapp _rf _rft <<< "$_rl"
+        for _lw in $_rapp; do
+            [[ "$_lw" == "any" ]] && continue
+            _tpl_lang_seen["$_lw"]=1
+        done
         _sk="1"
         if [[ "$_rsaf" == "true" ]]; then _sk="0"; fi
         _mk="1"
@@ -117,6 +122,16 @@ if [[ $_emit_template -eq 1 ]]; then
             pre-push)    _tpl_pp+=("$_key") ;;
         esac
     done <<< "$_reg_parsed"
+
+    # Languages the reference profile must declare so every listed hook's
+    # applicable_to intersects (hooks tagged [any] apply to all languages).
+    _tpl_langs=()
+    for _l in "${!_tpl_lang_seen[@]}"; do _tpl_langs+=("$_l"); done
+    if [[ ${#_tpl_langs[@]} -gt 0 ]]; then
+        IFS=$'\n' _tpl_langs=($(printf '%s\n' "${_tpl_langs[@]}" | sort)); unset IFS
+    else
+        _tpl_langs=(any)
+    fi
 
     IFS=$'\n' _tpl_pc_sorted=($(printf '%s\n' "${_tpl_pc[@]:-}" | sort)); unset IFS
     IFS=$'\n' _tpl_cm_sorted=($(printf '%s\n' "${_tpl_cm[@]:-}" | sort)); unset IFS
@@ -528,6 +543,7 @@ if [[ "$_pf_tier" == "strict" ]]; then
 fi
 
 _scl_gen_qe
+_scl_gen_fc
 
 # ── Create any missing exemption files (manifest-driven, never overwrites) ──
 if [[ $_dry_run -eq 0 ]]; then

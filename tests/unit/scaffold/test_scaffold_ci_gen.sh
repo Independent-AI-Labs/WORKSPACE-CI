@@ -342,8 +342,68 @@ test_emit_template_generates() {
     grep -q 'check-unstaged' "$TEST_TMP/out" || { echo "missing check-unstaged in template"; return 1; }
     grep -q 'ci-check-push' "$TEST_TMP/out" || { echo "missing ci-check-push in template"; return 1; }
     grep -q 'Total hooks:' "$TEST_TMP/out" || { echo "missing total count"; return 1; }
+    # The template must be a valid profile starter, not a bare hook list.
+    grep -q '^version: 1$' "$TEST_TMP/out" || { echo "template missing version"; return 1; }
+    grep -q '^project: ' "$TEST_TMP/out" || { echo "template missing project"; return 1; }
+    grep -q '^languages: ' "$TEST_TMP/out" || { echo "template missing languages"; return 1; }
+    grep -q '^tier: ' "$TEST_TMP/out" || { echo "template missing tier"; return 1; }
+    grep -q '^hooks:$' "$TEST_TMP/out" || { echo "template missing hooks wrapper"; return 1; }
 }
 _run_test "emit-template: generates all hooks" test_emit_template_generates
+
+test_scaffold_seeds_file_classifications() {
+    mkdir -p "$TEST_TMP/sci-fcl"
+    cat > "$TEST_TMP/sci-fcl/ci-profile.yaml" <<'EOF'
+version: 1
+project: fcl-test
+tier: strict
+languages: [any]
+hooks:
+  pre-commit: [check-unstaged]
+EOF
+    cd "$PROJECT_DIR"
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-fcl" > "$TEST_TMP/out" 2>&1
+    [[ -f "$TEST_TMP/sci-fcl/config/file_classifications.yaml" ]] || { echo "no file_classifications.yaml"; return 1; }
+    grep -q 'class: policy-definition' "$TEST_TMP/sci-fcl/config/file_classifications.yaml" || { echo "missing policy-definition"; return 1; }
+    grep -q 'config/banned_words_exceptions_v5.yaml' "$TEST_TMP/sci-fcl/config/file_classifications.yaml" || { echo "missing banned-words entry"; return 1; }
+}
+_run_test "scaffold: seeds config/file_classifications.yaml" test_scaffold_seeds_file_classifications
+
+test_scaffold_markdown_types_or() {
+    mkdir -p "$TEST_TMP/sci-md"
+    cat > "$TEST_TMP/sci-md/ci-profile.yaml" <<'EOF'
+version: 1
+project: md-test
+tier: strict
+languages: [any]
+hooks:
+  pre-commit: [check-unstaged]
+EOF
+    cd "$PROJECT_DIR"
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-md" > "$TEST_TMP/out" 2>&1
+    grep -q 'types_or: \[markdown\]' "$TEST_TMP/sci-md/.pre-commit-config.yaml" || { echo "missing types_or markdown"; return 1; }
+}
+_run_test "scaffold: markdown hook emits types_or" test_scaffold_markdown_types_or
+
+test_scaffold_makefile_not_at_silent() {
+    mkdir -p "$TEST_TMP/sci-at"
+    cat > "$TEST_TMP/sci-at/ci-profile.yaml" <<'EOF'
+version: 1
+project: at-test
+tier: strict
+languages: [any]
+hooks:
+  pre-commit: [check-unstaged]
+EOF
+    cd "$PROJECT_DIR"
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-at" > "$TEST_TMP/out" 2>&1
+    local _tab; _tab="$(printf '\t')"
+    if grep -q "^${_tab}@" "$TEST_TMP/sci-at/Makefile"; then
+        echo "tab-@ silent recipe in generated Makefile"
+        return 1
+    fi
+}
+_run_test "scaffold: generated Makefile has no tab-@ recipes" test_scaffold_makefile_not_at_silent
 
 test_emit_template_dry_run_no_write() {
     cd "$PROJECT_DIR"

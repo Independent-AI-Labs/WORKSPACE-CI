@@ -1,39 +1,45 @@
 # ci-profile.template.yaml: reference profile generated from
 # config/required_hooks.yaml by scripts/scaffold-ci --emit-template.
 # Copy this to <consumer>/ci-profile.yaml and trim per-project.
+# NOTE: set languages to your stack; a hook listed here whose
+# applicable_to does not intersect languages is rejected at
+# scaffold time. Remove hooks you do not want before scaffolding.
 # DO NOT edit this template by hand; regenerate it via
 # make scaffold-ci ARGS=--emit-template.
+version: 1
+project: your-project-name
+languages: [python]
+tier: strict
+hooks:
+  pre-commit:
+    - block-sensitive-files
+    - gitleaks
+    - check-unstaged
+    - ci-check-error-swallow
+    - check-coverage-no-devolution
+    - check-banned-words
+    - check-portable-shell
+    - check-file-length
+    - check-required-hooks-present
+    - ci-lint
+    - ci-type-check
+    - check-dependency-versions
+    - check-markdown-docs
+    - check-resolution-shapes
+    - check-module-size
+    - check-npm-lock-sync
+    - check-policy-integrity
+    - check-boot-venv-layout
+    - check-duplicate-dependencies
+  commit-msg:
+    - check-commit-message
+    - block-coauthored
+  pre-push:
+    - block-coauthored-history
+    - ci-check-push
+    - check-dead-code
+    - osv-scan
 
-pre-commit:
-  - block-sensitive-files
-  - gitleaks
-  - check-unstaged
-  - ci-check-error-swallow
-  - check-coverage-no-devolution
-  - check-banned-words
-  - check-portable-shell
-  - check-file-length
-  - check-required-hooks-present
-  - ci-lint
-  - ci-type-check
-  - check-dependency-versions
-  - check-markdown-docs
-  - check-resolution-shapes
-  - check-module-size
-  - check-npm-lock-sync
-  - check-boot-venv-layout
-  - check-duplicate-dependencies
-
-commit-msg:
-  - check-commit-message
-  - block-coauthored
-
-pre-push:
-  - block-coauthored-history
-  - ci-check-push
-  - check-dead-code
-  - osv-scan
-
-# Total hooks: 24 (pre-commit=18 commit-msg=2 pre-push=4)
-# Generated: 2026-08-27T07:20:56Z
+# Total hooks: 25 (pre-commit=19 commit-msg=2 pre-push=4)
+# Generated: 2026-09-25T05:13:03Z
 # Source: config/required_hooks.yaml

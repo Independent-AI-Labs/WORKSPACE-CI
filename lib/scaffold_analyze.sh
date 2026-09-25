@@ -237,6 +237,9 @@ _scl_analyze_text() {
     local _qe_state
     if [[ -f "$_consumer/quality_exceptions.yaml" ]]; then _qe_state="EXISTS"; else _qe_state="MISSING"; fi
     printf '%-44s %s\n' "quality_exceptions.yaml" "$_qe_state"
+    local _fc_state
+    if [[ -f "$_consumer/config/file_classifications.yaml" ]]; then _fc_state="EXISTS"; else _fc_state="MISSING"; fi
+    printf '%-44s %s\n' "config/file_classifications.yaml" "$_fc_state"
 
     local _missing_tgts=() _common_tgts=() _conflict_tgts=()
     _scl_makefile_target_diff _missing_tgts _common_tgts _conflict_tgts
@@ -298,6 +301,9 @@ _scl_analyze_json() {
     local _pc_n="${_d_rest%% *}"
     local _hook_n="${_d_rest##* }"
 
+    local _fc_state
+    if [[ -f "$_consumer/config/file_classifications.yaml" ]]; then _fc_state="EXISTS"; else _fc_state="MISSING"; fi
+
     printf '{"consumer":"%s","profile":{"tier":"%s","languages":["%s"],"project":"%s"}' \
         "$_consumer" "$_pf_tier" "${_pf_languages[*]/ /\",\"}" "$_pf_project"
     printf ',"files":['
@@ -308,6 +314,7 @@ _scl_analyze_json() {
         printf '{"path":"%s","state":"%s"}' "${_cfg_paths[$_i]}" "${_cfg_states[$_i]}"
         [[ $((_i + 1)) -lt ${#_cfg_paths[@]} ]] && printf ','
     done
+    printf ',{"path":"config/file_classifications.yaml","state":"%s"}' "$_fc_state"
     printf '],"makefile_targets":{"missing":['
     local _first=1
     for _t in "${_missing_tgts[@]:-}"; do

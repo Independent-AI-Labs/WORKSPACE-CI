@@ -65,6 +65,7 @@ _scl_get_field() {
         pass_filenames) printf '%s' "${_reg_pass_fn[$_hid]:-$_default}" ;;
         always_run)     printf '%s' "${_reg_always[$_hid]:-$_default}" ;;
         files)          printf '%s' "${_reg_files[$_hid]:-}" ;;
+        files_types)    printf '%s' "${_reg_files_types[$_hid]:-}" ;;
         *)              printf '%s' "$_default" ;;
     esac
 }
@@ -91,6 +92,7 @@ _scl_gen_precommit() {
             local _pf; _pf="$(_scl_get_field "$_hid" pass_filenames "true")"
             local _ar; _ar="$(_scl_get_field "$_hid" always_run "false")"
             local _files; _files="$(_scl_get_field "$_hid" files "")"
+            local _types; _types="$(_scl_get_field "$_hid" files_types "")"
             printf '      - id: %s\n' "$_hid"
             printf '        name: %s\n' "\"$_name\""
             printf '        entry: %s\n' "\"$_entry\""
@@ -102,6 +104,9 @@ _scl_gen_precommit() {
             fi
             if [[ -n "$_files" ]]; then
                 printf '        files: %s\n' "\"$_files\""
+            fi
+            if [[ -n "$_types" ]]; then
+                printf '        types_or: [%s]\n' "$_types"
             fi
         done
     done
@@ -263,6 +268,31 @@ _scl_gen_qe() {
     fi
 }
 
+# ── Generate config/file_classifications.yaml seed ────────────────────────
+# Exact-file classification manifest consumed by check-policy-integrity and
+# the banned-pattern scanner (ci.banned_scan.classify). Seeded once; existing
+# files are never overwritten (add your own binary/generated/lock entries).
+_scl_gen_fc() {
+    local _dst="$_consumer/config/file_classifications.yaml"
+    if [[ -f "$_dst" ]]; then
+        _skipped+=("$_dst (exists, never overwritten)")
+        return 0
+    fi
+    local _tpl="$_CI_ROOT/templates/file_classifications.template.yaml"
+    [[ -f "$_tpl" ]] || { ci_fail "file_classifications template not found: $_tpl"; exit 1; }
+    local _content; _content="$(cat "$_tpl")"
+    if [[ $_dry_run -eq 1 ]]; then
+        echo "================================================================================"
+        echo "Would write: $_dst"
+        echo "================================================================================"
+        printf '%s\n' "$_content"
+    else
+        mkdir -p "$(dirname "$_dst")"
+        printf '%s\n' "$_content" > "$_dst"
+        _generated+=("$_dst")
+    fi
+}
+
 # ── Build template stage arrays from registry ─────────────────────────────
 _scl_build_tpl_stages() {
     local _rid
@@ -290,8 +320,16 @@ _scl_gen_template() {
     printf '# ci-profile.template.yaml: reference profile generated from\n'
     printf '# config/required_hooks.yaml by scripts/scaffold-ci --emit-template.\n'
     printf '# Copy this to <consumer>/ci-profile.yaml and trim per-project.\n'
+    printf '# NOTE: set languages to your stack; a hook listed here whose\n'
+    printf '# applicable_to does not intersect languages is rejected at\n'
+    printf '# scaffold time. Remove hooks you do not want before scaffolding.\n'
     printf '# DO NOT edit this template by hand; regenerate it via\n'
     printf '# make scaffold-ci ARGS=--emit-template.\n'
+    printf 'version: 1\n'
+    printf 'project: your-project-name\n'
+    printf 'languages: [%s]\n' "${_tpl_langs[*]:-any}"
+    printf 'tier: strict\n'
+    printf 'hooks:\n'
     local _total=0 _stage_counts=""
     local _sname _entry
     for _sname in "pre-commit:_tpl_pc_sorted" "commit-msg:_tpl_cm_sorted" "pre-push:_tpl_pp_sorted"; do
@@ -299,10 +337,10 @@ _scl_gen_template() {
         local _var="${_sname#*:}"
         local -n _arr="$_var"
         local _count=0
-        printf '\n%s:\n' "$_name"
+        printf '  %s:\n' "$_name"
         for _entry in "${_arr[@]:-}"; do
             if [[ -z "$_entry" ]]; then continue; fi
-            printf '  - %s\n' "${_entry##*:}"
+            printf '    - %s\n' "${_entry##*:}"
             _count=$((_count + 1))
         done
         _total=$((_total + _count))

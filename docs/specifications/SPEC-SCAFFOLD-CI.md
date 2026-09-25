@@ -45,9 +45,11 @@ WORKSPACE-GATEWAY) integrate with WORKSPACE-CI by **hand-writing** two files:
   `install-hooks`, `sync`, `check`, `lint`, `type-check`, `test`, `clean`,
   `preflight`).
 
-The two files share a hidden invariant: the relative path from the consumer
-to `projects/CI`. Every `entry:` in the YAML and every `CI_DIR` assignment
-in the Makefile must encode that path consistently. There is no validator
+The two files share a hidden invariant: the consumer-to-CI path (`REL_CI`),
+which is `/opt/workspace-ci` for a protected install and a relative
+sibling-checkout path during source development. Every `entry:` in the YAML
+and every `CI_DIR` assignment in the Makefile must encode that path
+consistently. There is no validator
 for this invariant today: drift is detected only at runtime, often as
 `source: no such file` failures in the middle of a developer's `git commit`.
 
@@ -76,7 +78,12 @@ integration package:
    the consumer fills in.
 4. **`config/` directory**: the six per-project-overridable config files
    copied from CI defaults as starting seeds.
-5. **`quality_exceptions.yaml`**: rendered from the existing template with
+5. **`config/file_classifications.yaml`**: a reviewed exact-file
+   classification seed (policy-definition entries), written once and never
+   overwritten. Consumed by `check-policy-integrity` and the banned-pattern
+   scanner; prevents the scaffolded `config/banned_words_exceptions_v5.yaml`
+   from tripping the filename rule.
+6. **`quality_exceptions.yaml`**: rendered from the existing template with
    the project name substituted.
 
 The generator is **idempotent and force-aware**: rerunning it with
@@ -113,7 +120,7 @@ re-running `scaffold-ci`, and vice versa.
 - Generation of a contract-compliant `Makefile` with empty language-specific
   vacuous pass targets (§7).
 - Copy of CI's per-project-overridable config defaults into the consumer's
-  `config/` directory (§8).
+  `config/` directory, plus a `config/file_classifications.yaml` seed (§8).
 - Rendering of `quality_exceptions.yaml` from the existing template (§9).
 - The `--emit-template` maintenance subcommand that regenerates
   `templates/ci-profile.template.yaml` from `config/required_hooks.yaml`,
@@ -135,9 +142,9 @@ re-running `scaffold-ci`, and vice versa.
   `generate-hooks` (see SPEC-BOOT-LAYOUT §10). `scaffold-ci` only READS
   the tier declared in `ci-profile.yaml` to drive mandatory-hook validation
   (§4.5); it does not write to `project_enforcement.yaml`.
-- Generation of `.gitignore` entries. The generator emits only the five
-  in-scope files (§1.2). `.gitignore` management is the consumer's
-  responsibility.
+- Generation of `.gitignore` entries. The generator emits only the
+  in-scope files enumerated in §1.2. `.gitignore` management is the
+  consumer's responsibility.
 - Copy of the global (non-overridable) configs:
   `banned_words.yaml`, `banned_words_exceptions_v5.yaml`, `schemas`,
   `blocked_commit_patterns.yaml`, `required_hooks.yaml`,
@@ -269,7 +276,9 @@ recommended order:
    safety: false`.
 3. **Exemptable / heuristic hooks third**: `mandatory: false`.
 
-The template's only decoration is comments:
+The template is a **valid profile starter** (not a bare hook list): it
+declares `version`, `project`, `languages`, `tier`, and a `hooks:` mapping
+of stage -> `- <id>` lists.
 
 ```yaml
 # ci-profile.template.yaml: reference profile generated from
@@ -277,7 +286,24 @@ The template's only decoration is comments:
 # Copy this to <consumer>/ci-profile.yaml and trim per-project.
 # DO NOT edit this template by hand; regenerate it via
 # `make scaffold-ci ARGS=--emit-template`.
+version: 1
+project: your-project-name
+languages: [<union of applicable_to tags>]
+tier: strict
+hooks:
+  pre-commit:
+    - <id>
+  commit-msg:
+    - <id>
+  pre-push:
+    - <id>
 ```
+
+The generated `languages` value is the union of every hook's
+`applicable_to` tag (hooks tagged `[any]` apply to every language), so a
+consumer can scaffold the template verbatim before trimming. Hooks the
+consumer does not want are removed; a hook whose `applicable_to` does not
+intersect `languages` is rejected at validation time (§4.6).
 
 The template is a CONSUMER starting point. The generator does not require
 the consumer profile to match the template; the template is documentation,
@@ -449,7 +475,10 @@ Examples:
 - Every shell-sourced `entry:` in `.pre-commit-config.yaml`:
   `bash -c 'source <REL_CI>/lib/checks.sh && <fn>'`
 - The `Makefile::CI_DIR` assignment:
-  `CI_DIR := $(abspath $(REPO_ROOT)/<REL_CI>)`
+  `CI_DIR := $(if $(filter /%,<REL_CI>),<REL_CI>,$(abspath $(REPO_ROOT)/<REL_CI>))`
+  (an absolute `<REL_CI>` for a protected `/opt/workspace-ci` install is
+  used as-is; a relative sibling-checkout path is resolved against the
+  repo root)
 - The `Makefile::install-hooks` recipe:
   `bash <REL_CI>/scripts/reinstall-hooks`
 
@@ -512,8 +541,16 @@ The hook `kind` from `required_hooks.yaml` determines the `entry:` form:
 | `shell_inline` | `<entry>` (already complete; the entry IS the inline command) |
 | `shell_with_arg` (commit-msg stage) | `bash -c 'source <REL_CI>/lib/checks.sh && <entry> "$1"' --` |
 | `python_module` | `uv run --project <REL_CI> --no-sync python -m <entry>` |
-| `python_module_files` | `uv run --project <REL_CI> --no-sync python -m <entry> "$@"` (pass_filenames: true) |
+| `python_module_files` | `uv run --project <REL_CI> --no-sync python -m <entry> "$@"` (pass_filenames: true; the registry's `files_types` is emitted as `types_or`) |
 | `makefile_target` | `make <entry>` (the consumer's Makefile owns the implementation; no path injection needed) |
+
+Native git hooks receive no file arguments from git, so `generate-hooks`
+resolves the trailing `"$@"` itself: for an entry containing `"$@"` it
+captures the staged file list with a diff-filtered
+`git diff --cached --name-only` invocation limited to a pathspec derived
+from the hook's `types_or` tag, then passes the result explicitly. Only
+`markdown` is defined today. A hook with no matching staged files is
+skipped, not failed.
 
 The relative path `<REL_CI>` is substitute into the shell-source entries
 only. `makefile_target` entries run `make <target>` from the consumer's
@@ -567,7 +604,7 @@ generated `.pre-commit-config.yaml` (after override application):
 The generated `Makefile` implements all 10 mandatory targets from
 `lib/makefile_contract.mk` (CONTRACT_TARGETS line 13). The
 language-specific targets are STUBS with `TODO` comments and an exit-0
-`@:` body so `make check` succeeds out-of-the-box. The contract check
+`:` body so `make check` succeeds out-of-the-box. The contract check
 (`make contract-check`) passes via `make -n` (it only checks the target
 IS defined; the recipe body is irrelevant to the contract).
 
@@ -580,11 +617,16 @@ IS defined; the recipe body is irrelevant to the contract).
 # intentional vacuous targets. Fill them in per your project's stack. See
 # <REL_CI>/Makefile for the canonical example.
 
+ifeq ($(shell id -u),0)
+SHELL := /bin/bash.real
+else
 SHELL := /bin/bash
+endif
 .DEFAULT_GOAL := help
 
-CI_DIR := $(abspath $(REPO_ROOT)/<REL_CI>)
-REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
+_CONSUMER_MK := $(abspath $(lastword $(MAKEFILE_LIST)))
+REPO_ROOT := $(patsubst %/,%,$(dir $(_CONSUMER_MK)))
+CI_DIR := $(if $(filter /%,<REL_CI>),<REL_CI>,$(abspath $(REPO_ROOT)/<REL_CI>))
 
 -include $(CI_DIR)/lib/makefile_contract.mk
 
@@ -593,7 +635,7 @@ REPO_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 # =============================================================================
 .PHONY: help
 help: ## Show this help
-	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+	grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # =============================================================================
@@ -601,29 +643,29 @@ help: ## Show this help
 # =============================================================================
 .PHONY: preflight init install install-ci install-deps install-hooks sync
 preflight: ## Verify environment
-	@test -d "$(CI_DIR)" || { echo "ERROR: CI directory not found at $(CI_DIR)" >&2; exit 1; }
-	@test -f "$(CI_DIR)/scripts/reinstall-hooks" || { echo "ERROR: reinstall-hooks missing" >&2; exit 1; }
-	@echo "✓ Preflight OK"
+	test -d "$(CI_DIR)" || { echo "ERROR: CI directory not found at $(CI_DIR)" >&2; exit 1; }
+	test -f "$(CI_DIR)/scripts/reinstall-hooks" || { echo "ERROR: reinstall-hooks missing" >&2; exit 1; }
+	echo "Preflight OK"
 
 init: ## Install system-level dependencies
-	@echo "TODO: implement per-project system dependencies."
-	@:
+	echo "TODO: implement per-project system dependencies."
+	:
 
 install: install-deps ## Full install: deps (hooks install separately, root-only: sudo make install-hooks)
-	@:
+	:
 
 install-ci: install-deps ## CI install: deps only, no hooks
-	@:
+	:
 
 install-deps: ## Install project dependencies
-	@echo "TODO: implement per-project dependency install (uv sync / npm ci / cargo build)."
-	@:
+	echo "TODO: implement per-project dependency install (uv sync / npm ci / cargo build)."
+	:
 
 install-hooks: ## Install native git hooks (root-only: root-owned, immutable)
 	bash $(CI_DIR)/scripts/reinstall-hooks
 
 sync: install-deps ## Sync deps (hooks install separately, root-only: sudo make install-hooks)
-	@:
+	:
 
 # =============================================================================
 # Quality Gates (vacuous targets: implement per your stack)
@@ -631,40 +673,43 @@ sync: install-deps ## Sync deps (hooks install separately, root-only: sudo make 
 .PHONY: check lint type-check test check-push clean clean-precommit
 
 check: lint type-check test ## Run all quality gates
-	@echo "TODO: wire lint+type-check+test implementations."
+	echo "TODO: wire lint+type-check+test implementations."
 
 lint: ## Lint
-	@:
+	:
 
 type-check: ## Type-check
-	@:
+	:
 
 test: ## Test
-	@:
+	:
 
 check-push: ## Pre-push quality gate
-	@:
+	:
 
 # =============================================================================
 # Cleanup
 # =============================================================================
 clean: ## Remove build artifacts
-	@echo "TODO: implement per-project clean (rm -rf target/ node_modules dist/...)."
-	@:
+	echo "TODO: implement per-project clean (rm -rf target/ node_modules dist/...)."
+	:
 
 clean-precommit: ## Remove pre-commit framework traces
 	bash $(CI_DIR)/scripts/cleanup-precommit
 ```
 
+Recipes use no `@` prefix: `make-at-silent` requires command output to be
+visible, and the generated Makefile carries no silent recipes.
+
 ### 7.2 Why Stubs Pass `make check` Vacuously
 
-The vacuous `lint`, `type-check`, and `test` targets each have `@:` (the
-bash no-op) as their recipe body, which exits 0. `make check` chains
+The vacuous `lint`, `type-check`, and `test` targets each have `:` (the
+shell no-op) as their recipe body, which exits 0. `make check` chains
 `lint && type-check && test`, all of which exit 0, so `make check` exits
 0. This is intentional: a brand-new project can immediately commit without
 picking up CI's strictness until the operator installs hooks via the
 root-only path (`sudo make install-hooks`). The
-consumer INCREMENTS in real implementations, replacing each `@:` with a
+consumer INCREMENTS in real implementations, replacing each `:` with a
 real recipe. The `TODO:` comments are highly visible (echoed during the
 run), so the consumer cannot accidentally ship a vacuous target to production
 without noticing.
@@ -807,7 +852,9 @@ scaffold-ci --emit-template
    - Within each tier, preserve `required_hooks.yaml`'s declaring order
      (stable sort).
 3. Render to `templates/ci-profile.template.yaml` with the prefix
-   comment block (see §3.5).
+   comment block and a valid profile header (`version`, `project`,
+   `languages`, `tier`, `hooks:`) per §3.5. `languages` is the union of
+   all hooks' `applicable_to` tags.
 4. Each hook listed as a bare string (`- <id>`), no inline metadata. The
    template is a starting point, not a runtime config.
 5. Include a footer comment block enumerating the totals:
@@ -831,9 +878,10 @@ will catch the missing template update if a maintainer forgets.
 
 ### 10.4 Implementation Note
 
-`--emit-template` ignores all other arguments (`--consumer`, `--profile`,
-`--force`, `--dry-run`). It does not touch disk beyond the single
-template file. The Makefile target invocation `make scaffold-ci
+`--emit-template` ignores the scaffolding arguments (`--consumer`,
+`--profile`, `--force-*`). It does not touch disk beyond the single
+template file; `--dry-run` prints the rendered template without writing.
+The Makefile target invocation `make scaffold-ci
 ARGS=--emit-template` passes the flag through via the existing
 `ARGS=...` convention used by `code-stats` (see `Makefile` line 232).
 
@@ -1265,7 +1313,7 @@ does not check individual entries.
 The implementation satisfies REQ-SCAFFOLD-CI when ALL of the following
 hold (see REQ-SCAFFOLD-CI.md for full FR/NFR numbering):
 
-- **FR-1**: `make scaffold-ci CONSUMER=<path>` writes the five
+- **FR-1**: `make scaffold-ci CONSUMER=<path>` writes the
   in-scope files into `<path>` with correct relative-path computation
   (`<REL_CI>` verified by integration test).
 - **FR-2**: `make scaffold-ci ARGS=--emit-template` regenerates
@@ -1313,7 +1361,7 @@ integration by:
    correctly.
 5. Run `sudo make -C projects/WORKSPACE-GATEWAY install-hooks` (which calls
    `reinstall-hooks`; root-only, hooks land root-owned and immutable).
-6. Commit the five generated files plus the now-permanent
+6. Commit the generated files plus the now-permanent
    `ci-profile.yaml`.
 
 This workflow replaces the current ad-hoc hand-writing of
