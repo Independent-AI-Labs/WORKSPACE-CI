@@ -119,7 +119,7 @@ fi
 # Scan HEAD only (not --all, which would include backup refs from previous runs)
 _commits=""
 if [[ -n "$_base" ]]; then
-    local _log_rc=0
+    _log_rc=0
     _commits="$(git log --format='%H' "$_range")" || _log_rc=$?
 else
     _log_rc=0
@@ -207,12 +207,12 @@ if [[ -n "$_base" ]]; then
 fi
 
 git filter-branch --msg-filter "
-    local _filter_rc=0
+    _filter_rc=0
     grep -viE '$_combined' || _filter_rc=$?
 " --force -- $_filter_range
 
 # Clean up filter-branch refs
-local _cleanup_rc=0
+_cleanup_rc=0
 git for-each-ref --format='delete %(refname)' refs/original/ | git update-ref --stdin || _cleanup_rc=$?
 
 # Verify (only HEAD, not --all which includes backup refs)
