@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -103,7 +104,12 @@ def test_state_report_reports_state_per_entry(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _patch_manifest(monkeypatch, MANIFEST_ENTRIES)
-    (tmp_path / "alpha_exceptions.yaml").write_text("x\n", encoding="utf-8")
+    alpha = tmp_path / "alpha_exceptions.yaml"
+    alpha.write_text("x\n", encoding="utf-8")
+    # The suite must assert the non-root-owned branch even when pytest runs
+    # as root (operator pre-push): root writes create root-owned files.
+    if os.geteuid() == 0:
+        os.chown(alpha, 65534, 65534)
     report = state_report(tmp_path)
     assert [p for p, _ in report] == [
         tmp_path / "alpha_exceptions.yaml",
