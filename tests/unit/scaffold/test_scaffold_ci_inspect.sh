@@ -91,7 +91,7 @@ hooks:
   pre-commit: [check-unstaged]
 EOF
     cd "$PROJECT_DIR"
-    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-js" --json > "$TEST_TMP/out" 2>/tmp/sci-js-err.txt
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-js" --json > "$TEST_TMP/out" 2>"$TEST_TMP/sci-js-err.txt"
     [[ ! -f "$TEST_TMP/sci-js/.pre-commit-config.yaml" ]] || { echo "json wrote pc"; return 1; }
     grep -q '"consumer"' "$TEST_TMP/out" || { echo "missing consumer key"; return 1; }
     grep -q '"files"' "$TEST_TMP/out" || { echo "missing files key"; return 1; }
