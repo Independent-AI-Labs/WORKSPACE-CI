@@ -52,6 +52,12 @@ ci_boot_dir() {
 CI_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CI_PROJECT_ROOT="$(cd "$CI_LIB_DIR/.." && pwd)"
 CI_CONFIG_DIR="${CI_CONFIG_DIR:-$CI_PROJECT_ROOT/config}"
+# The `ci` package is never installed (the project is a non-package
+# workspace; REQ-BOOT-LAYOUT 2.19): Python resolves it from the sealed
+# project root on PYTHONPATH. This is the single export point every hook
+# and checker inherits, including generated hooks that invoke
+# `uv run python -m ci.<module>` directly.
+export PYTHONPATH="$CI_PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 export CI_LIB_DIR CI_PROJECT_ROOT CI_CONFIG_DIR
 
 # shellcheck source=ci_config_paths.sh

@@ -1,6 +1,5 @@
-[build-system]
-requires = ["setuptools==84.0.0", "wheel==0.48.0"]
-build-backend = "setuptools.build_meta"
+[tool.uv]
+package = false
 
 [project]
 name = "workspace-ci"
@@ -28,11 +27,3 @@ dev = [
     "types-PyYAML==6.0.12.20260906",
 ]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["ci*"]
-namespaces = true
-
-[tool.setuptools.package-data]
-"*" = ["lib/*.sh", "lib/*.awk", "config/*.yaml"]
-"ci" = ["py.typed"]
