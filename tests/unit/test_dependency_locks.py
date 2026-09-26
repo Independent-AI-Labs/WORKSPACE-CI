@@ -185,7 +185,6 @@ revision = 3
 [[package]]
 name = "example"
 version = "1.0"
-source = { editable = "." }
 dependencies = [{ name = "main-root" }]
 [package.optional-dependencies]
 dev = [{ name = "optional-root" }]
@@ -237,7 +236,6 @@ revision = 3
 [[package]]
 name = "example"
 version = "1.0"
-source = {{ editable = "." }}
 dependencies = [{{ name = "main-root" }}]
 [package.metadata]
 requires-dist = [{{ name = "main-root", specifier = "" }}]
@@ -266,7 +264,6 @@ revision = 3
 [[package]]
 name = "example"
 version = "2.0"
-source = { editable = "." }
 dependencies = []
 [package.metadata]
 requires-dist = []
@@ -307,7 +304,7 @@ def test_validate_compares_only_explicit_uv_lock_association(
     )
     (tmp_path / "uv.lock").write_text(
         'version = 1\nrevision = 3\n[[package]]\nname = "example"\n'
-        'version = "1.0"\nsource = { editable = "." }\n'
+        'version = "1.0"\n'
         "[package.metadata]\nrequires-dist = []\nprovides-extras = []\n"
     )
 

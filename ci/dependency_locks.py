@@ -384,7 +384,7 @@ def validate_uv_lock_bytes(
             f"DV-UVL-006 {lock_path}:package: missing project root {root_name}"
         )
         return sorted(diagnostics)
-    if root.get("version") != version or root.get("source") != {"editable": "."}:
+    if root.get("version") != version:
         diagnostics.append(
             f"DV-UVL-007 {lock_path}:package[{root_name}]: project metadata drift"
         )

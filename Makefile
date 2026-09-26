@@ -57,6 +57,11 @@ MYPY := $(UV) run mypy
 # $HOME/.local/share/uv/python (no unsanctioned HOME/system resources)
 export UV_PYTHON_INSTALL_DIR := $(CURDIR)/$(BOOT_NAME)/python
 
+# Source-development Python resolves `ci` from this checkout, so no install
+# is required or trusted. Protected execution uses /opt/workspace-ci
+# exclusively (REQ-BOOT-LAYOUT 2.19).
+export PYTHONPATH := $(CURDIR)$(if $(PYTHONPATH),:$(PYTHONPATH),)
+
 # Local overrides: copy .env.example -> .env (gitignored). KEY=value makefile syntax.
 -include .env
 export CLOUDFLARED_BIN TUNNEL_CONFIG TUNNEL_TOKEN

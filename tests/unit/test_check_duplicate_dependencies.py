@@ -297,7 +297,7 @@ class TestFindWorkspaceRoot:
 name = "workspace"
 
 [tool.uv.sources]
-member = { path = "packages/member", editable = true }
+member = { path = "packages/member" }
 """)
         member_dir = root / "packages" / "member"
         member_dir.mkdir(parents=True)
@@ -320,7 +320,7 @@ class TestMain:
 dependencies = ["unique-pkg==1.0.0"]
 
 [tool.uv.sources]
-member = { path = "member", editable = true }
+member = { path = "member" }
 """)
         member = root / "member"
         member.mkdir()
@@ -347,7 +347,7 @@ dependencies = ["pkg-a==1.0.0"]
 dev = ["pkg-a==2.0.0"]
 
 [tool.uv.sources]
-member = { path = "member", editable = true }
+member = { path = "member" }
 """)
         member = root / "member"
         member.mkdir()
@@ -374,7 +374,7 @@ dependencies = ["numpy==1.0.0"]
 dev = ["numpy==2.0.0"]
 
 [tool.uv.sources]
-member = { path = "member", editable = true }
+member = { path = "member" }
 """)
         member = root / "member"
         member.mkdir()

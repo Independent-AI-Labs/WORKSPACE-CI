@@ -25,6 +25,17 @@ test_generate_hooks_binds_protected_deployment() {
 }
 _run_test "generate-hooks binds protected deployment" test_generate_hooks_binds_protected_deployment
 
+test_generate_hooks_renders_drop_root_guard() {
+    local root="$TEST_TMP/droproot-hooks" output="$TEST_TMP/droproot-generated"
+    mkdir -p "$root" "$output"
+    git -C "$root" init -q
+    printf 'repos:\n  - repo: local\n    hooks:\n      - id: check\n        name: Check\n        entry: "true"\n        language: system\n        stages: [pre-commit]\n' > "$root/.pre-commit-config.yaml"
+    (cd "$root" && bash "$PROJECT_DIR/scripts/generate-hooks" --output-dir "$output")
+    grep -q 'EUID -eq 0' "$output/pre-commit" || { echo "missing root check"; return 1; }
+    grep -q 'runuser -u "$_hook_owner"' "$output/pre-commit" || { echo "missing runuser re-exec"; return 1; }
+}
+_run_test "generate-hooks renders drop-root guard" test_generate_hooks_renders_drop_root_guard
+
 test_generate_hooks_advisory_wrapper_is_non_failing() {
     local root="$TEST_TMP/advisory-hooks" output="$TEST_TMP/advisory-generated"
     mkdir -p "$root" "$output"

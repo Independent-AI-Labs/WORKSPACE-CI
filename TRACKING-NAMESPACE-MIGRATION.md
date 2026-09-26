@@ -92,7 +92,7 @@ python stub + current clone paths. Vendored `.gcloud` SDK untouched
 intact).
 
 ### Root env separation (leak fix)
-Root pyproject keeps `dataops` editable (root CLIs consume
+Root pyproject keeps `dataops` as a local path source (root CLIs consume
 `dataops.cli_components` as a library - intentional) but NO LONGER carries
 DATAOPS test-only deps; DATAOPS is self-sufficient in its own `.venv`.
 Moon link kept per operator.

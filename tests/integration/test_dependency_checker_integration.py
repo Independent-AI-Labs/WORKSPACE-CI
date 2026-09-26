@@ -126,7 +126,6 @@ def write_explicit_validation_inputs(root: Path, *, invalid: bool) -> None:
     (root / "uv.lock").write_text(
         "version = 1\nrevision = 3\n"
         "[[package]]\nname = 'consumer'\nversion = '1.0.0'\n"
-        "source = { editable = '.' }\n"
         "dependencies = [{ name = 'python-package' }, { name = 'ignored-python' }]\n"
         "[package.metadata]\n"
         "requires-dist = [{ name = 'python-package', specifier = '==1.2.3' }, "
