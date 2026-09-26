@@ -29,6 +29,35 @@ divert_is_active() {
     dpkg-divert --list /usr/bin/git | grep -q 'git.distrib'
 }
 
+_git_core_divert_is_active() {
+    dpkg-divert --list /usr/lib/git-core/git | grep -q 'git.distrib'
+}
+
+# Undo the exec-path guard: drop the guard symlink and restore the real
+# git binary behind a still-active dpkg-divert (or from git.distrib).
+_restore_git_core() {
+    local core=/usr/lib/git-core/git distrib=/usr/lib/git-core/git.distrib
+    [[ -e "$core" || -e "$distrib" ]] || return 0
+    if _has_chattr && [[ -e "$core" ]]; then
+        _guard_attempt chattr -i "$core"
+    fi
+    if [[ -L "$core" ]]; then
+        rm -f "$core"
+    fi
+    if _git_core_divert_is_active; then
+        _guard_attempt dpkg-divert --rename --remove /usr/lib/git-core/git
+    elif [[ -f "$distrib" && ! -e "$core" ]]; then
+        mv -f "$distrib" "$core"
+    fi
+    if [[ -e "$core" ]]; then
+        chown root:root "$core"
+        chmod 0755 "$core"
+        _guard_attempt setcap -r "$core"
+    fi
+    _guard_attempt setcap -r "$distrib"
+    log_info "Restored /usr/lib/git-core/git"
+}
+
 _has_chattr() {
     local _path=""
     _path="$(command -v chattr 2>&1)" && return 0
@@ -44,6 +73,7 @@ _has_func() {
 guard_is_installed() {
     [[ -f /usr/bin/git.original ]] \
         || divert_is_active \
+        || _git_core_divert_is_active \
         || [[ -f /usr/lib/workspace-guard/deployment-class ]]
 }
 
@@ -74,6 +104,7 @@ _restore_stock_git() {
         log_error "Reinstall git: sudo apt install --reinstall git"
         return 1
     fi
+    _restore_git_core
     return 0
 }
 
@@ -110,6 +141,7 @@ uninstall_guard() {
         if [[ -x /usr/bin/git ]]; then
             _guard_attempt setcap -r /usr/bin/git
         fi
+        _restore_git_core
         log_info "Cleanup complete (provision state preserved)"
         git --version
         return 0
@@ -168,6 +200,7 @@ rollback_guard() {
     else
         rm -rf /usr/lib/workspace-guard
     fi
+    _restore_git_core
 }
 
 _run_guard_install_with_drift_check() {

@@ -170,6 +170,9 @@ install_guard_binary() {
             git_src="/usr/bin/git.distrib"
         elif is_real_git /usr/bin/git; then
             git_src="/usr/bin/git"
+        elif is_real_git /usr/lib/git-core/git.distrib; then
+            git_src="/usr/lib/git-core/git.distrib"
+            log_warn "Using relocated apt package git: /usr/lib/git-core/git.distrib"
         elif is_real_git /usr/lib/git-core/git; then
             git_src="/usr/lib/git-core/git"
             log_warn "Using apt package git: /usr/lib/git-core/git"
@@ -272,6 +275,13 @@ if [[ -f /usr/bin/git.distrib ]]; then
     chmod 0700 /usr/bin/git.distrib
     chown root:root /usr/bin/git.distrib
 fi
+if [[ -f /usr/lib/git-core/git.distrib ]]; then
+    chmod 0700 /usr/lib/git-core/git.distrib
+    chown root:root /usr/lib/git-core/git.distrib
+fi
+if [[ -e /usr/lib/git-core/git && ! -L /usr/lib/git-core/git ]]; then
+    echo '[WARN] Git exec path /usr/lib/git-core/git is unguarded. Re-run: make install-guard-host-exec' >&2
+fi
 EOF
         chmod 755 /usr/lib/workspace-guard/apt-check.sh
     fi
@@ -335,6 +345,16 @@ EOF
                 log_info "Guard binary has host-exec file caps: $_gc"
             else
                 log_error "host-exec requires $(guard_workload_file_cap_string) (got: ${_gc:-none})"
+                structural_errors=1
+            fi
+        fi
+        if [[ -e /usr/lib/git-core/git ]]; then
+            if [[ ! -L /usr/lib/git-core/git || "$(readlink /usr/lib/git-core/git)" != "/usr/bin/git" ]]; then
+                log_error "git exec path /usr/lib/git-core/git is not guarded (expected symlink to /usr/bin/git)"
+                structural_errors=1
+            fi
+            if ! guard_git_core_divert_is_active; then
+                log_error "dpkg-divert for /usr/lib/git-core/git not active"
                 structural_errors=1
             fi
         fi

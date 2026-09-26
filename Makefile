@@ -621,9 +621,11 @@ WORKSPACE_GUARD_ROOT ?= $(abspath ../WORKSPACE-GUARD)
 # scoped Git operations. Use the normal operator commands:
 #   sudo --preserve-env=HOME,SSH_AUTH_SOCK make build-guard
 #   sudo --preserve-env=HOME,SSH_AUTH_SOCK make install-guard
-# build-guard writes only to WORKSPACE-GUARD/target/; bootstrap-workspace-guard
-# chowns that tree back to SUDO_USER when run under sudo, so agent-uid
-# rebuilds stay usable. check-guard is read-only and runs as the agent.
+# build-guard writes only to WORKSPACE-GUARD/target/ (git-ssh) and
+# WORKSPACE-GUARD/git-guard/target/ (the privileged package); bootstrap-
+# workspace-guard chowns those trees back to SUDO_USER when run under sudo,
+# so agent-uid rebuilds stay usable. check-guard is read-only and runs as
+# the agent.
 build-guard: ## Build git-guard binary (operator: sudo make build-guard)
 	WORKSPACE_GUARD_ROOT="$(WORKSPACE_GUARD_ROOT)" $(SCRIPT_BASH) scripts/bootstrap-workspace-guard build-only
 

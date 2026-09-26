@@ -87,14 +87,8 @@ guard_workload_file_cap_string() {
     printf '%s' "$GUARD_WORKLOAD_FILE_CAP_STRING"
 }
 
-# Inheritable-only variant of the workload cap set (suffix =ei): grants the
-# caps only to processes already holding them in CapInh, i.e. exclusively
-# guard-descended hook contexts. Used for /usr/lib/git-core/git, which
-# resolves ahead of the guard inside hooks (git prefixes PATH with its
-# exec path), so hook-side git can write the root-locked .git tree while
-# direct agent-shell invocation gains nothing.
-guard_workload_file_cap_string_inheritable() {
-    printf '%s' "${GUARD_WORKLOAD_FILE_CAP_STRING%=ep}=ei"
+guard_git_core_divert_is_active() {
+    dpkg-divert --list /usr/lib/git-core/git 2>&1 | grep -q 'git.distrib'
 }
 
 # Normalize file-cap strings for comparison (order and =ep/+ep suffix).
@@ -273,8 +267,8 @@ _resolve_guard_bin() {
     fi
     local candidate
     for candidate in \
-        "$_guard_dir/target/release/workspace-guard" \
-        "$_guard_dir/target/x86_64-unknown-linux-musl/release/workspace-guard"; do
+        "$_guard_dir/git-guard/target/release/workspace-guard" \
+        "$_guard_dir/git-guard/target/x86_64-unknown-linux-musl/release/workspace-guard"; do
         if [[ -f "$candidate" ]]; then
             printf '%s\n' "$candidate"
             return 0
@@ -364,6 +358,25 @@ guard_install_drift_reasons() {
 
         if ! divert_is_active; then
             reasons+=("dpkg-divert for /usr/bin/git not active")
+        fi
+
+        local _git_core=/usr/lib/git-core/git
+        if [[ -e "$_git_core" ]]; then
+            if [[ ! -L "$_git_core" || "$(readlink "$_git_core")" != "/usr/bin/git" ]]; then
+                reasons+=("/usr/lib/git-core/git is not the guard symlink to /usr/bin/git")
+            fi
+            if ! guard_git_core_divert_is_active; then
+                reasons+=("dpkg-divert for /usr/lib/git-core/git not active")
+            fi
+            local _git_core_distrib=/usr/lib/git-core/git.distrib
+            if [[ -e "$_git_core_distrib" ]]; then
+                local _core_mode _core_owner
+                _core_mode="$(_guard_capture stat -c '%a' "$_git_core_distrib")"
+                _core_owner="$(_guard_capture stat -c '%U:%G' "$_git_core_distrib")"
+                if [[ "$_core_mode" != "700" || "$_core_owner" != "root:root" ]]; then
+                    reasons+=("$_git_core_distrib wrong permissions (expected 0700 root:root, got ${_core_mode} ${_core_owner})")
+                fi
+            fi
         fi
 
         if _path="$(command -v getcap 2>&1)"; then

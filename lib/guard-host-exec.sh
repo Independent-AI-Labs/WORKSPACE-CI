@@ -10,6 +10,8 @@ guard_state_dir() {
 GUARD_DEPLOYMENT_CLASS_FILE="/usr/lib/workspace-guard/deployment-class"
 GUARD_PRIOR_DELIVERY_MODE_FILE="/usr/lib/workspace-guard/delivery.mode"
 GUARD_HOST_EXEC_CLASS="host-exec"
+GUARD_GIT_CORE_PATH="/usr/lib/git-core/git"
+GUARD_GIT_CORE_DISTRIB="/usr/lib/git-core/git.distrib"
 GUARD_PAM_CAP_AUTH_LINE='auth optional pam_cap.so defer keepcaps'
 GUARD_CAPABILITY_CONF_MARKERS=(
     "# workspace-guard ambient caps (managed by make install-guard)"
@@ -368,6 +370,41 @@ guard_verify_user_run_runuser() {
     return $rc
 }
 
+# Git prepends its exec path (/usr/lib/git-core) to PATH when running
+# hooks and child processes, so a hook's `git` resolves to
+# /usr/lib/git-core/git ahead of the guarded /usr/bin/git. Point that
+# path at the guard itself: relocate the real apt binary behind a
+# dpkg-divert (0700, root-only) and symlink the exec-path name to
+# /usr/bin/git. Every reachable git frontend is then guarded, and the
+# multi-call git-* helpers route through the guard's argv normalisation.
+# This replaces the prior inheritable-only setcap on the real binary,
+# which delivered capabilities but not the guard's safe.directory/env
+# hardening (observed: unsandboxed callers saw "dubious ownership").
+install_guard_git_core_frontend() {
+    local core="$GUARD_GIT_CORE_PATH" distrib="$GUARD_GIT_CORE_DISTRIB"
+    local setcap_path="/usr/sbin/setcap"
+    if [[ ! -e "$core" && ! -e "$distrib" ]]; then
+        log_warn "Git exec path $core not present; skipping exec-path guard"
+        return 0
+    fi
+    if _chattr_path="$(command -v chattr 2>&1)" && [[ -e "$core" ]]; then
+        _guard_attempt chattr -i "$core"
+    fi
+    if ! guard_git_core_divert_is_active; then
+        dpkg-divert --local --divert "$distrib" --rename --add "$core"
+    fi
+    chown root:root "$distrib"
+    chmod 0700 "$distrib"
+    _guard_attempt "$setcap_path" -r "$distrib"
+    ln -sfn /usr/bin/git "$core"
+    chown -h root:root "$core"
+    if [[ "$(readlink "$core")" != "/usr/bin/git" ]]; then
+        log_error "Failed to guard git exec path (expected symlink to /usr/bin/git): $core"
+        return 1
+    fi
+    log_info "Guarded git exec path: $core -> /usr/bin/git"
+}
+
 install_guard_host_exec() {
     _setcap_path=/usr/sbin/setcap
     _getcap_path=/usr/sbin/getcap
@@ -406,24 +443,7 @@ install_guard_host_exec() {
         return 1
     fi
 
-    # Git prepends its exec path (/usr/lib/git-core) to PATH when running
-    # hooks, so a hook's `git` resolves to the real capless binary instead
-    # of the guarded /usr/bin/git. Against the root-locked .git tree that
-    # makes hook-side staging (ci_check_unstaged) fail with git's own
-    # EACCES on .git/index.lock. Grant the same capability set with the
-    # inheritable-only flag: caps materialize only in processes already
-    # carrying them in CapInh (guard-descended hook contexts); a direct
-    # agent-shell invocation (CapInh=0) gains nothing.
-    local _git_core=/usr/lib/git-core/git
-    if [[ -x "$_git_core" ]]; then
-        local _icap_str
-        _icap_str="$(guard_workload_file_cap_string_inheritable)"
-        if ! "$_setcap_path" "$_icap_str" "$_git_core" 2>"$_setcap_err"; then
-            log_error "Failed to set inheritable file capabilities on $_git_core: $_icap_str"
-            [[ -s "$_setcap_err" ]] && log_error "$(cat "$_setcap_err")"
-            return 1
-        fi
-    fi
+    install_guard_git_core_frontend || return 1
 
     guard_write_deployment_class "$GUARD_HOST_EXEC_CLASS"
     guard_install_git_ssh_wrapper || return 1

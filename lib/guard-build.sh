@@ -28,33 +28,46 @@ _guard_repo_owner() {
     fi
 }
 
+# Release target trees: the top-level tools package builds into
+# $_guard_dir/target (workspace-git-ssh), the privileged package into
+# $_guard_dir/git-guard/target (workspace-guard).
+_guard_target_dirs() {
+    printf '%s\n' "$_guard_dir/target" "$_guard_dir/git-guard/target"
+}
+
 _guard_rehome_target_tree() {
-    local user="${1:-}"
-    [[ -n "$user" && "$user" != "root" && -d "$_guard_dir/target" ]] || return 0
-    chown -R "$user" "$_guard_dir/target" || log_warn "chown target/ -> $user failed (some files may remain root-owned)"
-    log_info "Re-homed target/ -> $user"
+    local user="${1:-}" _t
+    [[ -n "$user" && "$user" != "root" ]] || return 0
+    while IFS= read -r _t; do
+        [[ -d "$_t" ]] || continue
+        chown -R "$user" "$_t" || log_warn "chown $_t -> $user failed (some files may remain root-owned)"
+        log_info "Re-homed $_t -> $user"
+    done <<< "$(_guard_target_dirs)"
 }
 
 _guard_assert_target_ownership() {
-    local user="${1:-}"
-    [[ -n "$user" && "$user" != "root" && -d "$_guard_dir/target" ]] || return 0
-    local owner="" _stat_err _stat_rc=0
-    _stat_err="$(mktemp)"
-    owner="$(stat -c '%U' "$_guard_dir/target" 2>"$_stat_err")" || _stat_rc=$?
-    if [[ $_stat_rc -ne 0 ]]; then
-        if [[ -s "$_stat_err" ]]; then
-            log_warn "stat owner of $_guard_dir/target failed: $(head -1 "$_stat_err")"
+    local user="${1:-}" _t
+    [[ -n "$user" && "$user" != "root" ]] || return 0
+    while IFS= read -r _t; do
+        [[ -d "$_t" ]] || continue
+        local owner="" _stat_err _stat_rc=0
+        _stat_err="$(mktemp)"
+        owner="$(stat -c '%U' "$_t" 2>"$_stat_err")" || _stat_rc=$?
+        if [[ $_stat_rc -ne 0 ]]; then
+            if [[ -s "$_stat_err" ]]; then
+                log_warn "stat owner of $_t failed: $(head -1 "$_stat_err")"
+            fi
+            rm -f "$_stat_err"
+            continue
         fi
         rm -f "$_stat_err"
-        return 0
-    fi
-    rm -f "$_stat_err"
-    if [[ "$owner" == "root" ]]; then
-        log_error "WORKSPACE-GUARD/target is root-owned by design (item 17: root-gated release builds)."
-        log_error "Run release builds as root: sudo --preserve-env=HOME,SSH_AUTH_SOCK make build-guard"
-        log_error "Agent dev loops use CARGO_TARGET_DIR=target/agent (make check/lint/test)."
-        return 1
-    fi
+        if [[ "$owner" == "root" ]]; then
+            log_error "$_t is root-owned by design (item 17: root-gated release builds)."
+            log_error "Run release builds as root: sudo --preserve-env=HOME,SSH_AUTH_SOCK make build-guard"
+            log_error "Agent dev loops use CARGO_TARGET_DIR=target/agent (make check/lint/test)."
+            return 1
+        fi
+    done <<< "$(_guard_target_dirs)"
 }
 
 _guard_cargo_release_build() {
@@ -172,30 +185,36 @@ build_guard_binary() {
         fi
     fi
 
+    local _guard_pkg_dir="$_guard_dir/git-guard"
     if [[ ! -f "$_guard_dir/Cargo.toml" ]]; then
         log_error "WORKSPACE-GUARD project not found at $_guard_dir"
         log_error "Run 'make ensure-repos' or 'make sync-package' first to clone workspace repos"
         return 1
     fi
+    if [[ ! -f "$_guard_pkg_dir/Cargo.toml" ]]; then
+        log_error "WORKSPACE-GUARD git-guard package not found at $_guard_pkg_dir"
+        return 1
+    fi
 
-    cd "$_guard_dir"
     if [[ $EUID -eq 0 ]]; then
-        # Item 17: the release tree is root-built and root-owned so an
+        # Item 17: each release tree is root-built and root-owned so an
         # agent cannot stage a trojaned artifact in target/ for a later
         # root install to consume. Agent dev loops use CARGO_TARGET_DIR
         # target/agent (WORKSPACE-GUARD Makefile check/lint/test).
-        if [[ -d "$_guard_dir/target" ]]; then
-            chown root:root "$_guard_dir/target" || {
-                log_error "chown target/ -> root failed"
+        local _t
+        while IFS= read -r _t; do
+            [[ -d "$_t" ]] || continue
+            chown root:root "$_t" || {
+                log_error "chown $_t -> root failed"
                 return 1
             }
             # target/agent is the agent dev-loop CARGO_TARGET_DIR; it must
             # stay agent-owned. Root only claims the release tree.
-            find "$_guard_dir/target" -mindepth 1 -maxdepth 1 ! -name agent                 -exec chown -R root:root {} + || {
-                log_error "chown release target tree -> root failed"
+            find "$_t" -mindepth 1 -maxdepth 1 ! -name agent                 -exec chown -R root:root {} + || {
+                log_error "chown release target tree $_t -> root failed"
                 return 1
             }
-        fi
+        done <<< "$(_guard_target_dirs)"
     else
         _guard_assert_target_ownership "$(_guard_repo_owner)" || return 1
     fi
@@ -210,6 +229,7 @@ build_guard_binary() {
     fi
 
     local guard_bin=""
+    local git_ssh_bin=""
     local has_rustup=0
     if _path="$(command -v rustup 2>&1)"; then
         has_rustup=1
@@ -219,26 +239,35 @@ build_guard_binary() {
         installed_targets=$(rustup target list --installed)
         if echo "$installed_targets" | grep -q musl; then
             log_info "Building statically linked binaries (musl)..."
-            _guard_cargo_release_build build --release --target x86_64-unknown-linux-musl "${build_features[@]}"
-            _guard_cargo_release_build build --release --bin workspace-git-ssh --target x86_64-unknown-linux-musl "${build_features[@]}"
-            guard_bin="target/x86_64-unknown-linux-musl/release/workspace-guard"
+            (cd "$_guard_pkg_dir" && CARGO_TARGET_DIR="$_guard_pkg_dir/target" \
+                _guard_cargo_release_build build --release --target x86_64-unknown-linux-musl "${build_features[@]}")
+            (cd "$_guard_dir" && CARGO_TARGET_DIR="$_guard_dir/target" \
+                _guard_cargo_release_build build --release --bin workspace-git-ssh --target x86_64-unknown-linux-musl)
+            guard_bin="$_guard_pkg_dir/target/x86_64-unknown-linux-musl/release/workspace-guard"
+            git_ssh_bin="$_guard_dir/target/x86_64-unknown-linux-musl/release/workspace-git-ssh"
         else
             log_info "Building dynamically linked binaries (gnu)..."
             PATH="/usr/bin:/usr/sbin:/usr/local/bin:$PATH"
             CC=gcc
             export PATH CC
-            _guard_cargo_release_build build --release "${build_features[@]}"
-            _guard_cargo_release_build build --release --bin workspace-git-ssh "${build_features[@]}"
-            guard_bin="target/release/workspace-guard"
+            (cd "$_guard_pkg_dir" && CARGO_TARGET_DIR="$_guard_pkg_dir/target" \
+                _guard_cargo_release_build build --release "${build_features[@]}")
+            (cd "$_guard_dir" && CARGO_TARGET_DIR="$_guard_dir/target" \
+                _guard_cargo_release_build build --release --bin workspace-git-ssh)
+            guard_bin="$_guard_pkg_dir/target/release/workspace-guard"
+            git_ssh_bin="$_guard_dir/target/release/workspace-git-ssh"
         fi
     else
         log_info "Building dynamically linked binaries (gnu, no rustup)..."
         PATH="/usr/bin:/usr/sbin:/usr/local/bin:$PATH"
         CC=gcc
         export PATH CC
-        _guard_cargo_release_build build --release "${build_features[@]}"
-        _guard_cargo_release_build build --release --bin workspace-git-ssh "${build_features[@]}"
-        guard_bin="target/release/workspace-guard"
+        (cd "$_guard_pkg_dir" && CARGO_TARGET_DIR="$_guard_pkg_dir/target" \
+            _guard_cargo_release_build build --release "${build_features[@]}")
+        (cd "$_guard_dir" && CARGO_TARGET_DIR="$_guard_dir/target" \
+            _guard_cargo_release_build build --release --bin workspace-git-ssh)
+        guard_bin="$_guard_pkg_dir/target/release/workspace-guard"
+        git_ssh_bin="$_guard_dir/target/release/workspace-git-ssh"
     fi
 
     if [[ ! -f "$guard_bin" ]]; then
@@ -254,17 +283,20 @@ build_guard_binary() {
         return 1
     fi
     if [[ $EUID -eq 0 ]]; then
-        chown root:root "$_guard_dir/target" || {
-            log_error "post-build chown target/ -> root failed"
-            return 1
-        }
-        find "$_guard_dir/target" -mindepth 1 -maxdepth 1 ! -name agent             -exec chown -R root:root {} + || {
-            log_error "post-build chown release target tree -> root failed"
-            return 1
-        }
+        local _t
+        while IFS= read -r _t; do
+            [[ -d "$_t" ]] || continue
+            chown root:root "$_t" || {
+                log_error "post-build chown $_t -> root failed"
+                return 1
+            }
+            find "$_t" -mindepth 1 -maxdepth 1 ! -name agent             -exec chown -R root:root {} + || {
+                log_error "post-build chown release target tree $_t -> root failed"
+                return 1
+            }
+        done <<< "$(_guard_target_dirs)"
     fi
     log_info "Build successful: $(file "$guard_bin" | cut -d: -f2)"
-    local git_ssh_bin="${guard_bin/workspace-guard/workspace-git-ssh}"
     if [[ -f "$git_ssh_bin" ]]; then
         log_info "git-ssh wrapper built: $git_ssh_bin"
     else
