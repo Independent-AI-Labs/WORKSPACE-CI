@@ -14,6 +14,9 @@ Detectors:
      boot-then-PATH resolver.
   3b. an array literal holding 2+ boot-dir candidates: multi-source
      candidate resolution.
+  3c. an if/elif chain whose condition probes a boot-dir executable and
+     whose chain also probes PATH: the non-function form of the
+     boot-then-PATH resolver.
 
 Makefiles: wildcard-conditional resolution ($(if ...)) is
 token-detectable and enforced by the banned-words catalog; out of
@@ -37,6 +40,7 @@ _BOOT_PATH_RE = re.compile(r"[A-Za-z0-9_/${}.-]*\.boot-(?:linux|macos)[A-Za-z0-9
 _BOOT_EXEC_RE = re.compile(r"[A-Za-z0-9_/${}.-]*\.boot-(?:linux|macos)/bin/[A-Za-z0-9_/${}.-]*")
 _CMDV_RE = re.compile(r"\bcommand\s+-v\b")
 _ARRAY_OPEN_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=\($")
+_IF_ELIF_RE = re.compile(r"^(\s*)(if|elif)\b")
 
 _SHELL_SUFFIXES = {".sh", ".bash", ".bats"}
 _MAKE_NAMES = {"Makefile", "makefile", "GNUmakefile"}
@@ -160,21 +164,61 @@ def _scan_file(root: Path, rel: str) -> list[str]:
             if ")" in line:
                 _flush_array()
         fm = _FUNC_RE.match(line)
+        closes_line = False
         if fm:
             _flush_func()
             func_start = i
             func_name = fm.group(1)
             func_has_boot = False
             func_has_cmdv = False
+            # A one-line definition (`name() { body; }`) closes on the same
+            # line. Without this the range bleeds to EOF and drags in
+            # unrelated boot paths and command probes.
+            body = line[fm.end():]
+            closes_line = "}" in body and body.count("{") < body.count("}")
         if func_start is not None:
             if _BOOT_EXEC_RE.search(line):
                 func_has_boot = True
             if _CMDV_RE.search(line):
                 func_has_cmdv = True
-            if line.startswith("}"):
+            if closes_line or line.startswith("}"):
                 _flush_func()
                 func_start = None
     _flush_func()
+
+    # (3c) if/elif chain without an enclosing function: a boot-dir
+    # executable probe in the condition while the chain also probes PATH.
+    chain_start: int | None = None
+    chain_indent = 0
+    chain_has_boot = False
+    chain_has_cmdv = False
+    for i, line in enumerate(lines, 1):
+        bm = _IF_ELIF_RE.match(line)
+        if bm is not None:
+            indent = len(bm.group(1))
+            if chain_start is None:
+                chain_start, chain_indent = i, indent
+                chain_has_boot = bool(_BOOT_EXEC_RE.search(line))
+                chain_has_cmdv = bool(_CMDV_RE.search(line))
+            elif indent == chain_indent:
+                chain_has_boot = chain_has_boot or bool(_BOOT_EXEC_RE.search(line))
+                chain_has_cmdv = chain_has_cmdv or bool(_CMDV_RE.search(line))
+            continue
+        if chain_start is None:
+            continue
+        if (
+            line.lstrip().startswith("fi")
+            and len(line) - len(line.lstrip()) == chain_indent
+        ):
+            if chain_has_boot and chain_has_cmdv:
+                violations.append(
+                    f"{rel}:{chain_start}: if/elif chain mixes a boot-dir "
+                    f"executable probe with 'command -v' (boot-then-PATH "
+                    f"resolver)"
+                )
+            chain_start = None
+            continue
+        chain_has_cmdv = chain_has_cmdv or bool(_CMDV_RE.search(line))
 
     return violations
 
