@@ -6,7 +6,7 @@
 # with known dead/live Python functions.
 
 echo ""
-echo "=== ci_check_dead_code real-dangle integration tests ==="
+echo "=== ci_check_dead_code dangle integration tests ==="
 
 # ---------------------------------------------------------------------------
 # Shared helpers (real dangle specific)

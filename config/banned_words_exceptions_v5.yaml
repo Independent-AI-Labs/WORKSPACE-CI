@@ -176,12 +176,6 @@ exceptions:
     review_date: '2026-09-05'
     removal: Remove when the file no longer quotes the rule.
   - rule: rule
-    path: ^scripts/rewrite-history$
-    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
-    owner: workspace-ci
-    review_date: '2026-09-05'
-    removal: Remove when the file no longer quotes the rule.
-  - rule: rule
     path: ^scripts/run-candidate-namespace$
     rationale: Quoted forbidden vocabulary required by this file's reviewed role.
     owner: workspace-ci

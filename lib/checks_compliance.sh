@@ -312,7 +312,7 @@ ci_compliance_score() {
             _cs_pass "Q1" "History clean (no blocked patterns)"
         else
             _cs_fail "Q1" "History has $_hist_violations blocked pattern(s)" \
-                "Run: /opt/workspace-ci/scripts/rewrite-history"
+                "History is forward-only: fix the source and commit again"
         fi
     elif [[ -z "$_gitdir" ]]; then
         _cs_skip "Q1" "History clean (not a git repo)"

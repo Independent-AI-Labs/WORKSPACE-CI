@@ -75,11 +75,11 @@ ci_check_dead_code() {
     ci_validate_exemption_file "$_dc_cfg" "dead_code.yaml" || return 1
 
     local _dc_bin=""
-    if _dc_bin="$(command -v dangle 2>&1)"; then
-        :
-    elif [[ -x "${HOME}/.cargo/bin/dangle" ]]; then
+    _dc_bin="$(command -v dangle)" || _dc_bin=""
+    if [[ -z "$_dc_bin" && -x "${HOME}/.cargo/bin/dangle" ]]; then
         _dc_bin="${HOME}/.cargo/bin/dangle"
-    else
+    fi
+    if [[ -z "$_dc_bin" ]]; then
         ci_warn "dangle not installed; skipping dead-code check (cargo install dangle)"
         return 0
     fi

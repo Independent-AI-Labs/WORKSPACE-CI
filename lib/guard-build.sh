@@ -159,7 +159,7 @@ build_guard_binary() {
         return 1
     fi
 
-    if _path="$(command -v rustup 2>&1)"; then
+    if [[ -n "$(command -v rustup)" ]]; then
         # rc-capture: rustup show active-toolchain prints the active
         # toolchain name to stdout (we don't need it). On rc!=0 (rustup
         # broken, or no default toolchain configured), surface stderr
@@ -231,7 +231,7 @@ build_guard_binary() {
     local guard_bin=""
     local git_ssh_bin=""
     local has_rustup=0
-    if _path="$(command -v rustup 2>&1)"; then
+    if [[ -n "$(command -v rustup)" ]]; then
         has_rustup=1
     fi
     if [[ "$has_rustup" -eq 1 ]]; then

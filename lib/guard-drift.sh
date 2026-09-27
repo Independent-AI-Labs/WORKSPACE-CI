@@ -387,7 +387,7 @@ guard_install_drift_reasons() {
             fi
         fi
 
-        if _path="$(command -v getcap 2>&1)"; then
+        if [[ -n "$(command -v getcap)" ]]; then
             local _gc
             _gc="$(_guard_capture_line guard_git_file_cap_actual)"
             if ! guard_git_has_required_file_caps; then
@@ -410,7 +410,7 @@ guard_install_drift_reasons() {
             reasons+=("agent $_verify_user cannot run git via runuser (host-exec file-cap delivery ineffective)")
         fi
 
-        if _path="$(command -v lsattr 2>&1)"; then
+        if [[ -n "$(command -v lsattr)" ]]; then
             if [[ -f /usr/bin/git ]]; then
                 local _attrs _arc=0
                 _attrs="$(lsattr /usr/bin/git 2>&1)" || _arc=$?

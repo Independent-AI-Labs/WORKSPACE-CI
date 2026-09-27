@@ -149,8 +149,9 @@ completion.
 
 ## Capability-Loss Restoration (AUDIT-CAPABILITY-LOSS-2026-08-23 backlog)
 
-- [x] Restore `tests/test_rewrite_history.sh` with operator-context split
-      (`014a524`; execute-path tests skip as agent, run as root/podman).
+- [x] Superseded 2026-09-27: `scripts/rewrite-history` and its test were
+      deleted outright (audit decision 3). History is forward-only; the
+      operator-context split (`014a524`) is moot.
 - [x] Restore `tests/unit/test_bootstrap_rust.py` with
       enter-candidate-namespace lockdown-assertion allowlist (`88587a6`).
 - [x] Restore `tests/unit/test_podman_guard.py` unchanged (`3e09957`).
@@ -172,11 +173,11 @@ completion.
       old `projects/CI` vs new tree differential; every divergence
       classified superseded / dead-reference / dropped-capability
       (F-1 through F-4 plus pattern summary and open items).
-- [x] Root-cause record: the rewritten-history rewriter's guard bypass
-      (PATH prepend to real git) is doubly defeated as agent (shell-guard
-      PATH normalization; `git.original` 0700 root); documented
-      operator-only in `docs/audits/AUDIT-CAPABILITY-LOSS-2026-08-23.md`
-      and the `scripts/rewrite-history` header.
+- [x] Root-cause record: the history rewriter's guard bypass (PATH prepend
+      to real git) was doubly defeated as agent (shell-guard PATH
+      normalization; `git.original` 0700 root); documented operator-only in
+      `docs/audits/AUDIT-CAPABILITY-LOSS-2026-08-23.md`. The tool was
+      deleted 2026-09-27 (audit decision 3).
 
 ## Pre-Commit Index-Snapshot Semantics (2026-08-24 finding)
 

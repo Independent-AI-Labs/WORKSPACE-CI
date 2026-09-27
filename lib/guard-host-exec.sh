@@ -397,7 +397,7 @@ install_guard_git_core_frontend() {
         log_warn "Git exec path $core not present; skipping exec-path guard"
         return 0
     fi
-    if _chattr_path="$(command -v chattr 2>&1)" && [[ -e "$core" ]]; then
+    if [[ -n "$(command -v chattr)" && -e "$core" ]]; then
         _guard_attempt chattr -i "$core"
     fi
     if ! guard_git_core_divert_is_active; then
@@ -431,7 +431,7 @@ install_guard_host_exec() {
     local cap_str
     cap_str="$(guard_workload_file_cap_string)"
 
-    if _chattr_path="$(command -v chattr 2>&1)" && [[ -f /usr/bin/git ]]; then
+    if [[ -n "$(command -v chattr)" && -f /usr/bin/git ]]; then
         _guard_attempt chattr -i /usr/bin/git
     fi
     _guard_attempt "$_setcap_path" -r /usr/bin/git

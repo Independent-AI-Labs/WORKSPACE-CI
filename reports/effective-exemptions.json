@@ -2,7 +2,7 @@
   "schema": 1,
   "policy_digest": "bee88c069a593e3b8e65c5106287f2bbe3669d4c76fdeeccc86babb88deb955b",
   "rule_count": 225,
-  "exemption_count": 67,
+  "exemption_count": 66,
   "classification_count": 50,
   "exemptions": [
     {
@@ -549,17 +549,6 @@
       "rule": "rule",
       "path": "^scripts/reinstall-hooks$",
       "file": "scripts/reinstall-hooks",
-      "match_count": 1,
-      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
-      "owner": "workspace-ci",
-      "review_date": "2026-09-05",
-      "removal": "Remove when the file no longer quotes the rule."
-    },
-    {
-      "source": "project",
-      "rule": "rule",
-      "path": "^scripts/rewrite-history$",
-      "file": "scripts/rewrite-history",
       "match_count": 1,
       "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
       "owner": "workspace-ci",

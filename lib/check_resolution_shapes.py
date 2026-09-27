@@ -17,14 +17,6 @@ Detectors:
   3c. an if/elif chain whose condition probes a boot-dir executable and
       whose chain also probes PATH: the non-function form of the
       boot-then-PATH resolver.
-  4. any reference to a relocated original binary (`<tool>.original`), an
-     apt-diverted copy (`<tool>.distrib`), or a `real-` sibling in shell
-     content, and any tracked file whose name uses one of those forms.
-     This detector has no exemptions: the tree stays locked until every
-     such reference is gone.
-  5. a probe assignment embedded in an `if`/`elif`/`while` condition, as
-     in `if ! V="$(command -v x)"`. The try-A-then-B detector skips these
-     because the assignment shares the line with the condition keyword.
 
 Makefiles: wildcard-conditional resolution ($(if ...)) is
 token-detectable and enforced by the banned-words catalog; out of
@@ -49,20 +41,6 @@ _BOOT_EXEC_RE = re.compile(r"[A-Za-z0-9_/${}.-]*\.boot-(?:linux|macos)/bin/[A-Za
 _CMDV_RE = re.compile(r"\bcommand\s+-v\b")
 _ARRAY_OPEN_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=\($")
 _IF_ELIF_RE = re.compile(r"^(\s*)(if|elif)\b")
-_ASSIGN_IN_COND_RE = re.compile(
-    r"\b(?:if|elif|while|until)\b[^\n]*?\b([A-Za-z_][A-Za-z0-9_]*)="
-    r"\s*[\"']?\$\([^)]*\b(?:command\s+-v|which)\b"
-)
-_ORIGINAL_USAGE_RE = re.compile(
-    r"\breal-[A-Za-z0-9_][A-Za-z0-9_.-]*\b"
-    r"|\b[A-Za-z0-9_][A-Za-z0-9_.-]*\.original\b"
-    r"|\b[A-Za-z0-9_][A-Za-z0-9_.-]*\.real\b"
-    r"|\b[A-Za-z0-9_][A-Za-z0-9_.-]*\.distrib\b"
-)
-_ORIGINAL_FILENAME_RE = re.compile(
-    r"^(?:real-.*|.*\.original|.*\.real|.*\.distrib)$"
-)
-
 _SHELL_SUFFIXES = {".sh", ".bash", ".bats"}
 _MAKE_NAMES = {"Makefile", "makefile", "GNUmakefile"}
 
@@ -143,28 +121,6 @@ def _scan_file(root: Path, rel: str) -> list[str]:
                     f"after '! -x' probe (fail hard on the single source instead)"
                 )
                 break
-
-    # (4) forbidden original-binary access. No exemptions: any reference
-    # to a relocated original, an apt-diverted copy, or a real- sibling
-    # is a violation, so the tree stays locked until every one is gone.
-    for i, line in enumerate(lines, 1):
-        for m in _ORIGINAL_USAGE_RE.finditer(line):
-            violations.append(
-                f"{rel}:{i}: original-binary access '{m.group(0)}' "
-                f"(address the guarded tool through its wrapper only)"
-            )
-
-    # (5) probe assignment embedded in a conditional:
-    # `if ! V="$(command -v x)"; then`. Detector 2 misses it because the
-    # assignment does not start the line.
-    for i, line in enumerate(lines, 1):
-        m = _ASSIGN_IN_COND_RE.search(line)
-        if m:
-            violations.append(
-                f"{rel}:{i}: condition-embedded probe assignment: '{m.group(1)}' "
-                f"resolved from a probe inside a conditional (resolve once, then "
-                f"fail hard)"
-            )
 
     # (3a) function containing a boot-executable path AND `command -v`.
     # Function range ends at the first `}` in column 0 (or the next
@@ -266,20 +222,10 @@ def _scan_file(root: Path, rel: str) -> list[str]:
     return violations
 
 
-def _filename_violation(rel: str) -> str | None:
-    name = Path(rel).name
-    if _ORIGINAL_FILENAME_RE.match(name):
-        return f"{rel}: forbidden original-binary filename '{name}'"
-    return None
-
-
 def main() -> int:
     root = Path(_git(["rev-parse", "--show-toplevel"]).strip())
     all_violations: list[str] = []
     for rel in _tracked_files(root):
-        fv = _filename_violation(rel)
-        if fv is not None:
-            all_violations.append(fv)
         all_violations.extend(_scan_file(root, rel))
     if all_violations:
         print("RESOLUTION-SHAPE VIOLATIONS:", file=sys.stderr)

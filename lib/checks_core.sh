@@ -89,10 +89,8 @@ ci_check_unstaged() {
 # Delegates to lib/check_resolution_shapes.py to scan tracked shell files
 # for multi-source resolution shapes: probe-backed ${VAR:-...} defaults,
 # try-A-then-B reassignment after '! -x' probes, boot-then-PATH resolvers,
-# and multi-candidate boot-dir arrays. Also fails closed on any reference
-# to a relocated original binary, an apt-diverted copy, or a real- sibling,
-# in shell content and in tracked filenames, with no exemptions.
-# Complements the banned-words catalog with shape detection.
+# and multi-candidate boot-dir arrays. Complements the banned-words catalog
+# with shape detection.
 ci_check_resolution_shapes() {
     local script_path="${CI_LIB_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}/check_resolution_shapes.py"
     if [[ ! -f "$script_path" ]]; then

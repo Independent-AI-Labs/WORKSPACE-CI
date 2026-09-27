@@ -519,10 +519,6 @@ compliance: ## Deep compliance score for a project (usage: make compliance PROJE
 compliance-all: ## Recursive compliance audit of all repos in workspace
 	$(SCRIPT_BASH) scripts/compliance-report --recursive
 
-.PHONY: rewrite-history
-rewrite-history: ## Strip blocked patterns from git history (dangerous)
-	$(SCRIPT_BASH) scripts/rewrite-history
-
 .PHONY: clean-precommit
 clean-precommit: ## Remove pre-commit framework traces (operator-only tool; refuses non-interactive agents)
 	$(SCRIPT_BASH) scripts/cleanup-precommit

@@ -288,8 +288,8 @@ sudo make install-guard-host-exec
 make check-guard-host-exec
 ```
 
-`make rewrite-history` strips blocked patterns from git history and requires
-`WORKSPACE_GUARD_ADMIN=1` when guard is installed.
+History is forward-only: a blocked pattern in an existing commit is remedied
+by fixing the source and committing again. No history-rewriting command ships.
 
 ---
 

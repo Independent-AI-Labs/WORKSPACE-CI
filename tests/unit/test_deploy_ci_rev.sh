@@ -5,8 +5,7 @@
 # Agent-runnable coverage: argument-parser refusals (validated before the
 # root check by design) and source-structure assertions for the ancestry
 # enforcement block. Functional ancestry refusal and the happy-path
-# rollback deploy run in root/podman tiers (same split as
-# tests/test_rewrite_history.sh).
+# rollback deploy run in root/podman tiers.
 
 echo "=== deploy-ci REV tests ==="
 

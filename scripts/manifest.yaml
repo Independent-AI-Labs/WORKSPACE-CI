@@ -122,16 +122,6 @@ scripts:
     output: "Compliance score + violations on stdout. Exits non-zero on violations."
     make_target: compliance
 
-  - id: rewrite-history
-    path: scripts/rewrite-history
-    summary: Strip blocked patterns from commit messages across git history (dry-run by default).
-    usage: rewrite-history [--execute]
-    category: history
-    args:
-      - { name: --execute, description: "Apply the rewrite (default: dry-run). Always creates a backup ref first." }
-    output: "Planned/affected commits on stdout. Rewrites history only with --execute."
-    make_target: rewrite-history
-
   - id: check-boot-venv-layout
     path: ci/check_boot_venv_layout.py
     summary: Non-blocking audit of boot_layout.yaml + moon.yml + .pre-commit-config.yaml --project refs.

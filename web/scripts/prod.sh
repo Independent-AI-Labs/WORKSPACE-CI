@@ -47,7 +47,8 @@ systemd_delegate() {
 resolve_cmd() {
   local var="$1" name="$2"
   local path=""
-  if path="$(command -v "${name}" 2>&1)"; then
+  path="$(command -v "${name}")" || path=""
+  if [[ -n "${path}" ]]; then
     printf -v "${var}" '%s' "${path}"
     export "${var}"
   fi
@@ -58,7 +59,8 @@ resolve_cmd COMPOSE_CMD podman-compose
 require_cmd() {
   local cmd="$1" var="$2"
   local path=""
-  if ! path="$(command -v "${cmd}" 2>&1)"; then
+  path="$(command -v "${cmd}")" || path=""
+  if [[ -z "${path}" ]]; then
     echo "ERROR: ${cmd} not on PATH. Set ${var}= or fix PATH." >&2
     echo "${path}" >&2
     exit 1

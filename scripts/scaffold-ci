@@ -195,7 +195,7 @@ if [[ -z "$_profile" ]]; then
 fi
 [[ -f "$_profile" ]] || { ci_fail "Profile not found: $_profile"; exit 1; }
 
-if ! _realpath_path="$(command -v realpath 2>&1)"; then
+if [[ -z "$(command -v realpath)" ]]; then
     ci_fail "realpath(1) not found, install coreutils >= 8.23"
     exit 2
 fi

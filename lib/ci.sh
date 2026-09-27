@@ -138,19 +138,23 @@ CI_BOOT_DIR="$CI_PROJECT_ROOT/$CI_BOOT_NAME"
 #   Tries sha256sum (GNU coreutils / Darwin port), then shasum -a 256
 #   (macOS built-in). Returns 1 if both fail.
 ci_sha256() {
-    local file="$1"
+    local file="$1" _sha_path=""
     if [[ ! -r "$file" ]]; then
         echo "ci_sha256: cannot read '$file'" >&2
         return 1
     fi
-    if _sha_path="$(command -v sha256sum 2>&1)"; then
+    _sha_path="$(command -v sha256sum)" || _sha_path=""
+    if [[ -n "$_sha_path" ]]; then
         sha256sum "$file" | awk '{print $1}'
-    elif _sha_path="$(command -v shasum 2>&1)"; then
-        shasum -a 256 "$file" | awk '{print $1}'
-    else
-        echo "ci_sha256: no checksum tool available (sha256sum, shasum)" >&2
-        return 1
+        return 0
     fi
+    _sha_path="$(command -v shasum)" || _sha_path=""
+    if [[ -n "$_sha_path" ]]; then
+        shasum -a 256 "$file" | awk '{print $1}'
+        return 0
+    fi
+    echo "ci_sha256: no checksum tool available (sha256sum, shasum)" >&2
+    return 1
 }
 
 # ---------------------------------------------------------------------------
@@ -478,7 +482,7 @@ ci_resolve_boot_path() {
 #   $CI_BOOT_NAME/bin/<tool-name>. Falls back to command -v. Prints the
 #   resolved path to stdout; returns 1 if not found.
 ci_resolve_tool_path() {
-    local start="$1" tool="$2" walk _next _boot_name="${CI_BOOT_NAME:-$(ci_boot_name)}"
+    local start="$1" tool="$2" walk _next _tool_path="" _boot_name="${CI_BOOT_NAME:-$(ci_boot_name)}"
     # Empty start (e.g. caller's git rev-parse failed) is not a walkable
     # dir: skip the walk and go straight to PATH resolution.
     walk="$start"
@@ -492,7 +496,8 @@ ci_resolve_tool_path() {
         [[ "$_next" == "$walk" ]] && break
         walk="$_next"
     done
-    if _tool_path="$(command -v "$tool" 2>&1)"; then
+    _tool_path="$(command -v "$tool")" || _tool_path=""
+    if [[ -n "$_tool_path" ]]; then
         printf '%s\n' "$_tool_path"
         return 0
     fi

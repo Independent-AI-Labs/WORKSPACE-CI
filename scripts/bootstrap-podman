@@ -152,8 +152,8 @@ log_info "Checking system dependencies for Podman rootless mode"
 MISSING_SYS_DEPS=()
 
 # Check for uidmap (newuidmap/newgidmap)
-_newuidmap_path=""
-if _newuidmap_path="$(command -v newuidmap 2>&1)"; then
+_newuidmap_path="$(command -v newuidmap)" || _newuidmap_path=""
+if [[ -n "$_newuidmap_path" ]]; then
     log_info "✓ newuidmap found at $_newuidmap_path"
 else
     log_warn "newuidmap not found - required for Podman rootless mode"
@@ -161,8 +161,8 @@ else
 fi
 
 # Check for slirp4netns (rootless networking)
-_slirp_path=""
-if _slirp_path="$(command -v slirp4netns 2>&1)"; then
+_slirp_path="$(command -v slirp4netns)" || _slirp_path=""
+if [[ -n "$_slirp_path" ]]; then
     log_info "✓ slirp4netns found at $_slirp_path"
 else
     log_warn "slirp4netns not found - required for Podman rootless networking"
@@ -170,8 +170,8 @@ else
 fi
 
 # Check for iptables (required by netavark)
-_iptables_path=""
-if _iptables_path="$(command -v iptables 2>&1)"; then
+_iptables_path="$(command -v iptables)" || _iptables_path=""
+if [[ -n "$_iptables_path" ]]; then
     log_info "✓ iptables found at $_iptables_path"
 else
     log_warn "iptables not found - required for Podman networking (netavark)"

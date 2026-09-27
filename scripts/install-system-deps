@@ -147,7 +147,8 @@ SYSTEM_PATHS="/usr/bin /usr/sbin /usr/local/bin /usr/local/sbin /snap/bin /opt/h
 
 find_binary() {
     local cmd="$1" _path=""
-    if _path="$(command -v "$cmd" 2>&1)"; then
+    _path="$(command -v "$cmd")" || _path=""
+    if [[ -n "$_path" ]]; then
         echo "$_path"
         return 0
     fi

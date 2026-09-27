@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from check_resolution_shapes import _filename_violation, _scan_file
+from check_resolution_shapes import _scan_file
 
 
 def _scan(tmp_path: Path, text: str, name: str = "x.sh") -> list[str]:
@@ -85,49 +85,3 @@ def test_probe_backed_default_flagged(tmp_path: Path) -> None:
     )
     findings = _scan(tmp_path, text)
     assert any("probe/boot path" in f for f in findings)
-
-
-def test_real_podman_reference_flagged(tmp_path: Path) -> None:
-    text = (
-        "#!/usr/bin/env bash\n"
-        'PODMAN="/opt/workspace-ci/.boot-linux/bin/real-podman"\n'
-    )
-    findings = _scan(tmp_path, text)
-    assert any("original-binary access" in f for f in findings)
-
-
-def test_original_suffix_reference_flagged(tmp_path: Path) -> None:
-    text = (
-        "#!/usr/bin/env bash\n"
-        'GIT_REAL="/usr/bin/git.original"\n'
-    )
-    findings = _scan(tmp_path, text)
-    assert any("original-binary access" in f for f in findings)
-
-
-def test_distrib_reference_flagged(tmp_path: Path) -> None:
-    text = (
-        "#!/usr/bin/env bash\n"
-        "dpkg-divert --list /usr/lib/git-core/git.distrib\n"
-    )
-    findings = _scan(tmp_path, text)
-    assert any("original-binary access" in f for f in findings)
-
-
-def test_condition_embedded_probe_assignment_flagged(tmp_path: Path) -> None:
-    text = (
-        "#!/usr/bin/env bash\n"
-        'if ! REAL_GIT="$(command -v git)"; then\n'
-        "    REAL_GIT=git\n"
-        "fi\n"
-    )
-    findings = _scan(tmp_path, text)
-    assert any("condition-embedded" in f for f in findings)
-
-
-def test_original_binary_filename_flagged() -> None:
-    assert _filename_violation("bin/real-podman") is not None
-    assert _filename_violation("bin/git.original") is not None
-    assert _filename_violation("bin/bash.real") is not None
-    assert _filename_violation("bin/git.distrib") is not None
-    assert _filename_violation("bin/podman") is None

@@ -151,7 +151,7 @@ install_guard_binary() {
         [[ "$h" != "$guard_hash" ]]
     }
 
-    if [[ -f /usr/bin/git.original ]] && _path="$(command -v chattr 2>&1)"; then
+    if [[ -f /usr/bin/git.original && -n "$(command -v chattr)" ]]; then
         rc=0; chattr -i /usr/bin/git.original || rc=$?
         if [ $rc -ne 0 ]; then
             echo "chattr -i /usr/bin/git.original: no-op or failed (rc=$rc)" >&2
@@ -206,7 +206,7 @@ install_guard_binary() {
 
     if [[ "$install_mode" == "root-only" ]]; then
         # Root-only: simple copy, no dpkg-divert, no setcap, no chattr
-        if [[ -f /usr/bin/git ]] && _path="$(command -v chattr 2>&1)"; then
+        if [[ -f /usr/bin/git && -n "$(command -v chattr)" ]]; then
             rc=0; chattr -i /usr/bin/git || rc=$?
             if [ $rc -ne 0 ]; then
                 echo "chattr -i /usr/bin/git: no-op or failed (rc=$rc)" >&2
@@ -233,7 +233,7 @@ install_guard_binary() {
             return 1
         fi
 
-        if _path="$(command -v chattr 2>&1)" && [[ -f /usr/bin/git ]]; then
+        if [[ -n "$(command -v chattr)" && -f /usr/bin/git ]]; then
             rc=0; chattr -i /usr/bin/git || rc=$?
             if [ $rc -ne 0 ]; then
                 echo "chattr -i /usr/bin/git: no-op or failed (rc=$rc)" >&2
@@ -249,7 +249,7 @@ install_guard_binary() {
             return 1
         fi
 
-        if _path="$(command -v chattr 2>&1)"; then
+        if [[ -n "$(command -v chattr)" ]]; then
             chattr +i /usr/bin/git || log_warn "Could not set immutable on /usr/bin/git"
             chattr +i /usr/bin/git.original || log_warn "Could not set immutable on /usr/bin/git.original"
         else
