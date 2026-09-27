@@ -39,6 +39,51 @@ fi
 _total_entries="$(printf '%s\n' "$_hooks" | awk 'END {print NR}')"
 ci_pass "parsed $_total_entries hook entries from $_config"
 
+# === registry function reconciliation (renames never break consumers) ===
+# .pre-commit-config.yaml duplicates each checker's shell function name in
+# every consumer entry. A rename in config/required_hooks.yaml then breaks
+# every consumer until it is re-scaffolded, and a broken hook deadlocks the
+# fix commit. Resolve each registered hook's function by id: a token the lib
+# no longer defines is replaced with the registry's function for that id.
+# Entries whose functions resolve are untouched, so overrides survive.
+_lib_defines() {
+    local _fn="$1" _lib
+    for _lib in "$_CI_ROOT"/lib/*.sh; do
+        if grep -qE "^[[:space:]]*(function[[:space:]]+)?${_fn}[[:space:]]*\(\)" "$_lib"; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+_registry_file="$(ci_config_path required_hooks)"
+if [[ -f "$_registry_file" ]]; then
+    declare -A _reg_fn_for_id=()
+    _reg_stream="$(awk -v mode=registry -f "$_CI_ROOT/lib/parse_hook_yaml.awk" "$_registry_file")" || _reg_stream=""
+    while IFS=$'\034' read -r _ri _rk _re _rr; do
+        [[ -n "$_ri" ]] || continue
+        case "$_rk" in
+            shell|shell_with_arg) [[ "$_re" == ci_* ]] && _reg_fn_for_id["$_ri"]="$_re" ;;
+        esac
+    done <<< "$_reg_stream"
+    _reconciled_hooks=""
+    while IFS=$'\034' read -r _h_id _h_name _h_entry _h_stage _h_pass _h_always _h_files _h_exclude _h_args _h_types _h_advisory; do
+        [[ -n "$_h_id" ]] || continue
+        _reg_fn="${_reg_fn_for_id[$_h_id]:-}"
+        if [[ -n "$_reg_fn" ]] && _lib_defines "$_reg_fn"; then
+            _tokens="$(printf '%s\n' "$_h_entry" | grep -oE 'ci_[a-z_][a-z0-9_]*' | sort -u)" || _tokens=""
+            for _tok in $_tokens; do
+                if ! _lib_defines "$_tok"; then
+                    _h_entry="${_h_entry//$_tok/$_reg_fn}"
+                    ci_info "reconcile: hook '$_h_id' '$_tok' -> '$_reg_fn' (registry)"
+                fi
+            done
+        fi
+        _reconciled_hooks+="${_h_id}"$'\034'"${_h_name}"$'\034'"${_h_entry}"$'\034'"${_h_stage}"$'\034'"${_h_pass}"$'\034'"${_h_always}"$'\034'"${_h_files}"$'\034'"${_h_exclude}"$'\034'"${_h_args}"$'\034'"${_h_types}"$'\034'"${_h_advisory}"$'\n'
+    done <<< "$_hooks"
+    _hooks="$_reconciled_hooks"
+fi
+
 # === entry-resolution integrity (2026-08-24 portable_shell incident) ===
 # A rendered hook whose entry does not resolve fails only at commit time,
 # in the deployed artifact, where fixing it deadlocks (the broken gate

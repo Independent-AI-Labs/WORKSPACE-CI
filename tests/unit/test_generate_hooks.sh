@@ -104,3 +104,14 @@ EOF
     [[ ! -f "$output/pre-commit" ]] || { echo "hook written despite refusal"; return 1; }
 }
 _run_test "generate-hooks refuses filename-passing entries" test_generate_hooks_refuses_filename_passing
+
+test_generate_hooks_reconciles_renamed_registry_function() {
+    local root="$TEST_TMP/reconcile-hooks" output="$TEST_TMP/reconcile-generated"
+    mkdir -p "$root" "$output"
+    git -C "$root" init -q
+    printf 'repos:\n  - repo: local\n    hooks:\n      - id: check-resolution-shapes\n        name: "Check Resolution Shapes"\n        entry: "bash -c \x27source /opt/workspace-ci/lib/checks.sh && ci_check_fallback_resolution\x27"\n        language: system\n        stages: [pre-commit]\n' > "$root/.pre-commit-config.yaml"
+    (cd "$root" && bash "$PROJECT_DIR/scripts/generate-hooks" --output-dir "$output") || { echo "generation failed on a renamed registry function"; return 1; }
+    grep -q 'ci_check_resolution_shapes' "$output/pre-commit" || { echo "entry not reconciled to the registry function"; return 1; }
+    ! grep -q 'ci_check_fallback_resolution' "$output/pre-commit" || { echo "stale function survived reconciliation"; return 1; }
+}
+_run_test "generate-hooks reconciles a renamed registry function" test_generate_hooks_reconciles_renamed_registry_function
