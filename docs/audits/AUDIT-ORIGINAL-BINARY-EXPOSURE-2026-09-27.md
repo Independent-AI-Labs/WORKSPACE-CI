@@ -196,7 +196,7 @@ exactly that case.
 
 ## 6. Scanner coverage gaps
 
-`WORKSPACE-CI/lib/check_fallback_resolution.py` detects several
+`WORKSPACE-CI/lib/check_resolution_shapes.py` detects several
 competing-source shapes but misses:
 
 | Gap                                                            | Example                                                     |
@@ -240,9 +240,9 @@ Ordered. Every item below also appears in the session task list.
    and `*.(distrib)`, with path-scoped exemptions for the guard source and
    installation specifications.
 2. Add filename rules for the `real-` prefix and the `.real` suffix.
-3. Extend `check_fallback_resolution.py` to detect probes, links, and
+3. Extend `check_resolution_shapes.py` to detect probes, links, and
    copies of original binaries.
-4. Extend `check_fallback_resolution.py` to detect assignments inside
+4. Extend `check_resolution_shapes.py` to detect assignments inside
    conditions and nested `if`/`elif` chains.
 5. Add `shell_guard_policy` rules for original-binary paths in both command
    and script scope.
