@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-25T06:57:44.847624+00:00",
+  "generated_at": "2026-09-27T04:16:03.041947+00:00",
   "sources": [
     {
       "name": "ci_check_unstaged",
@@ -207,15 +207,6 @@
       "language": "bash",
       "id": "check-banned-words",
       "description": "Delegates to lib/check_banned_words.py to scan all tracked files for banned patterns defined in config/banned_words.yaml. Replaces a prior bash+AWK implementation that spawned ~33,000 subprocesses under PRoot and took 5+ minutes; the Python version does zero subprocess spawns and completes in <1s. Per-project exemptions are supported via config/banned_words_exceptions_v5.yaml with granular path and pattern scoping."
-    },
-    {
-      "name": "ci_check_fallback_resolution",
-      "source_file": "lib/checks_core.sh",
-      "docstring": "--- ci_check_fallback_resolution --- Delegates to lib/check_fallback_resolution.py to scan tracked shell files for multi-source resolution shapes: probe-backed ${VAR:-...} defaults, try-A-then-B reassignment after '! -x' probes, boot-then-PATH resolvers, and multi-candidate boot-dir arrays. Complements the banned-words catalog with shape detection.",
-      "source": "ci_check_fallback_resolution() {\n    local script_path=\"${CI_LIB_DIR:-$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)}/check_fallback_resolution.py\"\n    if [[ ! -f \"$script_path\" ]]; then\n        ci_fail \"Fallback-resolution: helper not found at $script_path\"\n        return 1\n    fi\n    local _scan_root=\"${CI_SCAN_ROOT:-$PWD}\"\n    CI_SCAN_ROOT=\"$_scan_root\" \\\n        ci_uv_run \"$script_path\" \"$@\" </dev/null\n}",
-      "language": "bash",
-      "id": "check-resolution-shapes",
-      "description": "Delegates to lib/check_fallback_resolution.py to scan tracked shell files for multi-source resolution shapes: probe-backed ${VAR:-...} defaults, try-A-then-B reassignment after '! -x' probes, boot-then-PATH resolvers, and multi-candidate boot-dir arrays. Complements the banned-words catalog with shape detection."
     },
     {
       "name": "ci_check_init_files",

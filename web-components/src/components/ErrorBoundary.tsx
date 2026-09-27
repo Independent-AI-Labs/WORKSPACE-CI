@@ -2,15 +2,15 @@
 
 import { Component, ReactNode } from 'react'
 
-type ErrorFallbackRender = (args: {
+type ErrorReserveRender = (args: {
   error: Error
   reset: () => void
 }) => ReactNode
 
 interface ErrorBoundaryProps {
   children: ReactNode
-  fallback?: ReactNode
-  fallbackRender?: ErrorFallbackRender
+  reserve?: ReactNode
+  reserveRender?: ErrorReserveRender
   onError?: (error: Error, info: { componentStack: string | null }) => void
   resetKeys?: unknown[]
   componentId?: string
@@ -62,14 +62,14 @@ export class ErrorBoundary extends Component<
 
   render(): ReactNode {
     if (this.state.hasError && this.state.error) {
-      if (this.props.fallbackRender) {
-        return this.props.fallbackRender({
+      if (this.props.reserveRender) {
+        return this.props.reserveRender({
           error: this.state.error,
           reset: this.reset,
         })
       }
-      if (this.props.fallback !== undefined) {
-        return this.props.fallback
+      if (this.props.reserve !== undefined) {
+        return this.props.reserve
       }
       return (
         <div className="error-boundary" role="alert">

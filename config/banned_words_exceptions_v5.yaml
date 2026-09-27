@@ -13,18 +13,6 @@ exceptions:
     owner: workspace-ci
     review_date: '2026-09-05'
     removal: Remove when the file no longer quotes the rule.
-  - rule: bfallback-b
-    path: ^lib/check_fallback_resolution\.py$
-    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
-    owner: workspace-ci
-    review_date: '2026-09-05'
-    removal: Remove when the file no longer quotes the rule.
-  - rule: bfallback-b
-    path: ^web-components/src/components/ErrorBoundary\.tsx$
-    rationale: Quoted forbidden vocabulary required by this file's reviewed role.
-    owner: workspace-ci
-    review_date: '2026-09-05'
-    removal: Remove when the file no longer quotes the rule.
   - rule: blegacy-b
     path: ^scripts/cleanup-precommit$
     rationale: Quoted forbidden vocabulary required by this file's reviewed role.

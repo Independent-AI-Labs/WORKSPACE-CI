@@ -5,7 +5,7 @@ set -euo pipefail
 # Podman Bootstrap Script for AMI-ORCHESTRATOR
 # Downloads and installs Podman and podman-compose in the .boot-linux environment ONLY
 # This script ensures Podman is available without requiring system-wide installation
-# FORCE INSTALLS TO .boot-linux - NO FALLBACKS, NO .venv, ONLY .boot-linux
+# FORCE INSTALLS TO .boot-linux - NO SUBSTITUTES, NO .venv, ONLY .boot-linux
 
 _SELF="${BASH_SOURCE[0]:-$0}"
 case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac

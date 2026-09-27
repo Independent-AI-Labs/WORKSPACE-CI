@@ -56,7 +56,7 @@ def test_prewarm_success_caches_true() -> None:
     assert "200" in msg
 
 
-def test_prewarm_head_then_get_fallback() -> None:
+def test_prewarm_head_then_get() -> None:
     c = HttpClient(timeout=5.0)
     head_resp = _mock_response(405)
     get_resp = _mock_response(200)

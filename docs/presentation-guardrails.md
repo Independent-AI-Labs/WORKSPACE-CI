@@ -15,7 +15,7 @@
 
 ## 2. Open Source / Self-Hosted First
 
-- **Secondary question:** can local, open-source LLMs serve as the *primary* code generation tools - not just fallbacks?
+- **Secondary question:** can local, open-source LLMs serve as the *primary* code generation tools - not only as stand-ins?
 - **Why it matters:**
   - Cost control
   - Data sovereignty

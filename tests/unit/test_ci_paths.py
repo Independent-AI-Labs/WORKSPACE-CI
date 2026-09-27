@@ -255,7 +255,7 @@ class TestFindGuardConfigDir:
             ci_paths.find_guard_config_dir()
 
 
-class TestFindProjectRootFallback:
+class TestFindProjectRootSearch:
     def test_derives_from_config_dir(
         self,
         monkeypatch: pytest.MonkeyPatch,

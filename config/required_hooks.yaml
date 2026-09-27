@@ -240,15 +240,6 @@ hooks:
     mandatory: true
     applicable_to:
       - any
-  - id: check-resolution-shapes
-    kind: shell
-    entry: ci_check_fallback_resolution
-    stage: pre-commit
-    pass_filenames: false
-    always_run: true
-    mandatory: true
-    applicable_to:
-      - any
   - id: check-init-files
     kind: shell
     entry: ci_check_init_files
@@ -270,6 +261,15 @@ hooks:
   - id: check-markdown-docs
     kind: python_module
     entry: ci.check_markdown_docs
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    applicable_to:
+      - any
+  - id: check-resolution-shapes
+    kind: shell
+    entry: ci_check_resolution_shapes
     stage: pre-commit
     pass_filenames: false
     always_run: true

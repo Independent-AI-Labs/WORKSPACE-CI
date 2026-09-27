@@ -1373,18 +1373,6 @@ exceptions:
     owner: workspace-ci
     review_date: '2026-09-05'
     removal: Remove when the file no longer quotes the rule.
-  - rule: bfallback-b
-    path: ^lib/check_silent_swallow\.py$
-    rationale: File's defined role requires quoting this rule.
-    owner: workspace-ci
-    review_date: '2026-09-05'
-    removal: Remove when the file no longer quotes the rule.
-  - rule: bfallback-b
-    path: ^lib/checks_silent\.sh$
-    rationale: File's defined role requires quoting this rule.
-    owner: workspace-ci
-    review_date: '2026-09-05'
-    removal: Remove when the file no longer quotes the rule.
   - rule: bsilent
     path: ^\.pre-commit-config\.yaml$
     rationale: File's defined role requires quoting this rule.

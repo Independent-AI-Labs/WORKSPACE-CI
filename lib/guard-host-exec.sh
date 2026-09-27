@@ -9,6 +9,7 @@ guard_state_dir() {
 
 GUARD_DEPLOYMENT_CLASS_FILE="/usr/lib/workspace-guard/deployment-class"
 GUARD_PRIOR_DELIVERY_MODE_FILE="/usr/lib/workspace-guard/delivery.mode"
+GUARD_WORKSPACE_ROOT_FILE="/usr/lib/workspace-guard/workspace-root"
 GUARD_HOST_EXEC_CLASS="host-exec"
 GUARD_GIT_CORE_PATH="/usr/lib/git-core/git"
 GUARD_GIT_CORE_DISTRIB="/usr/lib/git-core/git.distrib"
@@ -236,10 +237,19 @@ guard_write_deployment_class() {
     rm -f "$base/delivery.mode"
 }
 
+guard_write_workspace_root() {
+    local root="${1:?workspace root}" base
+    base="$(guard_state_dir)"
+    mkdir -p "$base"
+    printf '%s\n' "$root" > "$base/workspace-root"
+    chmod 0644 "$base/workspace-root"
+    chown root:root "$base/workspace-root"
+}
+
 guard_remove_git_install_artifacts() {
     local base
     base="$(guard_state_dir)"
-    rm -f "$base/deployment-class" "$base/git-ssh-wrapper" "$base/delivery.mode"
+    rm -f "$base/deployment-class" "$base/git-ssh-wrapper" "$base/delivery.mode" "$base/workspace-root"
 }
 
 guard_install_git_ssh_wrapper() {
@@ -446,6 +456,7 @@ install_guard_host_exec() {
     install_guard_git_core_frontend || return 1
 
     guard_write_deployment_class "$GUARD_HOST_EXEC_CLASS"
+    guard_write_workspace_root "${WORKSPACE_ROOT:?WORKSPACE_ROOT must name the workspace root}"
     guard_install_git_ssh_wrapper || return 1
     guard_install_agent_git_identity || return 1
     log_info "Deployment class: host-exec (file capabilities on /usr/bin/git)"

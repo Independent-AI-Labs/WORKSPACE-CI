@@ -255,3 +255,36 @@ def test_hook_entry_rejects_unknown_field() -> None:
                 "safty": True,
             },
         )
+
+
+def test_invariant4_accepts_renamed_shell_entry(tmp_path: Path) -> None:
+    """A renamed registry entry resolves when the shipping lib defines the
+    new name. The 2026-09-27 deadlock was a manifest/lib artifact
+    mismatch, never a missing implementation."""
+    (tmp_path / "lib").mkdir()
+    (tmp_path / "lib" / "checks_core.sh").write_text(
+        "#!/usr/bin/env bash\nci_check_resolution_shapes() { :; }\n"
+    )
+    manifest = _manifest_of(
+        [
+            {
+                "id": "check-resolution-shapes",
+                "kind": "shell",
+                "entry": (
+                    "bash -c 'source lib/checks.sh && ci_check_resolution_shapes'"
+                ),
+                "stage": "pre-commit",
+            },
+            {
+                "id": "baseline-safety",
+                "kind": "shell",
+                "entry": (
+                    "bash -c 'source lib/checks.sh && ci_check_resolution_shapes'"
+                ),
+                "stage": "pre-commit",
+                "mandatory": True,
+                "safety": True,
+            },
+        ],
+    )
+    assert _run_invariant_4_entries(manifest, quiet=True, package_root=tmp_path) == []

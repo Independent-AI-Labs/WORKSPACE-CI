@@ -38,7 +38,15 @@ def _write_manifest(workspace: Path, hooks: list[dict[str, object]]) -> None:
 
 
 def _use_manifest(workspace: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("CI_CONFIG_DIR", str(workspace / "config"))
+    """Point the checker's own import root at ``workspace``.
+
+    The manifest is resolved from that root, never from ``CI_CONFIG_DIR``,
+    so the test replaces the root instead of the environment.
+    """
+    monkeypatch.setattr(
+        "ci.check_required_hooks_present._ci_root",
+        lambda: workspace,
+    )
 
 
 def _make_repo_with_hooks(
@@ -383,19 +391,28 @@ def test_main_returns_infra_error_when_no_manifest(
     assert main(["--project", str(project), "--quiet"]) == EXIT_INFRA_ERROR
 
 
-def test_main_ignores_workspace_ancestor_manifest(
+def test_main_uses_package_root_not_env_config_dir(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The manifest comes from the CI config dir, never a workspace ancestor."""
+    """The manifest comes from the checker's own root, never CI_CONFIG_DIR.
+
+    The 2026-09-27 registry-rename deadlock was exactly this split: a
+    deployed ``CI_CONFIG_DIR`` manifest compared against the working-tree
+    lib. Pointing ``CI_CONFIG_DIR`` at an empty directory must not change
+    the outcome.
+    """
     root = _make_workspace(tmp_path)
     _write_manifest(root, [dict(_SAFETY_HOOK)])
+    _use_manifest(root, monkeypatch)
     empty = tmp_path / "empty-config"
     empty.mkdir()
     monkeypatch.setenv("CI_CONFIG_DIR", str(empty))
     project = root / "projects" / "X"
     project.mkdir(parents=True)
-    assert main(["--project", str(project), "--quiet"]) == EXIT_INFRA_ERROR
+    # The root manifest is found (env ignored); the project lacks
+    # quality_exceptions.yaml, so this is a violation, not an infra error.
+    assert main(["--project", str(project), "--quiet"]) == EXIT_VIOLATION
 
 
 def test_main_emits_ok_lines_when_not_quiet(

@@ -177,7 +177,7 @@ async function downloadDocument(postsDir, doc) {
       console.warn(`[fetch-web-documents] ${doc.id}: direct fetch was not PDF; converting HTML`)
       await fs.writeFile(`${dest}.source.html`, buf)
       const bytes = await convertHtmlUrlToPdf(doc.fetch_url, dest)
-      return { bytes, method: 'html_to_pdf_fallback' }
+      return { bytes, method: 'html_to_pdf_convert' }
     }
 
     await fs.writeFile(dest, buf)

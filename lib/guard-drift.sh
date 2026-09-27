@@ -356,6 +356,14 @@ guard_install_drift_reasons() {
             reasons+=("deployment-class is '$deployed_cls' (expected host-exec)")
         fi
 
+        local recorded_root
+        recorded_root="$(_guard_capture_line cat "$GUARD_WORKSPACE_ROOT_FILE")"
+        if [[ -z "$recorded_root" ]]; then
+            reasons+=("workspace-root record missing ($GUARD_WORKSPACE_ROOT_FILE)")
+        elif [[ -n "${WORKSPACE_ROOT:-}" && "$recorded_root" != "$WORKSPACE_ROOT" ]]; then
+            reasons+=("workspace-root record is '$recorded_root' (expected '$WORKSPACE_ROOT')")
+        fi
+
         if ! divert_is_active; then
             reasons+=("dpkg-divert for /usr/bin/git not active")
         fi

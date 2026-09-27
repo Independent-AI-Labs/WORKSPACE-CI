@@ -105,11 +105,6 @@ inline_patterns:
     language: shell
     description: 'Sources a file without guarding against failure; sourced errors vanish.'
 
-  - id: sh-fallback-echo
-    regex: '\|\|\s*(?:echo|printf)\b'
-    language: shell
-    description: 'Echo on failure replaces proper error handling; the exit code is lost.'
-
   - id: sh-if-then-colon-inline
     regex: 'if\s+.+\s*;\s*then\s*:\s*;?\s*fi'
     language: shell
@@ -227,11 +222,6 @@ inline_patterns:
     language: python
     description: 'Multiline subprocess call with check=False on its own line.'
 
-  - id: py-detect-path-fallback
-    regex: 'if\s+not\s+\w+\s+and\s+(?:component\.)?detect_path\b'
-    language: python
-    description: 'Conditional path detection that hides the reason a path was missing.'
-
   - id: py-result-or-literal
     regex: '\.strip\(\)\s*or\s*\"[^\"]*\"(?!\s*raise)'
     language: python
@@ -276,10 +266,18 @@ inline_patterns:
     regex: 'StandardOutput\s*=\s*journal'
     language: systemd
     description: 'Service logs stdout only to journald; terminal operators see nothing.'
+  - id: sh-echo-on-failure
+    regex: \|\|\s*(?:echo|printf)\b
+    language: shell
+    description: Echo on failure replaces proper error handling and loses the exit code.
+  - id: py-detect-path-conditional
+    regex: if\s+not\s+\w+\s+and\s+(?:component\.)?detect_path\b
+    language: python
+    description: Conditional path detection that hides the reason a path was missing.
   - id: js-existssync-source-select
     regex: \bexistsSync\([^)]*\)\s*\?
     language: js_ts
-    description: existsSync ternary silently selects a fallback source/config; require the canonical source and fail explicitly.
+    description: existsSync ternary silently selects an alternate source or config. Require the canonical source and fail explicitly.
 custom_detectors:
   - id: cron-no-log-redirect
     detector: _check_cron_inline

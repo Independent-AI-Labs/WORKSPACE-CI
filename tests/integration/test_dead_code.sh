@@ -78,7 +78,7 @@ _dc_run() {
 }
 
 # =========================================================================
-# Setup / fallback tests (4)
+# Setup / override tests (4)
 # =========================================================================
 
 test_dc_config_missing_returns_0() {
@@ -422,7 +422,7 @@ test_dc_stderr_no_stdout_leak() {
 }
 _run_test "dc: dangle stderr does not leak to stdout on normal run" test_dc_stderr_no_stdout_leak
 
-test_dc_config_dir_env_var_fallback() {
+test_dc_config_dir_env_var_override() {
     _dc_mock_setup 0
     rm -f config/dead_code.yaml
     local _custom_dir="$TEST_TMP/custom_config"
@@ -440,7 +440,7 @@ YAML
     _assert_eq 1 "$dc_rc" "CI_CONFIG_DIR config should be used"
     grep -q "custom_src/app.py" "$TEST_TMP/dc_out" || return 1
 }
-_run_test "dc: CI_CONFIG_DIR env var overrides config path" test_dc_config_dir_env_var_fallback
+_run_test "dc: CI_CONFIG_DIR env var overrides config path" test_dc_config_dir_env_var_override
 
 test_dc_mktemp_coverage_thresholds_preserved() {
     _dc_mock_setup 0

@@ -116,13 +116,13 @@ describe('rewriteRelativeImageSrc', () => {
     )
   })
 
-  it('uses a custom branch for raw github fallback', () => {
+  it('uses a custom branch for the raw github url', () => {
     expect(rewriteRelativeImageSrc('docs/screen.png', { ...ctx, branch: 'master' })).toBe(
       'https://github.com/org/repo/raw/master/docs/screen.png',
     )
   })
 
-  it('throws when branch is missing for raw github fallback', () => {
+  it('throws when branch is missing for the raw github url', () => {
     expect(() =>
       rewriteRelativeImageSrc('docs/screen.png', { repoUrl: 'https://github.com/org/repo' }),
     ).toThrow(/branch is required/)

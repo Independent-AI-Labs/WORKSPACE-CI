@@ -52,7 +52,7 @@ export function applyViewBox(svg: SVGSVGElement, vb: ViewBox): void {
 }
 
 /**
- * CSS-displayed size of an SVG, with a cascade of fallbacks: the box model,
+ * CSS-displayed size of an SVG, with a cascade of alternates: the box model,
  * the width/height attributes, the (live) viewBox attribute, and finally a
  * sane default. Robust across jsdom (which reports 0 for the box model).
  */

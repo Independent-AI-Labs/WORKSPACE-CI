@@ -172,7 +172,7 @@ describe('resolveGrafanaHealthUrlForServerProbe', () => {
     )
   })
 
-  it('returns null when no dev upstream is configured (no fallback)', () => {
+  it('returns null when no dev upstream is configured', () => {
     vi.stubEnv('NODE_ENV', 'development')
     delete process.env.GRAFANA_DEV_UPSTREAM
     expect(resolveGrafanaHealthUrlForServerProbe('http://127.0.0.1:4000/grafana')).toBeNull()

@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Self-check that validates the CI hook infrastructure of the invoking
-project across three invariants. Ensures every check_*.py module is
-registered in required_hooks.yaml and quality_exceptions.yaml is schema-valid.
+project across four invariants. Ensures every check_*.py module is
+registered in required_hooks.yaml, quality_exceptions.yaml is schema-valid,
+rendered hooks carry the required markers, and every registry entry resolves
+in the shipping lib.
 
-The manifest is loaded from the CI config directory (``CI_CONFIG_DIR``: the
-sealed artifact ``/opt/workspace-ci/config`` at hook time), never from a
-workspace ancestor. WORKSPACE-CI is the single source of truth for the hook
-registry.
+The manifest is loaded from the checker's own import root (``_ci_root()``:
+the working tree when WORKSPACE-CI validates its own commit, the sealed
+``/opt/workspace-ci`` when a consumer runs the hook). One root owns both the
+manifest and the lib, so they can never come from different artifacts.
 
 Exit codes: 0 = all invariants hold, 1 = violation, 2 = infrastructure error.
 """
@@ -21,8 +23,6 @@ from pathlib import Path
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
-
-from ci.paths import find_config_dir
 
 EXIT_OK = 0
 EXIT_VIOLATION = 1
@@ -92,17 +92,15 @@ def _ci_root() -> Path:
     return Path(__file__).resolve().parent.joinpath("..").resolve()
 
 
-def _resolve_config_dir() -> Path:
-    """Resolve the CI config directory.
+def _manifest_dir(package_root: Path) -> Path:
+    """The config directory that owns the hook registry.
 
-    ``CI_CONFIG_DIR`` (exported by lib/ci.sh, or set by the Makefile) is the
-    single authority; when the environment is absent, the CI package's own
-    ``config/`` is used. The manifest is never read from a workspace ancestor.
+    Always the checker's own import root: the one tree that also owns the
+    ``lib/`` this checker resolves entries against. The environment is never
+    consulted, so the manifest and the lib can never come from different
+    artifacts (the 2026-09-27 registry-rename deadlock).
     """
-    try:
-        return find_config_dir()
-    except FileNotFoundError:
-        return _ci_root() / "config"
+    return package_root / "config"
 
 
 def _load_manifest(config_dir: Path) -> HooksManifest | None:
@@ -421,15 +419,18 @@ def _run_invariant_4_entries(
     return issues
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, *, package_root: Path | None = None) -> int:
     args = _build_arg_parser().parse_args(argv)
 
     project_dir = args.project.resolve()
-    manifest = _load_manifest(_resolve_config_dir())
+    if package_root is None:
+        package_root = _ci_root()
+    manifest_dir = _manifest_dir(package_root)
+    manifest = _load_manifest(manifest_dir)
     if manifest is None:
         print(
             f"{RED}error:{RESET} required_hooks.yaml not found in CI config "
-            f"{_resolve_config_dir()}",
+            f"{manifest_dir}",
         )
         return EXIT_INFRA_ERROR
 
