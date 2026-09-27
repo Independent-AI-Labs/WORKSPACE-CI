@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "policy_digest": "9a740a21ecd81459298631ae142a63eca74b046b0c3632c44f7425db4113a1d1",
+  "policy_digest": "bee88c069a593e3b8e65c5106287f2bbe3669d4c76fdeeccc86babb88deb955b",
   "rule_count": 225,
-  "exemption_count": 71,
+  "exemption_count": 67,
   "classification_count": 50,
   "exemptions": [
     {
@@ -32,50 +32,6 @@
       "rule": "belevate-b",
       "path": "^docs/specifications/SPEC-HITL-GUARD\\.md$",
       "file": "docs/specifications/SPEC-HITL-GUARD.md",
-      "match_count": 1,
-      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
-      "owner": "workspace-ci",
-      "review_date": "2026-09-05",
-      "removal": "Remove when the file no longer quotes the rule."
-    },
-    {
-      "source": "project",
-      "rule": "bfallback-b",
-      "path": "^lib/check_fallback_resolution\\.py$",
-      "file": "lib/check_fallback_resolution.py",
-      "match_count": 1,
-      "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
-      "owner": "workspace-ci",
-      "review_date": "2026-09-05",
-      "removal": "Remove when the file no longer quotes the rule."
-    },
-    {
-      "source": "universal",
-      "rule": "bfallback-b",
-      "path": "^lib/check_silent_swallow\\.py$",
-      "file": "lib/check_silent_swallow.py",
-      "match_count": 1,
-      "rationale": "File's defined role requires quoting this rule.",
-      "owner": "workspace-ci",
-      "review_date": "2026-09-05",
-      "removal": "Remove when the file no longer quotes the rule."
-    },
-    {
-      "source": "universal",
-      "rule": "bfallback-b",
-      "path": "^lib/checks_silent\\.sh$",
-      "file": "lib/checks_silent.sh",
-      "match_count": 1,
-      "rationale": "File's defined role requires quoting this rule.",
-      "owner": "workspace-ci",
-      "review_date": "2026-09-05",
-      "removal": "Remove when the file no longer quotes the rule."
-    },
-    {
-      "source": "project",
-      "rule": "bfallback-b",
-      "path": "^web-components/src/components/ErrorBoundary\\.tsx$",
-      "file": "web-components/src/components/ErrorBoundary.tsx",
       "match_count": 1,
       "rationale": "Quoted forbidden vocabulary required by this file's reviewed role.",
       "owner": "workspace-ci",
