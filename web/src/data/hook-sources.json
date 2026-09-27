@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T04:16:03.041947+00:00",
+  "generated_at": "2026-09-27T11:03:02.482281+00:00",
   "sources": [
     {
       "name": "ci_check_unstaged",
@@ -76,11 +76,11 @@
     {
       "name": "ci.check_required_hooks_present",
       "source_file": "ci/check_required_hooks_present.py",
-      "docstring": "Self-check that validates the CI hook infrastructure of the invoking project across three invariants. Ensures every check_*.py module is registered in required_hooks.yaml and quality_exceptions.yaml is schema-valid.",
-      "source": "def main(argv: list[str] | None = None) -> int:\n    args = _build_arg_parser().parse_args(argv)\n\n    project_dir = args.project.resolve()\n    manifest = _load_manifest(_resolve_config_dir())\n    if manifest is None:\n        print(\n            f\"{RED}error:{RESET} required_hooks.yaml not found in CI config \"\n            f\"{_resolve_config_dir()}\",\n        )\n        return EXIT_INFRA_ERROR\n\n    project_name = project_dir.name\n\n    print(f\"Self-check: {project_name}\")\n\n    issues: list[str] = []\n    issues.extend(\n        _run_invariant_1_manifest(\n            project_name,\n            project_dir,\n            manifest,\n            quiet=args.quiet,\n        ),\n    )\n    issues.extend(\n        _run_invariant_2_exceptions(\n            project_dir,\n            manifest,\n            quiet=args.quiet,\n        ),\n    )\n    rendered_issues = _check_hooks_rendered(project_dir, manifest)\n    issues.extend(rendered_issues)\n    if not rendered_issues and not args.quiet:\n        _emit(\"OK\", \"rendered hooks carry required markers\")\n\n    entry_issues = _run_invariant_4_entries(manifest, quiet=args.quiet)\n    issues.extend(entry_issues)\n\n    if issues:\n        print()\n        for issue in issues:\n            _emit(\"FAIL\", issue)\n        print()\n        print(f\"{RED}{len(issues)} violation(s){RESET}: see fix instructions above.\")\n        return EXIT_VIOLATION\n\n    if not args.quiet:\n        print(f\"{GREEN}OK{RESET} {project_name}: contract satisfied.\")\n    return EXIT_OK",
+      "docstring": "Self-check that validates the CI hook infrastructure of the invoking project across four invariants. Ensures every check_*.py module is registered in required_hooks.yaml, quality_exceptions.yaml is schema-valid, rendered hooks carry the required markers, and every registry entry resolves in the shipping lib.",
+      "source": "def main(argv: list[str] | None = None, *, package_root: Path | None = None) -> int:\n    args = _build_arg_parser().parse_args(argv)\n\n    project_dir = args.project.resolve()\n    if package_root is None:\n        package_root = _ci_root()\n    manifest_dir = _manifest_dir(package_root)\n    manifest = _load_manifest(manifest_dir)\n    if manifest is None:\n        print(\n            f\"{RED}error:{RESET} required_hooks.yaml not found in CI config \"\n            f\"{manifest_dir}\",\n        )\n        return EXIT_INFRA_ERROR\n\n    project_name = project_dir.name\n\n    print(f\"Self-check: {project_name}\")\n\n    issues: list[str] = []\n    issues.extend(\n        _run_invariant_1_manifest(\n            project_name,\n            project_dir,\n            manifest,\n            quiet=args.quiet,\n        ),\n    )\n    issues.extend(\n        _run_invariant_2_exceptions(\n            project_dir,\n            manifest,\n            quiet=args.quiet,\n        ),\n    )\n    rendered_issues = _check_hooks_rendered(project_dir, manifest)\n    issues.extend(rendered_issues)\n    if not rendered_issues and not args.quiet:\n        _emit(\"OK\", \"rendered hooks carry required markers\")\n\n    entry_issues = _run_invariant_4_entries(manifest, quiet=args.quiet)\n    issues.extend(entry_issues)\n\n    if issues:\n        print()\n        for issue in issues:\n            _emit(\"FAIL\", issue)\n        print()\n        print(f\"{RED}{len(issues)} violation(s){RESET}: see fix instructions above.\")\n        return EXIT_VIOLATION\n\n    if not args.quiet:\n        print(f\"{GREEN}OK{RESET} {project_name}: contract satisfied.\")\n    return EXIT_OK",
       "language": "python",
       "id": "check-required-hooks-present",
-      "description": "Self-check that validates the CI hook infrastructure of the invoking project across three invariants. Ensures every check_*.py module is registered in required_hooks.yaml and quality_exceptions.yaml is schema-valid."
+      "description": "Self-check that validates the CI hook infrastructure of the invoking project across four invariants. Ensures every check_*.py module is registered in required_hooks.yaml, quality_exceptions.yaml is schema-valid, rendered hooks carry the required markers, and every registry entry resolves in the shipping lib."
     },
     {
       "name": "ci.check_boot_venv_layout",
@@ -234,6 +234,15 @@
       "language": "python",
       "id": "check-markdown-docs",
       "description": "Markdown documentation validator that walks .md files and checks every link and image target against the local filesystem and remote endpoints. Detects broken file links, missing section anchors, dead URLs, and unresolvable image references. Supports --check-remote for live HTTP verification and --all-md for scanning every tracked markdown file in the repo."
+    },
+    {
+      "name": "ci_check_resolution_shapes",
+      "source_file": "lib/checks_core.sh",
+      "docstring": "--- ci_check_resolution_shapes --- Delegates to lib/check_resolution_shapes.py to scan tracked shell files for multi-source resolution shapes: probe-backed ${VAR:-...} defaults, try-A-then-B reassignment after '! -x' probes, boot-then-PATH resolvers, and multi-candidate boot-dir arrays. Also fails closed on any reference to a relocated original binary, an apt-diverted copy, or a real- sibling, in shell content and in tracked filenames, with no exemptions. Complements the banned-words catalog with shape detection.",
+      "source": "ci_check_resolution_shapes() {\n    local script_path=\"${CI_LIB_DIR:-$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)}/check_resolution_shapes.py\"\n    if [[ ! -f \"$script_path\" ]]; then\n        ci_fail \"Resolution-shapes: helper not found at $script_path\"\n        return 1\n    fi\n    local _scan_root=\"${CI_SCAN_ROOT:-$PWD}\"\n    CI_SCAN_ROOT=\"$_scan_root\" \\\n        ci_uv_run \"$script_path\" \"$@\" </dev/null\n}",
+      "language": "bash",
+      "id": "check-resolution-shapes",
+      "description": "Delegates to lib/check_resolution_shapes.py to scan tracked shell files for multi-source resolution shapes: probe-backed ${VAR:-...} defaults, try-A-then-B reassignment after '! -x' probes, boot-then-PATH resolvers, and multi-candidate boot-dir arrays. Also fails closed on any reference to a relocated original binary, an apt-diverted copy, or a real- sibling, in shell content and in tracked filenames, with no exemptions. Complements the banned-words catalog with shape detection."
     }
   ]
 }
