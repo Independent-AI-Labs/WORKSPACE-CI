@@ -40,6 +40,7 @@ artifact, then install protected hooks as a separate step.
 | [`requirements/REQ-MODULE-SIZE.md`](requirements/REQ-MODULE-SIZE.md)                     | Source file and module-size guardrails                                          |
 | [`requirements/REQ-BANNED-PATTERN-MATCHING.md`](requirements/REQ-BANNED-PATTERN-MATCHING.md) | Normalized banned-pattern, path, variant, and exemption matching                 |
 | [`requirements/REQ-INLINE-CODE.md`](requirements/REQ-INLINE-CODE.md)                      | Inline-code detection and the generic allowed-construct mechanism                 |
+| [`requirements/REQ-HOOK-TRUST-BOUNDARY.md`](requirements/REQ-HOOK-TRUST-BOUNDARY.md)       | Protected hook trust boundary: sealed code, environment, import path, policy, scan root |
 | [`requirements/REQ-DEPENDENCY-VALIDATION.md`](requirements/REQ-DEPENDENCY-VALIDATION.md) | Deterministic policy, optional catalogs, and live freshness workflow            |
 | [`requirements/REQ-SCAFFOLD-CI.md`](requirements/REQ-SCAFFOLD-CI.md)                     | Profile-driven CI bootstrapper for consumer projects                             |
 | [`requirements/REQ-HITL.md`](requirements/REQ-HITL.md)                                   | Human-in-the-loop authorization system                                          |

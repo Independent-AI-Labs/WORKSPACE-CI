@@ -204,3 +204,15 @@ def test_extensionless_without_shebang_still_detected(tmp_path):
     assert [f.rule.id for f in check.scan_file(name, tmp_path, policy)] == [
         "interp-shell"
     ]
+
+
+def test_policy_dir_ignores_hostile_environment(tmp_path, monkeypatch):
+    hostile = tmp_path / "hostile"
+    hostile.mkdir()
+    (hostile / "inline_code.yaml").write_text("version: 1.0.0\n", encoding="utf-8")
+    monkeypatch.setenv("CI_CONFIG_PATH_INLINE_CODE", str(hostile / "inline_code.yaml"))
+    monkeypatch.setenv("CI_CONFIG_DIR", str(hostile))
+    expected = (
+        Path(check.__file__).resolve().parent.joinpath("..").resolve() / "config"
+    )
+    assert check._policy_dir() == expected

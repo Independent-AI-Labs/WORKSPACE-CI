@@ -34,6 +34,10 @@ semantics.
 5. The checker MUST NOT replace invalid input bytes and continue.
 6. Matching, masking, and exemption behavior MUST be deterministic across
    repeated runs on identical input.
+7. Protected invocation MUST satisfy
+   [REQ-HOOK-TRUST-BOUNDARY](REQ-HOOK-TRUST-BOUNDARY.md): no environment
+   variable, working directory, or `PYTHONPATH` supplied by the triggering
+   process may select the checker, the policy, or the scan root.
 
 ## 3. Discovery
 

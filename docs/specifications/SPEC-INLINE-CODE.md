@@ -44,6 +44,12 @@ A consumer repository supplies project exemptions in
 the sealed policy at scan time. Exemptions follow the exact file plus rule
 identity semantics of REQ-BANNED-PATTERN-MATCHING section 8.
 
+Policy resolution is anchored to the checker's own tree and ignores the
+environment, per
+[REQ-HOOK-TRUST-BOUNDARY](../requirements/REQ-HOOK-TRUST-BOUNDARY.md)
+section 5. A protected hook removes override variables before the checker
+runs, so no environment input selects the policy.
+
 A new policy file is authored under `config-staging/`, moved into `config/` by
 the operator as a single command, and committed as ordinary source, per the
 repository policy for new policy files.

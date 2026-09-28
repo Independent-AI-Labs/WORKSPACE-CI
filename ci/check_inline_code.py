@@ -13,7 +13,6 @@ rules against the original, normalized, and decoded views.
 from __future__ import annotations
 
 import bisect
-import os
 import re
 import sys
 from pathlib import Path
@@ -385,19 +384,13 @@ def _scan_all(files: list[str], root: Path, policy: Policy, classes) -> list[Fin
 
 
 def _policy_dir() -> Path:
-    """Resolve the universal policy directory, fail closed.
+    """Resolve the universal policy directory from the checker's own tree.
 
-    The per-file override and ``CI_CONFIG_DIR`` win when the policy is
-    present there (consumers read the sealed ``/opt`` copy). Otherwise the
-    policy is anchored to the checker's own tree, so the CI repository can
-    run a policy it is adding in the same commit, before deployment.
+    Anchored to the module location and never to the environment, so an
+    environment variable, working directory, or PYTHONPATH supplied by the
+    triggering process cannot select the policy
+    (REQ-HOOK-TRUST-BOUNDARY section 5).
     """
-    override = os.environ.get("CI_CONFIG_PATH_INLINE_CODE")
-    if override:
-        return Path(override).resolve().parent
-    env_dir = os.environ.get("CI_CONFIG_DIR")
-    if env_dir and (Path(env_dir) / "inline_code.yaml").is_file():
-        return Path(env_dir).resolve()
     package_root = Path(__file__).resolve().parent.joinpath("..").resolve()
     return package_root / "config"
 

@@ -173,11 +173,12 @@ def resolve_config_path(
 ) -> Path:
     """Resolve the filesystem path for a CI config file by stem.
 
-    Override inputs (per-file env vars, CI_CONFIG_OVERRIDES manifest)
-    are a build-time interface only. Protected hooks source
-    lib/checks.sh, which removes those variables from the environment
-    before any checker launches; resolution order here is therefore
-    unconditional and identical in every surviving context.
+    Override inputs (per-file env vars, CI_CONFIG_OVERRIDES manifest) are a
+    developer and build-time interface only. A protected hook MUST remove
+    those variables before it launches a checker
+    (REQ-HOOK-TRUST-BOUNDARY section 3). This function honors them only
+    outside a protected context, so a caller that runs a checker directly
+    owns the environment it supplies.
 
     A consumer-supplied path that exists wins over the sealed default:
     per-repo config customization (e.g. module_overrides in a
