@@ -150,8 +150,9 @@ preflight: ## Verify environment (curl + tar for bootstrapping; uv is bootstrapp
 	echo "✓ Preflight OK"
 
 .PHONY: install
-install: preflight install-deps ## Full install: deps + bootstrap binaries + hooks
+install: preflight install-deps ## Full install: deps + bootstrap binaries + hooks + per-user advisory DB timer
 	$(MAKE) install-hooks
+	$(MAKE) advisory-db-deploy
 
 .PHONY: install-ci
 install-ci: preflight install-deps ## CI install: deps + bootstrap binaries, no hooks
@@ -162,7 +163,7 @@ bootstrap: preflight install-boot-tools install-osv-scanner ## Build candidate-l
 	:
 
 .PHONY: install-deps
-install-deps: install-boot-tools install-pythons install-python-deps install-gitleaks install-osv-scanner install-cloc install-moon install-ansible install-node install-web-deps ## Install boot tools + Python pool + .venv deps + gitleaks + osv-scanner + cloc + moon + ansible + node + web deps
+install-deps: install-boot-tools install-pythons install-python-deps install-gitleaks install-osv-scanner install-cargo-deny install-cloc install-moon install-ansible install-node install-web-deps ## Install boot tools + Python pool + .venv deps + gitleaks + osv-scanner + cargo-deny + cloc + moon + ansible + node + web deps
 
 .PHONY: install-uv
 install-uv: ## Bootstrap uv into $(BOOT_NAME)/bin/ (idempotent)
@@ -184,6 +185,10 @@ install-gitleaks: ## Bootstrap the gitleaks binary used by the secret-content sc
 .PHONY: install-osv-scanner
 install-osv-scanner: ## Bootstrap the osv-scanner binary used by the dependency vulnerability scanner
 	$(SCRIPT_BASH) scripts/bootstrap-osv-scanner
+
+.PHONY: install-cargo-deny
+install-cargo-deny: ## Bootstrap the cargo-deny binary used by the Rust dependency-policy hook + advisory DB timer
+	$(SCRIPT_BASH) scripts/bootstrap-cargo-deny
 
 .PHONY: install-cloc
 install-cloc: ## Bootstrap the cloc binary (single-file Perl) used by code-stats
@@ -492,6 +497,25 @@ wiki-tls-deploy: ## Install systemd user timer for daily cert renewal
 	$(ANSIBLE_LETSENCRYPT) --tags deploy
 wiki-tls-undeploy: ## Remove Let's Encrypt renewal timer
 	$(ANSIBLE_LETSENCRYPT) --tags undeploy
+
+# =============================================================================
+# RustSec Advisory Database (per-user systemd timer)
+# =============================================================================
+
+# The refresh timer's ExecStart points at the refresh script in the sealed
+# deployed CI. The path is fixed: deploy-ci must have run first.
+DEPLOYED_CI_ROOT ?= /opt/workspace-ci
+ADVISORY_DB_PROJECT_ROOT := $(DEPLOYED_CI_ROOT)
+ANSIBLE_ADVISORY_DB := $(ANSIBLE_PLAYBOOK) res/ansible/advisory-db.yml -e rust_advisory_db_project_root=$(ADVISORY_DB_PROJECT_ROOT)
+
+.PHONY: advisory-db-deploy advisory-db-undeploy advisory-db-refresh
+advisory-db-deploy: ## Install + enable the daily per-user RustSec advisory database refresh timer
+	test -f "$(ADVISORY_DB_PROJECT_ROOT)/scripts/refresh-advisory-db" || { echo "ERROR: refresh script not found under $(ADVISORY_DB_PROJECT_ROOT); run make deploy-ci first" >&2; exit 1; }
+	$(ANSIBLE_ADVISORY_DB) --tags deploy
+advisory-db-undeploy: ## Remove the per-user advisory database refresh timer
+	$(ANSIBLE_ADVISORY_DB) --tags undeploy
+advisory-db-refresh: ## Refresh the per-user advisory database now
+	$(SCRIPT_BASH) scripts/refresh-advisory-db
 
 # =============================================================================
 # Cleanup

@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# bootstrap-cargo-deny: fetch the cargo-deny binary and place it on PATH.
+#
+# workspace-ci depends on `cargo-deny` for the Rust dependency-policy hook
+# (ci_check_cargo_deny, hook id `cargo-deny`) and for the advisory-database
+# refresh timer. This script is idempotent: if the pinned version is already
+# installed at the target path, it exits 0 without redownloading.
+#
+# Install location (boot contract, SPEC-BOOT-LAYOUT):
+#   $CI_PROJECT_ROOT/$CI_BOOT_NAME/bin/cargo-deny
+# where $CI_BOOT_NAME is platform-aware (.boot-linux on Linux, .boot-macos
+# on macOS), set at source-time by lib/ci.sh.
+#
+# Version pin: res/dependency-pins.yaml (tool key `cargo_deny`, the single
+# source of truth). Supply-chain pinning: SHA256 verification is MANDATORY
+# and always on, against the digest recorded in the catalog.
+set -euo pipefail
+
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+_ci_lib="$(cd "$(dirname "$_SELF")/../lib" && pwd)"
+# shellcheck source=lib/ci.sh
+if ! source "$_ci_lib/ci.sh"; then
+    echo "ERROR: failed to source $_ci_lib/ci.sh" >&2
+    exit 2
+fi
+if [[ -z "${CI_PROJECT_ROOT:-}" ]]; then
+    echo "ERROR: CI_PROJECT_ROOT not set after sourcing ci.sh" >&2
+    exit 2
+fi
+
+_log() { printf '[bootstrap-cargo-deny] %s\n' "$*" >&2; }
+
+CARGO_DENY_VERSION="$(ci_tool_version cargo_deny)" || { _log "missing cargo_deny tool pin"; exit 2; }
+CARGO_DENY_SHA256="$(ci_tool_artifact cargo_deny sha256)" || { _log "missing cargo_deny checksum"; exit 2; }
+CARGO_DENY_ASSET="$(ci_tool_artifact cargo_deny asset)" || { _log "missing cargo_deny asset"; exit 2; }
+
+main() {
+    local target_dir target
+    target_dir="${CI_PROJECT_ROOT}/${CI_BOOT_NAME}/bin"
+    target="${target_dir}/cargo-deny"
+
+    if ! mkdir -p "$target_dir"; then
+        _log "mkdir failed for $target_dir"
+        return 1
+    fi
+
+    if [[ -x "$target" ]]; then
+        local v_out v_err v_rc=0
+        v_out="$(mktemp)"
+        v_err="$(mktemp)"
+        "$target" --version >"$v_out" 2>"$v_err" || v_rc=$?
+        if [[ "$v_rc" -eq 0 ]]; then
+            local cur
+            cur="$(head -1 "$v_out")"
+            rm -f "$v_out" "$v_err"
+            if [[ "$cur" == *"$CARGO_DENY_VERSION"* ]]; then
+                _log "cargo-deny ${CARGO_DENY_VERSION} already at $target"
+                return 0
+            fi
+            _log "found existing cargo-deny ($cur), upgrading to ${CARGO_DENY_VERSION}"
+        else
+            local err_msg
+            err_msg="$(head -1 "$v_err")"
+            rm -f "$v_out" "$v_err"
+            _log "existing binary at $target did not respond to '--version' (status=$v_rc): $err_msg"
+            _log "re-downloading fresh copy"
+        fi
+    fi
+
+    if [[ "$(uname -s)" != "Linux" || "$(uname -m)" != "x86_64" ]]; then
+        _log "no pinned cargo-deny artifact for $(uname -s)/$(uname -m)"
+        return 1
+    fi
+
+    local url
+    url="https://github.com/EmbarkStudios/cargo-deny/releases/download/${CARGO_DENY_VERSION}/${CARGO_DENY_ASSET}"
+
+    local tmp
+    tmp="$(mktemp -d)"
+    # Use ${tmp:-} so the trap is safe under `set -u` once `tmp` (a local)
+    # goes out of scope after main() returns.
+    # shellcheck disable=SC2064
+    trap "rm -rf \"\${tmp:-$tmp}\"" EXIT
+
+    _log "fetching ${url}"
+    if ! curl -fsSL --retry 3 --retry-delay 2 -o "${tmp}/${CARGO_DENY_ASSET}" "$url"; then
+        _log "curl failed for $url"
+        return 1
+    fi
+
+    local actual_sha
+    actual_sha="$(ci_sha256 "${tmp}/${CARGO_DENY_ASSET}")"
+    if [[ "$actual_sha" != "$CARGO_DENY_SHA256" ]]; then
+        _log "checksum mismatch: expected $CARGO_DENY_SHA256, got $actual_sha"
+        return 1
+    fi
+    _log "checksum OK ($CARGO_DENY_SHA256)"
+
+    local member
+    member="${CARGO_DENY_ASSET%.tar.gz}/cargo-deny"
+    _log "extracting ${member}"
+    if ! tar -xzf "${tmp}/${CARGO_DENY_ASSET}" -C "$tmp" "$member"; then
+        _log "tar extraction failed for $member"
+        return 1
+    fi
+
+    _log "installing cargo-deny to ${target}"
+    if ! install -m 0755 "${tmp}/${member}" "$target"; then
+        _log "install (copy) failed to $target"
+        return 1
+    fi
+
+    local v_out2 v_rc2=0
+    v_out2="$(mktemp)"
+    "$target" --version >"$v_out2" 2>&1 || v_rc2=$?
+    if [[ "$v_rc2" -ne 0 ]]; then
+        _log "post-install verification failed: '$target --version' returned status=$v_rc2"
+        rm -f "$v_out2"
+        return 1
+    fi
+    _log "installed: $(head -1 "$v_out2") => $target"
+    rm -f "$v_out2"
+}
+
+main "$@"

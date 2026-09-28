@@ -1,0 +1,112 @@
+# Schema for inline_code.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+config: inline_code
+description: "Inline-code detection policy: code-signature rules, allowed constructs, bounded decode depth, and exact per-file exemptions."
+fields:
+  - path: version
+    type: string
+    required: true
+    description: "Schema version of the inline-code policy. Bumped when the YAML shape changes."
+
+  - path: decode
+    type: map
+    required: true
+    description: "Bounded decode settings applied before matching."
+
+  - path: decode.max_depth
+    type: integer
+    required: true
+    default: 2
+    description: "Number of chained decode passes over base32, base64, hexadecimal, and percent representations before a decoded form is matched."
+
+  - path: rules
+    type: list
+    required: true
+    description: "Code-signature rules matched against the original, normalized, and decoded views."
+
+  - path: rules[].id
+    type: string
+    required: true
+    description: "Stable rule identity emitted in violation output and referenced by exemptions."
+
+  - path: rules[].mode
+    type: string
+    required: true
+    description: "Matching mode: raw-regex for punctuation-significant syntax, normalized-token for word and command forms."
+
+  - path: rules[].category
+    type: string
+    required: true
+    description: "Category of the code construct: sql, interpreter, or remote-exec."
+
+  - path: rules[].flags
+    type: list<string>
+    description: "Pattern flags: s for dot-all and i for case-insensitive."
+
+  - path: rules[].pattern
+    type: string
+    required: true
+    description: "Regular expression matched against the selected views."
+
+  - path: rules[].boundary
+    type: boolean
+    default: false
+    description: "For normalized-token rules, require identifier boundaries around the pattern."
+
+  - path: rules[].reason
+    type: string
+    required: true
+    description: "Operator-facing explanation emitted with the finding."
+
+  - path: allowed_constructs
+    type: list
+    required: true
+    description: "Constructs excluded from detection for a language, for example a level-one fenced code block in Markdown."
+
+  - path: allowed_constructs[].id
+    type: string
+    required: true
+    description: "Stable construct identity."
+
+  - path: allowed_constructs[].language
+    type: string
+    required: true
+    description: "Detected language or format this construct applies to."
+
+  - path: allowed_constructs[].level
+    type: integer
+    default: 1
+    description: "Nesting level of the construct; a level-one construct is not nested in another allowed region."
+
+  - path: allowed_constructs[].open
+    type: string
+    description: "Region form: regular expression matched against a line to open the allowed region. Required with close when pattern is absent."
+
+  - path: allowed_constructs[].close
+    type: string
+    description: "Region form: regular expression matched against a line to close the allowed region. An unterminated region fails the check. Required with open when pattern is absent."
+
+  - path: allowed_constructs[].pattern
+    type: string
+    description: "Token form: regular expression whose matches are masked for the language. Declared instead of open and close."
+
+  - path: allowed_constructs[].reason
+    type: string
+    required: true
+    description: "Operator-facing explanation for why the construct is allowed."
+
+  - path: exemptions
+    type: list
+    required: true
+    description: "Exact file plus rule identity entries. No globs, directories, or multi-path entries."
+
+  - path: exemptions[].path
+    type: string
+    required: true
+    description: "Exact repository-relative regular file."
+
+  - path: exemptions[].rule
+    type: string
+    required: true
+    description: "Stable rule identity this exemption applies to."

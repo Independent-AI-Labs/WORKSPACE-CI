@@ -1,0 +1,8 @@
+---
+- name: Deploy advisory database refresh timer
+  tags: [deploy]
+  ansible.builtin.import_tasks: deploy.yml
+
+- name: Undeploy advisory database refresh timer
+  tags: [undeploy, never]
+  ansible.builtin.import_tasks: undeploy.yml

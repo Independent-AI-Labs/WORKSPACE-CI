@@ -34,7 +34,7 @@ def test_invariant4_flags_shell_entry_without_definition(
                 "id": "ghost-gate",
                 "kind": "shell",
                 "entry": (
-                    "bash -c 'source lib/checks.sh && ci_check_ghost_function'"
+                    "source lib/checks.sh && ci_check_ghost_function"
                 ),
                 "stage": "pre-commit",
             },
@@ -42,7 +42,7 @@ def test_invariant4_flags_shell_entry_without_definition(
                 "id": "baseline-safety",
                 "kind": "shell",
                 "entry": (
-                    "bash -c 'source lib/checks.sh && ci_check_present'"
+                    "source lib/checks.sh && ci_check_present"
                 ),
                 "stage": "pre-commit",
                 "mandatory": True,
@@ -70,7 +70,7 @@ def test_invariant4_accepts_defined_shell_entry(tmp_path: Path) -> None:
                 "id": "portable",
                 "kind": "shell",
                 "entry": (
-                    "bash -c 'source lib/checks.sh && ci_check_portable_shell'"
+                    "source lib/checks.sh && ci_check_portable_shell"
                 ),
                 "stage": "pre-commit",
             },
@@ -78,7 +78,7 @@ def test_invariant4_accepts_defined_shell_entry(tmp_path: Path) -> None:
                 "id": "baseline-safety",
                 "kind": "shell",
                 "entry": (
-                    "bash -c 'source lib/checks.sh && ci_check_portable_shell'"
+                    "source lib/checks.sh && ci_check_portable_shell"
                 ),
                 "stage": "pre-commit",
                 "mandatory": True,
@@ -151,13 +151,13 @@ def test_invariant4_skips_when_no_shipping_lib(tmp_path: Path) -> None:
             {
                 "id": "ghost-gate",
                 "kind": "shell",
-                "entry": "bash -c 'ci_check_ghost_function'",
+                "entry": "ci_check_ghost_function",
                 "stage": "pre-commit",
             },
             {
                 "id": "baseline-safety",
                 "kind": "shell",
-                "entry": "bash -c 'ci_check_ghost_function'",
+                "entry": "ci_check_ghost_function",
                 "stage": "pre-commit",
                 "mandatory": True,
                 "safety": True,
@@ -182,7 +182,7 @@ def test_invariant4_flags_safety_hook_that_is_not_mandatory(
             {
                 "id": "baseline-safety",
                 "kind": "shell",
-                "entry": "bash -c 'source lib/checks.sh && ci_check_present'",
+                "entry": "source lib/checks.sh && ci_check_present",
                 "stage": "pre-commit",
                 "mandatory": False,
                 "safety": True,
@@ -210,7 +210,7 @@ def test_invariant4_flags_wholesale_safety_marker_deletion(
             {
                 "id": "gitleaks",
                 "kind": "shell",
-                "entry": "bash -c 'source lib/checks.sh && ci_check_present'",
+                "entry": "source lib/checks.sh && ci_check_present",
                 "stage": "pre-commit",
                 "mandatory": True,
             },
@@ -232,7 +232,7 @@ def test_safety_coherence_fires_without_shipping_lib(tmp_path: Path) -> None:
             {
                 "id": "gitleaks",
                 "kind": "shell",
-                "entry": "bash -c 'ci_scan_secrets'",
+                "entry": "ci_scan_secrets",
                 "stage": "pre-commit",
                 "mandatory": True,
             },
@@ -250,7 +250,7 @@ def test_hook_entry_rejects_unknown_field() -> None:
             {
                 "id": "x",
                 "kind": "shell",
-                "entry": "bash -c 'ci_x'",
+                "entry": "ci_x",
                 "stage": "pre-commit",
                 "safty": True,
             },
@@ -271,7 +271,7 @@ def test_invariant4_accepts_renamed_shell_entry(tmp_path: Path) -> None:
                 "id": "check-resolution-shapes",
                 "kind": "shell",
                 "entry": (
-                    "bash -c 'source lib/checks.sh && ci_check_resolution_shapes'"
+                    "source lib/checks.sh && ci_check_resolution_shapes"
                 ),
                 "stage": "pre-commit",
             },
@@ -279,7 +279,7 @@ def test_invariant4_accepts_renamed_shell_entry(tmp_path: Path) -> None:
                 "id": "baseline-safety",
                 "kind": "shell",
                 "entry": (
-                    "bash -c 'source lib/checks.sh && ci_check_resolution_shapes'"
+                    "source lib/checks.sh && ci_check_resolution_shapes"
                 ),
                 "stage": "pre-commit",
                 "mandatory": True,

@@ -1,0 +1,16 @@
+[Unit]
+Description=Refresh the per-user RustSec advisory database
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=HOME={{ ansible_env.HOME }}
+Environment=CARGO_HOME={{ rust_advisory_db_cargo_home }}
+Environment=WORKSPACE_ADVISORY_DB_PATH={{ rust_advisory_db_path }}
+Environment=PATH={{ rust_advisory_db_project_root }}/{{ ".boot-macos" if ansible_system == "Darwin" else ".boot-linux" }}/bin:{{ rust_advisory_db_cargo_home }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart={{ rust_advisory_db_script }}
+SyslogIdentifier={{ rust_advisory_db_unit }}
+
+[Install]
+WantedBy=default.target

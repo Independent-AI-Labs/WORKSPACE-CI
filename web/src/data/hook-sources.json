@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T12:40:24.968303+00:00",
+  "generated_at": "2026-09-28T14:18:02.632986+00:00",
   "sources": [
     {
       "name": "ci_check_unstaged",
@@ -243,6 +243,42 @@
       "language": "bash",
       "id": "check-resolution-shapes",
       "description": "Delegates to lib/check_resolution_shapes.py to scan tracked shell files for multi-source resolution shapes: probe-backed ${VAR:-...} defaults, try-A-then-B reassignment after '! -x' probes, boot-then-PATH resolvers, and multi-candidate boot-dir arrays. Complements the banned-words catalog with shape detection."
+    },
+    {
+      "name": "ci.check_inline_code",
+      "source_file": "ci/check_inline_code.py",
+      "docstring": "Inline-code checker: detect code carried where a file does not declare it.",
+      "source": "def main(argv: list[str] | None = None) -> int:\n    argv = list(sys.argv[1:] if argv is None else argv)\n    config_dir = Path(os.environ.get(\"CI_CONFIG_DIR\", \"config\"))\n    root = discover.scan_root()\n    try:\n        policy = load_policy(config_dir)\n    except PolicyError as exc:\n        print(f\"inline-code: {exc}\", file=sys.stderr)\n        return 1\n\n    files = discover.tracked_files(argv, root)\n    try:\n        project_exemptions = load_project_exemptions(root)\n    except PolicyError as exc:\n        print(f\"inline-code: {exc}\", file=sys.stderr)\n        return 1\n    policy = policy._replace(exemptions=policy.exemptions | project_exemptions)\n    try:\n        classes = classify.load(root)\n    except classify.ClassificationError:\n        classes = None\n\n    try:\n        findings = _scan_all(files, root, policy, classes)\n    except PolicyError as exc:\n        print(f\"inline-code: {exc}\", file=sys.stderr)\n        return 1\n\n    for finding in findings:\n        _report(finding)\n    if findings:\n        print(f\"\\n{len(findings)} inline-code finding(s).\")\n        return 1\n    print(f\"No inline code found in {len(files)} non-gitignored file(s).\")\n    return 0",
+      "language": "python",
+      "id": "check-inline-code",
+      "description": "Inline-code checker: detect code carried where a file does not declare it."
+    },
+    {
+      "name": "ci_check_cargo_fmt",
+      "source_file": "lib/checks_cargo.sh",
+      "docstring": "!/usr/bin/env bash Cargo fleet hooks: formatting, lints, and dependency policy. Sourced by lib/checks.sh alongside the other check modules. Each function runs from the repository root so the workspace manifest and deny.toml apply. The advisory-database refresh in ci_check_cargo_deny is time-bounded; the check itself always runs offline and fails closed when the database is missing or older than cargo-deny's staleness window. ci_check_cargo_fmt: verify rustfmt formatting across the workspace.",
+      "source": "ci_check_cargo_fmt() {\n    local root cargo_bin\n    root=\"$(git rev-parse --show-toplevel)\" || return 1\n    if ! cargo_bin=\"$(command -v cargo)\"; then\n        ci_fail \"cargo is required but not on PATH\"\n        return 1\n    fi\n    if ! (cd \"$root\" && \"$cargo_bin\" fmt --all -- --check); then\n        ci_fail \"cargo fmt found unformatted files\"\n        return 1\n    fi\n    ci_pass \"cargo fmt is clean\"\n}",
+      "language": "bash",
+      "id": "cargo-fmt",
+      "description": ""
+    },
+    {
+      "name": "ci_check_cargo_clippy",
+      "source_file": "lib/checks_cargo.sh",
+      "docstring": "ci_check_cargo_clippy: run clippy for all targets with warnings denied.",
+      "source": "ci_check_cargo_clippy() {\n    local root cargo_bin\n    root=\"$(git rev-parse --show-toplevel)\" || return 1\n    if ! cargo_bin=\"$(command -v cargo)\"; then\n        ci_fail \"cargo is required but not on PATH\"\n        return 1\n    fi\n    if ! (cd \"$root\" && \"$cargo_bin\" clippy --workspace --all-targets --all-features -- -D warnings); then\n        ci_fail \"cargo clippy reported findings\"\n        return 1\n    fi\n    ci_pass \"cargo clippy is clean\"\n}",
+      "language": "bash",
+      "id": "cargo-clippy",
+      "description": ""
+    },
+    {
+      "name": "ci_check_cargo_deny",
+      "source_file": "lib/checks_cargo.sh",
+      "docstring": "ci_check_cargo_deny: refresh the advisory database when it is stale, then run the offline dependency-policy check.",
+      "source": "ci_check_cargo_deny() {\n    local root cargo_bin refresh\n    root=\"$(git rev-parse --show-toplevel)\" || return 1\n    if ! cargo_bin=\"$(command -v cargo)\"; then\n        ci_fail \"cargo is required but not on PATH\"\n        return 1\n    fi\n    refresh=\"$CI_PROJECT_ROOT/scripts/refresh-advisory-db\"\n    if [[ -x \"$refresh\" ]]; then\n        \"$refresh\" --if-stale \\\n            || ci_warn \"advisory database refresh unavailable; using the cached database\"\n    fi\n    if ! (cd \"$root\" && \"$cargo_bin\" deny --offline --no-default-features check); then\n        ci_fail \"cargo deny check reported findings\"\n        return 1\n    fi\n    ci_pass \"cargo deny check is clean\"\n}",
+      "language": "bash",
+      "id": "cargo-deny",
+      "description": ""
     }
   ]
 }

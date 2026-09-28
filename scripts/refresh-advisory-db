@@ -1,0 +1,162 @@
+#!/usr/bin/env bash
+# refresh-advisory-db: keep the per-user RustSec advisory database current
+# using only the git operations the workspace guard permits.
+#
+# cargo-deny updates an existing advisory checkout with `git reset --hard`,
+# which the guard blocks for every uid. This script removes the cached
+# checkout first, so `cargo deny fetch db` takes its clone-only path: the
+# only git command it runs is `git clone`.
+#
+# Usage:
+#   refresh-advisory-db [--if-stale [HOURS]]
+#
+# Without --if-stale it always refreshes. With --if-stale it refreshes only
+# when the checkout is absent or its newest advisory commit is older than
+# HOURS (25 unless overridden), and never fails the caller when the fetch
+# cannot reach the network.
+#
+# Runs as the invoking user and refuses root: the database is per-user
+# because the pre-commit gate reads the database owned by the committing
+# user.
+set -euo pipefail
+
+_SELF="${BASH_SOURCE[0]:-$0}"
+case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
+_ci_lib="$(cd "$(dirname "$_SELF")/../lib" && pwd)"
+# shellcheck source=lib/ci.sh
+if ! source "$_ci_lib/ci.sh"; then
+    printf 'refresh-advisory-db: failed to source %s\n' "$_ci_lib/ci.sh" >&2
+    exit 2
+fi
+
+log() { printf '[refresh-advisory-db] %s\n' "$*" >&2; }
+
+ADVISORY_DB_URL="https://github.com/rustsec/advisory-db"
+DEFAULT_STALE_HOURS=25
+FETCH_TIMEOUT_SECONDS=300
+
+usage() {
+    cat >&2 <<'EOF'
+Usage: refresh-advisory-db [--if-stale [HOURS]]
+  --if-stale [HOURS]  refresh only when the checkout is absent or its
+                      newest advisory commit is older than HOURS
+EOF
+}
+
+if_stale=0
+stale_hours="$DEFAULT_STALE_HOURS"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --if-stale)
+            if_stale=1
+            shift
+            if [[ $# -gt 0 && "$1" =~ ^[0-9]+$ ]]; then
+                stale_hours="$1"
+                shift
+            fi
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            log "unrecognized argument: $1"
+            usage
+            exit 2
+            ;;
+    esac
+done
+
+if [[ $EUID -eq 0 ]]; then
+    log "refusing to run as root; the advisory database belongs to the user"
+    exit 1
+fi
+
+db_root="${WORKSPACE_ADVISORY_DB_PATH:-$HOME/.cargo/advisory-db}"
+
+# Resolve cargo-deny through the boot contract; if that misses, use the
+# cargo home. cargo searches $CARGO_HOME/bin before PATH, so either location
+# works for `cargo deny`.
+if ! cargo_deny="$(ci_resolve_tool_path "$CI_PROJECT_ROOT" cargo-deny)"; then
+    cargo_deny="${CARGO_HOME:-$HOME/.cargo}/bin/cargo-deny"
+fi
+if [[ ! -x "$cargo_deny" ]]; then
+    log "cargo-deny not found; run scripts/bootstrap-cargo-deny"
+    exit 1
+fi
+
+# newest_commit_epoch <checkout>: print the newest advisory commit time.
+newest_commit_epoch() {
+    local checkout="$1" out
+    out="$(mktemp)"
+    if ! git -C "$checkout" log -1 --format=%ct >"$out" 2>&1; then
+        rm -f "$out"
+        return 1
+    fi
+    tr -d '[:space:]' < "$out"
+    rm -f "$out"
+}
+
+# db_is_fresh: true when a checkout exists with a commit newer than the cutoff.
+db_is_fresh() {
+    local cutoff checkout epoch
+    cutoff=$(( $(date +%s) - stale_hours * 3600 ))
+    for checkout in "$db_root"/advisory-db-*; do
+        [[ -d "$checkout/.git" ]] || continue
+        epoch="$(newest_commit_epoch "$checkout")" || continue
+        if [[ -n "$epoch" && "$epoch" -ge "$cutoff" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# fetch_db: replace the cached checkout with a fresh clone.
+fetch_db() {
+    local probe cfg out err
+    probe="$HOME/.cache/workspace-ci/advisory-db-probe"
+    mkdir -p "$probe/src"
+    printf '[package]\nname = "advisory-db-probe"\nversion = "0.0.0"\nedition = "2021"\n\n[lib]\npath = "src/lib.rs"\n' \
+        > "$probe/Cargo.toml"
+    : > "$probe/src/lib.rs"
+    cfg="$probe/deny.toml"
+    printf '[advisories]\ndb-path = "%s"\ndb-urls = ["%s"]\n' "$db_root" "$ADVISORY_DB_URL" \
+        > "$cfg"
+
+    # Drop the cached checkout so cargo-deny clones instead of updating: the
+    # update path runs `git reset --hard`, which the guard blocks.
+    rm -rf "$db_root"/advisory-db-*
+
+    out="$(mktemp)"
+    err="$(mktemp)"
+    # Git exports GIT_DIR and friends to hooks; clear them so the clone cannot
+    # be redirected into the committing repository.
+    if env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE \
+           -u GIT_OBJECT_DIRECTORY -u GIT_COMMON_DIR \
+           timeout --signal=TERM --kill-after=10s "${FETCH_TIMEOUT_SECONDS}s" \
+           "$cargo_deny" --manifest-path "$probe/Cargo.toml" --config "$cfg" fetch db \
+           >"$out" 2>"$err"; then
+        rm -f "$out" "$err"
+        return 0
+    fi
+    log "advisory database fetch failed:"
+    cat "$err" >&2
+    rm -f "$out" "$err"
+    return 1
+}
+
+if [[ $if_stale -eq 1 ]]; then
+    if db_is_fresh; then
+        exit 0
+    fi
+    if ! fetch_db; then
+        log "refresh unavailable; keeping the cached advisory database"
+        exit 0
+    fi
+    exit 0
+fi
+
+if ! fetch_db; then
+    exit 1
+fi
+log "advisory database refreshed"

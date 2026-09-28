@@ -367,7 +367,8 @@ ci_capture_pipe() {
 # the `|| _rc=$?` capture defeats `set -e` without masking the result,
 # and the `if [[ $_rc -ne 0 ]]` branch is the ONLY non-return-0 path.
 #
-# Environment variables CI_CONFIG_DIR, CI_LIB_DIR, CI_PROJECT_ROOT
+# Environment variables CI_CONFIG_DIR, CI_LIB_DIR, CI_PROJECT_ROOT,
+# and CI_BOOT_DIR
 # are ALWAYS propagated to the child, regardless of whether they are
 # exported in the parent shell. This eliminates CWD-dependent
 # relative-path bugs in sibling repos (e.g. WORKSPACE-GUARD) whose
@@ -397,6 +398,7 @@ ci_run_python_checker() {
     CI_GUARD_CONFIG_OVERRIDES="${CI_GUARD_CONFIG_OVERRIDES:-}" \
     CI_LIB_DIR="$CI_LIB_DIR" \
     CI_PROJECT_ROOT="$CI_PROJECT_ROOT" \
+    CI_BOOT_DIR="$CI_BOOT_DIR" \
         ci_uv_run "$_script" "$@" \
         > "$CI_CHECKER_STDOUT" 2>"$CI_CHECKER_STDERR" \
         || _rc=$?

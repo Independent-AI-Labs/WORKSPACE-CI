@@ -66,9 +66,10 @@
 
     - name: Verify deployed Python runtime independently
       ansible.builtin.shell: >-
+        env PYTHONPATH=/opt/workspace-ci
         /opt/workspace-ci/.boot-linux/bin/uv run
         --project /opt/workspace-ci --no-sync python
-        -c 'import yaml, pydantic' >>{{ deploy_output | quote }} 2>&1
+        -m ci.verify_runtime >>{{ deploy_output | quote }} 2>&1
       register: deployed_python_stream
       changed_when: false
       failed_when: deployed_python_stream.rc != 0

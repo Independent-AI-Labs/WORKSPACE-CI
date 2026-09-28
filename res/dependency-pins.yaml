@@ -125,3 +125,15 @@ cloc:
       os: any
       architecture: any
       sha256: "bf59272455172108072a0a106379f7509fd4349bdcfd85203bac038ccd286d83"
+cargo_deny:
+  version: "0.20.2"
+  source: "EmbarkStudios/cargo-deny"
+  source_kind: github_release
+  artifacts:
+    - asset: "cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz"
+      os: linux
+      architecture: x86_64
+      sha256: "9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f"
+      archive:
+        format: tar.gz
+        member: "cargo-deny-0.20.2-x86_64-unknown-linux-musl/cargo-deny"

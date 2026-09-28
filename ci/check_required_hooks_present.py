@@ -56,7 +56,7 @@ class HookEntry(BaseModel):
     always_run: bool = False
     pass_filenames: bool = True
     applicable_to: list[str] = Field(default_factory=lambda: ["any"])
-    files: list[str] = Field(default_factory=list)
+    files: str | None = None
 
 
 class HooksManifest(BaseModel):

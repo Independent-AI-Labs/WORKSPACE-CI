@@ -1,0 +1,62 @@
+---
+- name: Fail deploy without a project root
+  ansible.builtin.fail:
+    msg: 'Set rust_advisory_db_project_root to the CI checkout root.'
+  when: rust_advisory_db_project_root | length == 0
+
+- name: Ensure systemd user directory exists
+  ansible.builtin.file:
+    path: '{{ ansible_env.HOME }}/.config/systemd/user'
+    state: directory
+    mode: '0755'
+
+- name: Install advisory database refresh service unit
+  ansible.builtin.template:
+    src: rustsec-advisory-db-refresh.service.j2
+    dest: '{{ ansible_env.HOME }}/.config/systemd/user/{{ rust_advisory_db_unit }}.service'
+    mode: '0644'
+
+- name: Install advisory database refresh timer unit
+  ansible.builtin.template:
+    src: rustsec-advisory-db-refresh.timer.j2
+    dest: '{{ ansible_env.HOME }}/.config/systemd/user/{{ rust_advisory_db_unit }}.timer'
+    mode: '0644'
+
+- name: Ensure advisory database log directory exists
+  ansible.builtin.file:
+    path: '{{ rust_advisory_db_run_log | dirname }}'
+    state: directory
+    mode: '0755'
+
+- name: Enable systemd user linger for the advisory database timer
+  ansible.builtin.shell: >-
+    loginctl enable-linger {{ ansible_user_id }}
+    >>{{ rust_advisory_db_run_log | quote }} 2>&1
+  register: rust_advisory_db_linger
+  changed_when: rust_advisory_db_linger.rc == 0
+  failed_when: rust_advisory_db_linger.rc != 0
+
+- name: Reload systemd user daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+    scope: user
+
+- name: Refresh the advisory database now
+  ansible.builtin.systemd:
+    name: '{{ rust_advisory_db_unit }}.service'
+    state: started
+    scope: user
+
+- name: Enable and start the advisory database timer
+  ansible.builtin.systemd:
+    name: '{{ rust_advisory_db_unit }}.timer'
+    enabled: true
+    state: started
+    scope: user
+
+- name: Advisory database timer deployed
+  ansible.builtin.debug:
+    msg: |
+      RustSec advisory database refresh enabled ({{ rust_advisory_db_unit }}.timer).
+        Status : systemctl --user status {{ rust_advisory_db_unit }}.timer
+        Logs   : journalctl --user -u {{ rust_advisory_db_unit }}.service

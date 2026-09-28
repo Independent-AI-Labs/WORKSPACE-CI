@@ -145,6 +145,13 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: check-inline-code
+        name: Block Inline Code (code where the file does not declare it)
+        entry: "uv run python -m ci.check_inline_code"
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: check-required-hooks-present
         name: CI Self-Check (manifest + exceptions + rendered hooks)
         entry: "uv run python -m ci.check_required_hooks_present"

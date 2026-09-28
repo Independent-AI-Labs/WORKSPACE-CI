@@ -1,0 +1,142 @@
+# Inline-code policy (contract: docs/requirements/REQ-INLINE-CODE.md).
+# Detection targets code carried where the file does not declare it.
+# This file is definitional: the checker skips it, and rule patterns
+# carry the very tokens they search for.
+version: 1.0.0
+
+decode:
+  # Bounded iterative decode of base32, base64, hexadecimal, and percent
+  # representations, chained this many times before a decoded form is
+  # matched. An ordinary text file is never decoded without bound.
+  max_depth: 2
+
+rules:
+  - id: sql-select-from
+    mode: raw-regex
+    category: sql
+    flags: [i]
+    pattern: '\bselect\s+(?:distinct\s+|all\s+)?(?:\*|(?:[a-z_][a-z0-9_]*(?:\.[a-z0-9_*]+)?|\d+)(?:\s*,\s*(?:[a-z_][a-z0-9_]*(?:\.[a-z0-9_*]+)?|\d+))*|(?:count|sum|avg|min|max)\s*\(\s*(?:\*|[a-z_][a-z0-9_.]*|\d+)\s*\))\s+from\s+[a-z_][a-z0-9_.]*'
+    reason: Query text belongs under the repository SQL tree, loaded by the sanctioned loader.
+  - id: sql-insert-into
+    mode: raw-regex
+    category: sql
+    flags: [s, i]
+    pattern: '\binsert\s+into\b'
+    reason: Query text belongs under the repository SQL tree, loaded by the sanctioned loader.
+  - id: sql-create-object
+    mode: raw-regex
+    category: sql
+    flags: [s, i]
+    pattern: '\bcreate\s+(?:table|materialized\s+view|database)\b'
+    reason: Query text belongs under the repository SQL tree, loaded by the sanctioned loader.
+  - id: sql-alter-table
+    mode: raw-regex
+    category: sql
+    flags: [s, i]
+    pattern: '\balter\s+table\b'
+    reason: Query text belongs under the repository SQL tree, loaded by the sanctioned loader.
+  - id: sql-drop-object
+    mode: raw-regex
+    category: sql
+    flags: [s, i]
+    pattern: '\bdrop\s+(?:table|database|view)\b'
+    reason: Query text belongs under the repository SQL tree, loaded by the sanctioned loader.
+  - id: sql-truncate-table
+    mode: raw-regex
+    category: sql
+    flags: [s, i]
+    pattern: '\btruncate\s+table\b'
+    reason: Query text belongs under the repository SQL tree, loaded by the sanctioned loader.
+  - id: sql-delete-from
+    mode: raw-regex
+    category: sql
+    flags: [s, i]
+    pattern: '\bdelete\s+from\b'
+    reason: Query text belongs under the repository SQL tree, loaded by the sanctioned loader.
+  - id: sql-optimize-table
+    mode: raw-regex
+    category: sql
+    flags: [s, i]
+    pattern: '\boptimize\s+table\b'
+    reason: Query text belongs under the repository SQL tree, loaded by the sanctioned loader.
+  - id: sql-backup-database
+    mode: raw-regex
+    category: sql
+    flags: [s, i]
+    pattern: '\bbackup\s+database\b'
+    reason: Query text belongs under the repository SQL tree, loaded by the sanctioned loader.
+  - id: interp-python-inline
+    mode: raw-regex
+    category: interpreter
+    flags: [i]
+    pattern: '\bpython[0-9.]*\s+-c\b'
+    reason: Inline interpreter payloads are an unscanned code channel.
+  - id: interp-perl-inline
+    mode: raw-regex
+    category: interpreter
+    flags: [i]
+    pattern: '\bperl\s+-e\b'
+    reason: Inline interpreter payloads are an unscanned code channel.
+  - id: interp-node-inline
+    mode: raw-regex
+    category: interpreter
+    flags: [i]
+    pattern: '\bnode\s+-e\b'
+    reason: Inline interpreter payloads are an unscanned code channel.
+  - id: interp-ruby-inline
+    mode: raw-regex
+    category: interpreter
+    flags: [i]
+    pattern: '\bruby\s+-e\b'
+    reason: Inline interpreter payloads are an unscanned code channel.
+  - id: interp-php-inline
+    mode: raw-regex
+    category: interpreter
+    flags: [i]
+    pattern: '\bphp\s+-r\b'
+    reason: Inline interpreter payloads are an unscanned code channel.
+  - id: interp-shell-inline
+    mode: raw-regex
+    category: interpreter
+    flags: [i]
+    pattern: '\b(?:bash|sh|zsh|dash)\s+-c\b'
+    reason: Inline interpreter payloads are an unscanned code channel.
+  - id: exec-clickhouse-query
+    mode: raw-regex
+    category: remote-exec
+    flags: [s, i]
+    pattern: '\bclickhouse-client\b[\s\S]{0,200}?(?:-q|--query)\b'
+    reason: Query text belongs under the repository SQL tree, loaded by the sanctioned loader.
+  - id: exec-curl-data
+    mode: raw-regex
+    category: remote-exec
+    flags: [s, i]
+    pattern: '\bcurl\b[\s\S]{0,200}?(?:-d|--data)\b'
+    reason: Remote-execution payloads are an unscanned code channel.
+
+allowed_constructs:
+  # Region form: open and close syntaxes that delimit a masked region.
+  - id: markdown-fenced-code
+    language: markdown
+    level: 1
+    open: '^[ \t]{0,3}```'
+    close: '^[ \t]{0,3}```'
+    reason: A level-one fenced code block is a sanctioned construct of Markdown.
+  # Token form: a construct that the language or format itself carries.
+  - id: markdown-inline-code-span
+    language: markdown
+    level: 1
+    pattern: '`[^`\n]+`'
+    reason: An inline code span is the Markdown construct for naming a code token in prose.
+  - id: shell-interpreter-invocation
+    language: shell
+    level: 1
+    pattern: '(?i)\b(?:bash|sh|zsh|dash)\s+-c\b'
+    reason: A shell script invoking a shell is the language carrying its own interpreter.
+  - id: yaml-declared-command
+    language: yaml
+    level: 1
+    pattern: '(?i)(?:entry|command|run|shell)\s*:[^\n]*?\b(?:bash|sh|zsh|dash)\s+-c\b'
+    reason: A declared command field in YAML is the format's sanctioned place for an interpreter invocation.
+
+exemptions: []

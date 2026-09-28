@@ -1,0 +1,17 @@
+---
+# Deploy the per-user RustSec advisory database refresh timer.
+#
+# CI wiring: make advisory-db-deploy / advisory-db-undeploy / advisory-db-refresh
+# The timer refreshes the per-user advisory checkout once a day; the cargo-deny
+# pre-commit hook refreshes it again when it is stale, then checks offline.
+#
+# Tags: deploy, undeploy
+- name: RustSec advisory database refresh (systemd user timer)
+  hosts: localhost
+  gather_facts: true
+
+  vars:
+    rust_advisory_db_project_root: '{{ playbook_dir | dirname | dirname }}'
+
+  roles:
+    - role: rust_advisory_db

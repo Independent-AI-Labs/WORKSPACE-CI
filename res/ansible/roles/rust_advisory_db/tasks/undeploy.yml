@@ -1,0 +1,22 @@
+---
+- name: Stop and disable the advisory database timer
+  ansible.builtin.systemd:
+    name: '{{ rust_advisory_db_unit }}.timer'
+    enabled: false
+    state: stopped
+    scope: user
+
+- name: Remove the advisory database timer unit
+  ansible.builtin.file:
+    path: '{{ ansible_env.HOME }}/.config/systemd/user/{{ rust_advisory_db_unit }}.timer'
+    state: absent
+
+- name: Remove the advisory database service unit
+  ansible.builtin.file:
+    path: '{{ ansible_env.HOME }}/.config/systemd/user/{{ rust_advisory_db_unit }}.service'
+    state: absent
+
+- name: Reload systemd user daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+    scope: user

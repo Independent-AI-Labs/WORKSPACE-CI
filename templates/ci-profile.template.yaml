@@ -8,7 +8,7 @@
 # make scaffold-ci ARGS=--emit-template.
 version: 1
 project: your-project-name
-languages: [python]
+languages: [python rust]
 tier: strict
 hooks:
   pre-commit:
@@ -27,10 +27,14 @@ hooks:
     - check-npm-lock-sync
     - check-policy-integrity
     - check-banned-words
-    - check-resolution-shapes
     - check-init-files
     - check-py-not-executable
     - check-markdown-docs
+    - check-resolution-shapes
+    - check-inline-code
+    - cargo-fmt
+    - cargo-clippy
+    - cargo-deny
     - check-boot-venv-layout
     - check-duplicate-dependencies
   commit-msg:
@@ -42,6 +46,6 @@ hooks:
     - check-dead-code
     - osv-scan
 
-# Total hooks: 27 (pre-commit=21 commit-msg=2 pre-push=4)
-# Generated: 2026-09-25T06:38:26Z
+# Total hooks: 31 (pre-commit=25 commit-msg=2 pre-push=4)
+# Generated: 2026-09-28T14:24:41Z
 # Source: config/required_hooks.yaml

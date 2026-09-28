@@ -215,8 +215,8 @@ immutable "$DEPLOYED" || die "deployed root sealing failed"
 [[ $(git_root -C "$DEPLOYED" rev-parse HEAD) == "$head" ]] || die "final commit mismatch"
 [[ $(git_root -C "$DEPLOYED" rev-parse 'HEAD^{tree}') == "$tree" ]] || die "final tree mismatch"
 [[ -z $(find -L "$DEPLOYED" -xdev -type l -print -quit) ]] || die "published artifact contains a dangling symlink"
-"$DEPLOYED/.boot-linux/bin/uv" run --project "$DEPLOYED" --no-sync python \
-    -c 'import yaml, pydantic' || die "published Python environment is unusable"
+env PYTHONPATH="$DEPLOYED" "$DEPLOYED/.boot-linux/bin/uv" run --project "$DEPLOYED" \
+    --no-sync python -m ci.verify_runtime || die "published Python environment is unusable"
 install -v -d -o "$owner" -g "$owner_group" -m 0755 "$home/.config/containers"
 install -v -o "$owner" -g "$owner_group" -m 0644 \
     "$DEPLOYED/.boot-linux/containers/containers.conf" \

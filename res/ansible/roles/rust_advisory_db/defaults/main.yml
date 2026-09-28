@@ -1,0 +1,8 @@
+---
+# Per-user RustSec advisory database refresh timer.
+rust_advisory_db_unit: rustsec-advisory-db-refresh
+rust_advisory_db_project_root: ''
+rust_advisory_db_script: '{{ rust_advisory_db_project_root }}/scripts/refresh-advisory-db'
+rust_advisory_db_cargo_home: "{{ lookup('env', 'CARGO_HOME') | default(ansible_env.HOME + '/.cargo', true) }}"
+rust_advisory_db_path: "{{ ansible_env.HOME }}/.cargo/advisory-db"
+rust_advisory_db_run_log: "{{ ansible_env.HOME }}/.cache/rustsec-advisory-db/refresh.log"

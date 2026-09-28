@@ -276,3 +276,42 @@ hooks:
     mandatory: true
     applicable_to:
       - any
+  - id: check-inline-code
+    kind: python_module
+    entry: ci.check_inline_code
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    applicable_to:
+      - any
+  - id: cargo-fmt
+    kind: shell
+    entry: ci_check_cargo_fmt
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    applicable_to:
+      - rust
+    files: .rs
+  - id: cargo-clippy
+    kind: shell
+    entry: ci_check_cargo_clippy
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    applicable_to:
+      - rust
+    files: .rs
+  - id: cargo-deny
+    kind: shell
+    entry: ci_check_cargo_deny
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    applicable_to:
+      - rust
+    files: (Cargo.toml|deny.toml)

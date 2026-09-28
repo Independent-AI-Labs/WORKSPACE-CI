@@ -32,7 +32,7 @@ The execution model is three stages with non-redundant responsibility:
 
 | Stage      | What runs                                                                                                                       | Why it belongs there                                                   |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| pre-commit | Format, lint, secrets, banned patterns, error-swallow, deterministic dependency validation, file length, coverage no-devolution | Fast, content-focused gates that must pass before a commit is recorded |
+| pre-commit | Format, lint, secrets, banned patterns, inline code, error-swallow, deterministic dependency validation, file length, coverage no-devolution | Fast, content-focused gates that must pass before a commit is recorded |
 | commit-msg | Message format compliance, agent-attribution blocking                                                                           | Checks only the commit message file, not the working tree              |
 | pre-push   | Full test suite + coverage thresholds, web/JS quality, co-authored history scan, advisory dead-code report                      | Expensive gates that run only when code leaves the developer's machine |
 
@@ -108,6 +108,7 @@ Scope describes which files the check scans when triggered. Checks marked
 | Secret scanning (gitleaks, 160+ patterns, all non-gitignored files)                                                  | pre-commit          | all files                                             |
 | Sensitive filename blocking (`.env`, `*.pem`, `credentials.json`, ...)                                               | pre-commit          | all files                                             |
 | Banned patterns (200+ including type suppressions, unsafe code, AI slop)                                             | pre-commit          | all files                                             |
+| Inline code in non-code contexts (query, interpreter, remote-exec payloads; allowed-construct aware)                 | pre-commit          | all non-gitignored files                              |
 | Silent-error swallow (Python `except: pass`, JS `catch {}`, Shell `\|\| true`, Ansible `ignore_errors`, Cron no-log) | pre-commit          | all tracked files                                     |
 | Duplicate / redundant dependency warning                                                                             | pre-commit          | `pyproject.toml`                                      |
 | Code formatting (`ruff format`, auto-stage + re-run)                                                                 | pre-commit          | Python files                                          |
@@ -139,6 +140,8 @@ installs no hooks.
 
 All rules are config-driven. Patterns live in [`config/banned_words.yaml`](config/banned_words.yaml)
 (with per-project overrides in [`config/banned_words_exceptions_v5.yaml`](config/banned_words_exceptions_v5.yaml)),
+inline-code rules and allowed constructs in `config/inline_code.yaml`
+(contract in [`docs/requirements/REQ-INLINE-CODE.md`](docs/requirements/REQ-INLINE-CODE.md)),
 file rules in [`config/sensitive_files.yaml`](config/sensitive_files.yaml),
 coverage gates in [`config/coverage_thresholds.yaml`](config/coverage_thresholds.yaml),
 hook registry in [`config/required_hooks.yaml`](config/required_hooks.yaml),
