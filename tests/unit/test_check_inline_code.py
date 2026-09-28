@@ -12,6 +12,8 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from ci import check_inline_code as check
+from ci import inline_code_decode as decode
+from ci import verify_runtime
 
 SQL_SELECT = (
     r"\bselect\s+(?:distinct\s+|all\s+)?(?:\*|(?:[a-z_][a-z0-9_]*"
@@ -300,3 +302,203 @@ def test_safe_path_and_anchored_policy_defeat_hostile_environment(tmp_path):
     assert proc.returncode != 0, proc.stderr
     assert "bad.sh" in proc.stdout
     assert PYTHON_RULE in proc.stdout
+
+
+def test_verify_runtime_reports_runtime(capsys):
+    assert verify_runtime.main() == 0
+    assert "runtime ok" in capsys.readouterr().out
+
+
+def test_printable_rejects_short_and_nonprintable():
+    assert decode._printable(b"abc") is None
+    assert decode._printable(b"\x00" * 8) is None
+    assert decode._printable(b"select 1") == "select 1"
+
+
+def test_b64_decode_rejects_invalid_token():
+    assert decode._b64_decode("!!!!") is None
+
+
+def test_hex_decode_rejects_invalid_token():
+    assert decode._hex_decode("zz") is None
+
+
+def test_decode_base64_finds_ascii_payload():
+    payload = "c2VsZWN0ICogZnJvbSB1c2Vycw=="
+    assert ("select * from users", 0) in decode._decode_base64(payload)
+
+
+def test_decode_base64_skips_nonprintable_payload():
+    token = base64.b64encode(b"\x00" * 8).decode()
+    assert decode._decode_base64(token) == []
+
+
+def test_decode_hex_finds_ascii_payload():
+    assert ("hello world!!!", 0) in decode._decode_hex("68656c6c6f20776f726c64212121")
+
+
+def test_decode_percent_finds_ascii_payload():
+    assert ("select 1", 0) in decode._decode_percent("%73%65%6c%65%63%74%20%31")
+
+
+def test_build_views_depth_zero_is_raw_and_normalized():
+    views = decode.build_views("plain", 0)
+    assert [view.name for view in views] == ["raw", "normalized"]
+
+
+def test_build_views_decodes_base64_payload():
+    token = base64.b64encode(b"select * from users").decode()
+    views = decode.build_views(token, 1)
+    assert any(view.name == "decoded" and "select * from users" in view.text for view in views)
+
+
+def _violation_payload() -> str:
+    return "value=$(" + "python" + "3" + " -c 'print(1)')\n"
+
+
+def test_main_reports_violation(tmp_path, monkeypatch, capsys):
+    (tmp_path / "bad.sh").write_text(_violation_payload(), encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CI_SCAN_ROOT", raising=False)
+    assert check.main(["bad.sh"]) == 1
+    out = capsys.readouterr().out
+    assert "bad.sh" in out
+    assert PYTHON_RULE in out
+
+
+def test_main_reports_clean_tree(tmp_path, monkeypatch, capsys):
+    (tmp_path / "ok.sh").write_text("echo hi\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CI_SCAN_ROOT", raising=False)
+    assert check.main(["ok.sh"]) == 0
+    assert "No inline code" in capsys.readouterr().out
+
+
+def test_main_fails_closed_on_policy_error(monkeypatch, capsys):
+    def _boom(_config_dir):
+        raise check.PolicyError("bad policy")
+
+    monkeypatch.setattr(check, "load_policy", _boom)
+    assert check.main([]) == 1
+    assert "bad policy" in capsys.readouterr().err
+
+
+def test_main_fails_closed_on_exemption_error(tmp_path, monkeypatch, capsys):
+    (tmp_path / "x.sh").write_text("echo hi\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CI_SCAN_ROOT", raising=False)
+
+    def _boom(_root):
+        raise check.PolicyError("bad exemptions")
+
+    monkeypatch.setattr(check, "load_project_exemptions", _boom)
+    assert check.main(["x.sh"]) == 1
+    assert "bad exemptions" in capsys.readouterr().err
+
+
+def test_main_fails_closed_on_scan_error(tmp_path, monkeypatch, capsys):
+    (tmp_path / "x.sh").write_text("echo hi\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CI_SCAN_ROOT", raising=False)
+
+    def _boom(*_args):
+        raise check.PolicyError("scan failed")
+
+    monkeypatch.setattr(check, "_scan_all", _boom)
+    assert check.main(["x.sh"]) == 1
+    assert "scan failed" in capsys.readouterr().err
+
+
+def test_load_project_exemptions_reads_entries(tmp_path):
+    config = tmp_path / "config"
+    config.mkdir()
+    (config / "inline_code_exceptions.yaml").write_text(
+        "exemptions:\n  - rule: r\n    path: p\n", encoding="utf-8"
+    )
+    assert check.load_project_exemptions(tmp_path) == {("r", "p")}
+
+
+def test_load_project_exemptions_rejects_non_mapping(tmp_path):
+    config = tmp_path / "config"
+    config.mkdir()
+    (config / "inline_code_exceptions.yaml").write_text(
+        "- not a mapping\n", encoding="utf-8"
+    )
+    with pytest.raises(check.PolicyError):
+        check.load_project_exemptions(tmp_path)
+
+
+def test_verify_runtime_main_guard():
+    import runpy
+
+    with pytest.raises(SystemExit) as exc:
+        runpy.run_module("ci.verify_runtime", run_name="__main__")
+    assert exc.value.code == 0
+
+
+def test_scan_file_skips_undecodable_bytes(tmp_path):
+    policy = _load(tmp_path)
+    (tmp_path / "bad.bin").write_bytes(b"\xff\xfe")
+    assert check.scan_file("bad.bin", tmp_path, policy) == []
+
+
+def test_load_project_exemptions_rejects_invalid_yaml(tmp_path):
+    config = tmp_path / "config"
+    config.mkdir()
+    (config / "inline_code_exceptions.yaml").write_text(
+        "exemptions: [\n", encoding="utf-8"
+    )
+    with pytest.raises(check.PolicyError):
+        check.load_project_exemptions(tmp_path)
+
+
+def test_load_project_exemptions_empty_is_empty(tmp_path):
+    config = tmp_path / "config"
+    config.mkdir()
+    (config / "inline_code_exceptions.yaml").write_text("", encoding="utf-8")
+    assert check.load_project_exemptions(tmp_path) == set()
+
+
+def test_main_survives_classification_failure(tmp_path, monkeypatch):
+    (tmp_path / "bad.sh").write_text(_violation_payload(), encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CI_SCAN_ROOT", raising=False)
+
+    def _boom(_root):
+        raise check.classify.ClassificationError("no classification")
+
+    monkeypatch.setattr(check.classify, "load", _boom)
+    assert check.main(["bad.sh"]) == 1
+
+
+def test_load_policy_missing_file(tmp_path):
+    with pytest.raises(check.PolicyError):
+        check.load_policy(tmp_path)
+
+
+def test_load_policy_rejects_non_mapping(tmp_path):
+    config = tmp_path / "config"
+    config.mkdir()
+    (config / "inline_code.yaml").write_text("- item\n", encoding="utf-8")
+    with pytest.raises(check.PolicyError):
+        check.load_policy(config)
+
+
+def test_load_rule_rejects_invalid_pattern(tmp_path):
+    doc = {**POLICY, "rules": [{"id": "bad", "mode": "raw-regex", "pattern": "("}]}
+    with pytest.raises(check.PolicyError):
+        _load(tmp_path, doc)
+
+
+@pytest.mark.parametrize(
+    "construct",
+    [
+        {"id": "c", "language": "shell", "pattern": "x", "open": "a", "close": "b"},
+        {"id": "c", "language": "shell"},
+        {"id": "c", "language": "shell", "open": "(", "close": ")"},
+    ],
+)
+def test_load_construct_rejects_malformed(tmp_path, construct):
+    doc = {**POLICY, "allowed_constructs": [construct]}
+    with pytest.raises(check.PolicyError):
+        _load(tmp_path, doc)
