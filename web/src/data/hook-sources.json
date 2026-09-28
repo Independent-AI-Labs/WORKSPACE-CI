@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-28T14:18:02.632986+00:00",
+  "generated_at": "2026-09-28T18:36:56.123883+00:00",
   "sources": [
     {
       "name": "ci_check_unstaged",
@@ -248,7 +248,7 @@
       "name": "ci.check_inline_code",
       "source_file": "ci/check_inline_code.py",
       "docstring": "Inline-code checker: detect code carried where a file does not declare it.",
-      "source": "def main(argv: list[str] | None = None) -> int:\n    argv = list(sys.argv[1:] if argv is None else argv)\n    config_dir = Path(os.environ.get(\"CI_CONFIG_DIR\", \"config\"))\n    root = discover.scan_root()\n    try:\n        policy = load_policy(config_dir)\n    except PolicyError as exc:\n        print(f\"inline-code: {exc}\", file=sys.stderr)\n        return 1\n\n    files = discover.tracked_files(argv, root)\n    try:\n        project_exemptions = load_project_exemptions(root)\n    except PolicyError as exc:\n        print(f\"inline-code: {exc}\", file=sys.stderr)\n        return 1\n    policy = policy._replace(exemptions=policy.exemptions | project_exemptions)\n    try:\n        classes = classify.load(root)\n    except classify.ClassificationError:\n        classes = None\n\n    try:\n        findings = _scan_all(files, root, policy, classes)\n    except PolicyError as exc:\n        print(f\"inline-code: {exc}\", file=sys.stderr)\n        return 1\n\n    for finding in findings:\n        _report(finding)\n    if findings:\n        print(f\"\\n{len(findings)} inline-code finding(s).\")\n        return 1\n    print(f\"No inline code found in {len(files)} non-gitignored file(s).\")\n    return 0",
+      "source": "def main(argv: list[str] | None = None) -> int:\n    argv = list(sys.argv[1:] if argv is None else argv)\n    config_dir = _policy_dir()\n    root = discover.scan_root()\n    try:\n        policy = load_policy(config_dir)\n    except PolicyError as exc:\n        print(f\"inline-code: {exc}\", file=sys.stderr)\n        return 1\n\n    files = discover.tracked_files(argv, root)\n    try:\n        project_exemptions = load_project_exemptions(root)\n    except PolicyError as exc:\n        print(f\"inline-code: {exc}\", file=sys.stderr)\n        return 1\n    policy = policy._replace(exemptions=policy.exemptions | project_exemptions)\n    try:\n        classes = classify.load(root)\n    except classify.ClassificationError:\n        classes = None\n\n    try:\n        findings = _scan_all(files, root, policy, classes)\n    except PolicyError as exc:\n        print(f\"inline-code: {exc}\", file=sys.stderr)\n        return 1\n\n    for finding in findings:\n        _report(finding)\n    if findings:\n        print(f\"\\n{len(findings)} inline-code finding(s).\")\n        return 1\n    print(f\"No inline code found in {len(files)} non-gitignored file(s).\")\n    return 0",
       "language": "python",
       "id": "check-inline-code",
       "description": "Inline-code checker: detect code carried where a file does not declare it."
