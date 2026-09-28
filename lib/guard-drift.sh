@@ -4,7 +4,7 @@
 # Depends on parent globals: _guard_dir, divert_is_active.
 # host-exec helpers: guard-host-exec.sh (sourced after this file).
 
-GUARD_WORKLOAD_FILE_CAP_STRING='cap_setpcap,cap_chown,cap_dac_override,cap_fowner,cap_fsetid=ep'
+GUARD_WORKLOAD_FILE_CAP_STRING='cap_setpcap,cap_chown,cap_dac_override,cap_fowner=ep'
 GUARD_GIT_SSH_WRAPPER_CAP_STRING='cap_dac_override=ep'
 
 _guard_state_dir() {
