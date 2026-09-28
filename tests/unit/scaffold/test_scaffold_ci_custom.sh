@@ -34,8 +34,8 @@ repos:
         pass_filenames: false
         always_run: true
         files: \.py$
-      - id: cargo-clippy
-        name: Cargo Clippy
+      - id: my-cargo-lint
+        name: My Cargo Lint
         entry: "bash -c 'cargo clippy -- -D warnings'"
         language: system
         pass_filenames: false
@@ -51,7 +51,7 @@ test_scaffold_lift_preserves_custom_hooks() {
     local _c="$TEST_TMP/sci-custom/.pre-commit-config.yaml"
     grep -q 'My Custom Tool' "$_c" || { echo "lost custom hook name"; return 1; }
     grep -q 'echo custom' "$_c" || { echo "lost custom hook entry"; return 1; }
-    grep -q 'Cargo Clippy' "$_c" || { echo "lost cargo hook"; return 1; }
+    grep -q 'My Cargo Lint' "$_c" || { echo "lost cargo hook"; return 1; }
     grep -qF 'files: \.py$' "$_c" || { echo "lost files pattern"; return 1; }
     local _n
     _n="$(awk '/id: my-tool/ { n++ } END { print n + 0 }' "$_c")"

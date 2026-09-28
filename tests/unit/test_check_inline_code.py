@@ -1,6 +1,8 @@
 """Tests for ci/check_inline_code.py (inline-code detection)."""
 
 import base64
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -216,3 +218,85 @@ def test_policy_dir_ignores_hostile_environment(tmp_path, monkeypatch):
         Path(check.__file__).resolve().parent.joinpath("..").resolve() / "config"
     )
     assert check._policy_dir() == expected
+
+
+TRUST_ROOT = Path(__file__).resolve().parents[2]
+PYTHON_RULE = "interp-python-inline"
+
+
+def _hostile_env(work: Path, config_dir: Path) -> dict[str, str]:
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(TRUST_ROOT)
+    env["CI_CONFIG_DIR"] = str(config_dir)
+    env["CI_CONFIG_PATH_INLINE_CODE"] = str(config_dir / "inline_code.yaml")
+    env["CI_CONFIG_OVERRIDES"] = "planted-overrides.yaml"
+    env["CI_GUARD_CONFIG_OVERRIDES"] = "planted-guard-overrides.yaml"
+    env["CI_SCAN_ROOT"] = str(work)
+    return env
+
+
+def _plant_trust_case(work: Path) -> Path:
+    payload = "value=$(" + "python" + "3" + " -c 'print(1)')\n"
+    (work / "bad.sh").write_text(payload, encoding="utf-8")
+    hostile = work / "hostile-config"
+    hostile.mkdir()
+    (hostile / "inline_code.yaml").write_text(
+        "version: 1.0.0\nrules: []\n", encoding="utf-8"
+    )
+    return hostile
+
+
+def _plant_shadow_package(work: Path) -> Path:
+    sentinel = work / "shadow-ran"
+    shadow = work / "ci"
+    shadow.mkdir()
+    (shadow / "__init__.py").write_text("", encoding="utf-8")
+    (shadow / "check_inline_code.py").write_text(
+        "from pathlib import Path\n"
+        f"Path({str(sentinel)!r}).write_text('shadow', encoding='utf-8')\n"
+        "raise SystemExit(0)\n",
+        encoding="utf-8",
+    )
+    return sentinel
+
+
+def _run_module(work: Path, config_dir: Path, use_safe_path: bool):
+    args = [sys.executable]
+    if use_safe_path:
+        args.append("-P")
+    args += ["-m", "ci.check_inline_code", "bad.sh"]
+    proc = subprocess.run(
+        args,
+        cwd=work,
+        env=_hostile_env(work, config_dir),
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        sys.stderr.write(proc.stdout)
+        sys.stderr.write(proc.stderr)
+    return proc
+
+
+def test_shadow_package_runs_without_safe_path(tmp_path):
+    """Without -P the working directory shadows the sealed package.
+
+    This documents the vulnerability the generator closes: the shadow module
+    runs and the process reports success.
+    """
+    hostile = _plant_trust_case(tmp_path)
+    sentinel = _plant_shadow_package(tmp_path)
+    proc = _run_module(tmp_path, hostile, use_safe_path=False)
+    assert sentinel.is_file()
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout == ""
+
+
+def test_safe_path_and_anchored_policy_defeat_hostile_environment(tmp_path):
+    hostile = _plant_trust_case(tmp_path)
+    sentinel = _plant_shadow_package(tmp_path)
+    proc = _run_module(tmp_path, hostile, use_safe_path=True)
+    assert not sentinel.exists()
+    assert proc.returncode != 0, proc.stderr
+    assert "bad.sh" in proc.stdout
+    assert PYTHON_RULE in proc.stdout

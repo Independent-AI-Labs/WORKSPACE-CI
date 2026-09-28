@@ -26,7 +26,7 @@ _required_unit_tests=(
     test_deploy_ci_rev.sh
     test_cleanup_precommit.sh
     test_guard_build.sh
-    test_refresh_advisory_db.sh
+    cargo/test_refresh_advisory_db.sh
     scaffold/test_scaffold_ci.sh
     scaffold/test_scaffold_ci_custom.sh
     scaffold/test_scaffold_ci_force.sh
