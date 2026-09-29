@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 # refresh-advisory-db: keep the per-user RustSec advisory database current
-# using only the git operations the workspace guard permits.
+# with a full clone, so the offline cargo-deny gate always has a checkout.
 #
-# cargo-deny updates an existing advisory checkout with `git reset --hard`,
-# which the guard blocks for every uid. This script removes the cached
-# checkout first, so `cargo deny fetch db` takes its clone-only path: the
-# only git command it runs is `git clone`.
+# cargo-deny stores a database at
+#   $db_root/<last-url-segment>-<xxh64-seed-0xca80de71(lowercased url)>
+# (advisories/helpers/db.rs url_to_db_path) and reads it offline. It fetches
+# databases itself with a shallow `git clone --depth=1`, which the git guard
+# rejects: Git spawns its index-pack helper as
+# `git --shallow-file <file> index-pack ...` and the guard refuses the
+# leading option. This script clones the database in full instead, then
+# installs it atomically, leaving any existing checkout untouched when the
+# clone fails.
 #
 # Usage:
 #   refresh-advisory-db [--if-stale [HOURS]]
@@ -20,18 +25,13 @@
 # user.
 set -euo pipefail
 
-_SELF="${BASH_SOURCE[0]:-$0}"
-case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
-_ci_lib="$(cd "$(dirname "$_SELF")/../lib" && pwd)"
-# shellcheck source=lib/ci.sh
-if ! source "$_ci_lib/ci.sh"; then
-    printf 'refresh-advisory-db: failed to source %s\n' "$_ci_lib/ci.sh" >&2
-    exit 2
-fi
-
 log() { printf '[refresh-advisory-db] %s\n' "$*" >&2; }
 
 ADVISORY_DB_URL="https://github.com/rustsec/advisory-db"
+# cargo-deny's url_to_db_path lowercases the url, hashes it with XxHash64
+# seeded with 0xca80de71, and appends the last path segment. For the RustSec
+# url the digest is 3157b0e258782691.
+ADVISORY_DB_DIR="advisory-db-3157b0e258782691"
 DEFAULT_STALE_HOURS=25
 FETCH_TIMEOUT_SECONDS=300
 
@@ -75,28 +75,14 @@ fi
 # Match cargo-deny's default db-path, ${CARGO_HOME:-$HOME/.cargo}/advisory-dbs,
 # so this refresh and the offline `cargo deny` check read the same directory.
 db_root="${WORKSPACE_ADVISORY_DB_PATH:-${CARGO_HOME:-$HOME/.cargo}/advisory-dbs}"
-
-# Resolve cargo-deny. An explicit WORKSPACE_CARGO_DENY_BIN wins (operators
-# pinning a specific binary, and the test harness isolating resolution from
-# any boot-installed cargo-deny); then the boot contract; then the cargo
-# home. cargo searches $CARGO_HOME/bin before PATH, so either location works
-# for `cargo deny`.
-cargo_deny="${WORKSPACE_CARGO_DENY_BIN:-}"
-if [[ -z "$cargo_deny" ]]; then
-    if ! cargo_deny="$(ci_resolve_tool_path "$CI_PROJECT_ROOT" cargo-deny)"; then
-        cargo_deny="${CARGO_HOME:-$HOME/.cargo}/bin/cargo-deny"
-    fi
-fi
-if [[ ! -x "$cargo_deny" ]]; then
-    log "cargo-deny not found; run scripts/bootstrap-cargo-deny"
-    exit 1
-fi
+checkout="$db_root/$ADVISORY_DB_DIR"
+mkdir -p "$db_root"
 
 # newest_commit_epoch <checkout>: print the newest advisory commit time.
 newest_commit_epoch() {
-    local checkout="$1" out
+    local dir="$1" out
     out="$(mktemp)"
-    if ! git -C "$checkout" log -1 --format=%ct >"$out" 2>&1; then
+    if ! git -C "$dir" log -1 --format=%ct >"$out" 2>&1; then
         rm -f "$out"
         return 1
     fi
@@ -104,52 +90,57 @@ newest_commit_epoch() {
     rm -f "$out"
 }
 
-# db_is_fresh: true when a checkout exists with a commit newer than the cutoff.
+# db_is_fresh: true when the checkout exists with a commit newer than the cutoff.
 db_is_fresh() {
-    local cutoff checkout epoch
+    local cutoff epoch
     cutoff=$(( $(date +%s) - stale_hours * 3600 ))
-    for checkout in "$db_root"/advisory-db-*; do
-        [[ -d "$checkout/.git" ]] || continue
-        epoch="$(newest_commit_epoch "$checkout")" || continue
-        if [[ -n "$epoch" && "$epoch" -ge "$cutoff" ]]; then
-            return 0
-        fi
-    done
-    return 1
+    [[ -d "$checkout/.git" ]] || return 1
+    epoch="$(newest_commit_epoch "$checkout")" || return 1
+    [[ -n "$epoch" && "$epoch" -ge "$cutoff" ]]
 }
 
-# fetch_db: replace the cached checkout with a fresh clone.
+# fetch_db: clone the database in full and swap it into place. The live
+# checkout is displaced only after a successful clone, so a failed refresh
+# never removes a usable database.
 fetch_db() {
-    local probe cfg out err
-    probe="$HOME/.cache/workspace-ci/advisory-db-probe"
-    mkdir -p "$probe/src"
-    printf '[package]\nname = "advisory-db-probe"\nversion = "0.0.0"\nedition = "2021"\n\n[lib]\npath = "src/lib.rs"\n' \
-        > "$probe/Cargo.toml"
-    : > "$probe/src/lib.rs"
-    cfg="$probe/deny.toml"
-    printf '[advisories]\ndb-path = "%s"\ndb-urls = ["%s"]\n' "$db_root" "$ADVISORY_DB_URL" \
-        > "$cfg"
-
-    # Drop the cached checkout so cargo-deny clones instead of updating: the
-    # update path runs `git reset --hard`, which the guard blocks.
-    rm -rf "$db_root"/advisory-db-*
-
-    out="$(mktemp)"
-    err="$(mktemp)"
+    local stage repo old
+    stage="$(mktemp -d "$db_root/.refresh.XXXXXX")"
+    repo="$stage/repo"
+    old="$stage/old"
     # Git exports GIT_DIR and friends to hooks; clear them so the clone cannot
     # be redirected into the committing repository.
-    if env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE \
+    if ! env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE \
            -u GIT_OBJECT_DIRECTORY -u GIT_COMMON_DIR \
            timeout --signal=TERM --kill-after=10s "${FETCH_TIMEOUT_SECONDS}s" \
-           "$cargo_deny" --manifest-path "$probe/Cargo.toml" --config "$cfg" fetch db \
-           >"$out" 2>"$err"; then
-        rm -f "$out" "$err"
-        return 0
+           git clone --branch main "$ADVISORY_DB_URL" "$repo"; then
+        log "advisory database clone failed"
+        rm -rf "$stage"
+        return 1
     fi
-    log "advisory database fetch failed:"
-    cat "$err" >&2
-    rm -f "$out" "$err"
-    return 1
+    if [[ ! -d "$repo/crates" ]]; then
+        log "cloned advisory database has no crates directory"
+        rm -rf "$stage"
+        return 1
+    fi
+    if [[ -e "$checkout" ]]; then
+        if ! mv "$checkout" "$old"; then
+            log "cannot displace the existing advisory database at $checkout"
+            rm -rf "$stage"
+            return 1
+        fi
+    fi
+    if ! mv "$repo" "$checkout"; then
+        log "cannot install the refreshed advisory database at $checkout"
+        if [[ -e "$old" ]]; then
+            mv "$old" "$checkout"
+        fi
+        rm -rf "$stage"
+        return 1
+    fi
+    if ! rm -rf "$stage"; then
+        log "kept the previous advisory database backup under $stage"
+    fi
+    return 0
 }
 
 if [[ $if_stale -eq 1 ]]; then

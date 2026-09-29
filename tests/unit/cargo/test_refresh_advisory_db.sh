@@ -3,6 +3,7 @@
 # Sourced by run_tests_unit.sh; test_helpers.sh is already loaded.
 
 _REFRESH_SCRIPT="$PROJECT_DIR/scripts/refresh-advisory-db"
+_REFRESH_DIR="advisory-db-3157b0e258782691"
 
 # _refresh_mock <path> <contents>: write an executable mock.
 _refresh_mock() {
@@ -12,17 +13,32 @@ _refresh_mock() {
     chmod +x "$_path"
 }
 
-# _refresh_mock_git <bindir> <epoch_file>: git that reports a fixed epoch.
+# _refresh_mock_git <bindir> <epoch_file> <clone_log>: git that reports a
+# fixed epoch for `log` and records successful `clone` invocations, creating
+# the destination with the shape the script expects.
 _refresh_mock_git() {
     _refresh_mock "$1/git" "#!/bin/sh
-cat \"$2\""
+if [ \"\$1\" = \"-C\" ]; then
+    cat \"$2\"
+    exit 0
+fi
+if [ \"\$1\" = \"clone\" ]; then
+    printf '%s\n' \"\$*\" >> \"$3\"
+    mkdir -p \"\$5/.git\" \"\$5/crates\"
+    exit 0
+fi
+exit 0"
 }
 
-# _refresh_mock_deny <cargohome> <args_file> <exit_code>
-_refresh_mock_deny() {
-    _refresh_mock "$1/bin/cargo-deny" "#!/bin/sh
-printf '%s\n' \"\$*\" >> \"$2\"
-exit $3"
+# _refresh_mock_git_fail_clone <bindir> <epoch_file>: git that reports a
+# fixed epoch but fails every clone.
+_refresh_mock_git_fail_clone() {
+    _refresh_mock "$1/git" "#!/bin/sh
+if [ \"\$1\" = \"-C\" ]; then
+    cat \"$2\"
+    exit 0
+fi
+exit 1"
 }
 
 # _refresh_run <dir> <script args...>: run the script with isolated env.
@@ -33,7 +49,6 @@ _refresh_run() {
         export HOME="$_dir/home"
         export CARGO_HOME="$_dir/cargo"
         export WORKSPACE_ADVISORY_DB_PATH="$_dir/db"
-        export WORKSPACE_CARGO_DENY_BIN="$_dir/cargo/bin/cargo-deny"
         export PATH="$_dir/bin:$PATH"
         source "$_REFRESH_SCRIPT" "$@" || exit 1
     )
@@ -41,17 +56,16 @@ _refresh_run() {
 
 test_refresh_skips_when_fresh() {
     local _dir="$TEST_TMP"
-    mkdir -p "$_dir/home" "$_dir/db/advisory-db-mock/.git" "$_dir/bin"
+    mkdir -p "$_dir/home" "$_dir/db/$_REFRESH_DIR/.git" "$_dir/bin"
     printf '%s\n' "$(( $(date +%s) + 100000 ))" > "$_dir/epoch"
-    _refresh_mock_git "$_dir/bin" "$_dir/epoch"
-    _refresh_mock_deny "$_dir/cargo" "$_dir/deny.args" 0
+    _refresh_mock_git "$_dir/bin" "$_dir/epoch" "$_dir/clone.log"
 
     local _rc=0
     _refresh_run "$_dir" --if-stale >"$_dir/out" 2>"$_dir/err" || _rc=$?
 
     [[ $_rc -eq 0 ]] || { echo "rc=$_rc"; cat "$_dir/err"; return 1; }
-    if [[ -e "$_dir/deny.args" ]]; then
-        echo "cargo-deny ran for a fresh database"
+    if [[ -e "$_dir/clone.log" ]]; then
+        echo "cloned for a fresh database"
         return 1
     fi
     return 0
@@ -59,25 +73,24 @@ test_refresh_skips_when_fresh() {
 
 test_refresh_fetches_when_stale() {
     local _dir="$TEST_TMP"
-    mkdir -p "$_dir/home" "$_dir/db/advisory-db-old/.git" "$_dir/bin"
+    mkdir -p "$_dir/home" "$_dir/db/$_REFRESH_DIR/.git" "$_dir/bin"
     printf '0\n' > "$_dir/epoch"
-    _refresh_mock_git "$_dir/bin" "$_dir/epoch"
-    _refresh_mock_deny "$_dir/cargo" "$_dir/deny.args" 0
+    _refresh_mock_git "$_dir/bin" "$_dir/epoch" "$_dir/clone.log"
 
     local _rc=0
     _refresh_run "$_dir" --if-stale >"$_dir/out" 2>"$_dir/err" || _rc=$?
 
     [[ $_rc -eq 0 ]] || { echo "rc=$_rc"; cat "$_dir/err"; return 1; }
-    if [[ ! -f "$_dir/deny.args" ]]; then
-        echo "cargo-deny did not run for a stale database"
+    if [[ ! -f "$_dir/clone.log" ]]; then
+        echo "no clone for a stale database"
         return 1
     fi
-    if ! grep -q 'fetch db' "$_dir/deny.args"; then
-        echo "fetch db not requested: $(cat "$_dir/deny.args")"
+    if ! grep -qF 'https://github.com/rustsec/advisory-db' "$_dir/clone.log"; then
+        echo "clone did not target the RustSec url: $(cat "$_dir/clone.log")"
         return 1
     fi
-    if [[ -e "$_dir/db/advisory-db-old" ]]; then
-        echo "cached checkout was not removed before the clone"
+    if [[ ! -d "$_dir/db/$_REFRESH_DIR/crates" ]]; then
+        echo "refreshed checkout has no crates directory"
         return 1
     fi
     return 0
@@ -86,22 +99,24 @@ test_refresh_fetches_when_stale() {
 test_refresh_always_fetches_without_flag() {
     local _dir="$TEST_TMP"
     mkdir -p "$_dir/home" "$_dir/db" "$_dir/bin"
-    _refresh_mock_deny "$_dir/cargo" "$_dir/deny.args" 0
+    printf '0\n' > "$_dir/epoch"
+    _refresh_mock_git "$_dir/bin" "$_dir/epoch" "$_dir/clone.log"
 
     local _rc=0
     _refresh_run "$_dir" >"$_dir/out" 2>"$_dir/err" || _rc=$?
 
     [[ $_rc -eq 0 ]] || { echo "rc=$_rc"; cat "$_dir/err"; return 1; }
-    grep -q 'fetch db' "$_dir/deny.args" || { echo "fetch db not requested"; return 1; }
+    grep -q 'clone' "$_dir/clone.log" || { echo "no clone recorded"; return 1; }
+    [[ -d "$_dir/db/$_REFRESH_DIR/crates" ]] || { echo "no checkout"; return 1; }
     return 0
 }
 
-test_refresh_if_stale_tolerates_fetch_failure() {
+test_refresh_if_stale_keeps_database_on_failure() {
     local _dir="$TEST_TMP"
-    mkdir -p "$_dir/home" "$_dir/db" "$_dir/bin"
+    mkdir -p "$_dir/home" "$_dir/db/$_REFRESH_DIR/.git" "$_dir/bin"
     printf '0\n' > "$_dir/epoch"
-    _refresh_mock_git "$_dir/bin" "$_dir/epoch"
-    _refresh_mock_deny "$_dir/cargo" "$_dir/deny.args" 1
+    printf 'keep\n' > "$_dir/db/$_REFRESH_DIR/marker"
+    _refresh_mock_git_fail_clone "$_dir/bin" "$_dir/epoch"
 
     local _rc=0
     _refresh_run "$_dir" --if-stale >"$_dir/out" 2>"$_dir/err" || _rc=$?
@@ -109,36 +124,47 @@ test_refresh_if_stale_tolerates_fetch_failure() {
     [[ $_rc -eq 0 ]] || { echo "rc=$_rc"; cat "$_dir/err"; return 1; }
     grep -q 'keeping the cached advisory database' "$_dir/err" \
         || { echo "no tolerance message"; cat "$_dir/err"; return 1; }
+    if [[ ! -e "$_dir/db/$_REFRESH_DIR/marker" ]]; then
+        echo "failed refresh removed the cached database"
+        return 1
+    fi
     return 0
 }
 
 test_refresh_default_mode_fails_on_fetch_error() {
     local _dir="$TEST_TMP"
     mkdir -p "$_dir/home" "$_dir/db" "$_dir/bin"
-    _refresh_mock_deny "$_dir/cargo" "$_dir/deny.args" 1
+    printf '0\n' > "$_dir/epoch"
+    _refresh_mock_git_fail_clone "$_dir/bin" "$_dir/epoch"
 
     local _rc=0
     _refresh_run "$_dir" >"$_dir/out" 2>"$_dir/err" || _rc=$?
 
     if [[ $_rc -eq 0 ]]; then
-        echo "default mode tolerated a failed fetch"
+        echo "default mode tolerated a failed clone"
         return 1
     fi
     return 0
 }
 
-test_refresh_requires_cargo_deny() {
+test_refresh_rejects_missing_crates() {
     local _dir="$TEST_TMP"
-    mkdir -p "$_dir/home" "$_dir/db" "$_dir/cargo/bin"
+    mkdir -p "$_dir/home" "$_dir/db" "$_dir/bin"
+    _refresh_mock "$_dir/bin/git" "#!/bin/sh
+if [ \"\$1\" = \"clone\" ]; then
+    mkdir -p \"\$5/.git\"
+    exit 0
+fi
+exit 0"
 
     local _rc=0
     _refresh_run "$_dir" >"$_dir/out" 2>"$_dir/err" || _rc=$?
 
     if [[ $_rc -eq 0 ]]; then
-        echo "missing cargo-deny was accepted"
+        echo "accepted a checkout without crates"
         return 1
     fi
-    grep -q 'cargo-deny not found' "$_dir/err" \
+    grep -q 'no crates directory' "$_dir/err" \
         || { echo "missing diagnostic"; cat "$_dir/err"; return 1; }
     return 0
 }
@@ -146,22 +172,21 @@ test_refresh_requires_cargo_deny() {
 test_refresh_default_db_path_uses_cargo_home() {
     local _dir="$TEST_TMP"
     mkdir -p "$_dir/user" "$_dir/bin"
-    _refresh_mock_deny "$_dir/cargo" "$_dir/deny.args" 0
+    printf '0\n' > "$_dir/epoch"
+    _refresh_mock_git "$_dir/bin" "$_dir/epoch" "$_dir/clone.log"
 
     local _rc=0
     (
         export HOME="$_dir/user"
         export CARGO_HOME="$_dir/cargo"
-        export WORKSPACE_CARGO_DENY_BIN="$_dir/cargo/bin/cargo-deny"
         export PATH="$_dir/bin:$PATH"
         unset WORKSPACE_ADVISORY_DB_PATH
         source "$_REFRESH_SCRIPT" || exit 1
     ) >"$_dir/out" 2>"$_dir/err" || _rc=$?
 
     [[ $_rc -eq 0 ]] || { echo "rc=$_rc"; cat "$_dir/err"; return 1; }
-    local _cfg="$_dir/user/.cache/workspace-ci/advisory-db-probe/deny.toml"
-    grep -qF "db-path = \"$_dir/cargo/advisory-dbs\"" "$_cfg" \
-        || { echo "default db-path is not CARGO_HOME/advisory-dbs: $(cat "$_cfg")"; return 1; }
+    [[ -d "$_dir/cargo/advisory-dbs/$_REFRESH_DIR/crates" ]] \
+        || { echo "default db-path is not CARGO_HOME/advisory-dbs"; return 1; }
     return 0
 }
 
@@ -193,10 +218,10 @@ echo "=== refresh-advisory-db tests ==="
 for t in test_refresh_skips_when_fresh \
          test_refresh_fetches_when_stale \
          test_refresh_always_fetches_without_flag \
-         test_refresh_if_stale_tolerates_fetch_failure \
+         test_refresh_if_stale_keeps_database_on_failure \
          test_refresh_default_mode_fails_on_fetch_error \
+         test_refresh_rejects_missing_crates \
          test_refresh_default_db_path_uses_cargo_home \
-         test_cargo_deny_config_discovers_upward \
-         test_refresh_requires_cargo_deny; do
+         test_cargo_deny_config_discovers_upward; do
     _run_test "$t" "$t"
 done
