@@ -63,9 +63,10 @@ semantics.
    carry code that belongs in that file.
 3. **Allowed construct** is a code construct that policy declares to be
    permitted for a language or format. An allowed construct is excluded from
-   inline-code detection at scan time. A construct is declared either as a
-   region, by opening and closing syntax, or as a token, by a single pattern
-   whose matches are excluded.
+   inline-code detection at scan time. A construct is declared as a region,
+   by opening and closing syntax; as a token, by a single pattern whose
+   matches are excluded; or as a category, by naming one rule category whose
+   matches are excluded for the language.
 4. **Level** is the nesting depth of a construct. A level-one construct is not
    nested inside another allowed construct.
 
@@ -106,10 +107,11 @@ semantics.
    per file path.
 2. Each allowed-construct entry MUST declare a stable identity, the language
    or format selector that activates it, the permitted level, the reason it is
-   allowed, and either the opening and closing syntax (region form) or a single
-   token pattern (token form).
+   allowed, and exactly one selector: the opening and closing syntax (region
+   form), a single token pattern (token form), or a rule category (category
+   form).
 3. The checker MUST apply allowed constructs at scan time by excluding their
-   byte regions from detection while preserving the offset map.
+   content from detection while preserving the offset map.
 4. The default policy MUST allow level-one fenced code blocks in Markdown
    documents.
 5. A construct at a level other than the declared level MUST remain subject to
@@ -118,6 +120,13 @@ semantics.
 7. Excluding an allowed construct MUST NOT exclude content outside its region.
 8. Adding, changing, or removing an allowed construct is a policy change and
    MUST follow the reviewed policy procedure of this project.
+9. A category-form construct MUST exclude only the rules whose declared
+   category equals the named category. Every rule of every other category
+   MUST remain active for the language.
+10. The default policy MUST declare SQL statement syntax as the category-form
+    allowed construct for SQL source files, so SQL is permitted in a SQL
+    source file while interpreter invocations and remote-execution payloads
+    remain subject to detection there.
 
 ## 8. Exemptions
 
@@ -212,4 +221,7 @@ Acceptance tests MUST prove:
    that fails on unreviewed drift;
 10. the protected hook path performs no network access and loads no learned
     model;
-11. the optional analysis mode is inert unless explicitly requested.
+11. the optional analysis mode is inert unless explicitly requested;
+12. a category-form construct excludes only its named category: a SQL source
+    file allows SQL statement syntax while interpreter invocations and
+    remote-execution payloads in the same file are still reported.

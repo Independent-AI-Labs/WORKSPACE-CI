@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-29T06:35:13.092733+00:00",
+  "generated_at": "2026-09-29T08:45:02.140771+00:00",
   "sources": [
     {
       "name": "ci_check_unstaged",
@@ -274,8 +274,8 @@
     {
       "name": "ci_check_cargo_deny",
       "source_file": "lib/checks_cargo.sh",
-      "docstring": "ci_check_cargo_deny: refresh the advisory database when it is stale, then run the offline dependency-policy check.",
-      "source": "ci_check_cargo_deny() {\n    local root cargo_bin refresh\n    root=\"$(git rev-parse --show-toplevel)\" || return 1\n    if ! cargo_bin=\"$(command -v cargo)\"; then\n        ci_fail \"cargo is required but not on PATH\"\n        return 1\n    fi\n    refresh=\"$CI_PROJECT_ROOT/scripts/refresh-advisory-db\"\n    if [[ -x \"$refresh\" ]]; then\n        \"$refresh\" --if-stale \\\n            || ci_warn \"advisory database refresh unavailable; using the cached database\"\n    fi\n    if ! (cd \"$root\" && \"$cargo_bin\" deny --offline --no-default-features check); then\n        ci_fail \"cargo deny check reported findings\"\n        return 1\n    fi\n    ci_pass \"cargo deny check is clean\"\n}",
+      "docstring": "ci_check_cargo_deny: refresh the advisory database when it is stale, then run the offline dependency-policy check (advisories only when the repository declares no deny.toml).",
+      "source": "ci_check_cargo_deny() {\n    local root cargo_bin refresh config\n    root=\"$(git rev-parse --show-toplevel)\" || return 1\n    if ! cargo_bin=\"$(command -v cargo)\"; then\n        ci_fail \"cargo is required but not on PATH\"\n        return 1\n    fi\n    refresh=\"$CI_PROJECT_ROOT/scripts/refresh-advisory-db\"\n    if [[ -x \"$refresh\" ]]; then\n        \"$refresh\" --if-stale \\\n            || ci_warn \"advisory database refresh unavailable; using the cached database\"\n    fi\n    if config=\"$(_ci_cargo_deny_config \"$root\")\"; then\n        if ! (cd \"$root\" && \"$cargo_bin\" deny --offline --no-default-features check); then\n            ci_fail \"cargo deny check failed\"\n            return 1\n        fi\n    else\n        ci_warn \"no deny.toml found under $root; checking advisories only\"\n        if ! (cd \"$root\" && \"$cargo_bin\" deny --offline --no-default-features check advisories); then\n            ci_fail \"cargo deny advisories check failed\"\n            return 1\n        fi\n    fi\n    ci_pass \"cargo deny check is clean\"\n}",
       "language": "bash",
       "id": "cargo-deny",
       "description": ""

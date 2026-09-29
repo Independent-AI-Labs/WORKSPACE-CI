@@ -72,7 +72,9 @@ if [[ $EUID -eq 0 ]]; then
     exit 1
 fi
 
-db_root="${WORKSPACE_ADVISORY_DB_PATH:-$HOME/.cargo/advisory-db}"
+# Match cargo-deny's default db-path, ${CARGO_HOME:-$HOME/.cargo}/advisory-dbs,
+# so this refresh and the offline `cargo deny` check read the same directory.
+db_root="${WORKSPACE_ADVISORY_DB_PATH:-${CARGO_HOME:-$HOME/.cargo}/advisory-dbs}"
 
 # Resolve cargo-deny. An explicit WORKSPACE_CARGO_DENY_BIN wins (operators
 # pinning a specific binary, and the test harness isolating resolution from

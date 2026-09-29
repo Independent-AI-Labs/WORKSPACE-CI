@@ -34,9 +34,10 @@ The sealed `config/inline_code.yaml` declares the universal policy:
   (`raw-regex` or `normalized-token`), category, case behavior, boundary
   behavior, and pattern.
 - `allowed_constructs`: per-language or per-format constructs excluded at scan
-  time. An entry is either a region, declared by opening and closing syntax, or
-  a token, declared by a single pattern; each carries an identity, language
-  selector, permitted level, and reason.
+  time. An entry is a region, declared by opening and closing syntax; a token,
+  declared by a single pattern; or a category, declared by a rule category
+  name. Each carries an identity, language selector, permitted level, and
+  reason.
 - `decode`: the declared and bounded encoding and compression depth.
 
 A consumer repository supplies project exemptions in
@@ -63,10 +64,12 @@ For each discovered file:
 2. Apply strict UTF-8 input validation, failing closed on invalid bytes, NUL
    bytes, and unreadable input.
 3. Detect the language or format and select the active allowed constructs.
-4. Mask allowed construct regions, preserving the offset map. An unterminated
-   construct is an error.
+4. Mask allowed construct regions and token matches, preserving the offset
+   map. A category-form construct removes its named category from the rules
+   matched in step 6. An unterminated region is an error.
 5. Compute the normalized views and the declared decode views once.
-6. Match every rule against the masked content in each required view.
+6. Match every remaining rule (a category excluded by a category-form
+   construct is not matched) against the masked content in each required view.
 7. Report findings with original location, matched text, and matched view.
 8. Resolve exemptions and emit the receipt.
 
@@ -88,6 +91,14 @@ format, not the file path, selects which constructs are active.
 The mechanism is data, not code: a new language is supported by adding a
 declared construct, reviewed as a policy change. No checker code change is
 required to allow a new construct.
+
+A category-form construct names a rule category instead of carrying syntax.
+Its active language excludes every rule of that category from matching; the
+matches of those rules are the construct. Rules of every other category stay
+active, so a SQL source file allows SQL statement syntax while an interpreter
+invocation or remote-execution payload written in the same file is still
+reported. The default policy declares the `sql` category for the `sql`
+language this way, and the language is selected by the `.sql` extension.
 
 ## 6. Findings And Exit Codes
 

@@ -110,3 +110,6 @@ fields:
     type: string
     required: true
     description: "Stable rule identity this exemption applies to."
+  - path: allowed_constructs[].category
+    type: string
+    description: Category form. A rule category whose matches are excluded for the language, declared instead of pattern or open/close.

@@ -84,6 +84,7 @@ POLICY = {
             ),
             "reason": "yaml command field",
         },
+        {"id": "sql", "language": "sql", "level": 1, "category": "sql", "reason": "r"},
     ],
     "exemptions": [],
 }
@@ -115,6 +116,14 @@ def test_sql_outside_markdown_fence_detected(tmp_path):
     assert [f.rule.id for f in check.scan_file(name, tmp_path, policy)] == [
         "sql-select-from"
     ]
+
+
+def test_sql_category_allows_sql_but_not_payloads(tmp_path):
+    policy = _load(tmp_path)
+    q = _write(tmp_path, "q.sql", "SELECT a FROM t;\n")
+    assert check.scan_file(q, tmp_path, policy) == []
+    q = _write(tmp_path, "q.sql", "bash -c x\n")
+    assert [f.rule.id for f in check.scan_file(q, tmp_path, policy)] == ["interp-shell"]
 
 
 def test_multiline_sql_detected(tmp_path):
@@ -315,11 +324,8 @@ def test_printable_rejects_short_and_nonprintable():
     assert decode._printable(b"select 1") == "select 1"
 
 
-def test_b64_decode_rejects_invalid_token():
+def test_decode_rejects_invalid_tokens():
     assert decode._b64_decode("!!!!") is None
-
-
-def test_hex_decode_rejects_invalid_token():
     assert decode._hex_decode("zz") is None
 
 
@@ -496,6 +502,8 @@ def test_load_rule_rejects_invalid_pattern(tmp_path):
         {"id": "c", "language": "shell", "pattern": "x", "open": "a", "close": "b"},
         {"id": "c", "language": "shell"},
         {"id": "c", "language": "shell", "open": "(", "close": ")"},
+        {"id": "c", "language": "sql", "category": "sql", "pattern": "x"},
+        {"id": "c", "language": "sql", "open": "a"},
     ],
 )
 def test_load_construct_rejects_malformed(tmp_path, construct):

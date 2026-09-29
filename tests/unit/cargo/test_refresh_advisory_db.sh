@@ -143,6 +143,50 @@ test_refresh_requires_cargo_deny() {
     return 0
 }
 
+test_refresh_default_db_path_uses_cargo_home() {
+    local _dir="$TEST_TMP"
+    mkdir -p "$_dir/user" "$_dir/bin"
+    _refresh_mock_deny "$_dir/cargo" "$_dir/deny.args" 0
+
+    local _rc=0
+    (
+        export HOME="$_dir/user"
+        export CARGO_HOME="$_dir/cargo"
+        export WORKSPACE_CARGO_DENY_BIN="$_dir/cargo/bin/cargo-deny"
+        export PATH="$_dir/bin:$PATH"
+        unset WORKSPACE_ADVISORY_DB_PATH
+        source "$_REFRESH_SCRIPT" || exit 1
+    ) >"$_dir/out" 2>"$_dir/err" || _rc=$?
+
+    [[ $_rc -eq 0 ]] || { echo "rc=$_rc"; cat "$_dir/err"; return 1; }
+    local _cfg="$_dir/user/.cache/workspace-ci/advisory-db-probe/deny.toml"
+    grep -qF "db-path = \"$_dir/cargo/advisory-dbs\"" "$_cfg" \
+        || { echo "default db-path is not CARGO_HOME/advisory-dbs: $(cat "$_cfg")"; return 1; }
+    return 0
+}
+
+test_cargo_deny_config_discovers_upward() {
+    # shellcheck source=lib/checks_cargo.sh
+    source "$PROJECT_DIR/lib/checks_cargo.sh" || return 1
+    local _dir="$TEST_TMP" _found
+    mkdir -p "$_dir/repo/sub"
+    printf '[advisories]\n' > "$_dir/repo/deny.toml"
+    if ! _found="$(_ci_cargo_deny_config "$_dir/repo/sub")"; then
+        echo "parent deny.toml was not discovered"
+        return 1
+    fi
+    [[ "$_found" == "$_dir/repo/deny.toml" ]] || {
+        echo "wrong config: $_found"
+        return 1
+    }
+    rm -f "$_dir/repo/deny.toml"
+    if [[ -n "$(_ci_cargo_deny_config "$_dir/repo/sub")" ]]; then
+        echo "config reported with none on disk"
+        return 1
+    fi
+    return 0
+}
+
 echo ""
 echo "=== refresh-advisory-db tests ==="
 
@@ -151,6 +195,8 @@ for t in test_refresh_skips_when_fresh \
          test_refresh_always_fetches_without_flag \
          test_refresh_if_stale_tolerates_fetch_failure \
          test_refresh_default_mode_fails_on_fetch_error \
+         test_refresh_default_db_path_uses_cargo_home \
+         test_cargo_deny_config_discovers_upward \
          test_refresh_requires_cargo_deny; do
     _run_test "$t" "$t"
 done

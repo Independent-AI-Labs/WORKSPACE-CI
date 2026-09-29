@@ -138,5 +138,10 @@ allowed_constructs:
     level: 1
     pattern: '(?i)(?:entry|command|run|shell)\s*:[^\n]*?\b(?:bash|sh|zsh|dash)\s+-c\b'
     reason: A declared command field in YAML is the format's sanctioned place for an interpreter invocation.
+  - id: sql-source-statements
+    language: sql
+    level: 1
+    category: sql
+    reason: SQL statement syntax is the sanctioned content of a SQL source file
 
 exemptions: []

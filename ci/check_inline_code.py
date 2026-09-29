@@ -4,10 +4,11 @@ Contract: docs/requirements/REQ-INLINE-CODE.md,
 specification: docs/specifications/SPEC-INLINE-CODE.md.
 
 The checker reuses the normalization views and discovery of
-``ci.banned_scan``. It scans every non-gitignored file, masks constructs
-that policy declares allowed for the file's language (for example a
-level-one fenced code block in Markdown), and matches code-signature
-rules against the original, normalized, and decoded views.
+``ci.banned_scan``. It scans every non-gitignored file, excludes constructs
+that policy declares allowed for the file's language (a level-one fenced
+code block in Markdown, a token such as a shell interpreter invocation, or
+a named rule category such as SQL in a SQL source file), and matches
+code-signature rules against the original, normalized, and decoded views.
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ DEFAULT_LANGUAGES: dict[str, str] = {
     ".zsh": "shell",
     ".yml": "yaml",
     ".yaml": "yaml",
+    ".sql": "sql",
 }
 
 _SHEBANG_INTERPRETERS: tuple[str, ...] = (
@@ -84,6 +86,7 @@ class Construct(NamedTuple):
     open: str = ""
     close: str = ""
     pattern: str = ""
+    category: str = ""
     open_re: re.Pattern[str] | None = None
     close_re: re.Pattern[str] | None = None
     pattern_re: re.Pattern[str] | None = None
@@ -148,20 +151,26 @@ def _load_construct(entry: dict) -> Construct:
     open_pattern = str(entry.get("open", ""))
     close_pattern = str(entry.get("close", ""))
     token_pattern = str(entry.get("pattern", ""))
-    if token_pattern and (open_pattern or close_pattern):
+    category = str(entry.get("category", ""))
+    selectors = [
+        bool(token_pattern),
+        bool(open_pattern or close_pattern),
+        bool(category),
+    ]
+    if sum(selectors) != 1:
         msg = (
-            f"construct {entry.get('id')}: declare either a pattern or "
-            "open/close, not both"
+            f"construct {entry.get('id')}: declare exactly one of a pattern, "
+            "open/close, or a category"
         )
         raise PolicyError(msg)
-    if not token_pattern and not (open_pattern and close_pattern):
-        msg = f"construct {entry.get('id')}: needs a pattern or both open and close"
+    if bool(open_pattern) != bool(close_pattern):
+        msg = f"construct {entry.get('id')}: open and close must be declared together"
         raise PolicyError(msg)
     open_re = close_re = pattern_re = None
     try:
         if token_pattern:
             pattern_re = re.compile(token_pattern)
-        else:
+        elif not category:
             open_re = re.compile(open_pattern)
             close_re = re.compile(close_pattern)
     except re.error as exc:
@@ -175,6 +184,7 @@ def _load_construct(entry: dict) -> Construct:
         open=open_pattern,
         close=close_pattern,
         pattern=token_pattern,
+        category=category,
         open_re=open_re,
         close_re=close_re,
         pattern_re=pattern_re,
@@ -254,6 +264,15 @@ def _active_constructs(language: str | None, policy: Policy) -> list[Construct]:
     return [c for c in policy.constructs if c.language == language]
 
 
+def _allowed_categories(language: str | None, policy: Policy) -> set[str]:
+    """Rule categories a category-form construct excludes for the language."""
+    if language is None:
+        return set()
+    return {
+        c.category for c in policy.constructs if c.language == language and c.category
+    }
+
+
 def _opens(body: str, active: list[Construct]) -> Construct | None:
     for construct in active:
         if construct.open_re is not None and construct.open_re.match(body):
@@ -270,10 +289,11 @@ def _blank(chars: list[str], start: int, end: int) -> None:
 def mask_allowed_constructs(text: str, language: str | None, policy: Policy) -> str:
     """Replace allowed construct regions with spaces, preserving offsets.
 
-    A construct either declares an open/close region (for example a fenced
-    code block) or a token pattern (for example an interpreter invocation
-    that the language itself carries). Both forms are excluded from
-    detection without shifting any later byte.
+    A construct declares an open/close region (for example a fenced code
+    block) or a token pattern (for example an interpreter invocation that
+    the language itself carries); both are excluded here without shifting
+    any later byte. A category-form construct has neither and is handled by
+    the caller, which leaves its named rule category unmatched.
     """
     active = _active_constructs(language, policy)
     if not active:
@@ -342,13 +362,15 @@ def scan_file(rel: str, root: Path, policy: Policy) -> list[Finding]:
     except UnicodeDecodeError:
         return []
 
-    masked = mask_allowed_constructs(text, detect_language(rel, text), policy)
+    language = detect_language(rel, text)
+    masked = mask_allowed_constructs(text, language, policy)
     views = build_views(masked, policy.decode_depth)
     locate = _line_map(text)
 
+    allowed = _allowed_categories(language, policy)
     findings: list[Finding] = []
     for rule in policy.rules:
-        if (rule.id, rel) in policy.exemptions:
+        if (rule.id, rel) in policy.exemptions or rule.category in allowed:
             continue
         findings.extend(_matches_in(rule, views, rel, locate))
     return findings
