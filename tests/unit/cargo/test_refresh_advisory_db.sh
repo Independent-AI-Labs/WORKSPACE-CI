@@ -33,6 +33,7 @@ _refresh_run() {
         export HOME="$_dir/home"
         export CARGO_HOME="$_dir/cargo"
         export WORKSPACE_ADVISORY_DB_PATH="$_dir/db"
+        export WORKSPACE_CARGO_DENY_BIN="$_dir/cargo/bin/cargo-deny"
         export PATH="$_dir/bin:$PATH"
         source "$_REFRESH_SCRIPT" "$@" || exit 1
     )

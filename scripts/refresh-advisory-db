@@ -74,11 +74,16 @@ fi
 
 db_root="${WORKSPACE_ADVISORY_DB_PATH:-$HOME/.cargo/advisory-db}"
 
-# Resolve cargo-deny through the boot contract; if that misses, use the
-# cargo home. cargo searches $CARGO_HOME/bin before PATH, so either location
-# works for `cargo deny`.
-if ! cargo_deny="$(ci_resolve_tool_path "$CI_PROJECT_ROOT" cargo-deny)"; then
-    cargo_deny="${CARGO_HOME:-$HOME/.cargo}/bin/cargo-deny"
+# Resolve cargo-deny. An explicit WORKSPACE_CARGO_DENY_BIN wins (operators
+# pinning a specific binary, and the test harness isolating resolution from
+# any boot-installed cargo-deny); then the boot contract; then the cargo
+# home. cargo searches $CARGO_HOME/bin before PATH, so either location works
+# for `cargo deny`.
+cargo_deny="${WORKSPACE_CARGO_DENY_BIN:-}"
+if [[ -z "$cargo_deny" ]]; then
+    if ! cargo_deny="$(ci_resolve_tool_path "$CI_PROJECT_ROOT" cargo-deny)"; then
+        cargo_deny="${CARGO_HOME:-$HOME/.cargo}/bin/cargo-deny"
+    fi
 fi
 if [[ ! -x "$cargo_deny" ]]; then
     log "cargo-deny not found; run scripts/bootstrap-cargo-deny"
