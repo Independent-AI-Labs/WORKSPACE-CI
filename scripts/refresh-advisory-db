@@ -8,9 +8,12 @@
 # databases itself with a shallow `git clone --depth=1`, which the git guard
 # rejects: Git spawns its index-pack helper as
 # `git --shallow-file <file> index-pack ...` and the guard refuses the
-# leading option. This script clones the database in full instead, then
-# installs it atomically, leaving any existing checkout untouched when the
-# clone fails.
+# leading option. This script refreshes the database itself with the git
+# operations the guard permits: a full clone when the checkout is absent,
+# and an in-place fast-forward `git pull` when it exists. The guard chowns a
+# checkout's .git to root, so an existing checkout cannot be removed and
+# replaced by the user; updating in place avoids leaving undeletable
+# leftovers. A failed refresh leaves the existing checkout untouched.
 #
 # Usage:
 #   refresh-advisory-db [--if-stale [HOURS]]
@@ -99,14 +102,31 @@ db_is_fresh() {
     [[ -n "$epoch" && "$epoch" -ge "$cutoff" ]]
 }
 
-# fetch_db: clone the database in full and swap it into place. The live
-# checkout is displaced only after a successful clone, so a failed refresh
-# never removes a usable database.
+# fetch_db: refresh the checkout. An absent checkout is cloned in full into a
+# staging directory and moved into place; an existing checkout is
+# fast-forwarded in place. A failed refresh leaves the live checkout as it
+# was.
 fetch_db() {
-    local stage repo old
+    if [[ -d "$checkout/.git" ]]; then
+        # The guard chowns a checkout's .git to root, so the user cannot
+        # remove an existing checkout; refresh it in place instead.
+        if ! env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE \
+               -u GIT_OBJECT_DIRECTORY -u GIT_COMMON_DIR \
+               timeout --signal=TERM --kill-after=10s "${FETCH_TIMEOUT_SECONDS}s" \
+               git -C "$checkout" pull --ff-only origin main; then
+            log "advisory database update failed"
+            return 1
+        fi
+        if [[ ! -d "$checkout/crates" ]]; then
+            log "refreshed advisory database has no crates directory"
+            return 1
+        fi
+        return 0
+    fi
+
+    local stage repo
     stage="$(mktemp -d "$db_root/.refresh.XXXXXX")"
     repo="$stage/repo"
-    old="$stage/old"
     # Git exports GIT_DIR and friends to hooks; clear them so the clone cannot
     # be redirected into the committing repository.
     if ! env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE \
@@ -122,24 +142,12 @@ fetch_db() {
         rm -rf "$stage"
         return 1
     fi
-    if [[ -e "$checkout" ]]; then
-        if ! mv "$checkout" "$old"; then
-            log "cannot displace the existing advisory database at $checkout"
-            rm -rf "$stage"
-            return 1
-        fi
-    fi
     if ! mv "$repo" "$checkout"; then
-        log "cannot install the refreshed advisory database at $checkout"
-        if [[ -e "$old" ]]; then
-            mv "$old" "$checkout"
-        fi
+        log "cannot install the advisory database at $checkout"
         rm -rf "$stage"
         return 1
     fi
-    if ! rm -rf "$stage"; then
-        log "kept the previous advisory database backup under $stage"
-    fi
+    rm -rf "$stage"
     return 0
 }
 

@@ -13,30 +13,37 @@ _refresh_mock() {
     chmod +x "$_path"
 }
 
-# _refresh_mock_git <bindir> <epoch_file> <clone_log>: git that reports a
-# fixed epoch for `log` and records successful `clone` invocations, creating
-# the destination with the shape the script expects.
+# _refresh_mock_git <bindir> <epoch_file> <op_log>: git that reports a fixed
+# epoch for `log`, records `pull`/`clone`, and gives a clone the shape the
+# script expects.
 _refresh_mock_git() {
-    _refresh_mock "$1/git" "#!/bin/sh
+    local _bin="$1" _epoch="$2" _log="$3"
+    _refresh_mock "$_bin/git" "#!/bin/sh
 if [ \"\$1\" = \"-C\" ]; then
-    cat \"$2\"
+    case \"\$3\" in
+        log) cat \"$_epoch\" ;;
+        pull) printf 'pull %s\n' \"\$*\" >> \"$_log\"; mkdir -p \"\$2/crates\" ;;
+    esac
     exit 0
 fi
 if [ \"\$1\" = \"clone\" ]; then
-    printf '%s\n' \"\$*\" >> \"$3\"
+    printf 'clone %s\n' \"\$*\" >> \"$_log\"
     mkdir -p \"\$5/.git\" \"\$5/crates\"
     exit 0
 fi
 exit 0"
 }
 
-# _refresh_mock_git_fail_clone <bindir> <epoch_file>: git that reports a
-# fixed epoch but fails every clone.
-_refresh_mock_git_fail_clone() {
-    _refresh_mock "$1/git" "#!/bin/sh
+# _refresh_mock_git_fail <bindir> <epoch_file> <op_log>: git that reports a
+# fixed epoch but fails every clone and pull.
+_refresh_mock_git_fail() {
+    local _bin="$1" _epoch="$2" _log="$3"
+    _refresh_mock "$_bin/git" "#!/bin/sh
 if [ \"\$1\" = \"-C\" ]; then
-    cat \"$2\"
-    exit 0
+    case \"\$3\" in
+        log) cat \"$_epoch\"; exit 0 ;;
+    esac
+    exit 1
 fi
 exit 1"
 }
@@ -58,55 +65,46 @@ test_refresh_skips_when_fresh() {
     local _dir="$TEST_TMP"
     mkdir -p "$_dir/home" "$_dir/db/$_REFRESH_DIR/.git" "$_dir/bin"
     printf '%s\n' "$(( $(date +%s) + 100000 ))" > "$_dir/epoch"
-    _refresh_mock_git "$_dir/bin" "$_dir/epoch" "$_dir/clone.log"
+    _refresh_mock_git "$_dir/bin" "$_dir/epoch" "$_dir/ops.log"
 
     local _rc=0
     _refresh_run "$_dir" --if-stale >"$_dir/out" 2>"$_dir/err" || _rc=$?
 
     [[ $_rc -eq 0 ]] || { echo "rc=$_rc"; cat "$_dir/err"; return 1; }
-    if [[ -e "$_dir/clone.log" ]]; then
-        echo "cloned for a fresh database"
+    if [[ -e "$_dir/ops.log" ]]; then
+        echo "refreshed for a fresh database"
         return 1
     fi
     return 0
 }
 
-test_refresh_fetches_when_stale() {
+test_refresh_updates_when_stale() {
     local _dir="$TEST_TMP"
     mkdir -p "$_dir/home" "$_dir/db/$_REFRESH_DIR/.git" "$_dir/bin"
     printf '0\n' > "$_dir/epoch"
-    _refresh_mock_git "$_dir/bin" "$_dir/epoch" "$_dir/clone.log"
+    _refresh_mock_git "$_dir/bin" "$_dir/epoch" "$_dir/ops.log"
 
     local _rc=0
     _refresh_run "$_dir" --if-stale >"$_dir/out" 2>"$_dir/err" || _rc=$?
 
     [[ $_rc -eq 0 ]] || { echo "rc=$_rc"; cat "$_dir/err"; return 1; }
-    if [[ ! -f "$_dir/clone.log" ]]; then
-        echo "no clone for a stale database"
-        return 1
-    fi
-    if ! grep -qF 'https://github.com/rustsec/advisory-db' "$_dir/clone.log"; then
-        echo "clone did not target the RustSec url: $(cat "$_dir/clone.log")"
-        return 1
-    fi
-    if [[ ! -d "$_dir/db/$_REFRESH_DIR/crates" ]]; then
-        echo "refreshed checkout has no crates directory"
-        return 1
-    fi
+    grep -q '^pull ' "$_dir/ops.log" \
+        || { echo "no in-place update for a stale database: $(cat "$_dir/ops.log")"; return 1; }
     return 0
 }
 
-test_refresh_always_fetches_without_flag() {
+test_refresh_clones_when_absent() {
     local _dir="$TEST_TMP"
     mkdir -p "$_dir/home" "$_dir/db" "$_dir/bin"
     printf '0\n' > "$_dir/epoch"
-    _refresh_mock_git "$_dir/bin" "$_dir/epoch" "$_dir/clone.log"
+    _refresh_mock_git "$_dir/bin" "$_dir/epoch" "$_dir/ops.log"
 
     local _rc=0
     _refresh_run "$_dir" >"$_dir/out" 2>"$_dir/err" || _rc=$?
 
     [[ $_rc -eq 0 ]] || { echo "rc=$_rc"; cat "$_dir/err"; return 1; }
-    grep -q 'clone' "$_dir/clone.log" || { echo "no clone recorded"; return 1; }
+    grep -qF 'clone --branch main https://github.com/rustsec/advisory-db' "$_dir/ops.log" \
+        || { echo "clone did not target the RustSec url: $(cat "$_dir/ops.log")"; return 1; }
     [[ -d "$_dir/db/$_REFRESH_DIR/crates" ]] || { echo "no checkout"; return 1; }
     return 0
 }
@@ -116,7 +114,7 @@ test_refresh_if_stale_keeps_database_on_failure() {
     mkdir -p "$_dir/home" "$_dir/db/$_REFRESH_DIR/.git" "$_dir/bin"
     printf '0\n' > "$_dir/epoch"
     printf 'keep\n' > "$_dir/db/$_REFRESH_DIR/marker"
-    _refresh_mock_git_fail_clone "$_dir/bin" "$_dir/epoch"
+    _refresh_mock_git_fail "$_dir/bin" "$_dir/epoch" "$_dir/ops.log"
 
     local _rc=0
     _refresh_run "$_dir" --if-stale >"$_dir/out" 2>"$_dir/err" || _rc=$?
@@ -135,7 +133,7 @@ test_refresh_default_mode_fails_on_fetch_error() {
     local _dir="$TEST_TMP"
     mkdir -p "$_dir/home" "$_dir/db" "$_dir/bin"
     printf '0\n' > "$_dir/epoch"
-    _refresh_mock_git_fail_clone "$_dir/bin" "$_dir/epoch"
+    _refresh_mock_git_fail "$_dir/bin" "$_dir/epoch" "$_dir/ops.log"
 
     local _rc=0
     _refresh_run "$_dir" >"$_dir/out" 2>"$_dir/err" || _rc=$?
@@ -173,7 +171,7 @@ test_refresh_default_db_path_uses_cargo_home() {
     local _dir="$TEST_TMP"
     mkdir -p "$_dir/user" "$_dir/bin"
     printf '0\n' > "$_dir/epoch"
-    _refresh_mock_git "$_dir/bin" "$_dir/epoch" "$_dir/clone.log"
+    _refresh_mock_git "$_dir/bin" "$_dir/epoch" "$_dir/ops.log"
 
     local _rc=0
     (
@@ -216,8 +214,8 @@ echo ""
 echo "=== refresh-advisory-db tests ==="
 
 for t in test_refresh_skips_when_fresh \
-         test_refresh_fetches_when_stale \
-         test_refresh_always_fetches_without_flag \
+         test_refresh_updates_when_stale \
+         test_refresh_clones_when_absent \
          test_refresh_if_stale_keeps_database_on_failure \
          test_refresh_default_mode_fails_on_fetch_error \
          test_refresh_rejects_missing_crates \
