@@ -7,15 +7,15 @@
 # re-source it here (would reset the global test counters).
 
 # Write a fake osv-scanner into $TEST_TMP/bin. $1 = exit code,
-# $2 = stderr text, $3 = args capture file (optional).
+# $2 = stderr text, $3 = args capture file (optional), $4 = output-file body.
 _make_fake_osv_scanner() {
-    local rc="$1" err="$2" capture="${3:-}"
+    local rc="$1" err="$2" capture="${3:-}" body="${4:-}"
     mkdir -p "$TEST_TMP/bin"
     cat > "$TEST_TMP/bin/osv-scanner" <<EOF
 #!/usr/bin/env bash
 $( [[ -n "$capture" ]] && printf 'printf "%%s\\n" "$@" > %q\n' "$capture" )
 for arg in "\$@"; do
-    case "\$arg" in --output-file=*) printf '{}\n' > "\${arg#*=}" ;; esac
+    case "\$arg" in --output-file=*) printf '%s' '$body' > "\${arg#*=}" ;; esac
 done
 printf '%s' '$err' >&2
 exit $rc
@@ -63,7 +63,7 @@ test_cve_scan_clean() {
     _source_lib
     _prepare_osv_config
     touch uv.lock
-    _make_fake_osv_scanner 0 ""
+    _make_fake_osv_scanner 0 "" "" '{"results":[]}'
     local out rc=0
     out="$(PATH="$TEST_TMP/bin:$PATH" ci_scan_vulnerabilities 2>&1)" || rc=$?
     [[ "$rc" -eq 0 && "$out" == *"without findings"* ]] || {
@@ -72,30 +72,45 @@ test_cve_scan_clean() {
     }
 }
 
-# T4: findings -> FAIL, exit 1 (fail-closed)
+# T4: findings -> FAIL, exit 1, and the advisory identities are reported
+# (osv-scanner exits 1 on findings with empty stderr and JSON in the output
+# file; the refresh pass must not misreport that as a database failure).
 test_cve_scan_findings() {
     _source_lib
     _prepare_osv_config
     touch uv.lock
-    _make_fake_osv_scanner 1 "CVE-2099-0001: bad package"
+    _make_fake_osv_scanner 1 "" "" \
+        '{"results":[{"packages":[{"package":{"name":"undici","version":"8.9.0"}}],"vulnerabilities":[{"id":"GHSA-3wwx-pv8p-q78v"}]}]}'
     local out rc=0
     out="$(PATH="$TEST_TMP/bin:$PATH" ci_scan_vulnerabilities 2>&1)" || rc=$?
-    [[ "$rc" -eq 1 && "$out" == *"advisories found"* ]] || {
+    [[ "$rc" -eq 1 && "$out" == *"found advisories"* ]] || {
         echo "  expected rc=1 + findings FAIL, got rc=$rc: $out"
+        return 1
+    }
+    [[ "$out" == *"GHSA-3wwx-pv8p-q78v"* ]] || {
+        echo "  findings do not name the advisory: $out"
+        return 1
+    }
+    [[ "$out" != *"refresh error"* ]] || {
+        echo "  a finding was misreported as a database refresh error: $out"
         return 1
     }
 }
 
-# T5: scanner failure remains blocking
+# T5: scanner failure remains blocking and is distinct from a finding
 test_cve_scan_offline() {
     _source_lib
     _prepare_osv_config
     touch uv.lock
-    _make_fake_osv_scanner 1 "Post https://api.osv.dev/v1/querybatch: dial tcp: no such host"
+    _make_fake_osv_scanner 1 "Post https://api.osv.dev/v1/querybatch: dial tcp: no such host" "" ""
     local out rc=0
     out="$(PATH="$TEST_TMP/bin:$PATH" ci_scan_vulnerabilities 2>&1)" || rc=$?
     [[ "$rc" -eq 1 && "$out" == *"scan failed"* ]] || {
         echo "  expected rc=1 + scanner failure, got rc=$rc: $out"
+        return 1
+    }
+    [[ "$out" == *"database refresh error"* ]] || {
+        echo "  a real refresh error was not reported: $out"
         return 1
     }
 }
