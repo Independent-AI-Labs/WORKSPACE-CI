@@ -115,6 +115,7 @@ def test_regen_writes_artifact(tmp_path: Path, monkeypatch):
     subprocess.run(["git", "-C", str(tmp_path), "add", "README.md"], check=True)
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("CI_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("CI_SCAN_ROOT", str(tmp_path))
     monkeypatch.setattr(cee, "ARTIFACT", tmp_path / "reports" / "ee.json")
     rc = cee.main(["--regen"])
     assert rc == 0
@@ -126,6 +127,7 @@ def test_regen_refuses_violations(tmp_path: Path, monkeypatch, capsys):
     _write_repo(tmp_path, exceptions=[_exc(path="^gone\\.md$")])
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("CI_CONFIG_DIR", str(tmp_path / "config"))
+    monkeypatch.setenv("CI_SCAN_ROOT", str(tmp_path))
     monkeypatch.setattr(cee, "ARTIFACT", tmp_path / "reports" / "ee.json")
     rc = cee.main(["--regen"])
     assert rc == 1
