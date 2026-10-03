@@ -81,7 +81,7 @@ artifact, then install protected hooks as a separate step.
 | Document                                                                                     | Scope                                                          |
 | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | [`audits/AUDIT-GATEWAY-STACK-TEARDOWN-2026-10-03.md`](audits/AUDIT-GATEWAY-STACK-TEARDOWN-2026-10-03.md) | WORKSPACE-GATEWAY dev-stack teardown; root-caused to `podman-compose run` dependency reconciliation and fixed |
-| [`audits/AUDIT-SERVICE-KILLING-DEV-TOOLING-2026-10-03.md`](audits/AUDIT-SERVICE-KILLING-DEV-TOOLING-2026-10-03.md) | Port/name-based service kills in dev tooling; guard report-only prevention proposed |
+| [`audits/AUDIT-SERVICE-KILLING-DEV-TOOLING-2026-10-03.md`](audits/AUDIT-SERVICE-KILLING-DEV-TOOLING-2026-10-03.md) | Port/name-based service kills in dev tooling; guard hardening landed for system tools, remaining gaps recorded |
 
 ## Reading order for newcomers
 

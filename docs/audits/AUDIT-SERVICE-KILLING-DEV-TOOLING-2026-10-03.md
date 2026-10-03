@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-03
 **Auditor:** workspace-agent (opencode)
-**Status:** Open - defects confirmed; guard prevention mechanics proposed (report-only)
+**Status:** Open - defects confirmed; guard hardening c28269e landed for direct system tools; remaining gaps recorded
 
 ## Scope and Method
 
@@ -56,6 +56,50 @@ terminated.
 None of these caused the 2026-10-03 gateway teardown (they target port
 3000, not the gateway's 9080/3030/8123), but each can kill an unrelated
 service and each is currently invisible to the guard.
+
+## Post-audit update: guard hardening c28269e (2026-10-03)
+
+After this audit was written, the WORKSPACE-GUARD workstream landed
+`c28269e` ("feat: sudo-gate direct system-tool commands in the shell
+guard"). It adds two `scope: command` patterns with disposition `exec`
+(block), deliberately omitting the `sudo`/`doas` launchers so the
+operator path stays open:
+
+- `system-manager-command`: mutating `systemctl`/`loginctl` verbs,
+  bare `systemd-run`, and `service` start/stop. Read-only verbs
+  (`status`, `show`, `list-*`, `is-*`, `cat`, `get-*`) still pass.
+- `system-admin-command`: user/group admin, module loading,
+  device-mapper, mount/swap, audit/MAC, cron/tmpfiles, network
+  config, hostname/time/locale, mutating `ip` object-verbs, and the
+  `sysctl -w` form. Read-only `ip ... show` and `sysctl -a` still
+  pass.
+
+Effect on this audit's findings:
+
+| Finding | After c28269e |
+| --- | --- |
+| F-4 trigger (`systemctl --user stop/restart`) | blocked at the agent command channel |
+| the restore-test action in the gateway teardown audit | blocked |
+| F-1/F-3 `fuser -k <port>` | still open (no guard pattern) |
+| kill-by-port (`lsof/ss/netstat ... \| xargs kill`) | still open |
+| F-4/F-5 destructive compose forms as direct agent commands | already blocked by the existing `podman-command` rule (it matches the `podman` in `podman-compose`, including via an `xargs` launcher) |
+| all four findings inside trusted code | still open - see below |
+
+The landing design is **block + sudo escape**, not the report-only mode
+this audit originally proposed (P-1/P-2). The block choice is stronger
+for the agent command channel; a report-only disposition remains the
+right shape only for patterns that are not yet safe to block.
+
+### The structural gap is unchanged
+
+The shell guard scans only `bash -c` text and *untrusted* script
+bodies. All four findings live in **trusted** code (root-owned repo
+scripts, ansible `shell:` task bodies, or systemd `ExecStartPre`), so
+no shell-guard pattern can close them. That path requires the static
+report check in P-3. The two genuinely missing agent-channel patterns
+are `fuser -k` and the `lsof/ss/netstat ... | xargs kill` form.
+
+See `WORKSPACE-GUARD/docs/AUDIT-DIRECT-SYSTEM-TOOL-GATING-2026-10.md`.
 
 ## Findings
 
@@ -304,13 +348,13 @@ the prior owner before evicting it.
 
 ## Open Items
 
-- [ ] P-4 ownership-scoped kill helper in WORKSPACE-PORTAL.
-- [ ] P-4 helper in RUST-ZK-PORTAL.
-- [ ] P-5 project-scoped DATAOPS pre-start cleanup.
-- [ ] P-1 guard `mode: report` field plus policy-matrix coverage.
-- [ ] P-2 report rules and a one-week baseline.
-- [ ] P-3 static report check in the CI consumer.
-- [ ] Decide promotion of P-2 rules from report to block.
+- [x] Direct system-tool gating (`systemctl`/`loginctl`, admin tooling) blocked in the shell guard (`c28269e`, guard workstream).
+- [x] `systemctl --user stop/restart` blocked at the agent command channel.
+- [ ] Add guard patterns for `fuser -k` and port-based kill on the agent command channel (guard workstream).
+- [ ] P-3 static report check for the same patterns in trusted scripts and ansible task bodies (CI workstream).
+- [ ] P-4 ownership-scoped kill helper in WORKSPACE-PORTAL and RUST-ZK-PORTAL (consumer workstreams).
+- [ ] P-5 project-scoped DATAOPS pre-start cleanup (consumer workstream).
+- [ ] Decide whether the remaining patterns should block once baselined (supersedes the P-1/P-2 report-only mode for the covered cases).
 
 ## Appendix A - Evidence Locations
 
@@ -347,3 +391,4 @@ requires the P-3 static layer.
 | Date | Change |
 | --- | --- |
 | 2026-10-03 | Initial audit: service-killing dev tooling; guard report-only prevention proposed. |
+| 2026-10-03 | Reconciled with guard hardening `c28269e` (block + sudo escape for direct system tools); remaining gaps recorded. |

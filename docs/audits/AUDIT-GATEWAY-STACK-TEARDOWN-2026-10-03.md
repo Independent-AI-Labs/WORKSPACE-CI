@@ -352,9 +352,20 @@ Ordinary `podman`/`podman-compose` executions are absent, which is why
 the initial pass could not attribute the teardown. The agent session
 store proved to be the reliable source for agent-issued commands.
 
+## Related Guard Hardening (2026-10-03)
+
+`WORKSPACE-GUARD` `c28269e` now blocks direct `systemctl`/`loginctl`
+mutating verbs at the agent command channel, covering the class of the
+restore-test action (a direct `systemctl --user stop`). The in-repo
+migrate fix above is independent of that guard change; the guard adds
+a second layer against the same failure mode.
+
+See `AUDIT-SERVICE-KILLING-DEV-TOOLING-2026-10-03.md`.
+
 ## Revision History
 
 | Date | Change |
 | --- | --- |
 | 2026-10-03 | Initial audit (pre-remediation). Attributed the teardown externally. |
 | 2026-10-03 | Corrected: root cause is the agent's `make ch-migrate-status` / `podman-compose run` dependency reconciliation. Fixes applied and verified. |
+| 2026-10-03 | Added the related guard-hardening note (`c28269e`). |
