@@ -80,7 +80,8 @@ artifact, then install protected hooks as a separate step.
 
 | Document                                                                                     | Scope                                                          |
 | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| [`audits/AUDIT-GATEWAY-STACK-TEARDOWN-2026-10-03.md`](audits/AUDIT-GATEWAY-STACK-TEARDOWN-2026-10-03.md) | External teardown of the WORKSPACE-GATEWAY dev stack; invoker unattributed |
+| [`audits/AUDIT-GATEWAY-STACK-TEARDOWN-2026-10-03.md`](audits/AUDIT-GATEWAY-STACK-TEARDOWN-2026-10-03.md) | WORKSPACE-GATEWAY dev-stack teardown; root-caused to `podman-compose run` dependency reconciliation and fixed |
+| [`audits/AUDIT-SERVICE-KILLING-DEV-TOOLING-2026-10-03.md`](audits/AUDIT-SERVICE-KILLING-DEV-TOOLING-2026-10-03.md) | Port/name-based service kills in dev tooling; guard report-only prevention proposed |
 
 ## Reading order for newcomers
 
