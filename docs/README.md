@@ -76,6 +76,12 @@ artifact, then install protected hooks as a separate step.
 | [`runbooks/RUNBOOK-INTEGRATION.md`](runbooks/RUNBOOK-INTEGRATION.md)       | User-owned infrastructure for governing digital workspaces: capabilities, trust model, deployment, gates, policy, AI traffic, isolation, identity, audit  |
 | [`runbooks/RUNBOOK-HOOKS.md`](runbooks/RUNBOOK-HOOKS.md)                   | Protected hook deployment and reviewed-ancestor rollback                                       |
 
+### audits/ - investigation records (AUDIT-*)
+
+| Document                                                                                     | Scope                                                          |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| [`audits/AUDIT-GATEWAY-STACK-TEARDOWN-2026-10-03.md`](audits/AUDIT-GATEWAY-STACK-TEARDOWN-2026-10-03.md) | External teardown of the WORKSPACE-GATEWAY dev stack; invoker unattributed |
+
 ## Reading order for newcomers
 
 1. [`decisions/DECISION-BOOTSTRAP-AND-DEPLOYMENT-2026-08-10.md`](decisions/DECISION-BOOTSTRAP-AND-DEPLOYMENT-2026-08-10.md) and [`decisions/DECISION-SHELL-PYTHON-BOUNDARY-2026-08-18.md`](decisions/DECISION-SHELL-PYTHON-BOUNDARY-2026-08-18.md) - accepted human decisions.
