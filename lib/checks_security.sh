@@ -2,7 +2,7 @@
 # Bounded, fail-closed dependency vulnerability scan.
 
 ci_scan_vulnerabilities() {
-    local root scanner config validator lockfiles output errors refresh_err rc=0 size first_lockfile
+    local root scanner config validator lockfiles output errors refresh_err tracked rel rc=0 size first_lockfile
     root="$(git rev-parse --show-toplevel)" || return 1
     scanner="$(ci_resolve_tool_path "$root" osv-scanner)" || {
         ci_fail "osv-scanner is required"
@@ -20,11 +20,18 @@ ci_scan_vulnerabilities() {
     output="$(mktemp)"
     errors="$(mktemp)"
     refresh_err="$(mktemp)"
-    trap 'rm -f "$lockfiles" "$output" "$errors" "$refresh_err"' RETURN
-    find "$root" \
-        \( -name .git -o -name "$CI_BOOT_NAME" -o -name .venv -o -name node_modules -o -name target -o -name .next \) -prune \
-        -o -type f \( -name uv.lock -o -name package-lock.json -o -name Cargo.lock -o -name go.mod \) -print \
-        | sort > "$lockfiles"
+    tracked="$(mktemp)"
+    trap 'rm -f "$lockfiles" "$output" "$errors" "$refresh_err" "$tracked"' RETURN
+    # REQ-CVE-SCAN scans the repository's committed lockfiles. Enumerate the
+    # git-visible set (tracked plus untracked, non-ignored) so ignored tooling
+    # trees such as .opencode/ stay out of scope, then keep lockfiles by name.
+    git -C "$root" ls-files --cached --others --exclude-standard -z > "$tracked"
+    while IFS= read -r -d '' rel; do
+        case "$rel" in
+            */uv.lock|uv.lock|*/package-lock.json|package-lock.json|*/Cargo.lock|Cargo.lock|*/go.mod|go.mod)
+                printf '%s\n' "$root/$rel" ;;
+        esac
+    done < "$tracked" | sort > "$lockfiles"
     [[ -s "$lockfiles" ]] || { ci_fail "vulnerability scan found no lockfiles"; return 1; }
 
     # Refresh is visible but non-authoritative; validation below is always

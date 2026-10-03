@@ -1,1 +1,10 @@
 # Local OSV-Scanner configuration. Suppressions require id, reason, and expiry.
+
+# braces 3.0.3 is the latest published release and has no fixed version for
+# GHSA-vfj7-8cjw-p6xm (stack exhaustion on deeply nested brace patterns). It is
+# reached only as a transitive dev dependency of build-tool glob matching, never
+# from untrusted input. Remove this entry once an upstream fix ships.
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+reason = "No fixed braces release exists (3.0.3 is latest); dev-only transitive dependency of build tooling, not reachable from untrusted input."
+ignoreUntil = 2027-01-03
