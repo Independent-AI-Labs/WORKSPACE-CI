@@ -36,6 +36,7 @@ override BOOT_NAME := $(if $(filter Darwin,$(_OS)),.boot-macos,.boot-linux)
 override BOOT_BIN := $(CURDIR)/$(BOOT_NAME)/bin
 ANSIBLE_PLAYBOOK := /opt/workspace-ci/.boot-linux/bin/ansible-playbook
 DEPLOY_ANSIBLE_PLAYBOOK := $(abspath ../../.boot-linux/bin/ansible-playbook)
+CI_DIR ?= /opt/workspace-ci
 
 # uv is the hermetic runner for all Python tooling (FR-2.4). Resolve the
 # boot-bin uv by ABSOLUTE path when present: every recipe shell re-enters
@@ -223,14 +224,15 @@ install-web-deps: install-node ## npm ci JS workspace dependencies (repo root: w
 	$(SCRIPT_BASH) $(CURDIR)/scripts/web-tool deps-ci
 
 .PHONY: install-hooks
-install-hooks: ## (Re)generate native git hooks (root-owned hooks: run via sudo)
-	$(SCRIPT_BASH) scripts/reinstall-hooks
+install-hooks: ## (Re)generate native git hooks from the sealed artifact (root-owned hooks: run via sudo)
+	test -f "$(CI_DIR)/scripts/reinstall-hooks" || { echo "ERROR: sealed artifact missing at $(CI_DIR); run: make deploy-ci" >&2; exit 1; }
+	$(SCRIPT_BASH) $(CI_DIR)/scripts/reinstall-hooks
 
 .PHONY: lock-repo
 lock-repo: ## Root-lock config/*.yaml catalogs and regenerate root-owned hooks (root only)
 	$(SCRIPT_BASH) scripts/lock-repo --config-only $(CURDIR)
 	env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' \
-		$(SCRIPT_BASH) scripts/reinstall-hooks
+		$(SCRIPT_BASH) $(CI_DIR)/scripts/reinstall-hooks
 
 .PHONY: runtime-dirs
 runtime-dirs: ## Pre-create agent-owned runtime dirs (.venv, node_modules, egg-info); OWNER=<user> required, root only

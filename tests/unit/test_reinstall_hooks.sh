@@ -41,6 +41,25 @@ test_reinstall_hooks_no_user_owned_generate_branch() {
     fi
 }
 
+test_install_hooks_delegates_to_sealed() {
+    # The CI repo's own install-hooks must run the sealed /opt installer, not
+    # the agent-owned working-tree script (which the shell guard blocks on
+    # chattr-strip).
+    grep -Fq '$(SCRIPT_BASH) $(CI_DIR)/scripts/reinstall-hooks' "$PROJECT_DIR/Makefile" || {
+        echo "install-hooks does not invoke the sealed installer"
+        return 1
+    }
+    grep -Fq 'run: make deploy-ci' "$PROJECT_DIR/Makefile" || {
+        echo "install-hooks has no deploy-first guard"
+        return 1
+    }
+    if grep -Fq '$(SCRIPT_BASH) scripts/reinstall-hooks' "$PROJECT_DIR/Makefile"; then
+        echo "install-hooks still invokes the agent-owned working-tree installer"
+        return 1
+    fi
+}
+
 _run_test "reinstall-hooks exists" test_reinstall_hooks_exists
 _run_test "reinstall-hooks refuses non-root" test_reinstall_hooks_refuses_non_root
 _run_test "reinstall-hooks has no user-owned generate branch" test_reinstall_hooks_no_user_owned_generate_branch
+_run_test "install-hooks delegates to sealed installer" test_install_hooks_delegates_to_sealed
