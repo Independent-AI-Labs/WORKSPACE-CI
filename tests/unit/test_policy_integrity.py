@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from check_policy_integrity import main
+from check_policy_integrity import _tracked_files, main
 
 from ci import paths as ci_paths
 
@@ -194,3 +194,25 @@ def test_no_hardcoded_protected_directory_list_in_checker():
     body2 = (PROJECT / "ci" / "banned_scan" / "classify.py").read_text()
     for name in ("scripts", "res/ansible", "bootstrap", "hitl", "Makefile"):
         assert name not in body2
+
+
+def test_tracked_files_ignores_hook_injected_git_env(tmp_path, monkeypatch):
+    """A protected hook exports GIT_DIR and friends; the checker must ignore
+    them so `git ls-files` still enumerates the repository under review."""
+    root = tmp_path / "root"
+    root.mkdir()
+    subprocess.run(["git", "-C", str(root), "init", "-q"], check=True)
+    (root / "README.md").write_text("# repo\n")
+    subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+
+    other = tmp_path / "other"
+    other.mkdir()
+    subprocess.run(["git", "-C", str(other), "init", "-q"], check=True)
+    (other / "decoy.txt").write_text("x\n")
+    subprocess.run(["git", "-C", str(other), "add", "."], check=True)
+
+    monkeypatch.setenv("GIT_DIR", str(other / ".git"))
+    monkeypatch.setenv("GIT_INDEX_FILE", str(other / ".git" / "index"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(other))
+
+    assert _tracked_files(root) == {"README.md"}
