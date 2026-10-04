@@ -287,14 +287,24 @@ mtime. That reasoning was wrong (completion vs. start time).
    invocations, with a comment explaining the dependency
    reconciliation. This removes the teardown side effect.
 2. **`res/ansible/compose.yml`** - the OpenBao pre-start probe is now
-   `when: gateway_active.rc == 0`, `failed_when: false`, and the
-   stale-container recreate condition ignores empty stdout. Previously
-   the probe ran against a freshly restarted unit before OpenBao was
-   ready and aborted `make gw-start`.
-3. **`res/ansible/templates/gateway-compose.service.j2`** -
-   `Restart=no` -> `Restart=always`. The teardown exited status 0, so
-   `on-failure` would not have helped; `always` self-heals an
-   unexpected exit and does not fight an explicit `systemctl stop`.
+   `when: gateway_active.rc == 0`, with
+   `failed_when: gateway_host_health.rc not in [0, 7, 28, 125, 255]`
+   (the error-swallow gate forbids a literal `failed_when: false`),
+   and the stale-container recreate condition ignores empty stdout.
+   Previously the probe ran against a freshly restarted unit before
+   OpenBao was ready and aborted `make gw-start`.
+3. **`res/ansible/templates/gateway-compose.service.j2`** - left as
+   `Restart=no`. systemd restart is deliberately not an owner: the
+   compose services carry `restart: unless-stopped`, and
+   `AUDIT-GATEWAY-AUTOMATION-2026-08.md` ("Competing lifecycle
+   supervisors") warns against combining container restart policy with
+   systemd restart ownership; `gateway-compose-up.sh` force-recreates
+   every container on start, so an auto-restart would loop full
+   recreates. `tests/scripts/test_gateway_compose.sh` enforces the
+   single-restart-ownership rule. The status-0 exit is prevented at the
+   cause by the `--no-deps` fix and by the guard blocking direct
+   `systemctl` mutations; whole-stack supervision/alerting remains an
+   open decision.
 
 ### Verification
 
@@ -318,17 +328,20 @@ make gw-verify             # APISIX/etcd/ClickHouse/Grafana/Prometheus UP; sanit
 ### Structural
 
 3. Treat `podman-compose run` as a project-mutating operation in this
-   repo. Any future wrapper must pass `--no-deps` when the stack may be
-   live, or exec into an existing container instead.
-4. Optionally add an `OnFailure` notifier for genuine start failures
-   (it will not catch status-0 exits; `Restart=always` covers those).
+   repo. This is now enforced by the `check-trusted-exec` gate
+   (`compose-run-no-deps`), which blocks a compose `run` without
+   `--no-deps` in trusted code.
+4. Decide the whole-stack supervisor/alerting story deliberately. A
+   notify-only `OnFailure=` needs the notifier unit to exist (it does
+   not on this host today), and a systemd restart would duplicate the
+   container restart policy and loop full recreates.
 
 ## Open Items
 
 - [x] Correct the root cause (agent `make ch-migrate-status`, not an external teardown).
 - [x] Fix `migrate-*` to use `--no-deps`.
 - [x] Fix the cold-start probe guard and `make gw-start` abort.
-- [x] Harden the unit with `Restart=always`.
+- [x] Keep restart ownership single (the unit stays `Restart=no`).
 - [x] Restore and verify the stack (all services UP, sanity 200).
 - [ ] Add container tooling to the execution-audit surface (guard or `auditd`).
 
@@ -360,6 +373,12 @@ restore-test action (a direct `systemctl --user stop`). The in-repo
 migrate fix above is independent of that guard change; the guard adds
 a second layer against the same failure mode.
 
+`WORKSPACE-CI` `61e2087` adds the `check-trusted-exec` gate, which
+blocks the service-killing patterns directly in trusted code (including
+`compose-run-no-deps`). That is the layer that catches a migrate `run`
+without `--no-deps` even when it is authored in a repo script rather
+than typed by the agent.
+
 See `AUDIT-SERVICE-KILLING-DEV-TOOLING-2026-10-03.md`.
 
 ## Revision History
@@ -369,3 +388,4 @@ See `AUDIT-SERVICE-KILLING-DEV-TOOLING-2026-10-03.md`.
 | 2026-10-03 | Initial audit (pre-remediation). Attributed the teardown externally. |
 | 2026-10-03 | Corrected: root cause is the agent's `make ch-migrate-status` / `podman-compose run` dependency reconciliation. Fixes applied and verified. |
 | 2026-10-03 | Added the related guard-hardening note (`c28269e`). |
+| 2026-10-04 | Corrected the fix record: the unit stays `Restart=no` (systemd restart ownership was rejected); noted `check-trusted-exec` (`61e2087`). |
