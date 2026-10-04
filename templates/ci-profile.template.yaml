@@ -14,6 +14,7 @@ hooks:
   pre-commit:
     - gitleaks
     - block-sensitive-files
+    - check-trusted-exec
     - check-unstaged
     - ci-check-error-swallow
     - check-coverage-no-devolution
@@ -46,6 +47,6 @@ hooks:
     - check-dead-code
     - osv-scan
 
-# Total hooks: 31 (pre-commit=25 commit-msg=2 pre-push=4)
-# Generated: 2026-09-28T14:24:41Z
+# Total hooks: 32 (pre-commit=26 commit-msg=2 pre-push=4)
+# Generated: 2026-10-04T09:58:33Z
 # Source: config/required_hooks.yaml

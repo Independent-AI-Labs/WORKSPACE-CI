@@ -87,11 +87,6 @@ requires:
     platforms: [linux]
 
   # --- declared gap deps (previously undeclared, used by CI scripts) ---
-  - check_cmd: pkill
-    apt_package: procps
-    description: procps (pkill used by bootstrap-podman to clean up conmon/podman)
-    platforms: [linux]
-
   - check_cmd: iptables
     apt_package: iptables
     description: iptables (required by netavark for podman networking)
@@ -104,3 +99,8 @@ requires:
     apt_package: coreutils
     brew_package: coreutils
     description: coreutils (realpath --relative-to used by generate-hooks and checks_compliance)
+  - check_cmd: pkill
+    apt_package: procps
+    description: procps (process-name kill used by bootstrap-podman to clean up conmon/podman)
+    platforms:
+      - linux

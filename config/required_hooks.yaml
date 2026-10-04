@@ -315,3 +315,13 @@ hooks:
     applicable_to:
       - rust
     files: (Cargo.toml|deny.toml)
+  - id: check-trusted-exec
+    kind: shell
+    entry: ci_check_trusted_exec
+    stage: pre-commit
+    pass_filenames: false
+    always_run: true
+    mandatory: true
+    safety: true
+    applicable_to:
+      - any

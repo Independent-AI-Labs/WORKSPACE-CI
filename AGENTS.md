@@ -91,7 +91,9 @@
 
 §16. A new policy file is created by the agent under
     `config-staging/`, then moved into `config/` by the operator
-    with a single `mv` command, then committed as ordinary source.
+    with a single `mv` command, set to `root:root` mode `0644`
+    (the catalog-provenance gate requires uid 0), then committed as
+    ordinary source.
 
 ## Article V — Root Operations
 

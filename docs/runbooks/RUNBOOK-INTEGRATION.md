@@ -210,7 +210,7 @@ The gates run in three stages:
 
 | Stage | What runs | Why it belongs there |
 | --- | --- | --- |
-| pre-commit | Format, lint, secrets, banned patterns, inline code, swallowed-error scan, dependency validation, file and module size, coverage no-devolution | Fast, content-focused gates before a commit is recorded |
+| pre-commit | Format, lint, secrets, banned patterns, inline code, trusted-code service-killing patterns, swallowed-error scan, dependency validation, file and module size, coverage no-devolution | Fast, content-focused gates before a commit is recorded |
 | commit-msg | Message format compliance and agent-attribution blocking | Reads the message file |
 | pre-push | Full test suite and coverage thresholds, web and JS quality, co-authored history scan, advisory dead-code report | Expensive gates that run when code leaves the machine |
 

@@ -101,6 +101,35 @@ are `fuser -k` and the `lsof/ss/netstat ... | xargs kill` form.
 
 See `WORKSPACE-GUARD/docs/AUDIT-DIRECT-SYSTEM-TOOL-GATING-2026-10.md`.
 
+## Post-audit update: P-3 static gate decisions (2026-10-04)
+
+P-3 is being implemented as a blocking, non-exemptible protected hook
+named `check-trusted-exec`, not as the report-only check originally
+proposed. The operator decisions:
+
+- It applies to every repository (`applicable_to: [any]`) and is
+  installed even at `poc` tier (`safety: true`, `mandatory: true`).
+- Every rule is non-exemptible. There is no per-repository exemption
+  file and no configuration overlay.
+- It is blocking from the first activation. There is no report-only
+  phase; the three known offender repositories go red until P-4 and P-5
+  land.
+- Vendored and mirrored repositories install no hooks and are
+  unaffected.
+- Carriers scanned: shell, YAML (ansible, compose, systemd templates),
+  systemd units, Makefile recipes, JavaScript and TypeScript, Python,
+  and Lua. Markdown is not scanned.
+- Detection reuses the banned-pattern discovery and classification
+  pipeline and the bounded decode views of the inline-code checker, so
+  encoded forms are covered.
+- Self-reference is handled with the same exact-file classification
+  mechanism as the sibling content gates (`policy-definition` plus the
+  checker's fixed definitional set); that is not a repository exemption.
+
+Contract and specification:
+`docs/requirements/REQ-TRUSTED-EXEC.md`,
+`docs/specifications/SPEC-TRUSTED-EXEC.md`.
+
 ## Findings
 
 ### F-1 Portal kills whatever owns the dev port
@@ -351,10 +380,10 @@ the prior owner before evicting it.
 - [x] Direct system-tool gating (`systemctl`/`loginctl`, admin tooling) blocked in the shell guard (`c28269e`, guard workstream).
 - [x] `systemctl --user stop/restart` blocked at the agent command channel.
 - [ ] Add guard patterns for `fuser -k` and port-based kill on the agent command channel (guard workstream).
-- [ ] P-3 static report check for the same patterns in trusted scripts and ansible task bodies (CI workstream).
+- [~] P-3 static check for the same patterns in trusted scripts, ansible task bodies, systemd units, and application source (CI workstream). Implemented as the blocking, non-exemptible `check-trusted-exec` gate; see the 2026-10-04 update above, `REQ-TRUSTED-EXEC`, and `SPEC-TRUSTED-EXEC`.
 - [ ] P-4 ownership-scoped kill helper in WORKSPACE-PORTAL and RUST-ZK-PORTAL (consumer workstreams).
 - [ ] P-5 project-scoped DATAOPS pre-start cleanup (consumer workstream).
-- [ ] Decide whether the remaining patterns should block once baselined (supersedes the P-1/P-2 report-only mode for the covered cases).
+- [x] Decide the enforcement posture for the covered cases: block, non-exemptible, no report-only phase (supersedes the P-1/P-2 report-only mode for the static layer).
 
 ## Appendix A - Evidence Locations
 

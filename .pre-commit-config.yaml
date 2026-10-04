@@ -152,6 +152,13 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: check-trusted-exec
+        name: Block Service-Killing Patterns in Trusted Code
+        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_trusted_exec'"
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: check-required-hooks-present
         name: CI Self-Check (manifest + exceptions + rendered hooks)
         entry: "uv run python -m ci.check_required_hooks_present"

@@ -1,0 +1,72 @@
+# Trusted-code service-killing policy (contract:
+# docs/requirements/REQ-TRUSTED-EXEC.md).
+#
+# Detects ownership-free service-killing commands authored into a
+# repository's own executable code. This policy shape has no
+# exemptions and no allowed constructs: every rule is non-exemptible.
+# Definitional files that carry these patterns are excluded by the
+# checker's SELF_SKIP set and config/file_classifications.yaml.
+#
+# Patterns are matched against the original, normalized, and bounded
+# decoded views. Newlines and the command separators ; | & bound a
+# same-command window (spelled \x3b so the pattern survives YAML and
+# matching unmodified). Bare program names match ordinary identifiers
+# in source, so every rule requires a command form: a verb, a flag, or
+# a trailing argument.
+version: "1.0.0"
+
+decode:
+  # Bounded iterative decode of base64, hexadecimal, and percent
+  # representations before a decoded form is matched.
+  max_depth: 2
+
+rules:
+  - id: port-kill
+    mode: raw-regex
+    category: port-kill
+    flags: [i]
+    carriers: [shell, yaml, systemd, makefile, javascript, python, lua]
+    pattern: '\bfuser\b[^\x3b|&\n]*\s-[^\x3b|&\n\s]*k\b'
+    reason: A file-use kill removes whichever process holds the descriptor; resolve and check the owner first.
+  - id: port-pipeline-kill
+    mode: raw-regex
+    category: port-kill
+    flags: [i]
+    carriers: [shell, yaml, systemd, makefile, javascript, python, lua]
+    pattern: '\b(lsof|ss|netstat)\b[^\x3b|&\n]*\|[^\x3b|&\n]*\bkill\b'
+    reason: A listener-based kill removes whichever process holds the port; resolve and check the owner first.
+  - id: process-name-kill
+    mode: raw-regex
+    category: process-name-kill
+    flags: [i]
+    carriers: [shell, yaml, systemd, makefile, javascript, python, lua]
+    pattern: '\b(pkill|killall)\b[ \t]+-[^\s]|\b(pkill|killall)\b[ \t]+[A-Za-z0-9_./]'
+    reason: A name-pattern kill removes every matching process; target a resolved pid instead.
+  - id: orphan-remove
+    mode: raw-regex
+    category: orphan-remove
+    flags: [i]
+    carriers: [shell, yaml, systemd, makefile, javascript, python, lua]
+    pattern: '\b(podman-compose|podman[ \t]+compose|docker[ \t]+compose)\b(?![^\x3b|&\n]*(?:--project-name[ \t]+|-p[ \t]+|--file[ \t]+|-f[ \t]+))[^\x3b|&\n]*--remove-orphans\b'
+    reason: Orphan removal is only safe when the compose project is pinned on the same command.
+  - id: network-remove
+    mode: raw-regex
+    category: network-remove
+    flags: [i]
+    carriers: [shell, yaml, systemd, makefile, javascript, python, lua]
+    pattern: '\bnetwork\b[^\x3b|&\n]*\b(rm|remove)\b[^\x3b|&\n]*\s-f\b'
+    reason: Removing a shared network affects every project attached to it.
+  - id: mass-container-remove
+    mode: raw-regex
+    category: mass-container-remove
+    flags: [i]
+    carriers: [shell, yaml, systemd, makefile, javascript, python, lua]
+    pattern: '(\bps\b|\bpod\s+ls\b|\bpodman\s+ps\b)[^\x3b|&\n]*\|[^\x3b|&\n]*\bxargs\b[^\x3b|&\n]*\b(rm|pod\s+rm)\b'
+    reason: A status-only container sweep removes containers from every project; filter by the compose project label.
+  - id: compose-run-no-deps
+    mode: raw-regex
+    category: compose-run
+    flags: [i]
+    carriers: [shell, yaml, systemd, makefile, javascript, python, lua]
+    pattern: '\b(podman-compose|podman[ \t]+compose|docker[ \t]+compose)\b[^\x3b|&\n]*\brun\b(?![^\x3b|&\n]*--no-deps)'
+    reason: A compose run reconciles dependencies unless --no-deps is passed; pass --no-deps or pin the project.

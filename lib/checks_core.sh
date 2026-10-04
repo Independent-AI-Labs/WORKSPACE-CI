@@ -148,3 +148,20 @@ ci_check_policy_integrity() {
     CI_CONFIG_DIR="$CI_CONFIG_DIR" \
         ci_uv_run "$script_path" "$@" </dev/null
 }
+
+# --- ci_check_trusted_exec ---
+# Delegates to lib/check_trusted_exec.py: non-exemptible scan of trusted
+# authored code (shell, YAML, systemd, Makefile, JavaScript and
+# TypeScript, Python, Lua) for ownership-free service-killing commands.
+# The policy has no exemption key; every rule is non-exemptible.
+ci_check_trusted_exec() {
+    local script_path="${CI_LIB_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}/check_trusted_exec.py"
+    if [[ ! -f "$script_path" ]]; then
+        ci_fail "Trusted-exec: helper not found at $script_path"
+        return 1
+    fi
+    local _scan_root="${CI_SCAN_ROOT:-$PWD}"
+    CI_SCAN_ROOT="$_scan_root" \
+    CI_CONFIG_DIR="$CI_CONFIG_DIR" \
+        ci_uv_run "$script_path" "$@" </dev/null
+}

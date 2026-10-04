@@ -109,6 +109,7 @@ Scope describes which files the check scans when triggered. Checks marked
 | Sensitive filename blocking (`.env`, `*.pem`, `credentials.json`, ...)                                               | pre-commit          | all files                                             |
 | Banned patterns (200+ including type suppressions, unsafe code, AI slop)                                             | pre-commit          | all files                                             |
 | Inline code in non-code contexts (query, interpreter, remote-exec payloads; allowed-construct aware)                 | pre-commit          | all non-gitignored files                              |
+| Service-killing patterns in trusted code (port/name kills, orphan and network removal, unscoped compose run)          | pre-commit          | shell, YAML, systemd, Makefile, JS/TS, Python, Lua    |
 | Silent-error swallow (Python `except: pass`, JS `catch {}`, Shell `\|\| true`, Ansible `ignore_errors`, Cron no-log) | pre-commit          | all tracked files                                     |
 | Duplicate / redundant dependency warning                                                                             | pre-commit          | `pyproject.toml`                                      |
 | Code formatting (`ruff format`, auto-stage + re-run)                                                                 | pre-commit          | Python files                                          |

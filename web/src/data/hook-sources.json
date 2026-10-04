@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-03T12:13:29.206210+00:00",
+  "generated_at": "2026-10-04T09:58:33.754439+00:00",
   "sources": [
     {
       "name": "ci_check_unstaged",
@@ -279,6 +279,15 @@
       "language": "bash",
       "id": "cargo-deny",
       "description": ""
+    },
+    {
+      "name": "ci_check_trusted_exec",
+      "source_file": "lib/checks_core.sh",
+      "docstring": "--- ci_check_trusted_exec --- Delegates to lib/check_trusted_exec.py: non-exemptible scan of trusted authored code (shell, YAML, systemd, Makefile, JavaScript and TypeScript, Python, Lua) for ownership-free service-killing commands. The policy has no exemption key; every rule is non-exemptible.",
+      "source": "ci_check_trusted_exec() {\n    local script_path=\"${CI_LIB_DIR:-$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)}/check_trusted_exec.py\"\n    if [[ ! -f \"$script_path\" ]]; then\n        ci_fail \"Trusted-exec: helper not found at $script_path\"\n        return 1\n    fi\n    local _scan_root=\"${CI_SCAN_ROOT:-$PWD}\"\n    CI_SCAN_ROOT=\"$_scan_root\" \\\n    CI_CONFIG_DIR=\"$CI_CONFIG_DIR\" \\\n        ci_uv_run \"$script_path\" \"$@\" </dev/null\n}",
+      "language": "bash",
+      "id": "check-trusted-exec",
+      "description": "Delegates to lib/check_trusted_exec.py: non-exemptible scan of trusted authored code (shell, YAML, systemd, Makefile, JavaScript and TypeScript, Python, Lua) for ownership-free service-killing commands. The policy has no exemption key; every rule is non-exemptible."
     }
   ]
 }

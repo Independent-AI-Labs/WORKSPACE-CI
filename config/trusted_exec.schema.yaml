@@ -1,0 +1,60 @@
+# Schema for trusted_exec.yaml: field-level documentation.
+#
+# Convention: one config/<name>.schema.yaml per config/<name>.yaml.
+config: trusted_exec
+description: "Trusted-code service-killing policy: non-exemptible command-pattern rules scoped by executable carrier, matched against original, normalized, and bounded decoded views."
+fields:
+  - path: version
+    type: string
+    required: true
+    description: "Schema version of the trusted-exec policy. Bumped when the YAML shape changes."
+
+  - path: decode
+    type: map
+    required: true
+    description: "Bounded decode settings applied before matching."
+
+  - path: decode.max_depth
+    type: integer
+    required: true
+    default: 2
+    description: "Number of chained decode passes over base64, hexadecimal, and percent representations before a decoded form is matched."
+
+  - path: rules
+    type: list
+    required: true
+    description: "Service-killing command rules matched against the selected carriers and views. Every rule is non-exemptible."
+
+  - path: rules[].id
+    type: string
+    required: true
+    description: "Stable rule identity emitted in violation output."
+
+  - path: rules[].mode
+    type: string
+    required: true
+    description: "Matching mode: raw-regex for punctuation-significant syntax, normalized-token for word and command forms."
+
+  - path: rules[].category
+    type: string
+    required: true
+    description: "Defect class, for example service-manager, system-admin, port-kill, process-name-kill, orphan-remove, network-remove, mass-container-remove, or compose-run."
+
+  - path: rules[].flags
+    type: list<string>
+    description: "Pattern flags: s for dot-all and i for case-insensitive."
+
+  - path: rules[].carriers
+    type: list<string>
+    required: true
+    description: "Executable carriers the rule applies to: shell, yaml, systemd, makefile, javascript, python, or lua. Markdown is never a carrier."
+
+  - path: rules[].pattern
+    type: string
+    required: true
+    description: "Regular expression matched against the selected views."
+
+  - path: rules[].reason
+    type: string
+    required: true
+    description: "Operator-facing explanation emitted with the finding."

@@ -66,6 +66,7 @@ config_categories:
   wiki_labels: Project Structure
   file_classifications: Quality Gates
   inline_code: Content Rules
+  trusted_exec: Content Rules
 
 guard_categories:
   guard_config_keys: Access Control
