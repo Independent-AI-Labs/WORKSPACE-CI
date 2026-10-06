@@ -8,3 +8,13 @@
 id = "GHSA-vfj7-8cjw-p6xm"
 reason = "No fixed braces release exists (3.0.3 is latest); dev-only transitive dependency of build tooling, not reachable from untrusted input."
 ignoreUntil = 2027-01-03
+
+# katex 0.16.47 is what mermaid@11.16.1 (latest) pins (^0.16.47); the fix is
+# 0.18.2, a breaking major mermaid has not adopted, so an override would risk
+# the diagram renderer. GHSA-238p-pmpm-9mq7 is LOW severity (CVSS 2.1) and
+# requires an already-polluted Object.prototype plus unsanitized insertion of
+# rendered output. Remove once mermaid moves to katex 0.18.x.
+[[IgnoredVulns]]
+id = "GHSA-238p-pmpm-9mq7"
+reason = "Latest mermaid (11.16.1) pins katex ^0.16.47; fix 0.18.2 is a breaking major not yet adopted. LOW severity; exploitation requires a pre-existing prototype-pollution primitive plus unsanitized insertion of rendered output."
+ignoreUntil = 2027-01-06
