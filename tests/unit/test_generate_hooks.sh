@@ -32,6 +32,12 @@ test_generate_hooks_renders_trust_boundary_preamble() {
     printf 'repos:\n  - repo: local\n    hooks:\n      - id: check\n        name: Check\n        entry: "true"\n        language: system\n        stages: [pre-commit]\n' > "$root/.pre-commit-config.yaml"
     (cd "$root" && bash "$PROJECT_DIR/scripts/generate-hooks" --output-dir "$output") || return 1
     grep -q 'unset "\$_tb_var"' "$output/pre-commit" || { echo "missing override scrub"; return 1; }
+    local git_var
+    for git_var in GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_INDEX_FILE GIT_PREFIX \
+        GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_NAMESPACE \
+        GIT_CEILING_DIRECTORIES GIT_DISCOVERY_ACROSS_FILESYSTEM; do
+        grep -q "$git_var" "$output/pre-commit" || { echo "missing git env scrub: $git_var"; return 1; }
+    done
     grep -q 'export CI_CONFIG_DIR=/opt/workspace-ci/config' "$output/pre-commit" || { echo "missing sealed config dir"; return 1; }
     grep -q 'export CI_PROJECT_ROOT=/opt/workspace-ci' "$output/pre-commit" || { echo "missing sealed project root"; return 1; }
     grep -q 'export CI_SCAN_ROOT="\$_ROOT"' "$output/pre-commit" || { echo "missing pinned scan root"; return 1; }

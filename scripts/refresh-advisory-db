@@ -110,8 +110,10 @@ fetch_db() {
     if [[ -d "$checkout/.git" ]]; then
         # The guard chowns a checkout's .git to root, so the user cannot
         # remove an existing checkout; refresh it in place instead.
-        if ! env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE \
-               -u GIT_OBJECT_DIRECTORY -u GIT_COMMON_DIR \
+        if ! env -u GIT_DIR -u GIT_WORK_TREE -u GIT_COMMON_DIR \
+               -u GIT_INDEX_FILE -u GIT_PREFIX -u GIT_OBJECT_DIRECTORY \
+               -u GIT_ALTERNATE_OBJECT_DIRECTORIES -u GIT_NAMESPACE \
+               -u GIT_CEILING_DIRECTORIES -u GIT_DISCOVERY_ACROSS_FILESYSTEM \
                timeout --signal=TERM --kill-after=10s "${FETCH_TIMEOUT_SECONDS}s" \
                git -C "$checkout" pull --ff-only origin main; then
             log "advisory database update failed"
@@ -129,8 +131,10 @@ fetch_db() {
     repo="$stage/repo"
     # Git exports GIT_DIR and friends to hooks; clear them so the clone cannot
     # be redirected into the committing repository.
-    if ! env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE \
-           -u GIT_OBJECT_DIRECTORY -u GIT_COMMON_DIR \
+    if ! env -u GIT_DIR -u GIT_WORK_TREE -u GIT_COMMON_DIR \
+           -u GIT_INDEX_FILE -u GIT_PREFIX -u GIT_OBJECT_DIRECTORY \
+           -u GIT_ALTERNATE_OBJECT_DIRECTORIES -u GIT_NAMESPACE \
+           -u GIT_CEILING_DIRECTORIES -u GIT_DISCOVERY_ACROSS_FILESYSTEM \
            timeout --signal=TERM --kill-after=10s "${FETCH_TIMEOUT_SECONDS}s" \
            git clone --branch main "$ADVISORY_DB_URL" "$repo"; then
         log "advisory database clone failed"

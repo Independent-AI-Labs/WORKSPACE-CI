@@ -40,13 +40,22 @@ invoked, not what they match.
    before it launches a checker, including `CI_CONFIG_PATH_*`,
    `CI_CONFIG_OVERRIDES`, `CI_GUARD_CONFIG_OVERRIDES`, and any other variable
    that selects a config file.
-2. A protected hook MUST set the sealed deployment variables itself:
+2. A protected hook MUST remove from its environment every git variable that
+   selects the repository, working tree, index, object store, or discovery
+   behavior: `GIT_DIR`, `GIT_WORK_TREE`, `GIT_COMMON_DIR`, `GIT_INDEX_FILE`,
+   `GIT_PREFIX`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES`,
+   `GIT_NAMESPACE`, `GIT_CEILING_DIRECTORIES`, and
+   `GIT_DISCOVERY_ACROSS_FILESYSTEM`. A checker that enumerates tracked files
+   MUST enumerate the repository under check, never a repository selected by
+   the trigger. `GIT_CONFIG_*` MUST be retained: the root-owned artifact's
+   `safe.directory` trust is carried through git configuration.
+3. A protected hook MUST set the sealed deployment variables itself:
    `CI_PROJECT_ROOT`, `CI_LIB_DIR`, `CI_CONFIG_DIR`, and `CI_BOOT_DIR` to the
    paths under `/opt/workspace-ci`.
-3. A protected hook MUST set `CI_SCAN_ROOT` to the toplevel of the repository
+4. A protected hook MUST set `CI_SCAN_ROOT` to the toplevel of the repository
    under check. It MUST NOT accept a caller-supplied scan root.
-4. A protected hook MUST NOT forward a caller-supplied `PYTHONPATH`.
-5. The override removal and the sealed assignments MUST be emitted by the hook
+5. A protected hook MUST NOT forward a caller-supplied `PYTHONPATH`.
+6. The override removal and the sealed assignments MUST be emitted by the hook
    generator into every stage, so that a new hook cannot be added without
    inheriting them.
 

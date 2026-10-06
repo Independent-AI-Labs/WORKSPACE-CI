@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from check_policy_integrity import _tracked_files, main
+from check_policy_integrity import _git_env, _tracked_files, main
 
 from ci import paths as ci_paths
 
@@ -214,5 +214,25 @@ def test_tracked_files_ignores_hook_injected_git_env(tmp_path, monkeypatch):
     monkeypatch.setenv("GIT_DIR", str(other / ".git"))
     monkeypatch.setenv("GIT_INDEX_FILE", str(other / ".git" / "index"))
     monkeypatch.setenv("GIT_WORK_TREE", str(other))
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(other))
+    monkeypatch.setenv("GIT_OBJECT_DIRECTORY", str(other / ".git" / "objects"))
 
     assert _tracked_files(root) == {"README.md"}
+
+
+def test_git_env_scrub_drops_git_vars_but_keeps_config(monkeypatch):
+    """Every GIT_* selector is dropped except GIT_CONFIG_*, which carries the
+    safe.directory trust the root-owned artifact depends on."""
+    monkeypatch.setenv("GIT_DIR", "/decoy/.git")
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", "/decoy")
+    monkeypatch.setenv("GIT_NAMESPACE", "decoy")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/safe/global")
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+
+    env = _git_env()
+
+    assert "GIT_DIR" not in env
+    assert "GIT_CEILING_DIRECTORIES" not in env
+    assert "GIT_NAMESPACE" not in env
+    assert env["GIT_CONFIG_GLOBAL"] == "/safe/global"
+    assert env["GIT_CONFIG_NOSYSTEM"] == "1"

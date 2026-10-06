@@ -46,23 +46,25 @@ def _fail(messages: list[str]) -> int:
     return 1
 
 
+def _git_env() -> dict[str, str]:
+    # GIT_CONFIG_* is retained on purpose: safe.directory for the root-owned
+    # artifact relies on config, while every other GIT_* var is a caller- or
+    # hook-supplied repo/index selector that must not redirect the listing.
+    return {
+        k: v
+        for k, v in os.environ.items()
+        if not (k.startswith("GIT_") and not k.startswith("GIT_CONFIG_"))
+    }
+
+
 def _tracked_files(root: Path) -> set[str]:
-    env = os.environ.copy()
-    for key in (
-        "GIT_DIR",
-        "GIT_WORK_TREE",
-        "GIT_COMMON_DIR",
-        "GIT_INDEX_FILE",
-        "GIT_PREFIX",
-    ):
-        env.pop(key, None)
     try:
         proc = subprocess.run(
             ["git", "-C", str(root), "ls-files", "-z"],
             capture_output=True,
             check=True,
             timeout=60,
-            env=env,
+            env=_git_env(),
         )
     except (OSError, subprocess.SubprocessError) as exc:
         print(f"policy-integrity: git ls-files unavailable: {exc}", file=sys.stderr)
