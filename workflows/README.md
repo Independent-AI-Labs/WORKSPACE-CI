@@ -9,6 +9,8 @@ diagrams in any workspace repo.
 | [WORKFLOW-WRITING-WEBSITE-COPY.md](WORKFLOW-WRITING-WEBSITE-COPY.md) | Wiki hero text, branding strings, README catalogue blurbs (first ~2 sentences)                   |
 | [WORKFLOW-WRITING-README.md](WORKFLOW-WRITING-README.md)             | Technical README bodies: overview (what/why), install catalog, subsystems, contribution contract |
 | [WORKFLOW-CREATING-DIAGRAMS.md](WORKFLOW-CREATING-DIAGRAMS.md)       | Mermaid architecture diagrams in READMEs and docs                                                |
+| [WORKFLOW-WRITING-WIKIS.md](WORKFLOW-WRITING-WIKIS.md)               | Reference wikis: page inventory, article structure, sourcing and citation rules                  |
+| [WORKFLOW-DESIGNING-WEB-PAGES.md](WORKFLOW-DESIGNING-WEB-PAGES.md)   | Web page design: anti-slop rules, design brief, real imagery, enforcement tests                  |
 
 Each workflow has generic rules up front and **Worked examples** at the end
 (from WORKSPACE-CI, WORKSPACE-GATEWAY, WORKSPACE-GUARD, etc.). Examples
