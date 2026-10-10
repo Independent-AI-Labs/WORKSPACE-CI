@@ -741,7 +741,7 @@ The following six files are copied from `CI/config/` into `<consumer>/config/`:
 
 | Source (CI) | Destination (consumer) | Tuning scope |
 |---------------|-------------------------|--------------|
-| `coverage_thresholds.yaml` | `config/coverage_thresholds.yaml` | Unit / integration min coverage, source paths. **CRITICAL:** the generator post-processes this file to substitute `source_path: ci` for `source_path: <project>` (the project name from the profile). |
+| `coverage_thresholds.yaml` | `config/coverage_thresholds.yaml` | Suites, runners, source paths, min coverage. **CRITICAL:** the generator post-processes this file to substitute `source_path: ci` for `source_path: <project>` (the project name from the profile). The copied file carries CI's Python runner and is a starting point only; the consumer replaces the suites with those describing its own stack until the file satisfies SPEC-COVERAGE-GATE §3-§4. |
 | `file_length_limits.yaml` | `config/file_length_limits.yaml` | Max lines (default 512), recognised extensions. |
 | `dead_code.yaml` | `config/dead_code.yaml` | `scan_paths`, `entry_points`. **CRITICAL:** generator substitutes `scan_paths: [ci]` with `scan_paths: [<project-language-default-dir>]` based on declared languages. For `rust`, stock is `[src]`. For `python`, stock is `[]` (no scan paths; the consumer fills them). For `node`, stock is `[]`. |
 | `dependency_excludes.yaml` | `config/dependency_excludes.yaml` | PyPI / npm excludes. |

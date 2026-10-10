@@ -7,6 +7,32 @@ Policy and exemption hardening is tracked separately in
 `docs/TODO-POLICY-EXEMPTION-REMEDIATION.md`; both ledgers are mandatory for
 completion.
 
+## Coverage Gate Orphan (2026-10-10; discovered in gate review)
+
+- [x] Contract written: `REQ-COVERAGE-GATE.md` and `SPEC-COVERAGE-GATE.md`
+      define per-repository, config-driven, pre-push coverage enforcement;
+      `REQ-SCAFFOLD-CI` FR-SC-8.3a and `SPEC-SCAFFOLD-CI` §8.1 updated; README
+      and `RUNBOOK-INTEGRATION.md` corrected.
+- [ ] `ci_verify_coverage` (`lib/checks_coverage.sh:6`) is orphaned: defined and
+      unit-tested, but referenced by no hook, no Makefile target, and no
+      `required_hooks.yaml` entry. Every `min_coverage` value is therefore a
+      paper number. Register a mandatory `verify-coverage` pre-push hook.
+- [ ] Runner adapters report thresholds without measuring: the `"npm test"*` /
+      `node --test` and bare `cargo` branches append no coverage arguments
+      (`lib/checks_coverage.sh:94-116`), and the generic branch appends flags
+      almost no runner accepts. Make `coverage: true` invalid for
+      non-measuring runners per SPEC-COVERAGE-GATE §3-§4.
+- [ ] WORKSPACE-CI's own `config/coverage_thresholds.yaml` declares Python
+      `unit`/`integration` suites only; the Node workspaces (`web/`,
+      `web-components/`, `hitl/web`) are unmeasured and `make check-push`
+      hardcodes `--fail-under=90` (`Makefile:354`) instead of reading the
+      config. Requires the root-gated config interface (REQ/SPEC-COVERAGE-GATE
+      §8).
+- [ ] Per-repo data repair: RUST-ZK-* declare pytest in Rust repositories; 10
+      repositories with a `tests/` directory have no config; 6 configs exist in
+      repositories with no tests. Repos with suites replace their configs;
+      repos without are advisory per REQ-COVERAGE-GATE §6.
+
 ## Root-Only Hook Installation (2026-08-31; supersedes H5 rationale)
 
 - [x] `reinstall-hooks` non-root branch deleted: it previously generated

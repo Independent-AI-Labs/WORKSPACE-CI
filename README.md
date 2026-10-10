@@ -119,6 +119,7 @@ Scope describes which files the check scans when triggered. Checks marked
 | `__init__.py` must be empty                                                                                          | pre-commit          | `__init__.py` files                                   |
 | `+x` bit forbidden on `.py` modules                                                                                  | pre-commit          | tracked `.py` files                                   |
 | Coverage thresholds not lowered                                                                                      | pre-commit          | `coverage_thresholds.yaml`                            |
+| Coverage gate (each repo runs its own `coverage_thresholds.yaml`; enabled suites measured, disabled suites pass/fail) | pre-push            | repo-local `config/coverage_thresholds.yaml`          |
 | Deleted `.py` still imported elsewhere                                                                               | pre-commit          | staged deletions                                      |
 | Unstaged/untracked files auto-stage guard                                                                            | pre-commit          | full tree                                             |
 | Process substitution banned in shell scripts                                                                         | pre-commit          | shell scripts                                         |
@@ -128,7 +129,7 @@ Scope describes which files the check scans when triggered. Checks marked
 | Boot layout audit (`.boot-linux/`/`.boot-macos/` + `.venv/` alignment, **advisory**)                                 | pre-commit          | layout config                                         |
 | Commit message format (`type: description`, body required)                                                           | commit-msg          | message body                                          |
 | Agent attribution / `Co-authored-by` pattern blocking                                                                | commit-msg          | message body                                          |
-| Full test suite + coverage enforcement (Python + shell + JS packages)                                                | pre-push            | whole project                                         |
+| Full test suite (Python + shell + JS packages)                                                                       | pre-push            | whole project                                         |
 | Web/JS quality (eslint, tsc, vitest via `make check-push`)                                                           | pre-push            | `web/`, `web-components/`, `hitl/web/`                |
 | Co-authored / agent attribution in push range                                                                        | pre-push            | git history                                           |
 | Dead code candidates (`dangle`, 13 languages, **advisory**)                                                          | pre-push            | git-tracked sources per `dead_code.yaml` `scan_paths` |
@@ -144,7 +145,8 @@ All rules are config-driven. Patterns live in [`config/banned_words.yaml`](confi
 inline-code rules and allowed constructs in `config/inline_code.yaml`
 (contract in [`docs/requirements/REQ-INLINE-CODE.md`](docs/requirements/REQ-INLINE-CODE.md)),
 file rules in [`config/sensitive_files.yaml`](config/sensitive_files.yaml),
-coverage gates in [`config/coverage_thresholds.yaml`](config/coverage_thresholds.yaml),
+coverage gates in each repository's own `config/coverage_thresholds.yaml`
+(contract in [`docs/requirements/REQ-COVERAGE-GATE.md`](docs/requirements/REQ-COVERAGE-GATE.md): every repo owns its suites; coverage is enabled only on coverage-capable runners),
 hook registry in [`config/required_hooks.yaml`](config/required_hooks.yaml),
 boot layout in [`moon.yml`](moon.yml) (`project.inherited_boot_dirs`),
 file length limits in [`config/file_length_limits.yaml`](config/file_length_limits.yaml),

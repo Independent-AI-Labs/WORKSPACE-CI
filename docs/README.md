@@ -38,6 +38,7 @@ artifact, then install protected hooks as a separate step.
 | [`requirements/REQ-PORTABILITY.md`](requirements/REQ-PORTABILITY.md)                     | Shell portability contract: process-substitution ban, capture helpers           |
 | [`requirements/REQ-CVE-SCAN.md`](requirements/REQ-CVE-SCAN.md)                           | Dependency vulnerability scanning via OSV-Scanner (live OSV.dev CVE DB)         |
 | [`requirements/REQ-MODULE-SIZE.md`](requirements/REQ-MODULE-SIZE.md)                     | Source file and module-size guardrails                                          |
+| [`requirements/REQ-COVERAGE-GATE.md`](requirements/REQ-COVERAGE-GATE.md)                 | Per-repository coverage gate: config authority, real measurement, pre-push enforcement |
 | [`requirements/REQ-BANNED-PATTERN-MATCHING.md`](requirements/REQ-BANNED-PATTERN-MATCHING.md) | Normalized banned-pattern, path, variant, and exemption matching                 |
 | [`requirements/REQ-INLINE-CODE.md`](requirements/REQ-INLINE-CODE.md)                      | Inline-code detection and the generic allowed-construct mechanism                 |
 | [`requirements/REQ-TRUSTED-EXEC.md`](requirements/REQ-TRUSTED-EXEC.md)                   | Service-killing pattern detection in trusted authored code                        |
@@ -61,6 +62,7 @@ artifact, then install protected hooks as a separate step.
 | [`specifications/SPEC-PORTABILITY.md`](specifications/SPEC-PORTABILITY.md)                     | Capture helper API, detection patterns, enforcement mechanism                      |
 | [`specifications/SPEC-CVE-SCAN.md`](specifications/SPEC-CVE-SCAN.md)                           | OSV-Scanner bootstrap, `ci_scan_vulnerabilities` wrapper, `osv-scan` pre-push hook |
 | [`specifications/SPEC-MODULE-SIZE.md`](specifications/SPEC-MODULE-SIZE.md)                     | Module-size hook implementation and configuration                                  |
+| [`specifications/SPEC-COVERAGE-GATE.md`](specifications/SPEC-COVERAGE-GATE.md)                 | Coverage gate implementation: suite schema, runner adapters, validation, hook wiring |
 | [`specifications/SPEC-INLINE-CODE.md`](specifications/SPEC-INLINE-CODE.md)                     | Inline-code checker components, scan pipeline, and allowed constructs              |
 | [`specifications/SPEC-TRUSTED-EXEC.md`](specifications/SPEC-TRUSTED-EXEC.md)                   | Trusted-code service-killing checker, carriers, and rule table                     |
 | [`specifications/SPEC-DEPENDENCY-VALIDATION.md`](specifications/SPEC-DEPENDENCY-VALIDATION.md) | Offline policy and live freshness components                                       |

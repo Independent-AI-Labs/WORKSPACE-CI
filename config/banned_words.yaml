@@ -1308,6 +1308,24 @@ rules:
     reason: Tracked text must use reviewed hermetic tooling, not a system interpreter.
     category: deployment-integrity
     non_exemptible: true
+  - id: gitleaks-allow-directive
+    mode: raw-regex
+    case: fold
+    pattern: gitleaks[\s:;=_\-]*allow\b
+    reason: Inline gitleaks suppression forbidden. Fix the finding, or add a reviewed repo-level .gitleaks.toml allowlist.
+    category: linter-suppression
+  - id: gitleaks-allowlist-directive
+    mode: raw-regex
+    case: fold
+    pattern: gitleaks[\s:;=_\-]*allow[\s:;=_\-]*list\b
+    reason: gitleaks allowlist directive (all spellings) forbidden. Fix the finding instead.
+    category: linter-suppression
+  - id: gitleaks-ignore-directive
+    mode: raw-regex
+    case: fold
+    pattern: gitleaks[\s:;=_\-]*ignor\w*
+    reason: gitleaks ignore directive / .gitleaksignore forbidden. Fix the finding instead.
+    category: linter-suppression
 directory_rules:
   tests:
   - id: tests-reason-not-implemented-yet

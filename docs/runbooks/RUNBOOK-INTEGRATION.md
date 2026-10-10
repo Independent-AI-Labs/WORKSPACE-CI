@@ -212,7 +212,7 @@ The gates run in three stages:
 | --- | --- | --- |
 | pre-commit | Format, lint, secrets, banned patterns, inline code, trusted-code service-killing patterns, swallowed-error scan, dependency validation, file and module size, coverage no-devolution | Fast, content-focused gates before a commit is recorded |
 | commit-msg | Message format compliance and agent-attribution blocking | Reads the message file |
-| pre-push | Full test suite and coverage thresholds, web and JS quality, co-authored history scan, advisory dead-code report | Expensive gates that run when code leaves the machine |
+| pre-push | Full test suite, each repository's own coverage gate, web and JS quality, co-authored history scan, advisory dead-code report | Expensive gates that run when code leaves the machine |
 
 Mirror the push gate locally before pushing:
 
@@ -239,8 +239,10 @@ config change with no code edit:
   Ansible, and cron.
 - **File classifications and per-file exemptions.** An exemption names a rule
   and a path.
-- **Coverage floors and module-size limits.** Thresholds that can only rise,
-  and structural limits on source files and modules.
+- **Coverage floors and module-size limits.** Each repository owns its
+  `config/coverage_thresholds.yaml`; the coverage gate runs that file at
+  pre-push, measuring enabled suites and passing disabled suites on test
+  outcome alone. Thresholds can only rise. Module-size limits are structural.
 - **Effective-exemption receipts.** Generated deterministically and gated for
   drift, the same way lockfiles are.
 

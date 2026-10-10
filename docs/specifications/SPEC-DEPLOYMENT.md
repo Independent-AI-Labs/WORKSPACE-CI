@@ -279,11 +279,11 @@ unusable-current replacement all pass through the same Ansible role.
 
 Primary references:
 
-- [Linux `rename(2)`](https://man7.org/linux/man-pages/man2/rename.2.html)
-- [Linux mount namespaces](https://man7.org/linux/man-pages/man7/mount_namespaces.7.html)
+- [Linux `rename(2)`](https://manpages.debian.org/bookworm/manpages-dev/rename.2.en.html)
+- [Linux mount namespaces](https://manpages.debian.org/bookworm/manpages/mount_namespaces.7.en.html)
 - [Python virtual environments](https://docs.python.org/3/library/venv.html)
 - [POSIX `rename()`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/rename.html)
-- [Linux `chattr(1)`](https://man7.org/linux/man-pages/man1/chattr.1.html)
+- [Linux `chattr(1)`](https://manpages.debian.org/bookworm/e2fsprogs/chattr.1.en.html)
 - [Capistrano deployment structure](https://capistranorb.com/documentation/getting-started/structure/)
 - [Nix profiles and atomic upgrades](https://nix.dev/manual/nix/latest/package-management/profiles)
 - [OSTree atomic upgrades](https://ostreedev.github.io/ostree/atomic-upgrades/)
