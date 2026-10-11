@@ -1311,20 +1311,20 @@ rules:
   - id: gitleaks-allow-directive
     mode: raw-regex
     case: fold
-    pattern: gitleaks[\s:;=_\-]*allow\b
+    pattern: gitleaks\s*[:;=_-]\s*allow\b
     reason: Inline gitleaks suppression forbidden. Fix the finding, or add a reviewed repo-level .gitleaks.toml allowlist.
     category: linter-suppression
   - id: gitleaks-allowlist-directive
     mode: raw-regex
     case: fold
-    pattern: gitleaks[\s:;=_\-]*allow[\s:;=_\-]*list\b
+    pattern: gitleaks\s*[:;=_-]\s*allow\s*[-_]?\s*list\b
     reason: gitleaks allowlist directive (all spellings) forbidden. Fix the finding instead.
     category: linter-suppression
   - id: gitleaks-ignore-directive
     mode: raw-regex
     case: fold
-    pattern: gitleaks[\s:;=_\-]*ignor\w*
-    reason: gitleaks ignore directive / .gitleaksignore forbidden. Fix the finding instead.
+    pattern: (gitleaks\s*[:;=_-]\s*ignor\w*|\.gitleaksignore\b)
+    reason: gitleaks ignore directive / .gitleaksignore file forbidden. Fix the finding instead.
     category: linter-suppression
 directory_rules:
   tests:
