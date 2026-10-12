@@ -38,6 +38,8 @@ _config_overrides=""
 
 _consumer=""
 _profile=""
+_profile_given=0
+_profile_generated_tmp=""
 _dry_run=0
 _force_pc=0
 _force_mf=0
@@ -56,7 +58,7 @@ _strict_applicable=1
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --consumer)        _consumer="$2"; shift 2 ;;
-        --profile)         _profile="$2"; shift 2 ;;
+        --profile)         _profile="$2"; _profile_given=1; shift 2 ;;
         --config-overrides) _config_overrides="$2"; shift 2 ;;
         --dry-run)         _dry_run=1; shift ;;
         --force-precommit|--apply-precommit) _force_pc=1; shift ;;
@@ -192,6 +194,28 @@ _consumer="$(cd "$_consumer" && pwd)"
 
 if [[ -z "$_profile" ]]; then
     _profile="$_consumer/ci-profile.yaml"
+fi
+# A consumer with no profile is enrolled from the reference template:
+# substituting the consumer directory name for the template project value.
+# The reference template already lists every registered hook with
+# languages = union of applicable_to, so it always validates. An
+# explicitly supplied --profile is still authoritative and must exist.
+if [[ $_profile_given -eq 0 && ! -f "$_profile" ]]; then
+    _profile_tpl="$_CI_ROOT/templates/ci-profile.template.yaml"
+    [[ -f "$_profile_tpl" ]] || { ci_fail "Profile not found: $_profile (and reference template missing at $_profile_tpl)"; exit 1; }
+    _pf_basename="$(basename "$_consumer")"
+    _pf_rendered="$(sed "s/^project: your-project-name\$/project: $_pf_basename/" "$_profile_tpl")"
+    if [[ $_dry_run -eq 1 ]]; then
+        _profile_generated_tmp="$(mktemp)"
+        trap 'rm -f "${_profile_generated_tmp:-}"' EXIT
+        printf '%s\n' "$_pf_rendered" > "$_profile_generated_tmp"
+        _profile="$_profile_generated_tmp"
+        ci_info "Would generate ci-profile.yaml from reference template (project=$_pf_basename)"
+    else
+        printf '%s\n' "$_pf_rendered" > "$_profile"
+        _generated+=("$_profile")
+        ci_info "Generated $_profile from templates/ci-profile.template.yaml (project=$_pf_basename)"
+    fi
 fi
 [[ -f "$_profile" ]] || { ci_fail "Profile not found: $_profile"; exit 1; }
 

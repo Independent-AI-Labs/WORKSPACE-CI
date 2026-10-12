@@ -188,11 +188,13 @@ test_scaffold_missing_profile() {
     mkdir -p "$consumer"
     cd "$PROJECT_DIR"
     local rc=0
-    bash "$_SCI_SCRIPT" --consumer "$consumer" > "$TEST_TMP/out" 2>&1 || rc=$?
+    # An explicitly supplied --profile is authoritative and must exist;
+    # only the implicit default profile is auto-generated from the template.
+    bash "$_SCI_SCRIPT" --consumer "$consumer" --profile "$consumer/absent.yaml" > "$TEST_TMP/out" 2>&1 || rc=$?
     [[ $rc -ne 0 ]] || { echo "expected non-zero exit"; return 1; }
     grep -q 'Profile not found' "$TEST_TMP/out" || { echo "wrong error message"; return 1; }
 }
-_run_test "scaffold_missing: profile not found fails" test_scaffold_missing_profile
+_run_test "scaffold_missing: explicit missing profile fails" test_scaffold_missing_profile
 
 # ── Unknown hook ID ────────────────────────────────────────────────────────
 

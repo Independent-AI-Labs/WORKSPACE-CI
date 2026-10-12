@@ -408,7 +408,8 @@ _scl_gen_template() {
     printf '# make scaffold-ci ARGS=--emit-template.\n'
     printf 'version: 1\n'
     printf 'project: your-project-name\n'
-    printf 'languages: [%s]\n' "${_tpl_langs[*]:-any}"
+    local _tpl_langs_csv; _tpl_langs_csv="$(IFS=,; echo "${_tpl_langs[*]:-any}")"
+    printf 'languages: [%s]\n' "$_tpl_langs_csv"
     printf 'tier: strict\n'
     printf 'hooks:\n'
     local _total=0 _stage_counts=""

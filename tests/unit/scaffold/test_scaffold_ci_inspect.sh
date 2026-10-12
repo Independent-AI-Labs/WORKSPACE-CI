@@ -146,6 +146,79 @@ EOF
 }
 _run_test "scaffold: --append-makefile no-op when complete" test_append_makefile_no_changes_when_complete
 
+test_append_makefile_includes_preamble() {
+    mkdir -p "$TEST_TMP/sci-am3"
+    cat > "$TEST_TMP/sci-am3/ci-profile.yaml" <<'EOF'
+version: 1
+project: am3-test
+tier: strict
+languages: [any]
+hooks:
+  pre-commit: [check-unstaged]
+EOF
+    # A hand-written Makefile with no CI preamble: appended recipes must
+    # carry CI_DIR/SCRIPT_BASH or they expand to /scripts/reinstall-hooks.
+    printf 'init:\n\t@echo partial\n' > "$TEST_TMP/sci-am3/Makefile"
+    cd "$PROJECT_DIR"
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-am3" --append-makefile --yes > "$TEST_TMP/out" 2>&1
+    grep -q '^CI_DIR' "$TEST_TMP/sci-am3/Makefile" || { echo "appended Makefile lacks CI_DIR preamble"; return 1; }
+    grep -q '^SCRIPT_BASH' "$TEST_TMP/sci-am3/Makefile" || { echo "appended Makefile lacks SCRIPT_BASH preamble"; return 1; }
+    grep -q 'makefile_contract.mk' "$TEST_TMP/sci-am3/Makefile" || { echo "appended Makefile lacks contract include"; return 1; }
+    if grep -q '\.DEFAULT_GOAL' "$TEST_TMP/sci-am3/Makefile"; then
+        echo "appended preamble clobbers the consumer default goal"
+        return 1
+    fi
+}
+_run_test "scaffold: --append-makefile carries the variable preamble" test_append_makefile_includes_preamble
+
+test_append_makefile_second_run_no_preamble_dupe() {
+    mkdir -p "$TEST_TMP/sci-am4"
+    cat > "$TEST_TMP/sci-am4/ci-profile.yaml" <<'EOF'
+version: 1
+project: am4-test
+tier: strict
+languages: [any]
+hooks:
+  pre-commit: [check-unstaged]
+EOF
+    printf 'init:\n\t@echo partial\n' > "$TEST_TMP/sci-am4/Makefile"
+    cd "$PROJECT_DIR"
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-am4" --append-makefile --yes > "$TEST_TMP/out1" 2>&1
+    # A second append: the preamble is already present, and the targets are now
+    # all present, so nothing should change.
+    local _before _after
+    _before="$(cat "$TEST_TMP/sci-am4/Makefile")"
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-am4" --append-makefile --yes > "$TEST_TMP/out" 2>&1
+    _after="$(cat "$TEST_TMP/sci-am4/Makefile")"
+    [[ "$_before" == "$_after" ]] || { echo "second append modified the Makefile"; return 1; }
+}
+_run_test "scaffold: --append-makefile is idempotent" test_append_makefile_second_run_no_preamble_dupe
+
+test_analyze_and_json_run_to_completion() {
+    mkdir -p "$TEST_TMP/sci-ac"
+    cat > "$TEST_TMP/sci-ac/ci-profile.yaml" <<'EOF'
+version: 1
+project: ac-test
+tier: strict
+languages: [any]
+hooks:
+  pre-commit: [check-unstaged]
+EOF
+    # A common target present in both template and Makefile used to leak a
+    # nonzero from _scl_makefile_target_diff, aborting the report under set -e.
+    printf 'lint:\n\t:\n' > "$TEST_TMP/sci-ac/Makefile"
+    cd "$PROJECT_DIR"
+    local rc=0
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-ac" --json > "$TEST_TMP/out-json" 2>&1 || rc=$?
+    [[ $rc -eq 0 ]] || { echo "--json exited $rc"; cat "$TEST_TMP/out-json"; return 1; }
+    grep -q '"makefile_targets"' "$TEST_TMP/out-json" || { echo "--json output truncated"; return 1; }
+    rc=0
+    bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-ac" --analyze > "$TEST_TMP/out-an" 2>&1 || rc=$?
+    [[ $rc -eq 0 ]] || { echo "--analyze exited $rc"; return 1; }
+    grep -q 'Makefile target analysis' "$TEST_TMP/out-an" || { echo "--analyze output truncated"; return 1; }
+}
+_run_test "scaffold: --analyze/--json complete (no set -e abort)" test_analyze_and_json_run_to_completion
+
 test_apply_alias_matches_force() {
     mkdir -p "$TEST_TMP/sci-aa"
     cat > "$TEST_TMP/sci-aa/ci-profile.yaml" <<'EOF'

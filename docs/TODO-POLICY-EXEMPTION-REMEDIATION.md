@@ -144,9 +144,9 @@ mandatory for scanner and exemption acceptance.
 - [ ] Prevent interpreter indirection from hiding blocked `chattr`, deletion, Podman, or filesystem operations.
 - [ ] Audit `Invocation::PassThrough` and document its exact allowed boundary.
 - [ ] Audit `ScriptClass::Trusted` and require exact immutable identity before bypassing body scans.
-- [ ] Audit the root `/bin/bash.real` escape as host authority outside repository provisioning.
-- [ ] Prohibit every repository provisioning reference to `/bin/bash.real`.
-- [ ] Add integration tests proving guarded `/bin/bash` remains usable while the candidate owner cannot execute `/bin/bash.real` directly.
+- [x] DONE 2026-10-12: audited the root `/bin/bash.real` escape as host authority outside repository provisioning (docs/audits/AUDIT-SCAFFOLD-CI-AND-GITLEAKS-2026-10-12.md F14).
+- [x] DONE 2026-10-12: prohibited every repository-provisioning reference to `/bin/bash.real` (removed from `templates/Makefile.consumer` and SPEC-SCAFFOLD-CI §7.1; `test_automation_has_no_real_shell_escape` now scans `templates/*`).
+- [~] PARTIAL 2026-10-12: candidate-owner lockdown covered by tests/integration/test_candidate_namespace.py (`test ! -x /bin/bash.real`); guarded `/bin/bash` usability for root is the canonical flow (WORKSPACE-CI Makefile `install-hooks`). A dedicated guard-domain integration test remains.
 - [ ] Inventory commands allowed solely because the shell guard uses a denylist rather than an allowlist.
 - [ ] Decide whether deployment requires an exact system-tool allowlist enforced independently of command regexes.
 

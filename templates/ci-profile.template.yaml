@@ -8,7 +8,7 @@
 # make scaffold-ci ARGS=--emit-template.
 version: 1
 project: your-project-name
-languages: [python rust]
+languages: [python,rust]
 tier: strict
 hooks:
   pre-commit:
@@ -48,5 +48,5 @@ hooks:
     - osv-scan
 
 # Total hooks: 32 (pre-commit=26 commit-msg=2 pre-push=4)
-# Generated: 2026-10-04T09:58:33Z
+# Generated: 2026-10-12T08:58:41Z
 # Source: config/required_hooks.yaml

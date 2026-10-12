@@ -50,7 +50,9 @@ Usage: scaffold-ci --consumer PATH [--profile PATH] [--dry-run]
                            leave existing files untouched. Fresh-scaffold
                            (all files missing) writes everything.
   --consumer PATH        Consumer project directory (required for scaffolding).
-  --profile PATH         Profile YAML (default: <consumer>/ci-profile.yaml).
+  --profile PATH         Profile YAML (default: <consumer>/ci-profile.yaml;
+                           created from templates/ci-profile.template.yaml
+                           when absent, unless --profile is given).
   --dry-run              Print intended file content without writing.
 
   Overwrite flags (granular; --apply-* are aliases of --force-*):
@@ -208,8 +210,11 @@ _scl_makefile_target_diff() {
         for _e in "${_template_tgts[@]:-}"; do
             [[ "$_e" == "$_t" ]] && { _found=1; break; }
         done
-        [[ $_found -eq 0 ]] && _extra+=("$_t")
+        if [[ $_found -eq 0 ]]; then _extra+=("$_t"); fi
     done
+    # Explicit success: the trailing test above must not leak a nonzero
+    # status, which under `set -e` aborts --analyze/--json mid-report.
+    return 0
 }
 
 # ── Analyze: text-table report (no writes) ───────────────────────────────
@@ -454,14 +459,39 @@ _scl_append_makefile() {
         return 0
     fi
 
+    # A hand-written Makefile that lacks the template preamble leaves the
+    # appended recipes' $(CI_DIR) / $(SCRIPT_BASH) empty, so e.g.
+    # install-hooks expands to "/scripts/reinstall-hooks". Emit the
+    # preamble (everything before the first target, minus the consumer-
+    # overriding .DEFAULT_GOAL) when the destination does not define them.
+    local _need_preamble=0
+    if ! grep -qE '^CI_DIR[[:space:]]*[:?+]?=' "$_mf_target" \
+       || ! grep -qE '^SCRIPT_BASH[[:space:]]*[:?+]?=' "$_mf_target"; then
+        _need_preamble=1
+    fi
+    local _preamble=""
+    if [[ $_need_preamble -eq 1 ]]; then
+        _preamble="$(printf '%s\n' "$_rendered" | awk '
+            /^[A-Za-z][A-Za-z0-9_.-]*:/ { exit }
+            /^[[:space:]]*\.DEFAULT_GOAL[[:space:]]*[:?+]?=/ { next }
+            { print }
+        ')"
+    fi
+
     local _missing_re
     _missing_re="^($(IFS='|'; printf '%s' "${_missing_tgts[*]}"; unset IFS)):"
-    printf '%s\n' "$_rendered" | awk -v want_re="$_missing_re" '
-        BEGIN { in_block = 0 }
-        /^[A-Za-z][A-Za-z0-9_.-]*:/ && $0 ~ want_re { in_block = 1; printf "\n%s\n", $0; next }
-        /^[A-Za-z][A-Za-z0-9_.-]*:/ && $0 !~ want_re { in_block = 0; next }
-        in_block == 1 { print }
-    ' > "$_mf_target.append.tmp"
+    {
+        printf '\n# Appended by scaffold-ci --append-makefile [%s]\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        if [[ $_need_preamble -eq 1 ]]; then
+            printf '%s\n\n' "$_preamble"
+        fi
+        printf '%s\n' "$_rendered" | awk -v want_re="$_missing_re" '
+            BEGIN { in_block = 0 }
+            /^[A-Za-z][A-Za-z0-9_.-]*:/ && $0 ~ want_re { in_block = 1; printf "\n%s\n", $0; next }
+            /^[A-Za-z][A-Za-z0-9_.-]*:/ && $0 !~ want_re { in_block = 0; next }
+            in_block == 1 { print }
+        '
+    } > "$_mf_target.append.tmp"
 
     if [[ -s "$_mf_target.append.tmp" ]]; then
         if [[ $_dry_run -eq 1 ]]; then
@@ -472,7 +502,6 @@ _scl_append_makefile() {
             rm -f "$_mf_target.append.tmp"
         else
             _scl_backup "$_mf_target" "$_make_backup" _backups_written
-            printf '\n# Appended by scaffold-ci --append-makefile [%s]\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$_mf_target"
             cat "$_mf_target.append.tmp" >> "$_mf_target"
             rm -f "$_mf_target.append.tmp"
             _generated+=("Makefile (appended: ${_missing_tgts[*]})")

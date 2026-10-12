@@ -184,11 +184,17 @@ working-directory audit sink for agent sessions.
 `scaffold-ci` is the profile-driven bootstrapper that enrolls a repository:
 
 ```bash
-make scaffold-ci CONSUMER=<path> ARGS="--force-precommit --yes"
+make scaffold-ci CONSUMER=<path> ARGS="--force-precommit --append-makefile --yes"
 ```
 
 It generates the CI integration files, including `.pre-commit-config.yaml`,
-which declares hooks, stages, and file gates. The engine reads that file and
+which declares hooks, stages, and file gates. If `<path>/ci-profile.yaml`
+does not exist it is generated from `templates/ci-profile.template.yaml`
+(the project name is substituted; trim the hook list to your stack
+afterwards). An existing Makefile is never overwritten: `--append-makefile`
+adds any missing contract targets (with the variable preamble they need)
+while leaving hand-written recipes untouched. The engine reads
+`.pre-commit-config.yaml` and
 generates native `.git/hooks/*` scripts from it; there is no framework runtime
 and no remote hook environment to clone. Requirements are in
 [`REQ-SCAFFOLD-CI.md`](https://github.com/Independent-AI-Labs/WORKSPACE-CI/blob/main/docs/requirements/REQ-SCAFFOLD-CI.md).

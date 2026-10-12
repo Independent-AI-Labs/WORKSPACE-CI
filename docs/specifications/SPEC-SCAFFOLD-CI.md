@@ -498,11 +498,13 @@ Because the consumer directory may not yet be a git repo (the user may run
 work on a non-git directory. `realpath --relative-to` is filesystem-pure
 and requires no git context.
 
-If `$CONSUMER_DIR/ci-profile.yaml` does not exist, the script refuses
-(unless `--profile` is given to point at a profile path elsewhere). The
-recommended workflow is to `cp templates/ci-profile.template.yaml
-<consumer>/ci-profile.yaml`, trim, then run `scaffold-ci --consumer
-<consumer>`.
+If `$CONSUMER_DIR/ci-profile.yaml` does not exist and no `--profile` is
+given, the generator creates it by rendering
+`templates/ci-profile.template.yaml` with the `project:` field set to the
+consumer directory name, then proceeds. An explicitly supplied `--profile`
+is authoritative and MUST exist; a missing path fails fast. The template
+lists every hook, so the generated profile scaffolds verbatim until the
+consumer trims it to its stack (and replaces the template `languages`).
 
 ---
 
@@ -621,11 +623,8 @@ IS defined; the recipe body is irrelevant to the contract).
 # intentional vacuous targets. Fill them in per your project's stack. See
 # <REL_CI>/Makefile for the canonical example.
 
-ifeq ($(shell id -u),0)
-SHELL := /bin/bash.real
-else
 SHELL := /bin/bash
-endif
+SCRIPT_BASH := bash
 .DEFAULT_GOAL := help
 
 _CONSUMER_MK := $(abspath $(lastword $(MAKEFILE_LIST)))
@@ -959,7 +958,10 @@ Usage: scaffold-ci --consumer PATH [--profile PATH] [--dry-run]
   --consumer PATH        Consumer project directory (required for scaffolding).
                          MUST exist on disk; need not be a git repo.
   --profile PATH         Profile YAML path. Default: <consumer>/ci-profile.yaml.
-                         The file MUST exist; the script does not create it.
+                         If not supplied and the file is absent, it is
+                         created from templates/ci-profile.template.yaml
+                         with project set to the consumer directory name.
+                         An explicitly supplied path MUST exist.
   --dry-run              Print every file's intended content via `cat` to stdout;
                          do not write any file. Output is prefixed with a
                          per-file header suitable for diffing.

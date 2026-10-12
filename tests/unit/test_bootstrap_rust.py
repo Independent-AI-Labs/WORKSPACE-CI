@@ -13,7 +13,12 @@ def test_bootstrap_rust_rejects_root_without_real_shell_escape() -> None:
 
 def test_automation_has_no_real_shell_escape() -> None:
     root = Path(__file__).parents[2]
-    paths = [root / "Makefile", root / "web/Containerfile", *root.glob("scripts/*")]
+    paths = [
+        root / "Makefile",
+        root / "web/Containerfile",
+        *root.glob("scripts/*"),
+        *root.glob("templates/*"),
+    ]
     # enter-candidate-namespace.sh is an operator root tool that only
     # asserts the bash.real lockdown (0:700 root-owned, not executable
     # by the candidate owner); it never invokes bash.real.

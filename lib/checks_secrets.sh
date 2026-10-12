@@ -66,10 +66,37 @@ ci_scan_secrets() {
     rm -f "$_ss_ignored_paths_tmp" "$_ss_stderr_tmp"
     rm -f "$_ss_candidates_tmp"
 
-    if [[ -f "$_ss_root/.gitleaks.toml" ]]; then
-        printf "[extend]\npath = '''%s'''\n\n" "$_ss_root/.gitleaks.toml" >"$_ss_config_tmp"
-    else
-        printf '[extend]\nuseDefault = true\n\n' >"$_ss_config_tmp"
+    # The generated config always carries the default gitleaks rules
+    # (useDefault) AND the repo allowlist. Two fail-open shapes are
+    # deliberately avoided: (1) pointing at the repo file with
+    # `[extend] path` merges rules only and drops its
+    # [allowlist]/[[allowlists]] sections; (2) omitting useDefault when a
+    # repo file exists makes an allowlist-only file yield a zero-rule
+    # scan that passes every secret. The repo file is a normal reviewed
+    # tracked source file (agent-editable through review, not a root-owned
+    # artifact): its `[extend]`/`title` boilerplate is stripped and
+    # useDefault is forced on, so it can never disable the default rules,
+    # and its allowlists are concatenated into the top-level config.
+    _ss_repo_cfg="$_ss_root/.gitleaks.toml"
+    printf '[extend]\nuseDefault = true\n\n' >"$_ss_config_tmp"
+    if [[ -L "$_ss_repo_cfg" ]] || { [[ -e "$_ss_repo_cfg" ]] && [[ ! -f "$_ss_repo_cfg" ]]; }; then
+        ci_fail "repo .gitleaks.toml must be a regular file (not a symlink or special file): $_ss_repo_cfg"
+        rm -f "$_ss_config_tmp" "$_ss_ignored_tmp"
+        return 1
+    fi
+    if [[ -f "$_ss_repo_cfg" ]]; then
+        if grep -qE '^[[:space:]]*\[\[?rules\]' "$_ss_repo_cfg"; then
+            ci_fail "repo .gitleaks.toml must be allowlist-only (no [[rules]]): $_ss_repo_cfg"
+            rm -f "$_ss_config_tmp" "$_ss_ignored_tmp"
+            return 1
+        fi
+        awk '
+            /^[[:space:]]*\[/ { _skip = ($0 ~ /^[[:space:]]*\[\[?extend\]\]?[[:space:]]*$/) ? 1 : 0 }
+            _skip { next }
+            /^[[:space:]]*title[[:space:]]*=/ { next }
+            { print }
+        ' "$_ss_repo_cfg" >>"$_ss_config_tmp"
+        printf '\n' >>"$_ss_config_tmp"
     fi
     if [[ -s "$_ss_ignored_tmp" ]]; then
         printf '[[allowlists]]\ndescription = "Git-ignored paths"\npaths = [\n' >>"$_ss_config_tmp"

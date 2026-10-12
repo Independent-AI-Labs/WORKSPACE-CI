@@ -138,7 +138,7 @@ root-owned and immutable; there is no user-owned hook installation path).
 |----|-------------|
 | FR-SC-1.1 | The consumer's working profile MUST live at `<consumer>/ci-profile.yaml`. |
 | FR-SC-1.2 | The generator MUST accept a `--profile PATH` override pointing at a profile location other than `<consumer>/ci-profile.yaml`. |
-| FR-SC-1.3 | If neither the default profile path nor a `--profile`-supplied path exists on disk, the generator MUST fail fast with a non-zero exit code and a printed diagnostic. The generator MUST NOT create a profile from scratch (consumers copy the template). |
+| FR-SC-1.3 | If `--profile` is not supplied and the default `<consumer>/ci-profile.yaml` does not exist, the generator MUST create it by rendering `CI/templates/ci-profile.template.yaml` with `project:` set to the consumer directory name, then proceed with scaffolding. If `--profile PATH` IS supplied and `PATH` does not exist, the generator MUST fail fast with a non-zero exit code and the diagnostic `Profile not found: <PATH>`. The generator MUST NOT otherwise invent a profile. |
 | FR-SC-1.4 | `ci-profile.yaml` MUST be committed to the consumer's repo (per SPEC §16 Q6: checked-in is the per-repo source of truth). The generator does not enforce this; it is a social contract via PR review. |
 
 #### FR-SC-2: Profile Schema
@@ -350,7 +350,7 @@ root-owned and immutable; there is no user-owned hook installation path).
 | ID | Requirement |
 |----|-------------|
 | TR-SC-1 | The unit test file `tests/unit/scaffold/test_scaffold_ci.sh` MUST cover every validation phase (A through E), the path-computation function, and every hook-kind entry-render rule (six kinds). |
-| TR-SC-2 | The integration test file `tests/integration/test_scaffold_ci.sh` MUST cover: full scaffold run, dry-run, force, emit-template, vendored tier, missing profile, unknown hook ID. Each integration test asserts filesystem state after the run. |
+| TR-SC-2 | The integration test file `tests/integration/test_scaffold_ci.sh` MUST cover: full scaffold run, dry-run, force, emit-template, vendored tier, explicit-missing-profile failure, unknown hook ID. Each integration test asserts filesystem state after the run. |
 | TR-SC-3 | Unit and integration tests MUST run under the existing `tests/run_tests.sh` (shell tests) and `tests/run_tests_unit.sh` / `tests/run_tests_integration.sh` harnesses. No new harness. |
 | TR-SC-4 | The unit tests MUST run without network access (no `mktemp -d` touching `/tmp` requiring redis-json from a network drive; all temp dirs under the existing test sandbox). |
 | TR-SC-5 | The integration tests MAY use `mktemp -d` for a temp consumer directory. The temp directory MUST be cleaned up via `trap ... EXIT`. |

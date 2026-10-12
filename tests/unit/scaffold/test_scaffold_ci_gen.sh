@@ -447,3 +447,37 @@ test_emit_template_dry_run_no_write() {
     fi
 }
 _run_test "emit-template: dry-run does not write" test_emit_template_dry_run_no_write
+
+test_scaffold_autogenerates_profile() {
+    local _consumer="$TEST_TMP/sci-autopf"
+    mkdir -p "$_consumer"
+    cd "$PROJECT_DIR"
+    bash "$_SCI_SCRIPT" --consumer "$_consumer" > "$TEST_TMP/out" 2>&1
+    [[ -f "$_consumer/ci-profile.yaml" ]] || { echo "no ci-profile.yaml generated"; cat "$TEST_TMP/out"; return 1; }
+    grep -q "^project: sci-autopf\$" "$_consumer/ci-profile.yaml" || { echo "project not substituted from dir name"; return 1; }
+    [[ -f "$_consumer/.pre-commit-config.yaml" ]] || { echo "scaffold did not proceed after profile generation"; return 1; }
+    grep -q "$_consumer/ci-profile.yaml" "$TEST_TMP/out" || true
+}
+_run_test "scaffold: generates ci-profile.yaml when absent" test_scaffold_autogenerates_profile
+
+test_scaffold_dry_run_no_profile_writes_nothing() {
+    local _consumer="$TEST_TMP/sci-autopf-dry"
+    mkdir -p "$_consumer"
+    cd "$PROJECT_DIR"
+    bash "$_SCI_SCRIPT" --consumer "$_consumer" --dry-run > "$TEST_TMP/out" 2>&1
+    [[ ! -f "$_consumer/ci-profile.yaml" ]] || { echo "dry-run wrote ci-profile.yaml"; return 1; }
+    [[ ! -f "$_consumer/.pre-commit-config.yaml" ]] || { echo "dry-run wrote .pre-commit-config.yaml"; return 1; }
+    [[ ! -f "$_consumer/Makefile" ]] || { echo "dry-run wrote Makefile"; return 1; }
+}
+_run_test "scaffold: dry-run with no profile writes nothing" test_scaffold_dry_run_no_profile_writes_nothing
+
+test_scaffold_explicit_missing_profile_fails() {
+    local _consumer="$TEST_TMP/sci-expf"
+    mkdir -p "$_consumer"
+    cd "$PROJECT_DIR"
+    local rc=0
+    bash "$_SCI_SCRIPT" --consumer "$_consumer" --profile "$_consumer/does-not-exist.yaml" > "$TEST_TMP/out" 2>&1 || rc=$?
+    [[ $rc -ne 0 ]] || { echo "explicit missing --profile should fail"; return 1; }
+    grep -q 'Profile not found' "$TEST_TMP/out" || { echo "wrong error"; return 1; }
+}
+_run_test "scaffold: explicit missing --profile still fails" test_scaffold_explicit_missing_profile_fails

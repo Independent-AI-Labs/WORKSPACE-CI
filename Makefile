@@ -677,7 +677,7 @@ check-guard-host-exec: ## Check host-exec git-guard installation (read-only, run
 	WORKSPACE_GUARD_ROOT="$(WORKSPACE_GUARD_ROOT)" $(SCRIPT_BASH) scripts/bootstrap-workspace-guard check-host-exec
 
 .PHONY: scaffold-ci
-scaffold-ci: ## Generate CI integration files for a consumer project (make scaffold-ci CONSUMER=<path> ARGS="--force-precommit --yes")
+scaffold-ci: ## Generate CI integration files for a consumer project (make scaffold-ci CONSUMER=<path> ARGS="--force-precommit --append-makefile --yes")
 	test -n "$(CONSUMER)" || { echo "ERROR: CONSUMER=<path> is required" >&2; exit 1; }
 	$(SCRIPT_BASH) scripts/scaffold-ci --consumer "$(CONSUMER)" $(ARGS)
 
