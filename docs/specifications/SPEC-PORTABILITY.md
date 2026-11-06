@@ -203,7 +203,7 @@ The `make preflight` target verifies the bash version.
 | Case | Decision |
 |------|----------|
 | Pattern mentioned in a comment | Scanner skips `^[[:space:]]*#` lines: allowed |
-| `guard-drift.sh` local capture helper | Uses its own temp-file capture (same contract), not the ci.sh helpers, because the guard library is standalone |
+| Standalone guard library in WORKSPACE-GUARD | The git-guard install libraries live in WORKSPACE-GUARD (`scripts/lib/guard-*.sh`); they use their own temp-file capture (same contract), not the ci.sh helpers |
 | Snippet quoting | Always single-quoted static literals at call sites (`eval` injection surface) |
 | Blank stdout lines | Skipped by both helpers (arrays contain no empty elements) |
 

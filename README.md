@@ -281,12 +281,13 @@ API credentials are set. See [`res/ansible/tunnel.yml`](res/ansible/tunnel.yml).
 
 ## WORKSPACE-GUARD install
 
-WORKSPACE-GUARD is a separate repo; CI provides build and install targets that
-wrap it via [`lib/guard-build.sh`](lib/guard-build.sh) and
-[`lib/guard-install.sh`](lib/guard-install.sh):
+WORKSPACE-GUARD is a separate repo and owns installation of every host guard
+(git, shell, binary lock). CI does not build or install the guard; run the
+guard Makefile:
 
 ```bash
 # Operator (requires sudo; the installed guard supplies Git transport identity):
+cd ../WORKSPACE-GUARD
 sudo make build-guard
 sudo make install-guard-host-exec
 

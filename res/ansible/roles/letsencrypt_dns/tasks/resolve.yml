@@ -45,12 +45,18 @@
         - _boot_certbot.stat.exists | default(false)
         - _boot_certbot.stat.executable | default(false)
 
-    - name: Set certbot from PATH lookup
+    - name: Stat user-local certbot
+      ansible.builtin.stat:
+        path: '{{ ansible_env.HOME }}/.local/bin/certbot'
+      register: _home_certbot
+
+    - name: Set certbot from user-local bin
       ansible.builtin.set_fact:
-        letsencrypt_certbot_bin: "{{ lookup('ansible.builtin.which', 'certbot', errors='ignore') }}"
+        letsencrypt_certbot_bin: '{{ ansible_env.HOME }}/.local/bin/certbot'
       when:
         - letsencrypt_certbot_bin | length == 0
-        - lookup('ansible.builtin.which', 'certbot', errors='ignore') | length > 0
+        - _home_certbot.stat.exists | default(false)
+        - _home_certbot.stat.executable | default(false)
 
 - name: Set Cloudflare credentials path default
   ansible.builtin.set_fact:
@@ -65,7 +71,9 @@
     - letsencrypt_primary_domain | length > 0
 
 - name: Resolve ansible-playbook for renewal timer
-  when: letsencrypt_playbook_path | length > 0
+  when:
+    - letsencrypt_playbook_path | length > 0
+    - ansible_playbook_bin | default('') | length == 0
   block:
     - name: Stat boot ansible-playbook
       ansible.builtin.stat:

@@ -253,6 +253,10 @@ Ordered. Every item below also appears in the session task list.
 
 ### 9.2 Naming unification
 
+> **Superseded 2026-10-12** by
+> [AUDIT-SEALED-BINARY-MIGRATION-2026-10-12](AUDIT-SEALED-BINARY-MIGRATION-2026-10-12.md)
+> section 5: one sealed directory, no `.original` suffix. Kept for the record.
+
 9. `bootstrap-podman` creates `podman.original` as `root:root 0700`.
 10. `res/podman-guard` and `workspace/scripts/utils/podman-guard` resolve
     `podman.original` through one hardcoded absolute path; keep one copy.
@@ -316,6 +320,12 @@ Root and operator operations required after the source fixes land:
 4. Re-run the featured consumer gates.
 
 ## 10. Decisions (resolved 2026-09-27)
+
+> **Superseded 2026-10-12.** Items 1 and 2 below (the `<tool>.original`
+> convention with `.distrib` retained) are superseded by
+> [AUDIT-SEALED-BINARY-MIGRATION-2026-10-12](AUDIT-SEALED-BINARY-MIGRATION-2026-10-12.md):
+> one sealed directory `/usr/lib/workspace-guard/sealed/<basename>`, no
+> filename suffixes. Items 3-5 stand.
 
 1. `bash.real` is renamed to `bash.original` in full: Rust constant,
    install, uninstall, check, Makefile template, `Containerfile.test`,

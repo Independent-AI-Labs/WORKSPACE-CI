@@ -61,8 +61,9 @@ main() {
         return 1
     fi
 
+    # Pinned: the renewal timer depends on this exact pair. Bump both together.
     UV_PYTHON_INSTALL_DIR="$python_dir" UV_TOOL_DIR="$tool_dir" UV_TOOL_BIN_DIR="$target_dir" \
-        "$uv_bin" tool install certbot --with certbot-dns-cloudflare --force
+        "$uv_bin" tool install 'certbot==5.8.0' --with 'certbot-dns-cloudflare==5.8.0' --force
 
     local v_out v_rc=0
     v_out="$("$target_dir/certbot" --version 2>&1)" || v_rc=$?

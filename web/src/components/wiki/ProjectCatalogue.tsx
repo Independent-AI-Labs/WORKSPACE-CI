@@ -60,8 +60,10 @@ export async function ProjectCatalogue() {
     <>
       <h1>Browse Projects</h1>
       <p className="page-intro">
-        Each card summarizes a workspace repo. Open the project title for the
-        full README, or Makefile on the card for targets and recipes.
+        Open-source research and tooling for cybersecurity, digital compliance
+        and sovereign technology. From self-hosted infrastructure and agent
+        sandboxing, to the enforcement of multi-layer policies and
+        controls.
       </p>
       <ProjectList
         projects={projects}

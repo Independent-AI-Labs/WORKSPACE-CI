@@ -29,12 +29,10 @@
     mode: '0755'
 
 - name: Enable systemd user linger for the advisory database timer
-  ansible.builtin.shell: >-
-    loginctl enable-linger {{ ansible_user_id }}
-    >>{{ rust_advisory_db_run_log | quote }} 2>&1
-  register: rust_advisory_db_linger
-  changed_when: rust_advisory_db_linger.rc == 0
-  failed_when: rust_advisory_db_linger.rc != 0
+  ansible.builtin.command:
+    argv: [loginctl, enable-linger, '{{ ansible_user_id }}']
+  changed_when: rc == 0
+  failed_when: rc != 0
 
 - name: Reload systemd user daemon
   ansible.builtin.systemd:

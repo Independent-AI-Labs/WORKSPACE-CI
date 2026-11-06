@@ -22,6 +22,11 @@ def is_js_file(path: str) -> bool:
 
 
 JS_CATCH_HEADER = re.compile(r"^(?P<indent>\s*)\}\s*catch\s*(?:\([^)]*\))?\s*\{")
+JS_VOID_CALL = re.compile(r"(?:^|[\s;}])void\s+[A-Za-z_$][\w$.]*\s*\(")
+JS_SESSION_DATA_EMPTY = re.compile(
+    r"(?:todoResult\.data|(?:client|session)[^\n]{0,240}\.data|response\.data)"
+    r"\s*\?\?\s*\[\]"
+)
 JS_SILENT_RETURN = re.compile(
     r"^(?P<indent>\s+)"
     r"(?:return\s+(?:null|undefined|\[\]|\{\}|false|''|\"\"|0)\s*;?\s*"
@@ -118,6 +123,15 @@ def _check_warn_and_return(
     return None
 
 
+def _check_discarded_result(text: str) -> str | None:
+    """Statement-level void call, or a session read turned into []."""
+    if JS_VOID_CALL.search(text):
+        return "js-void-call-discard"
+    if JS_SESSION_DATA_EMPTY.search(text):
+        return "js-session-data-empty"
+    return None
+
+
 def detect_js_multiline(
     added: list[AddedLine],
 ) -> Iterator[tuple[AddedLine, str]]:
@@ -131,6 +145,9 @@ def detect_js_multiline(
 
     for lines in by_file.values():
         for lineno, header in sorted(lines.items()):
+            discarded = _check_discarded_result(header.text)
+            if discarded is not None:
+                yield header, discarded
             m = JS_CATCH_HEADER.match(header.text)
             if not m:
                 continue

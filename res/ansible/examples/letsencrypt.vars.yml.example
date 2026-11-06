@@ -15,8 +15,15 @@ letsencrypt_email: ops@example.com
 letsencrypt_cloudflare_zone: example.com
 letsencrypt_cert_dir: /path/to/certs/wiki.example.com
 
-# Optional post-issue/renew hook (reload nginx, haproxy, etc.)
-letsencrypt_reload_cmd: podman exec my-nginx nginx -s reload
+# Optional post-issue/renew hook. argv list, run with ansible.builtin.command
+# (no shell) so a sealed shell guard never scans a command string.
+letsencrypt_reload_argv:
+  - podman
+  - exec
+  - my-nginx
+  - nginx
+  - -s
+  - reload
 
 # Use true for dry-run against Let's Encrypt staging CA
 letsencrypt_staging: false

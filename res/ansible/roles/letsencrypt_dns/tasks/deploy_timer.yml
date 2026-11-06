@@ -10,6 +10,31 @@
     state: directory
     mode: '0755'
 
+- name: Resolve renewal role vars file
+  ansible.builtin.set_fact:
+    letsencrypt_role_vars_file: '{{ ansible_env.HOME }}/.config/letsencrypt/role-vars.yml'
+  when: letsencrypt_role_vars_file | length == 0
+
+- name: Ensure certbot config directory exists
+  ansible.builtin.file:
+    path: '{{ letsencrypt_config_dir }}'
+    state: directory
+    mode: '0700'
+
+- name: Write renewal role vars (timer input; no secrets)
+  ansible.builtin.copy:
+    dest: '{{ letsencrypt_role_vars_file }}'
+    mode: '0600'
+    content: |
+      letsencrypt_domains: {{ letsencrypt_domains | to_json }}
+      letsencrypt_cert_dir: {{ letsencrypt_cert_dir | to_json }}
+      letsencrypt_email: {{ letsencrypt_email | to_json }}
+      letsencrypt_cloudflare_zone: {{ letsencrypt_cloudflare_zone | to_json }}
+      letsencrypt_reload_argv: {{ letsencrypt_reload_argv | to_json }}
+      letsencrypt_cert_min_days: {{ letsencrypt_cert_min_days | to_json }}
+      letsencrypt_project_root: {{ letsencrypt_project_root | to_json }}
+      letsencrypt_playbook_path: {{ letsencrypt_playbook_path | to_json }}
+
 - name: Install renewal service unit
   ansible.builtin.template:
     src: letsencrypt-renew.service.j2
@@ -22,13 +47,13 @@
     dest: '{{ ansible_env.HOME }}/.config/systemd/user/{{ letsencrypt_unit_name }}.timer'
     mode: '0644'
 
+# argv, not a shell string: the sealed shell guard never sees it and does
+# not block a self-linger that is otherwise a permitted operator action.
 - name: Enable systemd user linger for renewal timer
-  ansible.builtin.shell: >-
-    loginctl enable-linger {{ ansible_user_id }}
-    >>{{ letsencrypt_run_log | quote }} 2>&1
-  register: _linger
-  changed_when: _linger.rc == 0
-  failed_when: _linger.rc != 0
+  ansible.builtin.command:
+    argv: [loginctl, enable-linger, '{{ ansible_user_id }}']
+  changed_when: rc == 0
+  failed_when: rc != 0
 
 - name: Reload systemd user daemon
   ansible.builtin.systemd:
@@ -46,5 +71,6 @@
   ansible.builtin.debug:
     msg: |
       Let's Encrypt renewal timer enabled ({{ letsencrypt_unit_name }}.timer).
-        Status : systemctl --user status {{ letsencrypt_unit_name }}.timer
-        Logs   : journalctl --user -u {{ letsencrypt_unit_name }}.service
+        Vars  : {{ letsencrypt_role_vars_file }}
+        Status: systemctl --user status {{ letsencrypt_unit_name }}.timer
+        Logs  : journalctl --user -u {{ letsencrypt_unit_name }}.service

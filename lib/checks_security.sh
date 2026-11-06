@@ -40,9 +40,13 @@ ci_scan_vulnerabilities() {
     # is scanned, so refresh every lockfile. osv-scanner exits 1 both for
     # findings and for errors, so a non-zero refresh is only a database failure
     # when it writes to stderr; a finding is left to the offline validation.
+    # --verbosity error suppresses routine progress lines ("Starting filesystem
+    # walk", "Loaded npm local db", config notes) that would otherwise make a
+    # successful refresh look like a database failure.
     while IFS= read -r first_lockfile; do
         if ! timeout --signal=TERM --kill-after=10s 300s "$scanner" scan source \
             --offline --offline-vulnerabilities --download-offline-databases \
+            --verbosity error \
             --config="$config" --lockfile="$first_lockfile" \
             --format=json --output-file="$output" \
             2>"$refresh_err"; then

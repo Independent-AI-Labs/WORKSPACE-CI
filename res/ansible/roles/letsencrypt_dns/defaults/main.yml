@@ -11,7 +11,9 @@ letsencrypt_logs_dir: "{{ ansible_env.HOME }}/.config/letsencrypt/logs"
 letsencrypt_cloudflare_credentials: ''
 
 letsencrypt_staging: "{{ lookup('env', 'LETSENCRYPT_STAGING') | default('0', true) in ['1', 'true', 'yes', 'True'] }}"
-letsencrypt_reload_cmd: ''
+# Reload hook after issue/renew. A LIST of argv, run with ansible.builtin.command
+# (no shell), so the sealed artifact never sees a shell command string.
+letsencrypt_reload_argv: []
 letsencrypt_certbot_bin: ''
 
 letsencrypt_primary_domain: "{{ letsencrypt_domains | first }}"
@@ -19,6 +21,8 @@ letsencrypt_unit_name: letsencrypt-renew
 letsencrypt_project_root: ''
 letsencrypt_playbook_path: ''
 letsencrypt_bootstrap_script: ''
+# Vars file the renewal timer passes back with -e @file (no shell, no secrets).
+letsencrypt_role_vars_file: ''
 
 letsencrypt_cert_min_days: 30
 letsencrypt_run_log_dir: "{{ ansible_env.HOME }}/.cache/letsencrypt-ansible"

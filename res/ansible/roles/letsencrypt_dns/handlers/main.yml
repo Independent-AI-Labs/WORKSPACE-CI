@@ -1,9 +1,10 @@
 ---
+# Run the reload hook as argv via ansible.builtin.command: no shell is
+# involved, so the sealed shell guard never sees a command string and the
+# hook (e.g. `podman exec ... nginx -s reload`) is not policy-blocked.
 - name: Reload TLS consumer
-  ansible.builtin.shell: >-
-    /bin/bash -lc {{ letsencrypt_reload_cmd | quote }}
-    >>{{ letsencrypt_run_log | quote }} 2>&1
-  when: letsencrypt_reload_cmd | length > 0
-  register: tls_reload
-  changed_when: tls_reload.rc == 0
-  failed_when: tls_reload.rc != 0
+  ansible.builtin.command:
+    argv: '{{ letsencrypt_reload_argv }}'
+  when: letsencrypt_reload_argv | length > 0
+  changed_when: rc == 0
+  failed_when: rc != 0

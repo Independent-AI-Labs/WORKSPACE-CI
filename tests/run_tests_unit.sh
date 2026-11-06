@@ -25,7 +25,6 @@ _required_unit_tests=(
     test_verify_immutable.sh
     test_deploy_ci_rev.sh
     test_cleanup_precommit.sh
-    test_guard_build.sh
     cargo/test_refresh_advisory_db.sh
     scaffold/test_scaffold_ci.sh
     scaffold/test_scaffold_ci_custom.sh
@@ -54,7 +53,6 @@ source "$TESTS_DIR/unit/test_generate_hooks.sh"
 source "$TESTS_DIR/unit/test_verify_immutable.sh"
 source "$TESTS_DIR/unit/test_deploy_ci_rev.sh"
 source "$TESTS_DIR/unit/test_cleanup_precommit.sh"
-source "$TESTS_DIR/unit/test_guard_build.sh"
 source "$TESTS_DIR/unit/cargo/test_refresh_advisory_db.sh"
 source "$TESTS_DIR/unit/scaffold/test_scaffold_ci.sh"
 source "$TESTS_DIR/unit/scaffold/test_scaffold_ci_custom.sh"

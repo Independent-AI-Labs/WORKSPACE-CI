@@ -27,6 +27,7 @@
     boot_name: "{{ '.boot-macos' if ansible_facts['system'] == 'Darwin' else '.boot-linux' }}"
     tunnel_config_default: '{{ project_root }}/cloudflare/config.yml'
     cloudflared_bin: "{{ lookup('env', 'CLOUDFLARED_BIN') | default('', true) }}"
+    podman_bin: "{{ lookup('env', 'WIKI_PODMAN_BIN') | default('/opt/workspace-ci/.boot-linux/bin/podman', true) }}"
     tunnel_config: "{{ lookup('env', 'TUNNEL_CONFIG') | default(tunnel_config_default, true) }}"
     wiki_tunnel_hostname: "{{ lookup('env', 'WIKI_TUNNEL_HOSTNAME') | default('', true) }}"
     wiki_tunnel_id: "{{ lookup('env', 'WIKI_TUNNEL_ID') | default('', true) }}"
@@ -130,30 +131,25 @@
             - tunnel_token | length == 0
             - not tunnel_creds.stat.exists
 
-        - name: Check wiki prod containers are running
-          ansible.builtin.shell: >-
-            podman ps --filter name=wiki-ci- --format
-            '{{ "{{" }}.Names{{ "}}" }} {{ "{{" }}.Status{{ "}}" }}'
-            > {{ tunnel_log_dir | quote }}/containers.log
-            && grep -q wiki-ci-app {{ tunnel_log_dir | quote }}/containers.log
-            && grep -q wiki-ci-nginx {{ tunnel_log_dir | quote }}/containers.log
-            >>{{ tunnel_log | quote }} 2>&1
-          register: wiki_containers
+        - name: Require wiki-ci-app to be running
+          ansible.builtin.command:
+            argv:
+              - '{{ podman_bin }}'
+              - container
+              - exists
+              - wiki-ci-app
           changed_when: false
-          failed_when: wiki_containers.rc not in [0, 1, 2]
+          failed_when: rc != 0
 
-        - name: Show wiki prod container list
-          ansible.builtin.debug:
-            msg: "{{ lookup('ansible.builtin.file', tunnel_log_dir + '/containers.log') | default('(none)') | trim }}"
-
-        - name: Fail if wiki prod stack is not running
-          ansible.builtin.fail:
-            msg: |
-              Wiki prod stack must be running before starting the tunnel.
-              Expected containers: wiki-ci-app, wiki-ci-nginx
-              Found: {{ lookup('ansible.builtin.file', tunnel_log_dir + '/containers.log') | default('(none)') | trim }}
-              Start prod first: make wiki-prod-start
-          when: wiki_containers.rc != 0
+        - name: Require wiki-ci-nginx to be running
+          ansible.builtin.command:
+            argv:
+              - '{{ podman_bin }}'
+              - container
+              - exists
+              - wiki-ci-nginx
+          changed_when: false
+          failed_when: rc != 0
 
         - name: Sync Cloudflare tunnel ingress to local origin (token-mode tunnels)
           when:
@@ -242,12 +238,10 @@
 
         - name: Enable systemd user linger
           tags: [deploy]
-          ansible.builtin.shell: >-
-            loginctl enable-linger {{ ansible_facts["user_id"] }}
-            >>{{ tunnel_log | quote }} 2>&1
-          register: linger_result
-          failed_when: linger_result.rc != 0
-          changed_when: linger_result.rc == 0
+          ansible.builtin.command:
+            argv: [loginctl, enable-linger, '{{ ansible_facts["user_id"] }}']
+          failed_when: rc != 0
+          changed_when: rc == 0
 
         - name: Reload systemd user daemon
           ansible.builtin.systemd:

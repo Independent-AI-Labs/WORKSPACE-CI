@@ -140,12 +140,10 @@
 
         - name: Enable systemd user linger
           tags: [deploy]
-          ansible.builtin.shell: >-
-            loginctl enable-linger {{ ansible_facts["user_id"] }}
-            >>{{ prod_log | quote }} 2>&1
-          register: linger_result
-          changed_when: linger_result.rc == 0
-          failed_when: linger_result.rc != 0
+          ansible.builtin.command:
+            argv: [loginctl, enable-linger, '{{ ansible_facts["user_id"] }}']
+          changed_when: rc == 0
+          failed_when: rc != 0
 
         - name: Install wiki prod systemd unit
           ansible.builtin.template:

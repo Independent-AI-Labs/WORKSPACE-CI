@@ -627,7 +627,7 @@ Verify against:
 - [WORKSPACE-VM/README.md](../../../README.md) (framework placement)
 - `docs/specifications/SPEC-GIT-GUARD-DEPLOYMENT.md` (install classes)
 - `config/guard-host-profiles.yaml` (host binding; do not paste hostnames into README)
-- `Makefile` / `/opt/workspace-ci/scripts/bootstrap-workspace-guard` (real install targets)
+- `Makefile` / `WORKSPACE-GUARD/scripts/install-git-guard` (real install targets)
 
 ## References
 

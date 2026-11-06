@@ -490,3 +490,15 @@ multiline_detectors:
     source_file: lib/check_silent_swallow_js.py
     language: js_ts
     description: Catch block contains only console.debug/log/info; errors are demoted to low-severity noise with no escalation.
+  - id: js-void-call-discard
+    detector: detect_js_multiline
+    source_function: _check_discarded_result
+    source_file: lib/check_silent_swallow_js.py
+    language: js_ts
+    description: Statement-level void call drops a promise rejection. Await it or attach a handler that records the failure.
+  - id: js-session-data-empty
+    detector: detect_js_multiline
+    source_function: _check_discarded_result
+    source_file: lib/check_silent_swallow_js.py
+    language: js_ts
+    description: A session, client, or todo read uses .data ?? [] and turns a missing payload into an empty success.

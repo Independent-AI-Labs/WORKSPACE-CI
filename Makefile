@@ -164,7 +164,7 @@ bootstrap: preflight install-boot-tools install-osv-scanner ## Build candidate-l
 	:
 
 .PHONY: install-deps
-install-deps: install-boot-tools install-pythons install-python-deps install-gitleaks install-osv-scanner install-cargo-deny install-cloc install-moon install-ansible install-node install-web-deps ## Install boot tools + Python pool + .venv deps + gitleaks + osv-scanner + cargo-deny + cloc + moon + ansible + node + web deps
+install-deps: install-boot-tools install-pythons install-python-deps install-gitleaks install-osv-scanner install-cargo-deny install-cloc install-moon install-ansible install-certbot install-node install-web-deps ## Install boot tools + Python pool + .venv deps + gitleaks + osv-scanner + cargo-deny + cloc + moon + ansible + certbot + node + web deps
 
 .PHONY: install-uv
 install-uv: ## Bootstrap uv into $(BOOT_NAME)/bin/ (idempotent)
@@ -479,10 +479,11 @@ ANSIBLE_LETSENCRYPT_EXTRA := \
 	-e "letsencrypt_cert_dir=$(WIKI_TLS_DIR)" \
 	-e "letsencrypt_email=$(LETSENCRYPT_EMAIL)" \
 	-e "letsencrypt_cloudflare_zone=$(LETSENCRYPT_CLOUDFLARE_ZONE)" \
-	-e 'letsencrypt_reload_cmd=podman exec wiki-ci-nginx nginx -s reload' \
+	-e @$(CURDIR)/res/ansible/examples/wiki-tls-reload.yml \
+	-e "ansible_playbook_bin=$(ANSIBLE_PLAYBOOK)" \
 	-e "letsencrypt_project_root=$(CURDIR)" \
 	-e "letsencrypt_playbook_path=$(CURDIR)/res/ansible/letsencrypt.yml"
-ANSIBLE_LETSENCRYPT := $(ANSIBLE_LETSENCRYPT_ENV) $(BOOT_BIN)/ansible-playbook res/ansible/letsencrypt.yml $(ANSIBLE_LETSENCRYPT_EXTRA)
+ANSIBLE_LETSENCRYPT := $(ANSIBLE_LETSENCRYPT_ENV) $(ANSIBLE_PLAYBOOK) res/ansible/letsencrypt.yml $(ANSIBLE_LETSENCRYPT_EXTRA)
 
 .PHONY: wiki-tls-issue wiki-tls-renew wiki-tls-verify wiki-tls-deploy wiki-tls-undeploy
 wiki-tls-issue: ## Issue Let's Encrypt cert (DNS-01; LETSENCRYPT_STAGING=1 to test)
@@ -633,48 +634,14 @@ enforce-syslog-limits: ## Enforce system-level log ceilings: logrotate maxsize +
 	echo "==> Enforcing system log ceilings..."
 	$(SUDO) $(SCRIPT_BASH) scripts/enforce-syslog-limits
 
-# WORKSPACE-GUARD: compiled git protection (opt-in)
 # =============================================================================
-# WORKSPACE-GUARD
+# WORKSPACE-GUARD install
 # =============================================================================
-
-.PHONY: build-guard install-guard install-guard-host-exec reconcile-guard-host-exec uninstall-guard check-guard check-guard-host-exec
-
-WORKSPACE_GUARD_ROOT ?= $(abspath ../WORKSPACE-GUARD)
-
-# Operator invocation contract: guard targets depend on `ensure-repos`
-# (upstream `make` chain) which pulls every workspace repo over SSH. The
-# installed guard supplies the provisioned transport identity for owner-
-# scoped Git operations. Use the normal operator commands:
-#   sudo --preserve-env=HOME,SSH_AUTH_SOCK make build-guard
-#   sudo --preserve-env=HOME,SSH_AUTH_SOCK make install-guard
-# build-guard writes only to WORKSPACE-GUARD/target/ (git-ssh) and
-# WORKSPACE-GUARD/git-guard/target/ (the privileged package); bootstrap-
-# workspace-guard chowns those trees back to SUDO_USER when run under sudo,
-# so agent-uid rebuilds stay usable. check-guard is read-only and runs as
-# the agent.
-build-guard: ## Build git-guard binary (operator: sudo make build-guard)
-	WORKSPACE_GUARD_ROOT="$(WORKSPACE_GUARD_ROOT)" $(SCRIPT_BASH) scripts/bootstrap-workspace-guard build-only
-
-install-guard: ## REMOVED: use install-guard-host-exec
-	echo "ERROR: make install-guard is removed. Use: make install-guard-host-exec" >&2
-	exit 1
-
-install-guard-host-exec: build-guard ## Install git-guard (host-exec; operator: sudo make install-guard-host-exec)
-	$(SUDO) WORKSPACE_GUARD_ROOT="$(WORKSPACE_GUARD_ROOT)" $(SCRIPT_BASH) scripts/bootstrap-workspace-guard install-host-exec
-
-uninstall-guard: ## Uninstall git-guard, restore stock git; preserve provision state (operator: sudo make uninstall-guard)
-	$(SUDO) WORKSPACE_GUARD_ROOT="$(WORKSPACE_GUARD_ROOT)" $(SCRIPT_BASH) scripts/bootstrap-workspace-guard uninstall
-
-reconcile-guard-host-exec: build-guard ## Force rebuild + reinstall git guard and aux artifacts (operator: sudo make reconcile-guard-host-exec)
-	GUARD_FORCE_RECONCILE=1 GUARD_SKIP_BUILD=1 $(MAKE) install-guard-host-exec
-
-check-guard: ## REMOVED: use check-guard-host-exec
-	echo "ERROR: make check-guard is removed. Use: make check-guard-host-exec" >&2
-	exit 1
-
-check-guard-host-exec: ## Check host-exec git-guard installation (read-only, runs as agent)
-	WORKSPACE_GUARD_ROOT="$(WORKSPACE_GUARD_ROOT)" $(SCRIPT_BASH) scripts/bootstrap-workspace-guard check-host-exec
+# Host guard installation (git, shell, binary lock) is owned by the
+# WORKSPACE-GUARD repository, not CI. Run the guard Makefile there:
+#   cd ../WORKSPACE-GUARD && sudo make install-guard-host-exec
+# CI keeps only the deploy of /opt/workspace-ci and the contract checks the
+# git guard calls.
 
 .PHONY: scaffold-ci
 scaffold-ci: ## Generate CI integration files for a consumer project (make scaffold-ci CONSUMER=<path> ARGS="--force-precommit --append-makefile --yes")

@@ -13,7 +13,7 @@ _make_fake_osv_scanner() {
     mkdir -p "$TEST_TMP/bin"
     cat > "$TEST_TMP/bin/osv-scanner" <<EOF
 #!/usr/bin/env bash
-$( [[ -n "$capture" ]] && printf 'printf "%%s\\n" "$@" > %q\n' "$capture" )
+$( [[ -n "$capture" ]] && printf 'printf "%%s\\n" "$@" >> %q\n' "$capture" )
 for arg in "\$@"; do
     case "\$arg" in --output-file=*) printf '%s' '$body' > "\${arg#*=}" ;; esac
 done
@@ -130,6 +130,27 @@ test_cve_scan_config_passthrough() {
     }
 }
 
+# T8: the refresh pass asks for error-level logging only. Informational
+# progress lines would otherwise make a successful refresh look like a
+# database failure (the "using cached database" warning seen on every push).
+test_cve_scan_refresh_verbosity() {
+    _source_lib
+    _prepare_osv_config
+    touch uv.lock
+    _make_fake_osv_scanner 0 "" "$TEST_TMP/args.txt"
+    PATH="$TEST_TMP/bin:$PATH" ci_scan_vulnerabilities >/dev/null 2>&1 || true
+    grep -q -- '--verbosity' "$TEST_TMP/args.txt" || {
+        echo "  expected --verbosity on the refresh scan, got args:"
+        sed 's/^/    | /' "$TEST_TMP/args.txt"
+        return 1
+    }
+    grep -q -- '^error$' "$TEST_TMP/args.txt" || {
+        echo "  expected --verbosity error on the refresh scan, got args:"
+        sed 's/^/    | /' "$TEST_TMP/args.txt"
+        return 1
+    }
+}
+
 # T7: no banned patterns in the new sources (swallow canon + procsub ban)
 test_cve_scan_source_hygiene() {
     local bad
@@ -150,4 +171,5 @@ _run_test "cve-scan: clean scan passes"                test_cve_scan_clean
 _run_test "cve-scan: findings fail closed"             test_cve_scan_findings
 _run_test "cve-scan: scanner failure blocks"           test_cve_scan_offline
 _run_test "cve-scan: config passthrough"               test_cve_scan_config_passthrough
+_run_test "cve-scan: refresh uses error verbosity"    test_cve_scan_refresh_verbosity
 _run_test "cve-scan: source hygiene (no banned shell)" test_cve_scan_source_hygiene

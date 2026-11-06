@@ -258,7 +258,7 @@ ci_check_commit_message() {
 # choice. Security-control paths are the enforcement stack itself:
 # hooks, gates, deploy tooling, guard integration, policy config, and
 # the operating rules.
-_CI_SECURITY_CONTROL_PATH_RE='^(lib/checks.*\.sh|lib/check_[^/]+\.py|lib/guard-.*\.sh|lib/ci\.sh|ci/.*\.py|scripts/deploy-ci|scripts/bootstrap-workspace-guard|scripts/run-deploy-ci|scripts/generate-hooks|\.pre-commit-config\.yaml|config/|AGENTS\.md|docs/requirements/|docs/specifications/)'
+_CI_SECURITY_CONTROL_PATH_RE='^(lib/checks.*\.sh|lib/check_[^/]+\.py|lib/ci\.sh|ci/.*\.py|scripts/deploy-ci|scripts/run-deploy-ci|scripts/generate-hooks|\.pre-commit-config\.yaml|config/|AGENTS\.md|docs/requirements/|docs/specifications/)'
 
 ci_check_security_commit_disclosure() {
     local msg_file="${1:-}"
