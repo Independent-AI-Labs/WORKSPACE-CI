@@ -233,7 +233,7 @@ for _stage in pre-commit commit-msg pre-push; do
         while IFS=$'\034' read -r h_id h_name h_entry h_stage h_pass h_always h_files h_exclude h_args h_types h_advisory; do
             [[ -n "$h_id" ]] || continue
             [[ -n "$h_entry" ]] || { ci_fail "Hook '$h_id' has empty entry"; exit 1; }
-            h_cmd="${h_entry//bash -c/\"\$BASH\" -c}"
+            h_cmd="$h_entry"
             h_cmd="${h_cmd//uv run python -m ci./\/opt\/workspace-ci\/.boot-linux\/bin\/uv run --project \/opt\/workspace-ci --no-sync python -P -m ci.}"
             [[ -n "$h_args" ]] && h_cmd="$h_cmd $h_args"
             printf '# === Hook: %s ===\n' "$h_id"
