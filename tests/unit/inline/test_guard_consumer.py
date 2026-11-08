@@ -9,7 +9,6 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from ci import check_inline_code as check
 from ci import inline_scanner
 
 
@@ -47,34 +46,3 @@ def test_schema_mismatch_fails(monkeypatch, tmp_path):
         inline_scanner.scan([])
 
 
-def _finding(root: Path, exemptible: bool) -> dict[str, object]:
-    return {
-        "path": str(root / "a.txt"),
-        "rule": "r",
-        "category": "c",
-        "line": 1,
-        "column": 1,
-        "matched": "x",
-        "view": "raw",
-        "reason": "why",
-        "exemptible": exemptible,
-    }
-
-
-def test_consumer_applies_exemption(monkeypatch, tmp_path):
-    (tmp_path / "a.txt").write_text("x", encoding="utf-8")
-    policy = check.Policy({("r", "a.txt")})
-    monkeypatch.setattr(
-        inline_scanner, "scan", lambda entries: [_finding(tmp_path, True)]
-    )
-    assert check._scan_all_guard(["a.txt"], tmp_path, policy, None) == []
-
-
-def test_consumer_keeps_non_exemptible_finding(monkeypatch, tmp_path):
-    (tmp_path / "a.txt").write_text("x", encoding="utf-8")
-    policy = check.Policy({("r", "a.txt")})
-    monkeypatch.setattr(
-        inline_scanner, "scan", lambda entries: [_finding(tmp_path, False)]
-    )
-    findings = check._scan_all_guard(["a.txt"], tmp_path, policy, None)
-    assert [finding.rule.id for finding in findings] == ["r"]

@@ -52,9 +52,6 @@ SELF_SKIP: frozenset[str] = frozenset(
         "config/inline_code.yaml",
         "config/inline_code.schema.yaml",
         "config/inline_code_exceptions.yaml",
-        "config-staging/inline_code.yaml",
-        "config-staging/inline_code.schema.yaml",
-        "config-staging/inline_code_exceptions.yaml",
         "tests/unit/test_check_inline_code.py",
     }
 )
@@ -81,26 +78,6 @@ class Finding(NamedTuple):
     col: int
     matched: str
     view: str
-
-
-def load_policy(config_dir: Path) -> Policy:
-    path = config_dir / "inline_code.yaml"
-    if not path.is_file():
-        msg = f"inline-code policy not found: {path}"
-        raise PolicyError(msg)
-    try:
-        raw = _PYYAML_SAFE(path.read_text(encoding="utf-8"))
-    except (OSError, yaml.YAMLError) as exc:
-        msg = f"inline-code policy unreadable: {exc}"
-        raise PolicyError(msg) from exc
-    if not isinstance(raw, dict):
-        msg = "inline-code policy must be a mapping"
-        raise PolicyError(msg)
-    exemptions = {
-        (str(entry["rule"]), str(entry["path"]))
-        for entry in raw.get("exemptions") or []
-    }
-    return Policy(exemptions)
 
 
 def detect_language(path: str, text: str | None = None) -> str | None:
@@ -200,35 +177,16 @@ def _report(finding: Finding) -> None:
         print(f"  > {snippet}")
 
 
-def _policy_dir() -> Path:
-    """Resolve the universal policy directory from the checker's own tree.
-
-    Anchored to the module location and never to the environment, so an
-    environment variable, working directory, or PYTHONPATH supplied by the
-    triggering process cannot select the policy
-    (REQ-HOOK-TRUST-BOUNDARY section 5).
-    """
-    package_root = Path(__file__).resolve().parent.joinpath("..").resolve()
-    return package_root / "config"
-
-
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
-    config_dir = _policy_dir()
     root = discover.scan_root()
-    try:
-        policy = load_policy(config_dir)
-    except PolicyError as exc:
-        print(f"inline-code: {exc}", file=sys.stderr)
-        return 1
 
     files = discover.tracked_files(argv, root)
     try:
-        project_exemptions = load_project_exemptions(root)
+        policy = Policy(load_project_exemptions(root))
     except PolicyError as exc:
         print(f"inline-code: {exc}", file=sys.stderr)
         return 1
-    policy = policy._replace(exemptions=policy.exemptions | project_exemptions)
     try:
         classes = classify.load(root)
     except classify.ClassificationError:

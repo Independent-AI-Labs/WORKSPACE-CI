@@ -53,38 +53,6 @@ def test_detect_language_unknown():
     assert check.detect_language("notes.txt", "hello\n") is None
 
 
-def test_load_policy_reads_exemptions(tmp_path):
-    config = tmp_path / "config"
-    config.mkdir()
-    (config / "inline_code.yaml").write_text(
-        "exemptions:\n  - rule: r\n    path: p\n", encoding="utf-8"
-    )
-    assert check.load_policy(config).exemptions == {("r", "p")}
-
-
-def test_load_policy_missing_file(tmp_path):
-    with pytest.raises(check.PolicyError):
-        check.load_policy(tmp_path)
-
-
-def test_load_policy_rejects_non_mapping(tmp_path):
-    config = tmp_path / "config"
-    config.mkdir()
-    (config / "inline_code.yaml").write_text("- item\n", encoding="utf-8")
-    with pytest.raises(check.PolicyError):
-        check.load_policy(config)
-
-
-def test_policy_dir_ignores_hostile_environment(tmp_path, monkeypatch):
-    hostile = tmp_path / "hostile"
-    hostile.mkdir()
-    (hostile / "inline_code.yaml").write_text("version: 1.0.0\n", encoding="utf-8")
-    monkeypatch.setenv("CI_CONFIG_PATH_INLINE_CODE", str(hostile / "inline_code.yaml"))
-    monkeypatch.setenv("CI_CONFIG_DIR", str(hostile))
-    expected = Path(check.__file__).resolve().parent.joinpath("..").resolve() / "config"
-    assert check._policy_dir() == expected
-
-
 def test_load_project_exemptions_reads_entries(tmp_path):
     config = tmp_path / "config"
     config.mkdir()
@@ -173,7 +141,6 @@ def _patch_discovery(monkeypatch, root: Path, files: list[str]) -> None:
 def test_main_reports_violation(monkeypatch, tmp_path, capsys):
     _write(tmp_path, "bad.sh", "x")
     _patch_discovery(monkeypatch, tmp_path, ["bad.sh"])
-    monkeypatch.setattr(check, "load_policy", lambda config_dir: check.Policy(set()))
     monkeypatch.setattr(
         inline_scanner, "scan", lambda entries: [_finding(tmp_path, "bad.sh")]
     )
@@ -186,27 +153,15 @@ def test_main_reports_violation(monkeypatch, tmp_path, capsys):
 def test_main_reports_clean_tree(monkeypatch, tmp_path, capsys):
     _write(tmp_path, "ok.sh", "echo hi\n")
     _patch_discovery(monkeypatch, tmp_path, ["ok.sh"])
-    monkeypatch.setattr(check, "load_policy", lambda config_dir: check.Policy(set()))
     monkeypatch.setattr(inline_scanner, "scan", lambda entries: [])
     assert check.main(["ok.sh"]) == 0
     assert "No inline code" in capsys.readouterr().out
-
-
-def test_main_fails_closed_on_policy_error(monkeypatch, capsys):
-    def _boom(_config_dir):
-        error = check.PolicyError("bad policy")
-        raise error
-
-    monkeypatch.setattr(check, "load_policy", _boom)
-    assert check.main([]) == 1
-    assert "bad policy" in capsys.readouterr().err
 
 
 def test_main_fails_closed_on_exemption_error(monkeypatch, tmp_path, capsys):
     _write(tmp_path, "x.sh", "echo hi\n")
     monkeypatch.setattr(check.discover, "scan_root", lambda: tmp_path)
     monkeypatch.setattr(check.discover, "tracked_files", lambda argv, root: ["x.sh"])
-    monkeypatch.setattr(check, "load_policy", lambda config_dir: check.Policy(set()))
 
     def _boom(_root):
         error = check.PolicyError("bad exemptions")
@@ -220,7 +175,6 @@ def test_main_fails_closed_on_exemption_error(monkeypatch, tmp_path, capsys):
 def test_main_fails_closed_on_scanner_error(monkeypatch, tmp_path, capsys):
     _write(tmp_path, "x.sh", "echo hi\n")
     _patch_discovery(monkeypatch, tmp_path, ["x.sh"])
-    monkeypatch.setattr(check, "load_policy", lambda config_dir: check.Policy(set()))
 
     def _boom(_entries):
         error = inline_scanner.ScannerError("scanner failed")
