@@ -333,8 +333,17 @@ _policy-impl:
 
 .PHONY: check-generated
 check-generated: ## Verify generated policy-derived data is current and deterministic
+	set -e; \
+	tmp="$$(mktemp -d)"; \
+	trap 'rm -rf "$$tmp"' EXIT; \
+	cp web/src/data/hook-sources.json web/src/data/script-sources.json "$$tmp/"; \
+	$(MAKE) extract-hook-sources extract-script-sources CI_WEB_DATA_DIR="$$tmp"; \
+	diff -u web/src/data/hook-sources.json "$$tmp/hook-sources.json"; \
+	diff -u web/src/data/script-sources.json "$$tmp/script-sources.json"
+
+.PHONY: generate-web-data
+generate-web-data: ## Regenerate committed web/src/data hook and script sources
 	$(MAKE) extract-hook-sources extract-script-sources
-	git diff --exit-code -- web/src/data/hook-sources.json web/src/data/script-sources.json
 
 .PHONY: _test-push-impl
 # The runners are SOURCED, not executed: the workspace shell guard

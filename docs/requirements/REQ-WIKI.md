@@ -147,7 +147,7 @@ Next.js parenthesized route groups MAY organize these routes without changing
 | ID     | Requirement                                                                                                                                                                                                          |
 | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PIPE-1 | Development and production builds MUST synchronize project registry, logos, Grafana dashboards, navigation, remote web documents, and landing content before serving or building.                                    |
-| PIPE-2 | Generated JSON under `web/src/data/` MUST be consumed as build inputs and regenerated from canonical workspace sources.                                                                                              |
+| PIPE-2 | Generated JSON under `web/src/data/` MUST be consumed as build inputs and regenerated from canonical workspace sources. Regeneration MUST be a separate write command. Verification MUST regenerate into a temporary directory and compare, and MUST NOT write to `web/src/data/`. |
 | PIPE-3 | YAML and Markdown filesystem reads MUST occur in server modules.                                                                                                                                                     |
 | PIPE-4 | Syntax highlighting and Markdown rendering MUST sanitize generated HTML before insertion.                                                                                                                            |
 | PIPE-5 | `WORKSPACE_CI_CONFIG_ROOT`, `WORKSPACE_GUARD_CONFIG_ROOT`, project root, docs root, scripts root, and web-content root MUST remain configurable through their implemented environment contracts during web content pipeline execution. Per-file config overrides (`CI_CONFIG_OVERRIDES`, `CI_CONFIG_PATH_*`, guard equivalents) are build-time inputs only: the enforcement entry point (`lib/checks.sh` as sourced by protected hooks) MUST remove them from the environment before any checker launches, so the variables do not exist in enforcement contexts and resolution there is unconditionally canonical under the deployed artifact. |
@@ -165,7 +165,7 @@ Next.js parenthesized route groups MAY organize these routes without changing
 
 ## 13. Acceptance
 
-1. `npm run check:generated` confirms generated navigation and registry inputs are current.
+1. `npm run check:generated` confirms generated navigation and registry inputs are current without modifying them.
 2. `/` renders synchronized landing content or redirects according to the feature flag.
 3. `/open-source` renders registered repositories and project README routes.
 4. Hook, anti-pattern, configuration, sandbox, tooling, and governance catalogues render from their canonical sources and open their inspection dialogs.

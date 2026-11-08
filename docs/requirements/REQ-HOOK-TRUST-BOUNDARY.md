@@ -108,6 +108,11 @@ invoked, not what they match.
    at mode 0711 so the CI user can traverse to it. A missing or incompatible
    scanner MUST fail the check. The checker MUST obtain detection from the
    sealed scanner.
+6. The sealed real shell is a WORKSPACE-GUARD dependency at the fixed
+   documented path `/usr/lib/workspace-guard/sealed/bash`: root-owned regular
+   file, mode 0700, under the sealed guard root at mode 0711. CI MUST NOT
+   hardcode an obsolete real-shell path. A missing or non-conforming sealed shell
+   MUST fail closed.
 
 ## 8. Verification
 
@@ -123,13 +128,20 @@ invoked, not what they match.
 4. A test MUST prove the inline checker verifies the sealed guard scanner and
    fails closed when the scanner is absent, unreadable, or reports an
    incompatible schema.
-4. A test MUST prove the producer-side catalog gate of section 7.3: the
+5. A test MUST prove the producer-side catalog gate of section 7.3: the
    candidate check fails on an unregistered `ci/check_*.py`, passes when that
    file is registered in the candidate's own `config/required_hooks.yaml`, and
    fails when a registered entry has no matching implementation in the
    candidate `lib/` or `ci/`.
-5. A test MUST prove that a protected hook reads catalog completeness and
+6. A test MUST prove that a protected hook reads catalog completeness and
    entry resolution only from the sealed artifact.
+7. A test MUST prove candidate producer checks run candidate code and never
+   import the current sealed artifact.
+8. A test MUST prove candidate verification is non-mutating: generated-data
+   verification writes only to a temporary directory.
+9. A test MUST reject hardcoded obsolete guard paths in provisioning code and
+   verify that each language-local constant matches the fixed documented sealed
+   path.
 
 ## 9. Change Control
 

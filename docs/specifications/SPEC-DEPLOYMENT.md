@@ -75,7 +75,9 @@ mount boundary. All construction happens at
    `pyvenv.cfg`, generated shebangs, entrypoints, and other runtime metadata;
    deployment does not rewrite those references;
 9. normalize ownership and modes;
-10. run artifact integrity and functional checks;
+10. run artifact integrity and functional checks; verification is read-only,
+    and generated-data comparisons regenerate into a writable temporary
+    directory instead of writing inside the candidate;
 11. apply and verify immutable attributes on every non-symlink descendant while
    leaving only the candidate root inode renameable; sealed parent directories
    protect generated symlink entries because Linux does not support `chattr` on
@@ -242,7 +244,8 @@ REV. Argument validation runs before the root gate so refusals are testable
 unprivileged. The candidate at REV runs that revision's own `check-push`
 inside the private namespace (per-generation verification; policy is
 forward-activating, so a historical generation is not measured against
-future baselines).
+future baselines). Candidate verification MUST NOT mutate the candidate:
+checks that compare generated data MUST write only to a temporary directory.
 
 Rollback exists so recovery never depends on the broken component: when a
 deployed artifact gates every commit (for example a hook whose entry no

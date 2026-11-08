@@ -121,7 +121,7 @@ ci_block_sensitive_files() {
 # config/file_length_limits.yaml.
 # The default limit is 512 lines with support for per-file overrides in the
 # config.
-# Scans .py, .sh, .js, .ts, .tsx, .rs, .css, and .lua files, skipping
+# Scans .py, .sh, .js, .ts, .tsx, .rs, .css, .lua, and .galaxy files, skipping
 # ignored directories.
 ci_check_file_length() {
     local config
@@ -130,7 +130,7 @@ ci_check_file_length() {
         ci_validate_exemption_file "$config" "file_length_limits.yaml" || return 1
     fi
     local max_lines=512
-    local exts=(.py .sh .js .ts .tsx .rs .css .lua)
+    local exts=(.py .sh .js .ts .tsx .rs .css .lua .galaxy)
     local errors=0
 
     # Read config if available
@@ -142,6 +142,11 @@ ci_check_file_length() {
         local cfg_exts=()
         ci_capture_lines cfg_exts -- ci_read_yaml_list "$config" "extensions"
         [[ ${#cfg_exts[@]} -gt 0 ]] && exts=("${cfg_exts[@]}")
+        local _has_galaxy=0 _ext
+        for _ext in "${exts[@]}"; do
+            [[ "$_ext" == ".galaxy" ]] && _has_galaxy=1
+        done
+        [[ $_has_galaxy -eq 1 ]] || exts+=(.galaxy)
 
         # Read per-file overrides: path -> max_lines
         declare -A _fl_ovr=()

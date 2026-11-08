@@ -143,6 +143,10 @@ registration or an unresolved entry fails the deploy. A complete catalog is
 sealed. The next commit validates the new module against the sealed manifest
 through invariants 2, 3, and 4.
 
+The producer gate runs candidate code against the candidate tree. It never
+imports the current sealed artifact. Candidate construction and verification
+ordering are owned by SPEC-DEPLOYMENT; verification is read-only.
+
 Consumer hooks and consumer behavior are unchanged.
 
 ## 7. Failure Behavior

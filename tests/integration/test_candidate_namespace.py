@@ -33,7 +33,8 @@ def test_candidate_uses_final_path_without_replacing_host_artifact(
             entry,
             "/bin/sh",
             "-c",
-            "test ! -x /bin/bash.real && test \"$HOME\" = /mnt/user && "
+            "test ! -x /usr/lib/workspace-guard/sealed/bash && "
+            'test "$HOME" = /mnt/user && '
             "touch \"$HOME/.config/containers/probe\" && "
             "cd /opt/workspace-ci && pwd -P > observed-path",
         ],

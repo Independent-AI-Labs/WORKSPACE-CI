@@ -126,7 +126,9 @@ The final call is equivalent to:
 execve("/bin/bash", ["bash", "-c", quoted_command], caller_environment)
 ```
 
-`/bin/bash` is the existing shell guard, not `/bin/bash.real`. It scans the full
+`/bin/bash` is the existing shell guard. Its sealed backing shell is
+`/usr/lib/workspace-guard/sealed/bash` (root-owned, mode `0700`), not a
+checkout-visible path. It scans the full
 quoted command with its existing policy. If accepted, the real shell parses the
 quoted words and invokes `/usr/bin/sudo`, which is the existing sudo guard, not
 `/usr/bin/sudo.real`. Because `escalate` set all UIDs to root before the Bash

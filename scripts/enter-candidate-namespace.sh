@@ -6,6 +6,8 @@ owner=${2:?owner}
 home=${3:?home}
 shift 3
 
+REAL_SHELL=/usr/lib/workspace-guard/sealed/bash
+
 mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /mnt
 install -d -m 0755 /mnt/candidate
 mount --bind "$candidate" /mnt/candidate
@@ -20,6 +22,6 @@ mount --bind \
 mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /opt
 install -d -m 0755 /opt/workspace-ci
 mount --bind /mnt/candidate /opt/workspace-ci
-[[ $(stat -c '%u:%a' /bin/bash.real) == 0:700 ]]
-/usr/sbin/runuser -u "$owner" -- test ! -x /bin/bash.real
+[[ $(stat -c '%u:%a' "$REAL_SHELL") == 0:700 ]]
+/usr/sbin/runuser -u "$owner" -- test ! -x "$REAL_SHELL"
 exec /usr/sbin/runuser -u "$owner" -- /usr/bin/env HOME=/mnt/user "$@"

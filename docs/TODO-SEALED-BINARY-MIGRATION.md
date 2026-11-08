@@ -160,7 +160,8 @@ the contract checks the git guard calls.
 - [x] Delete `scripts/rewrite-history` and every reference (done 2026-09-27;
       file and its test are absent from `git ls-files`).
 - [ ] `scripts/podman/e2e-policy-matrix.sh:88-93`: seed a non-git dummy.
-- [ ] `docs/OPERATOR.md:82-86`: remove the `/bin/bash.real` recipe.
+- [x] DONE 2026-11-08: `WORKSPACE-GUARD/docs/OPERATOR.md` recovery recipe now
+      names the sealed shell path, not `/bin/bash.real`.
 
 ### 2.5 Consumers and callers
 - [x] `WORKSPACE-GUARD/scripts/guard-operator.sh`: dropped unused `CI_ROOT`.

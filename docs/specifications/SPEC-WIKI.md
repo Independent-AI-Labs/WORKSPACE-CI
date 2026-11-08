@@ -252,6 +252,11 @@ npm test
 npm run build
 ```
 
+`npm run check:generated` is read-only. It regenerates into a temporary
+directory and compares the result with `web/src/data/`. It MUST NOT rewrite
+tracked files. Regeneration that writes into `web/src/data/` is a separate
+explicit command and never part of a verification gate.
+
 Vitest runs browser-facing tests in jsdom from `tests/web`. Route loading and
 error modules cover data-bearing sections. Responsive verification follows
 SPEC-WIKI-RESPONSIVE.

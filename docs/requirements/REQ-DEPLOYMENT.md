@@ -53,8 +53,11 @@ migration path, or restoration workflow.
     moving or rewriting an already-created virtual environment. The host mount
     namespace and current artifact MUST remain unchanged during construction.
 11. Candidate verification MUST prove source identity, expected files, no
-   tracked symlinks, ownership, modes, executable identities, dependency lock
-   conformance, and required quality/integrity checks.
+    tracked symlinks, ownership, modes, executable identities, dependency lock
+    conformance, and required quality/integrity checks. Verification MUST be
+    non-mutating: a check that compares generated data MUST regenerate into a
+    writable temporary directory and compare there, and MUST NOT write inside
+    the candidate tree.
 12. Candidate verification MUST reject candidate-path references in
     runtime symlinks, `pyvenv.cfg`, generated shebangs, entrypoints, and other
     execution metadata. It MUST NOT repair these references by rewriting files
