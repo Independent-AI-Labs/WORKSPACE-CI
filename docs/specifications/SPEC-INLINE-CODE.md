@@ -21,7 +21,7 @@ guard library. Those functions exist once, in Rust.
 
 1. The protected hook invokes the checker from immutable `/opt/workspace-ci`.
 2. The checker invokes the sealed guard scanner. It verifies the scanner is a
-   root-owned regular file with mode 0700 under the sealed guard root.
+   root-owned regular file with mode 0755 under the sealed guard root.
 3. An absent, unreadable, incompatible, or failed scanner fails the check.
 4. The checker consumes the sealed guard scanner.
 5. The guard scanner is installed before the CI artifact that consumes it.
@@ -75,7 +75,7 @@ The scanner returns one JSON response on standard output:
 
 - `schema`: response schema version.
 - `findings`: array of `{path, rule, category, line, column, view, matched,
-  reason, hint, block}`.
+  reason, hint, block, exemptible}`.
 
 Rules are evaluated in declared order. The scanner returns every finding. The
 consumer applies path exemptions, ordering, and reporting. A schema mismatch

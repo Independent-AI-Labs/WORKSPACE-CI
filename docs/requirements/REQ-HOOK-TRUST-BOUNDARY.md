@@ -104,7 +104,7 @@ invoked, not what they match.
    only from the sealed artifact.
 5. Inline-code detection is a sealed WORKSPACE-GUARD dependency. The CI
    checker MUST verify the guard scanner as a root-owned regular file with
-   mode 0700 under the sealed guard root before use. A missing or incompatible
+   mode 0755 under the sealed guard root before use. A missing or incompatible
    scanner MUST fail the check. The checker MUST obtain detection from the
    sealed scanner.
 

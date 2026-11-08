@@ -42,7 +42,7 @@ reporting, and obtains detection results from the sealed guard scanner.
    independent of the caller environment and working directory.
 8. The checker MUST invoke the sealed WORKSPACE-GUARD inline scanner. Before
    use it MUST verify that the scanner is a root-owned regular file with mode
-   0700 under the sealed guard root.
+   0755 under the sealed guard root.
 9. An absent, unreadable, incompatible, or failed scanner MUST fail the
    check.
 10. The system MUST provide exactly one inline-code detector: the sealed

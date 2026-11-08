@@ -114,7 +114,7 @@ preflight therefore uses a measured complete-candidate inode and byte budget
 plus documented margin. Deployment does not use an unexplained fixed threshold.
 
 The deployment preflight also verifies the sealed WORKSPACE-GUARD inline
-scanner at its fixed path: root-owned regular file, mode 0700, under the sealed
+scanner at its fixed path: root-owned regular file, mode 0755, under the sealed
 guard root. A missing or unverifiable scanner fails the deployment before any
 candidate work. The guard is a dependency of WORKSPACE-CI and is installed
 first.
