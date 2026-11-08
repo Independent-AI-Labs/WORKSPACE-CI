@@ -65,6 +65,7 @@ artifact, then install protected hooks as a separate step.
 | [`specifications/SPEC-COVERAGE-GATE.md`](specifications/SPEC-COVERAGE-GATE.md)                 | Coverage gate implementation: suite schema, runner adapters, validation, hook wiring |
 | [`specifications/SPEC-INLINE-CODE.md`](specifications/SPEC-INLINE-CODE.md)                     | Inline-code checker components, scan pipeline, and allowed constructs              |
 | [`specifications/SPEC-TRUSTED-EXEC.md`](specifications/SPEC-TRUSTED-EXEC.md)                   | Trusted-code service-killing checker, carriers, and rule table                     |
+| [`specifications/SPEC-REQUIRED-HOOKS-SELF-CHECK.md`](specifications/SPEC-REQUIRED-HOOKS-SELF-CHECK.md) | Required-hooks consumer invariants and producer-side consistency gate |
 | [`specifications/SPEC-DEPENDENCY-VALIDATION.md`](specifications/SPEC-DEPENDENCY-VALIDATION.md) | Offline policy and live freshness components                                       |
 | [`specifications/SPEC-SCAFFOLD-CI.md`](specifications/SPEC-SCAFFOLD-CI.md)                 | Scaffold generator implementation contract                                        |
 | [`specifications/SPEC-HITL.md`](specifications/SPEC-HITL.md)                                   | HITL system architecture and implementation plan                                   |

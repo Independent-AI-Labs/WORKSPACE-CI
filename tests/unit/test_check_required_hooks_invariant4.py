@@ -7,11 +7,16 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+import yaml
 
 from ci.check_required_hooks_present import (
+    EXIT_INFRA_ERROR,
+    EXIT_OK,
+    EXIT_VIOLATION,
     HookEntry,
     HooksManifest,
     _run_invariant_4_entries,
+    main,
 )
 
 
@@ -288,3 +293,99 @@ def test_invariant4_accepts_renamed_shell_entry(tmp_path: Path) -> None:
         ],
     )
     assert _run_invariant_4_entries(manifest, quiet=True, package_root=tmp_path) == []
+
+
+_SAFETY_HOOK: dict[str, object] = {
+    "id": "baseline-safety",
+    "kind": "makefile_target",
+    "entry": "check-safety",
+    "stage": "pre-commit",
+    "mandatory": True,
+    "safety": True,
+}
+
+
+def _make_candidate(tmp_path: Path) -> Path:
+    candidate = tmp_path / "candidate"
+    (candidate / "ci").mkdir(parents=True)
+    (candidate / "config").mkdir()
+    (candidate / "lib").mkdir()
+    return candidate
+
+
+def _write_manifest(candidate: Path, hooks: list[dict[str, object]]) -> None:
+    (candidate / "config" / "required_hooks.yaml").write_text(
+        yaml.safe_dump({"version": 1, "hooks": hooks}),
+    )
+
+
+def _candidate_manifest() -> list[dict[str, object]]:
+    return [
+        {
+            "id": "check-foo",
+            "kind": "python_module",
+            "entry": "ci.check_foo",
+            "stage": "pre-commit",
+            "mandatory": True,
+        },
+        dict(_SAFETY_HOOK),
+    ]
+
+
+def test_producer_mode_passes_for_registered_checker(tmp_path: Path) -> None:
+    candidate = _make_candidate(tmp_path)
+    (candidate / "ci" / "check_foo.py").write_text("")
+    _write_manifest(candidate, _candidate_manifest())
+    assert main(["--producer", "--project", str(candidate), "--quiet"]) == EXIT_OK
+
+
+def test_producer_mode_fails_for_unregistered_checker(tmp_path: Path) -> None:
+    candidate = _make_candidate(tmp_path)
+    (candidate / "ci" / "check_foo.py").write_text("")
+    _write_manifest(candidate, [dict(_SAFETY_HOOK)])
+    assert (
+        main(["--producer", "--project", str(candidate), "--quiet"]) == EXIT_VIOLATION
+    )
+
+
+def test_producer_mode_fails_when_registered_entry_is_missing(
+    tmp_path: Path,
+) -> None:
+    candidate = _make_candidate(tmp_path)
+    _write_manifest(candidate, _candidate_manifest())
+    assert (
+        main(["--producer", "--project", str(candidate), "--quiet"]) == EXIT_VIOLATION
+    )
+
+
+def test_producer_mode_fails_without_manifest(tmp_path: Path) -> None:
+    candidate = _make_candidate(tmp_path)
+    assert (
+        main(["--producer", "--project", str(candidate), "--quiet"]) == EXIT_INFRA_ERROR
+    )
+
+
+def test_producer_mode_uses_project_manifest_not_sealed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    candidate = _make_candidate(tmp_path)
+    (candidate / "ci" / "check_foo.py").write_text("")
+    _write_manifest(candidate, _candidate_manifest())
+    sealed = tmp_path / "sealed"
+    sealed.mkdir()
+    monkeypatch.setattr(
+        "ci.check_required_hooks_present._ci_root",
+        lambda: sealed,
+    )
+    assert main(["--producer", "--project", str(candidate), "--quiet"]) == EXIT_OK
+
+
+def test_producer_mode_requires_lib(tmp_path: Path) -> None:
+    candidate = _make_candidate(tmp_path)
+    (candidate / "lib").rmdir()
+    (candidate / "ci" / "check_foo.py").write_text("")
+    _write_manifest(candidate, _candidate_manifest())
+    assert (
+        main(["--producer", "--project", str(candidate), "--quiet"]) == EXIT_VIOLATION
+    )

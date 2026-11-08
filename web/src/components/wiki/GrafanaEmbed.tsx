@@ -28,9 +28,11 @@ export function GrafanaEmbed({ src, title, className }: GrafanaEmbedProps) {
 
   useEffect(() => {
     let cancelled = false
-    void checkGrafanaHealthViaApi().then((ok) => {
-      if (!cancelled) setStatus(ok ? 'ready' : 'unavailable')
-    })
+    checkGrafanaHealthViaApi()
+      .then((ok) => {
+        if (!cancelled) setStatus(ok ? 'ready' : 'unavailable')
+      })
+      .catch((err) => console.error('grafana health check failed:', err))
     return () => {
       cancelled = true
     }

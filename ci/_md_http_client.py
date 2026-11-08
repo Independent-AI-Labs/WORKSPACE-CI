@@ -18,6 +18,7 @@ RESET = "\033[0m"
 
 GLOBAL_BUDGET_SECONDS = 30.0
 MAX_CONCURRENCY = 10
+MAX_RETRIES = 3
 HTTP_OK_MIN = HTTPStatus.OK
 HTTP_REDIRECT_MAX = HTTPStatus.BAD_REQUEST
 
@@ -42,7 +43,13 @@ class HttpClient:
 
     def __init__(self, timeout: float) -> None:
         self._timeout = timeout
-        self._headers = {"user-agent": "ci-md-validator/0.1"}
+        self._headers = {
+            "user-agent": (
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/120.0 Safari/537.36 "
+                "ci-md-validator/0.1"
+            )
+        }
         self._cache: dict[str, tuple[bool, str]] = {}
         self._budget_exceeded = False
 
@@ -103,14 +110,22 @@ class HttpClient:
             return
         async with sem:
             for method in ("HEAD", "GET"):
-                try:
-                    r = await client.request(method, url)
-                except httpx.RequestError as exc:
-                    self._cache[url] = (False, f"{type(exc).__name__}: {exc}")
-                    return
-                if HTTP_OK_MIN <= r.status_code < HTTP_REDIRECT_MAX:
-                    self._cache[url] = (True, f"{r.status_code}")
-                    return
+                for attempt in range(MAX_RETRIES):
+                    try:
+                        r = await client.request(method, url)
+                    except httpx.RequestError as exc:
+                        self._cache[url] = (False, f"{type(exc).__name__}: {exc}")
+                        return
+                    if HTTP_OK_MIN <= r.status_code < HTTP_REDIRECT_MAX:
+                        self._cache[url] = (True, f"{r.status_code}")
+                        return
+                    if (
+                        r.status_code == HTTPStatus.TOO_MANY_REQUESTS
+                        and attempt < MAX_RETRIES - 1
+                    ):
+                        await asyncio.sleep(1.0 * (attempt + 1))
+                        continue
+                    break
                 if method == "HEAD":
                     continue
                 self._cache[url] = (False, f"HTTP {r.status_code}")

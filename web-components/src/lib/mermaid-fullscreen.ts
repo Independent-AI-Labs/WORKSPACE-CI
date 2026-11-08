@@ -223,7 +223,7 @@ export class FullscreenOverlay {
         this.downloadSvg()
         break
       case 'download-png':
-        void this.downloadPng()
+        this.downloadPng().catch((err) => console.error('mermaid png export failed:', err))
         break
       case 'close':
         this.destroy()

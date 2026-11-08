@@ -79,22 +79,24 @@ export function MermaidRenderer() {
 
   useEffect(() => {
     let cancelled = false
-    void import('mermaid').then(({ default: mermaid }) => {
-      if (cancelled) return
-      runnerRef.current = mermaid as unknown as MermaidRunner
-      void mountPending()
-    })
+    import('mermaid')
+      .then(({ default: mermaid }) => {
+        if (cancelled) return
+        runnerRef.current = mermaid as unknown as MermaidRunner
+        mountPending().catch((err) => console.error('mermaid mount failed:', err))
+      })
+      .catch((err) => console.error('mermaid load failed:', err))
     return () => {
       cancelled = true
     }
   }, [])
 
   useEffect(() => {
-    void mountPending()
+    mountPending().catch((err) => console.error('mermaid mount failed:', err))
   }, [pathname])
 
   useEffect(() => {
-    void rerenderAll()
+    rerenderAll().catch((err) => console.error('mermaid rerender failed:', err))
   }, [theme])
 
   useEffect(() => {

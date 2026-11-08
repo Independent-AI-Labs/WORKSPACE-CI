@@ -13,12 +13,17 @@ ci_check_module_size() {
     config="$(ci_config_path file_length_limits "./config/file_length_limits.yaml")" || return 1
 
     local max_bytes=262144 max_total_bytes=16777216 max_files=48 max_submodules=8 max_depth=8
-    local exts=(.py .sh .js .ts .tsx .rs .css .lua)
+    local exts=(.py .sh .js .ts .tsx .rs .css .lua .galaxy)
     local value key
     if [[ -f "$config" ]]; then
         local configured_exts=()
         ci_capture_lines configured_exts -- ci_read_yaml_list "$config" extensions
         [[ ${#configured_exts[@]} -gt 0 ]] && exts=("${configured_exts[@]}")
+        local _has_galaxy=0 _ext
+        for _ext in "${exts[@]}"; do
+            [[ "$_ext" == ".galaxy" ]] && _has_galaxy=1
+        done
+        [[ $_has_galaxy -eq 1 ]] || exts+=(.galaxy)
         for key in max_file_bytes max_total_source_bytes max_source_files_per_module max_submodules_per_module max_module_depth; do
             value="$(ci_read_yaml "$config" "$key")"
             [[ -n "$value" ]] || continue

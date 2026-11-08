@@ -286,10 +286,10 @@ export function mountMermaidDiagram(frame: HTMLElement): MermaidController {
         downloadSvg()
         break
       case 'download-png':
-        void downloadPng()
+        downloadPng().catch((err) => console.error('mermaid png export failed:', err))
         break
       case 'copy-source':
-        void copySource(target)
+        copySource(target).catch((err) => console.error('mermaid copy failed:', err))
         break
     }
   }

@@ -18,7 +18,6 @@ from ci.check_required_hooks_present import (
     QualityExceptions,
     _check_manifest_completeness,
     _check_quality_exceptions,
-    _run_invariant_4_entries,
     main,
 )
 
@@ -464,3 +463,37 @@ def test_main_accepts_workspace_root(
     assert rc == EXIT_OK
 
 
+def test_protected_mode_never_runs_catalog_completeness(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = _make_workspace(tmp_path)
+    _write_manifest(root, [dict(_SAFETY_HOOK)])
+    _use_manifest(root, monkeypatch)
+    project = _setup_strict_repo_with_full_contract(root, "X")
+
+    def _forbidden(*_args: object, **_kwargs: object) -> list[str]:
+        pytest.fail("invariant 1 ran in protected mode")
+
+    monkeypatch.setattr(
+        "ci.check_required_hooks_present._run_invariant_1_manifest",
+        _forbidden,
+    )
+    assert main(["--project", str(project), "--quiet"]) == EXIT_OK
+
+
+def test_protected_mode_ignores_project_registry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = _make_workspace(tmp_path)
+    _write_manifest(root, [dict(_SAFETY_HOOK)])
+    _use_manifest(root, monkeypatch)
+    project = _setup_strict_repo_with_full_contract(root, "X")
+    (project / "config").mkdir()
+    (project / "config" / "required_hooks.yaml").write_text(
+        yaml.safe_dump({"version": 1, "hooks": []}),
+    )
+    (project / "ci").mkdir()
+    (project / "ci" / "check_orphan.py").write_text("")
+    assert main(["--project", str(project), "--quiet"]) == EXIT_OK

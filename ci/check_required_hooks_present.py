@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
-"""Self-check that validates the CI hook infrastructure of the invoking
-project across four invariants. Ensures every check_*.py module is
-registered in required_hooks.yaml, quality_exceptions.yaml is schema-valid,
-rendered hooks carry the required markers, and every registry entry resolves
-in the shipping lib.
+"""Validate the CI hook infrastructure of the invoking project.
 
-The manifest is loaded from the checker's own import root (``_ci_root()``:
-the working tree when WORKSPACE-CI validates its own commit, the sealed
-``/opt/workspace-ci`` when a consumer runs the hook). One root owns both the
-manifest and the lib, so they can never come from different artifacts.
+Protected mode (default) validates quality_exceptions.yaml, rendered
+mandatory-hook markers, and entry resolution against the sealed tree. It never
+reads the checkout registry. Producer mode (--producer) validates catalog
+completeness and entry resolution against the project's own tree before
+sealing, so a new ci/check_*.py can be committed before it is first sealed.
 
-Exit codes: 0 = all invariants hold, 1 = violation, 2 = infrastructure error.
+Exit codes: 0 = ok, 1 = violation, 2 = infrastructure error.
 """
 
 from __future__ import annotations
@@ -93,12 +90,12 @@ def _ci_root() -> Path:
 
 
 def _manifest_dir(package_root: Path) -> Path:
-    """The config directory that owns the hook registry.
+    """The config directory that owns the registry for ``package_root``.
 
-    Always the checker's own import root: the one tree that also owns the
-    ``lib/`` this checker resolves entries against. The environment is never
-    consulted, so the manifest and the lib can never come from different
-    artifacts (the 2026-09-27 registry-rename deadlock).
+    Protected mode passes the sealed root; producer mode passes the candidate.
+    The same root owns the ``lib/`` and ``ci/`` entries resolve against, so the
+    manifest and the tree can never come from different artifacts (the
+    2026-09-27 registry-rename deadlock). The environment is never consulted.
     """
     return package_root / "config"
 
@@ -276,6 +273,11 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Suppress per-check OK lines",
     )
+    parser.add_argument(
+        "--producer",
+        action="store_true",
+        help="Validate catalog completeness and entry resolution as a candidate",
+    )
     return parser
 
 
@@ -286,13 +288,10 @@ def _run_invariant_1_manifest(
     *,
     quiet: bool,
 ) -> list[str]:
-    # Only the CI source repository carries the ci/ package the manifest must
-    # register; consumers have no scripts/generate-hooks and skip this.
-    if not (project_dir / "scripts" / "generate-hooks").is_file():
-        return []
+    """Invariant 1: every ci/check_*.py is registered. Producer mode only."""
     issues = _check_manifest_completeness(project_dir, manifest)
     if not issues and not quiet:
-        _emit("OK", "manifest registers every check_*.py")
+        _emit("OK", "candidate manifest registers every check_*.py")
     return issues
 
 
@@ -349,16 +348,17 @@ def _run_invariant_4_entries(
     *,
     quiet: bool,
     package_root: Path | None = None,
+    require_lib: bool = False,
 ) -> list[str]:
     """Invariant 4: every manifest entry resolves in the shipping lib.
 
     The 2026-08-24 portable_shell incident: ci_check_portable_shell was
     dropped from lib/checks_files.sh while required_hooks.yaml kept the
     entry; the deployed hook failed with "command not found" on every
-    commit, deadlocking the fix. This invariant runs in source pre-commit
-    and in candidate check-push (deploy-time), so a tree that drops an
-    implementation while keeping its catalog entry can neither commit
-    nor publish.
+    commit, deadlocking the fix. This invariant runs in the protected hook
+    against the sealed tree and in the producer gate against the candidate
+    tree, so a tree that drops an implementation while keeping its catalog
+    entry can neither publish nor stay published.
 
     Also enforces coherence of the safety-marked catalog fields: the
     wholesale deletion of every ``safety: true`` marker (2026-08-24,
@@ -391,7 +391,9 @@ def _run_invariant_4_entries(
     if not lib_dir.is_dir():
         # Consumer invocation without a shipping lib (checker imported
         # from a source checkout elsewhere); generation-time refusal and
-        # the CI-repo self-check own this invariant.
+        # the protected hook own this invariant.
+        if require_lib:
+            issues.append(f"lib/ directory not found under {package_root}")
         return issues
     defined = _shell_function_names(lib_dir)
     for hook in manifest.hooks:
@@ -419,49 +421,7 @@ def _run_invariant_4_entries(
     return issues
 
 
-def main(argv: list[str] | None = None, *, package_root: Path | None = None) -> int:
-    args = _build_arg_parser().parse_args(argv)
-
-    project_dir = args.project.resolve()
-    if package_root is None:
-        package_root = _ci_root()
-    manifest_dir = _manifest_dir(package_root)
-    manifest = _load_manifest(manifest_dir)
-    if manifest is None:
-        print(
-            f"{RED}error:{RESET} required_hooks.yaml not found in CI config "
-            f"{manifest_dir}",
-        )
-        return EXIT_INFRA_ERROR
-
-    project_name = project_dir.name
-
-    print(f"Self-check: {project_name}")
-
-    issues: list[str] = []
-    issues.extend(
-        _run_invariant_1_manifest(
-            project_name,
-            project_dir,
-            manifest,
-            quiet=args.quiet,
-        ),
-    )
-    issues.extend(
-        _run_invariant_2_exceptions(
-            project_dir,
-            manifest,
-            quiet=args.quiet,
-        ),
-    )
-    rendered_issues = _check_hooks_rendered(project_dir, manifest)
-    issues.extend(rendered_issues)
-    if not rendered_issues and not args.quiet:
-        _emit("OK", "rendered hooks carry required markers")
-
-    entry_issues = _run_invariant_4_entries(manifest, quiet=args.quiet)
-    issues.extend(entry_issues)
-
+def _report(project_name: str, issues: list[str], *, quiet: bool) -> int:
     if issues:
         print()
         for issue in issues:
@@ -470,9 +430,75 @@ def main(argv: list[str] | None = None, *, package_root: Path | None = None) -> 
         print(f"{RED}{len(issues)} violation(s){RESET}: see fix instructions above.")
         return EXIT_VIOLATION
 
-    if not args.quiet:
+    if not quiet:
         print(f"{GREEN}OK{RESET} {project_name}: contract satisfied.")
     return EXIT_OK
+
+
+def _missing_manifest(manifest_dir: Path, label: str) -> int:
+    print(
+        f"{RED}error:{RESET} required_hooks.yaml not found in {label} config "
+        f"{manifest_dir}",
+    )
+    return EXIT_INFRA_ERROR
+
+
+def _run_protected(
+    project_dir: Path,
+    *,
+    package_root: Path | None,
+    quiet: bool,
+) -> int:
+    # Invariant 1 is absent: the protected hook never reads the checkout
+    # registry. It runs against the sealed artifact only.
+    root = package_root if package_root is not None else _ci_root()
+    manifest_dir = _manifest_dir(root)
+    manifest = _load_manifest(manifest_dir)
+    if manifest is None:
+        return _missing_manifest(manifest_dir, "CI")
+
+    issues = _run_invariant_2_exceptions(project_dir, manifest, quiet=quiet)
+    rendered = _check_hooks_rendered(project_dir, manifest)
+    issues.extend(rendered)
+    if not rendered and not quiet:
+        _emit("OK", "rendered hooks carry required markers")
+    issues.extend(
+        _run_invariant_4_entries(manifest, quiet=quiet, package_root=root),
+    )
+    return _report(project_dir.name, issues, quiet=quiet)
+
+
+def _run_producer(project_dir: Path, *, quiet: bool) -> int:
+    """Validate candidate catalog completeness and entry resolution."""
+    manifest_dir = _manifest_dir(project_dir)
+    manifest = _load_manifest(manifest_dir)
+    if manifest is None:
+        return _missing_manifest(manifest_dir, "candidate")
+
+    issues = _run_invariant_1_manifest(
+        project_dir.name,
+        project_dir,
+        manifest,
+        quiet=quiet,
+    )
+    issues.extend(
+        _run_invariant_4_entries(
+            manifest,
+            quiet=quiet,
+            package_root=project_dir,
+            require_lib=True,
+        ),
+    )
+    return _report(project_dir.name, issues, quiet=quiet)
+
+
+def main(argv: list[str] | None = None, *, package_root: Path | None = None) -> int:
+    args = _build_arg_parser().parse_args(argv)
+    project_dir = args.project.resolve()
+    print(f"Self-check: {project_dir.name}")
+    if args.producer:
+        return _run_producer(project_dir, quiet=args.quiet)
+    return _run_protected(project_dir, package_root=package_root, quiet=args.quiet)
 
 
 if __name__ == "__main__":

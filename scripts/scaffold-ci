@@ -321,7 +321,7 @@ _c_errors=()
 case "$_pf_tier" in strict|poc|vendored) ;; *) _c_errors+=("tier must be strict|poc|vendored, got '$_pf_tier'") ;; esac
 _has_any=0
 for _lang in "${_pf_languages[@]}"; do
-    case "$_lang" in any) _has_any=1 ;; python|rust|node|shell|lua|go|ruby) ;; *) _c_errors+=("unknown language: $_lang") ;; esac
+    case "$_lang" in any) _has_any=1 ;; python|rust|node|shell|lua|go|ruby|galaxy) ;; *) _c_errors+=("unknown language: $_lang") ;; esac
 done
 if [[ $_has_any -eq 1 && ${#_pf_languages[@]} -gt 1 ]]; then
     _c_errors+=("language 'any' cannot coexist with other languages")

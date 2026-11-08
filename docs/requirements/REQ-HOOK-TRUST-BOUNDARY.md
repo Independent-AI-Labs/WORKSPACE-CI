@@ -94,6 +94,18 @@ invoked, not what they match.
    and MUST NOT be treated as a trust boundary.
 2. No decision of a repository-tooling hook MAY authorize policy, grant an
    exemption, or select a checker.
+3. Catalog consistency is a producer-side check. The rules that every
+   `ci/check_*.py` in the CI source tree is registered in that tree's
+   `config/required_hooks.yaml`, and that every manifest entry resolves in
+   that tree's `lib/` and `ci/`, MUST be enforced against the deployment
+   candidate during candidate validation. The invocation MUST be made by the
+   deployment build script against the candidate, not solely by
+   candidate-controlled Makefile logic. Neither rule MUST be enforced by a
+   protected hook.
+4. A protected hook MUST treat the WORKSPACE-CI checkout exactly like any
+   other consumer: it executes the sealed checker and reads pooled policy from
+   the sealed artifact. It MUST NOT read the checked repository's
+   `config/required_hooks.yaml` for catalog completeness or entry resolution.
 
 ## 8. Verification
 
@@ -106,6 +118,14 @@ invoked, not what they match.
    the proof without a new test.
 3. A generator test MUST assert that no rendered hook invokes an interpreter
    outside the sealed, unsafe-path-disabled form.
+4. A test MUST prove the producer-side catalog gate of section 7.3: the
+   candidate check fails on an unregistered `ci/check_*.py`, passes when that
+   file is registered in the candidate's own `config/required_hooks.yaml`, and
+   fails when a registered entry has no matching implementation in the
+   candidate `lib/` or `ci/`.
+5. A test MUST prove that a protected hook does not read the checked
+   repository's `config/required_hooks.yaml` for catalog completeness or entry
+   resolution.
 
 ## 9. Change Control
 
@@ -126,4 +146,10 @@ Acceptance tests MUST prove:
 3. a planted inline-code, banned-pattern, or policy-integrity violation is
    still detected under the hostile environment;
 4. an agent-writable exemption file fails the check;
-5. every registered python-module hook passes items 1 through 3.
+5. every registered python-module hook passes items 1 through 3;
+6. the protected hook treats the CI checkout as a consumer and never reads the
+   checkout's `config/required_hooks.yaml` for catalog completeness or entry
+   resolution;
+7. the candidate build fails when a `ci/check_*.py` is not registered in the
+   candidate's own `config/required_hooks.yaml`, or when a registered entry
+   does not resolve in the candidate tree.

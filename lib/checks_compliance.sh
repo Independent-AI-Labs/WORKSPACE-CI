@@ -237,12 +237,20 @@ ci_compliance_score() {
     if [[ -f "$_precommit" ]]; then
         local _fl_config="$project_dir/config/file_length_limits.yaml"
         local _fl_max=512
-        local _fl_exts=(.py .sh .js .ts .rs .tsx .css)
+        local _fl_exts=(.py .sh .js .ts .rs .tsx .css .lua .galaxy)
 
         if [[ -f "$_fl_config" ]]; then
             local _cfg_max
             _cfg_max="$(ci_read_yaml "$_fl_config" "max_lines")"
             [[ -n "$_cfg_max" ]] && _fl_max="$_cfg_max"
+            local _cfg_exts=()
+            ci_capture_lines _cfg_exts -- ci_read_yaml_list "$_fl_config" "extensions"
+            [[ ${#_cfg_exts[@]} -gt 0 ]] && _fl_exts=("${_cfg_exts[@]}")
+            local _has_galaxy=0 _ext
+            for _ext in "${_fl_exts[@]}"; do
+                [[ "$_ext" == ".galaxy" ]] && _has_galaxy=1
+            done
+            [[ $_has_galaxy -eq 1 ]] || _fl_exts+=(.galaxy)
         fi
 
         local _fl_files=()
