@@ -232,7 +232,7 @@ def test_policy_dir_ignores_hostile_environment(tmp_path, monkeypatch):
 
 
 TRUST_ROOT = Path(__file__).resolve().parents[2]
-PYTHON_RULE = "interp-python-inline"
+PYTHON_RULE = "interp-inline-code"
 
 
 def _hostile_env(work: Path, config_dir: Path) -> dict[str, str]:
@@ -410,7 +410,7 @@ def test_main_fails_closed_on_scan_error(tmp_path, monkeypatch, capsys):
     def _boom(*_args):
         raise check.PolicyError("scan failed")
 
-    monkeypatch.setattr(check, "_scan_all", _boom)
+    monkeypatch.setattr(check, "_scan_all_guard", _boom)
     assert check.main(["x.sh"]) == 1
     assert "scan failed" in capsys.readouterr().err
 

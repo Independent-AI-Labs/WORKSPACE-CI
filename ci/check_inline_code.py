@@ -21,6 +21,7 @@ from typing import NamedTuple
 
 import yaml
 
+from ci import inline_scanner
 from ci.banned_scan import classify, discover
 from ci.banned_scan import engine as _engine
 from ci.inline_code_decode import View, build_views
@@ -100,12 +101,18 @@ class Policy(NamedTuple):
 
 
 class Finding(NamedTuple):
-    rule: Rule
+    rule: Rule | GuardRule
     path: str
     line: int
     col: int
     matched: str
     view: str
+
+
+class GuardRule(NamedTuple):
+    id: str
+    category: str
+    reason: str
 
 
 def _compile_pattern(
@@ -405,6 +412,42 @@ def _scan_all(files: list[str], root: Path, policy: Policy, classes) -> list[Fin
     return findings
 
 
+def _scan_all_guard(
+    files: list[str], root: Path, policy: Policy, classes
+) -> list[Finding]:
+    entries: list[dict[str, str]] = []
+    for rel in files:
+        if rel in SELF_SKIP or not (root / rel).is_file():
+            continue
+        if _skip_class(rel, classes):
+            continue
+        data = (root / rel).read_bytes()
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            text = None
+        language = detect_language(rel, text) or "text"
+        entries.append({"path": str(root / rel), "language": language})
+    findings: list[Finding] = []
+    for item in inline_scanner.scan(entries):
+        rel = Path(str(item["path"])).relative_to(root).as_posix()
+        rule_id = str(item["rule"])
+        if (rule_id, rel) in policy.exemptions and item.get("exemptible", True):
+            continue
+        rule = GuardRule(rule_id, str(item["category"]), str(item["reason"]))
+        findings.append(
+            Finding(
+                rule,
+                rel,
+                int(str(item["line"])),
+                int(str(item["column"])),
+                str(item["matched"]),
+                str(item["view"]),
+            )
+        )
+    return findings
+
+
 def _policy_dir() -> Path:
     """Resolve the universal policy directory from the checker's own tree.
 
@@ -440,8 +483,8 @@ def main(argv: list[str] | None = None) -> int:
         classes = None
 
     try:
-        findings = _scan_all(files, root, policy, classes)
-    except PolicyError as exc:
+        findings = _scan_all_guard(files, root, policy, classes)
+    except (PolicyError, inline_scanner.ScannerError) as exc:
         print(f"inline-code: {exc}", file=sys.stderr)
         return 1
 
