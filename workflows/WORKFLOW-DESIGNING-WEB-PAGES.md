@@ -11,7 +11,7 @@ Canonical path: `/opt/workspace-ci/workflows/WORKFLOW-DESIGNING-WEB-PAGES.md`
 Sources: [Anthropic, Improving frontend design through Skills](https://claude.com/blog/improving-frontend-design-through-skills),
 [Anthropic frontend-design skill](https://raw.githubusercontent.com/anthropics/skills/main/skills/frontend-design/SKILL.md),
 [Anthropic, Prompting for frontend aesthetics](https://platform.claude.com/cookbook/coding-prompting-for-frontend-aesthetics),
-[avoid-ai-design](https://github.com/funboy322/avoid-ai-design),
+avoid-ai-design,
 [refero anti-ai-slop](https://github.com/referodesign/refero_skill/blob/master/skills/refero-design/references/anti-ai-slop.md),
 [925Studios, AI slop design tells](https://www.925studios.co/blog/ai-slop-design-tells),
 [Sailop, AI Slop Encyclopedia](https://sailop.com/blog/ai-slop-encyclopedia),
@@ -212,7 +212,7 @@ When asked to build or restyle a web page:
 - [WORKFLOW-CREATING-DIAGRAMS.md](WORKFLOW-CREATING-DIAGRAMS.md) (Mermaid)
 - [WORKFLOW-WRITING-README.md](WORKFLOW-WRITING-README.md) (prose style)
 - [Anthropic, Improving frontend design through Skills](https://claude.com/blog/improving-frontend-design-through-skills)
-- [avoid-ai-design](https://github.com/funboy322/avoid-ai-design)
+- avoid-ai-design
 - [925Studios, AI slop design tells](https://www.925studios.co/blog/ai-slop-design-tells)
 - [refero anti-ai-slop](https://github.com/referodesign/refero_skill/blob/master/skills/refero-design/references/anti-ai-slop.md)
 - [Pew Research, When Online Content Disappears](https://www.pewresearch.org/data-labs/2024/05/17/when-online-content-disappears/) (link rot and archives)

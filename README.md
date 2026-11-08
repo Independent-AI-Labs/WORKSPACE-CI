@@ -233,7 +233,7 @@ admission for pre-commit's hook scheduling.
 | Dependency freshness                                       | Flags stale pinned versions, not just unpinned ones. `pip-audit` checks vulnerabilities; this checks rot.                                                                                                                                      |
 | Co-authored history scan on push                           | Catches agent-attribution lines snuck in via rebase or amend that slipped past commit-msg. Scans the actual push range.                                                                                                                        |
 | Enforcement tiers (strict / poc / vendored)                | Per-project gate profiles. Pre-commit has no tier concept; every repo gets the same hooks or none.                                                                                                                                             |
-| Escape-hatch blocking                                      | [WORKSPACE-GUARD](https://github.com/Independent-AI-Labs/WORKSPACE-GUARD) intercepts `--no-verify`, force-push, `git reset`, and `git commit --amend` at the syscall level. No hook framework can do this; hooks are bypassable by definition. |
+| Escape-hatch blocking                                      | WORKSPACE-GUARD intercepts `--no-verify`, force-push, `git reset`, and `git commit --amend` at the syscall level. No hook framework can do this; hooks are bypassable by definition. |
 | Native bash dispatch                                       | No pre-commit framework, tree stashing, or remote hook environment. Generated `.git/hooks/*` Bash scripts invoke shell checks and hermetic Python modules as required.                                                                         |
 
 The tools workspace-ci wraps are the floor, not the ceiling. The value is
@@ -346,7 +346,7 @@ markdown refs, boot layout audit) is Python-only.
 Pre-commit hooks fail closed. Pre-push scans the push range for co-authored
 and agent-attribution patterns: anything snuck in via rebase or amend gets
 blocked.
-[WORKSPACE-GUARD](https://github.com/Independent-AI-Labs/WORKSPACE-GUARD)
+WORKSPACE-GUARD
 wraps the `git` binary itself and refuses `--no-verify`, force-push to main,
 and other escape hatches.
 

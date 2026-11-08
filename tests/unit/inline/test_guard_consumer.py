@@ -63,7 +63,7 @@ def _finding(root: Path, exemptible: bool) -> dict[str, object]:
 
 def test_consumer_applies_exemption(monkeypatch, tmp_path):
     (tmp_path / "a.txt").write_text("x", encoding="utf-8")
-    policy = check.Policy([], [], 2, {("r", "a.txt")})
+    policy = check.Policy({("r", "a.txt")})
     monkeypatch.setattr(
         inline_scanner, "scan", lambda entries: [_finding(tmp_path, True)]
     )
@@ -72,7 +72,7 @@ def test_consumer_applies_exemption(monkeypatch, tmp_path):
 
 def test_consumer_keeps_non_exemptible_finding(monkeypatch, tmp_path):
     (tmp_path / "a.txt").write_text("x", encoding="utf-8")
-    policy = check.Policy([], [], 2, {("r", "a.txt")})
+    policy = check.Policy({("r", "a.txt")})
     monkeypatch.setattr(
         inline_scanner, "scan", lambda entries: [_finding(tmp_path, False)]
     )
