@@ -21,7 +21,8 @@ guard library. Those functions exist once, in Rust.
 
 1. The protected hook invokes the checker from immutable `/opt/workspace-ci`.
 2. The checker invokes the sealed guard scanner. It verifies the scanner is a
-   root-owned regular file with mode 0755 under the sealed guard root.
+   root-owned regular file with mode 0755 under the sealed guard root, and the
+   sealed guard root is mode 0711 so the CI user can traverse to it.
 3. An absent, unreadable, incompatible, or failed scanner fails the check.
 4. The checker consumes the sealed guard scanner.
 5. The guard scanner is installed before the CI artifact that consumes it.
