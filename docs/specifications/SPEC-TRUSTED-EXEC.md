@@ -36,8 +36,11 @@ authored executable code across every consumer repository.
 | `config/trusted_exec.schema.yaml` | Field documentation |
 | `tests/unit/trusted_exec/test_check_trusted_exec.py` | Unit coverage |
 
-The checker obtains bounded decode views from the WORKSPACE-GUARD shared
-decode engine.
+The checker obtains bounded decode views from the WORKSPACE-GUARD sealed
+scanner. It sends a schema-2 request with `decode_depth` and receives one
+`{name, text, offsets}` view list per file. Matching stays in the checker
+because its patterns use lookahead assertions; the decode implementation exists
+once, in the guard.
 
 The checker's policy table is authored for whole-file scanning. The shell
 guard's runtime table includes command-position and pipe-context anchors that

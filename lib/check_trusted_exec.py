@@ -10,10 +10,10 @@ JavaScript or TypeScript, Python, Lua) for ownership-free service-killing
 commands. Markdown is not scanned.
 
 The checker reuses the discovery and exact-file classification of
-``ci.banned_scan`` and the original, normalized, and bounded decoded
-views of ``ci.inline_code_decode``. Every rule is non-exemptible: the
-policy shape has no exemption or allowed-construct key, and the loader
-rejects a policy that carries one.
+``ci.banned_scan`` and obtains the original, normalized, and bounded
+decoded views from the sealed WORKSPACE-GUARD scanner. Every rule is
+non-exemptible: the policy shape has no exemption or allowed-construct
+key, and the loader rejects a policy that carries one.
 """
 
 from __future__ import annotations
@@ -26,9 +26,9 @@ from typing import NamedTuple
 
 import yaml
 
+from ci import inline_scanner
 from ci.banned_scan import classify, discover
 from ci.banned_scan import engine as _engine
-from ci.inline_code_decode import View, build_views
 
 SUPPORTED_CARRIERS: tuple[str, ...] = (
     "shell",
@@ -103,6 +103,12 @@ class Rule(NamedTuple):
     regex: re.Pattern[str] | None = None
 
 
+class View(NamedTuple):
+    name: str
+    text: str
+    offsets: list[int]
+
+
 class Policy(NamedTuple):
     rules: list[Rule]
     decode_depth: int
@@ -161,7 +167,6 @@ def _load_rule(entry: object) -> Rule:
         raise PolicyError(msg)
     flags = tuple(str(f) for f in entry.get("flags", []) or [])
     pattern = str(entry["pattern"])
-    regex = _compile_rule(rule_id, pattern, mode, flags)
     return Rule(
         id=rule_id,
         mode=mode,
@@ -171,7 +176,7 @@ def _load_rule(entry: object) -> Rule:
         carriers=frozenset(carriers),
         flags=flags,
         boundary=mode == "normalized-token",
-        regex=regex,
+        regex=_compile_rule(rule_id, pattern, mode, flags),
     )
 
 
@@ -262,31 +267,20 @@ def _matches_in(rule: Rule, views: list[View], locate, rel: str) -> list[Finding
             if (line, col) in seen:
                 continue
             seen.add((line, col))
-            findings.append(
-                Finding(rule, rel, line, col, match.group(0), view.name),
-            )
+            findings.append(Finding(rule, rel, line, col, match.group(0), view.name))
     return findings
+
+
+def _to_view(item: inline_scanner.ScanView) -> View:
+    return View(
+        str(item["name"]),
+        str(item["text"]),
+        [int(offset) for offset in item["offsets"]],
+    )
 
 
 def scan_file(rel: str, root: Path, policy: Policy) -> list[Finding]:
-    data = (root / rel).read_bytes()
-    if b"\x00" in data:
-        return []
-    try:
-        text = data.decode("utf-8")
-    except UnicodeDecodeError:
-        return []
-    carrier = detect_carrier(rel, text)
-    if carrier == "markdown":
-        return []
-    views = build_views(text, policy.decode_depth)
-    locate = _line_map(text)
-    findings: list[Finding] = []
-    for rule in policy.rules:
-        if carrier is not None and carrier not in rule.carriers:
-            continue
-        findings.extend(_matches_in(rule, views, locate, rel))
-    return findings
+    return _scan_all([rel], root, policy, None)
 
 
 def _report(finding: Finding) -> None:
@@ -308,13 +302,37 @@ def _skip_class(rel: str, classes) -> bool:
 
 
 def _scan_all(files: list[str], root: Path, policy: Policy, classes) -> list[Finding]:
-    findings: list[Finding] = []
+    selected: list[tuple[str, str | None]] = []
     for rel in files:
         if rel in SELF_SKIP or not (root / rel).is_file():
             continue
         if _skip_class(rel, classes):
             continue
-        findings.extend(scan_file(rel, root, policy))
+        try:
+            text = (root / rel).read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            text = None
+        carrier = detect_carrier(rel, text)
+        if carrier == "markdown":
+            continue
+        selected.append((rel, carrier))
+
+    entries = [{"path": str(root / rel), "language": "text"} for rel, _ in selected]
+    scanned = inline_scanner.scan_views(entries, policy.decode_depth) if entries else []
+    by_path = {str(item["path"]): item for item in scanned}
+
+    findings: list[Finding] = []
+    for rel, carrier in selected:
+        item = by_path.get(str(root / rel))
+        if item is None:
+            continue
+        views = [_to_view(view) for view in item["views"]]
+        raw = next(view for view in views if view.name == "raw")
+        locate = _line_map(raw.text)
+        for rule in policy.rules:
+            if carrier is not None and carrier not in rule.carriers:
+                continue
+            findings.extend(_matches_in(rule, views, locate, rel))
     findings.sort(key=lambda f: (f.path, f.line, f.col, f.rule.id))
     return findings
 
@@ -349,7 +367,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         findings = _scan_all(files, root, policy, classes)
-    except PolicyError as exc:
+    except (PolicyError, inline_scanner.ScannerError) as exc:
         print(f"trusted-exec: {exc}", file=sys.stderr)
         return 1
 

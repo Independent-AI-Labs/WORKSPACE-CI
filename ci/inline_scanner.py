@@ -13,12 +13,24 @@ from typing import TypedDict, cast
 SCANNER = Path("/usr/lib/workspace-guard/sealed/inline-scan")
 SEALED_ROOT = Path("/usr/lib/workspace-guard/sealed")
 SCHEMA = 1
+VIEWS_SCHEMA = 2
 SCANNER_MODE = 0o755
 SEALED_ROOT_MODE = 0o711
 
 
 class ScannerError(Exception):
     """The scanner is missing, unverifiable, or returned an invalid result."""
+
+
+class ScanView(TypedDict):
+    name: str
+    text: str
+    offsets: list[int]
+
+
+class FileViews(TypedDict):
+    path: str
+    views: list[ScanView]
 
 
 class ScanFinding(TypedDict, total=False):
@@ -57,13 +69,12 @@ def verify_scanner() -> None:
         raise ScannerError(msg)
 
 
-def scan(entries: Sequence[Mapping[str, str]]) -> list[ScanFinding]:
+def _request(payload: Mapping[str, object], schema: int) -> Mapping[str, object]:
     verify_scanner()
-    payload = json.dumps({"schema": SCHEMA, "files": entries})
     try:
         completed = subprocess.run(
             [str(SCANNER)],
-            input=payload,
+            input=json.dumps(payload),
             text=True,
             capture_output=True,
             check=True,
@@ -80,11 +91,35 @@ def scan(entries: Sequence[Mapping[str, str]]) -> list[ScanFinding]:
     except json.JSONDecodeError as exc:
         msg = f"inline scanner returned invalid JSON: {exc}"
         raise ScannerError(msg) from exc
-    if not isinstance(response, dict) or response.get("schema") != SCHEMA:
+    if not isinstance(response, dict) or response.get("schema") != schema:
         msg = "inline scanner returned an incompatible schema"
         raise ScannerError(msg)
+    return cast("Mapping[str, object]", response)
+
+
+def scan(entries: Sequence[Mapping[str, str]]) -> list[ScanFinding]:
+    response = _request({"schema": SCHEMA, "files": list(entries)}, SCHEMA)
     findings = response.get("findings")
     if not isinstance(findings, list):
         msg = "inline scanner response has no findings list"
         raise ScannerError(msg)
     return cast("list[ScanFinding]", findings)
+
+
+def scan_views(
+    entries: Sequence[Mapping[str, str]],
+    decode_depth: int,
+) -> list[FileViews]:
+    response = _request(
+        {
+            "schema": VIEWS_SCHEMA,
+            "files": list(entries),
+            "decode_depth": decode_depth,
+        },
+        VIEWS_SCHEMA,
+    )
+    files = response.get("files")
+    if not isinstance(files, list):
+        msg = "inline scanner response has no views list"
+        raise ScannerError(msg)
+    return cast("list[FileViews]", files)

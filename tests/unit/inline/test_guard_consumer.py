@@ -46,3 +46,28 @@ def test_schema_mismatch_fails(monkeypatch, tmp_path):
         inline_scanner.scan([])
 
 
+def test_scan_views_returns_views(monkeypatch, tmp_path):
+    payload = (
+        '{"schema":2,"files":[{"path":"a","views":'
+        '[{"name":"raw","text":"x","offsets":[0]}]}]}'
+    )
+    monkeypatch.setattr(inline_scanner, "SCANNER", _fake_scanner(tmp_path, payload))
+    monkeypatch.setattr(inline_scanner, "verify_scanner", lambda: None)
+    files = inline_scanner.scan_views([{"path": "a", "language": "text"}], 0)
+    assert files[0]["views"][0]["text"] == "x"
+
+
+def test_scan_views_schema_mismatch_fails(monkeypatch, tmp_path):
+    payload = '{"schema":1,"findings":[]}'
+    monkeypatch.setattr(inline_scanner, "SCANNER", _fake_scanner(tmp_path, payload))
+    monkeypatch.setattr(inline_scanner, "verify_scanner", lambda: None)
+    with pytest.raises(inline_scanner.ScannerError):
+        inline_scanner.scan_views([], 0)
+
+
+def test_scan_views_missing_files_fails(monkeypatch, tmp_path):
+    payload = '{"schema":2}'
+    monkeypatch.setattr(inline_scanner, "SCANNER", _fake_scanner(tmp_path, payload))
+    monkeypatch.setattr(inline_scanner, "verify_scanner", lambda: None)
+    with pytest.raises(inline_scanner.ScannerError):
+        inline_scanner.scan_views([], 0)

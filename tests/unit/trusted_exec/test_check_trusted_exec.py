@@ -1,6 +1,7 @@
 """Tests for ci/check_trusted_exec.py (trusted-code service-killing scan)."""
 
 import base64
+import os
 import sys
 from pathlib import Path
 
@@ -10,6 +11,18 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 import check_trusted_exec as check
+
+from ci import inline_scanner
+
+_LOCAL_SCANNER = os.environ.get("WORKSPACE_GUARD_TEST_SCANNER")
+
+
+@pytest.fixture(autouse=True)
+def _use_local_scanner(monkeypatch):
+    if _LOCAL_SCANNER:
+        monkeypatch.setattr(inline_scanner, "SCANNER", Path(_LOCAL_SCANNER))
+        monkeypatch.setattr(inline_scanner, "verify_scanner", lambda: None)
+
 
 ALL_CARRIERS = [
     "shell",
