@@ -129,6 +129,9 @@ migration path, or restoration workflow.
     inodes cannot hold a complete concurrent candidate. Any preflight threshold
     MUST be derived from measured artifact requirements and documented margin;
     an arbitrary fixed inode count is forbidden.
+31. Deployment MUST fail before candidate construction when the sealed
+    WORKSPACE-GUARD inline scanner is absent or fails verification. The
+    guard scanner MUST be installed before the CI artifact that consumes it.
 
 ## 3. Acceptance
 

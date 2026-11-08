@@ -112,6 +112,12 @@ publication.
 Candidate and current artifacts must coexist until publication. Resource
 preflight therefore uses a measured complete-candidate inode and byte budget
 plus documented margin. Deployment does not use an unexplained fixed threshold.
+
+The deployment preflight also verifies the sealed WORKSPACE-GUARD inline
+scanner at its fixed path: root-owned regular file, mode 0700, under the sealed
+guard root. A missing or unverifiable scanner fails the deployment before any
+candidate work. The guard is a dependency of WORKSPACE-CI and is installed
+first.
 The broken deployed artifact measured on 2026-08-19 contains 114,618 filesystem
 objects and occupies 4,185,591,808 allocated bytes. These values are a baseline,
 not a preflight threshold; a successful clean candidate build must supply the

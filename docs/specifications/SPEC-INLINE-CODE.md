@@ -1,144 +1,174 @@
 # Specification: WORKSPACE-CI Inline Code Detection
 
-**Status:** Active blank-slate specification, implementation pending
+**Status:** Active specification; detector owned by WORKSPACE-GUARD
 
 ## 1. Components
 
-The feature is delivered by these components, all resolved from immutable
-`/opt/workspace-ci` during protected hooks:
+| Component | Owner | Role |
+| --------- | ----- | ---- |
+| `ci/check_inline_code.py` | WORKSPACE-CI | Consumer: discovery, language selection, scanner verification, exemption overlay, reporting |
+| `/usr/lib/workspace-guard/sealed/inline-scan` | WORKSPACE-GUARD | Sealed scanner entrypoint, a hardlink of the guard binary |
+| WORKSPACE-GUARD inline library | WORKSPACE-GUARD | Rust rule engine, decode views, allowed-construct mask, findings |
+| WORKSPACE-GUARD inline policy | WORKSPACE-GUARD | Canonical rules, allowed constructs, decode depth, contexts |
+| `config/inline_code_exceptions.yaml` | Consumer | Consumer path exemptions applied by the CI wrapper |
+| `config/required_hooks.yaml` | WORKSPACE-CI | Hook manifest entry that wires the consumer |
+| `tests/unit/test_check_inline_code.py` | WORKSPACE-CI | Integration tests for the consumer and evasion cases |
 
-| Component | Role |
-| --------- | ---- |
-| `ci/check_inline_code.py` | Checker entry point, invoked as a module: discovery, masking, detection, reporting |
-| `config/inline_code.yaml` | Universal policy: rules, allowed constructs, decode depth |
-| `config/inline_code.schema.yaml` | Structural validation of the policy |
-| `config/inline_code_exceptions.yaml` | Consumer project exemptions overlaid at scan time |
-| `config/required_hooks.yaml` | Hook manifest entry that wires the checker |
-| `tests/unit/test_check_inline_code.py` | Unit tests for the checker and the evasion cases |
+WORKSPACE-CI delegates matching, masking, decoding, and rule evaluation to the
+guard library. Those functions exist once, in Rust.
 
-The checker reuses the normalization views, offset mapping, input validation,
-and model code of `ci/banned_scan/`. It does not reimplement them.
+## 2. Authority And Dependency
 
-## 2. Discovery
+1. The protected hook invokes the checker from immutable `/opt/workspace-ci`.
+2. The checker invokes the sealed guard scanner. It verifies the scanner is a
+   root-owned regular file with mode 0700 under the sealed guard root.
+3. An absent, unreadable, incompatible, or failed scanner fails the check.
+4. The checker consumes the sealed guard scanner.
+5. The guard scanner is installed before the CI artifact that consumes it.
+6. The CI deployment preflight verifies the scanner before publication.
+
+## 3. Discovery
 
 The checker enumerates every non-gitignored file with NUL-delimited Git output
 covering tracked files and untracked non-ignored files. Enumeration is stable
 and independent of the index. Symlink entries are read as link text. Each
-discovered file is read once.
+discovered file is reported once.
 
-## 3. Policy Model
+Discovery, skip-class filtering, and language selection remain in
+WORKSPACE-CI. The checker sends the guard scanner a manifest of paths and
+languages.
 
-The sealed `config/inline_code.yaml` declares the universal policy:
+## 4. Policy Model
 
-- `rules`: detection rules, each with a stable identity, mode
-  (`raw-regex` or `normalized-token`), category, case behavior, boundary
-  behavior, and pattern.
-- `allowed_constructs`: per-language or per-format constructs excluded at scan
-  time. An entry is a region, declared by opening and closing syntax; a token,
-  declared by a single pattern; or a category, declared by a rule category
-  name. Each carries an identity, language selector, permitted level, and
-  reason.
-- `decode`: the declared and bounded encoding and compression depth.
+The canonical policy lives in WORKSPACE-GUARD and is compiled into the guard
+binary from root-owned configuration. It declares:
 
-A consumer repository supplies project exemptions in
-`config/inline_code_exceptions.yaml`. The checker overlays those entries onto
-the sealed policy at scan time. Exemptions follow the exact file plus rule
-identity semantics of REQ-BANNED-PATTERN-MATCHING section 8.
+- `rules`: stable identity, contexts, mode, category, case and boundary
+  behavior, pattern, hint, reason, mask behavior, and exemptible flag.
+- `allowed_constructs`: per-language region, token, or category constructs.
+- `decode`: declared and bounded encoding and compression depth.
 
-Policy resolution is anchored to the checker's own tree and ignores the
-environment, per
-[REQ-HOOK-TRUST-BOUNDARY](../requirements/REQ-HOOK-TRUST-BOUNDARY.md)
-section 5. A protected hook removes override variables before the checker
-runs, so no environment input selects the policy.
+Contexts are `file`, `command`, and `script`:
 
-A new policy file is authored under `config-staging/`, moved into `config/` by
-the operator as a single command, and committed as ordinary source, per the
-repository policy for new policy files.
+- `file`: consumer file scans. Allowed constructs apply.
+- `command`: `-c` command text. The command rule set applies.
+- `script`: untrusted script bodies. The script rule set applies.
 
-## 4. Scan Pipeline
+A rule may declare `mask: false` so it evaluates the original text. Such a
+rule is used for structural checks that must see text an allowed construct
+would otherwise mask.
 
-For each discovered file:
+A rule may declare `exemptible: false`. The consumer resolves exemptions only
+for exemptible rules. The structural substitution rule is non-exemptible.
 
-1. Classify the exact file type. Binary files are reported or skipped by
-   declared classification, never by a broad content exemption.
-2. Apply strict UTF-8 input validation, failing closed on invalid bytes, NUL
-   bytes, and unreadable input.
-3. Detect the language or format and select the active allowed constructs.
-4. Mask allowed construct regions and token matches, preserving the offset
-   map. A category-form construct removes its named category from the rules
-   matched in step 6. An unterminated region is an error.
-5. Compute the normalized views and the declared decode views once.
-6. Match every remaining rule (a category excluded by a category-form
-   construct is not matched) against the masked content in each required view.
-7. Report findings with original location, matched text, and matched view.
-8. Resolve exemptions and emit the receipt.
+Policy changes require a guard rebuild and installation. The guard policy is
+the single rule-set authority; WORKSPACE-CI carries only the consumer.
+
+## 5. Scanner Protocol
+
+The checker sends one JSON request on standard input:
+
+- `schema`: request schema version.
+- `files`: array of `{path, language}` entries.
+
+The scanner returns one JSON response on standard output:
+
+- `schema`: response schema version.
+- `findings`: array of `{path, rule, category, line, column, view, matched,
+  reason, hint, block}`.
+
+Rules are evaluated in declared order. The scanner returns every finding. The
+consumer applies path exemptions, ordering, and reporting. A schema mismatch
+is an error.
+
+The scanner accepts strict UTF-8 only. Invalid UTF-8 or NUL bytes in a file
+selected for scanning fail the request. There is no secondary decode path.
+
+## 6. Scan Pipeline
+
+The checker performs these steps:
+
+1. Discover files.
+2. Classify exact file types and apply declared skip classes.
+3. Detect the language or format for each file.
+4. Verify the sealed scanner.
+5. Send the path and language manifest.
+6. Apply consumer exemptions to returned findings.
+7. Report findings and exit non-zero when any remain.
+
+The guard engine performs these steps for each file:
+
+1. Validate strict UTF-8 input.
+2. Select active allowed constructs for the language.
+3. Mask allowed construct regions and token matches for rules whose mask
+   behavior applies, preserving byte offsets.
+4. Compute normalized and declared decode views once.
+5. Match every active rule in every required view.
+6. Return findings with original line and column.
 
 One file is processed once. Rules are compiled once per process. Views are
 computed once per file.
 
-## 5. Allowed Constructs
+## 7. Allowed Constructs
 
 Allowed constructs are the generic mechanism for code that a language permits.
 A Markdown document declares a level-one fenced code block as allowed. The
 masker removes the fenced region, including its fence lines, and leaves all
-other bytes of the document subject to detection. A fenced block nested inside
-another allowed region is at a deeper level and remains subject to detection.
-The same mechanism also carries token constructs, applied by masking each
-match: a Markdown inline code span, a shell script's own interpreter
-invocation, and a YAML command field that names a shell. The language or
-format, not the file path, selects which constructs are active.
+other bytes subject to detection. A fenced block nested inside another allowed
+region is at a deeper level and remains subject to detection.
 
-The mechanism is data, not code: a new language is supported by adding a
-declared construct, reviewed as a policy change. No checker code change is
-required to allow a new construct.
+Token constructs are applied by masking each match: a Markdown inline code
+span, a shell script's own interpreter invocation, and a YAML command field
+that names a shell. The language or format, not the file path, selects which
+constructs are active.
 
-A category-form construct names a rule category instead of carrying syntax.
-Its active language excludes every rule of that category from matching; the
-matches of those rules are the construct. Rules of every other category stay
+A category-form construct names a rule category. Its active language excludes
+every rule of that category from matching. Rules of every other category stay
 active, so a SQL source file allows SQL statement syntax while an interpreter
 invocation or remote-execution payload written in the same file is still
-reported. The default policy declares the `sql` category for the `sql`
-language this way, and the language is selected by the `.sql` extension.
+reported.
 
-## 6. Findings And Exit Codes
+The mechanism is data, not checker code. A new language is supported by adding
+a declared construct to the guard policy.
+
+## 8. Findings And Exit Codes
 
 The checker exits zero when no finding remains after masking and exemptions.
 It exits non-zero when any rule matches, when input fails validation, when the
-policy fails structural validation, or when a resource budget is exceeded.
-Each non-zero result names the responsible rule identity and location.
+scanner fails or is missing, when the scanner schema is incompatible, or when
+the policy fails structural validation. Each non-zero result names the
+responsible rule identity and location.
 
-## 7. Hook Wiring
+## 9. Hook Wiring
 
 The hook manifest declares a `check-inline-code` entry with kind
 `python_module`, entry `ci.check_inline_code`, stage `pre-commit`,
 `always_run: true`, `pass_filenames: false`, and `mandatory: true`. The
-`check_required_hooks_present` gate requires the entry, so a consumer cannot
-drop the check.
+`check_required_hooks_present` gate requires the entry, so every consumer
+keeps the check.
 
-An undeclared interpreter payload is replaced by a tracked module rather than
-kept inline: the deploy sanity check runs `ci.verify_runtime` instead of an
-inline interpreter one-liner.
+## 10. Native Hook Rendering
 
-## 8. Optional Analysis Mode
+Native hooks rendered by `scripts/generate-hooks` carry the check command
+directly. Registered hooks render from `config/required_hooks.yaml`. Custom
+entries render verbatim. Native hook bodies contain only the check command,
+with no inline interpreter wrapper.
 
-A separate, explicitly requested analysis mode MAY run a probabilistic
-classifier over the same masked content. The mode is never part of a protected
-hook. It is non-blocking and its output is advisory. The protected path loads
-no learned model and performs no network access.
+## 11. Tests
 
-## 9. Tests
+- Guard unit tests cover rule evaluation, allowed constructs, decode views,
+  contexts, and the structural substitution rule.
+- Guard conformance vectors define the shared expected findings.
+- WORKSPACE-CI integration tests exercise the consumer against the sealed
+  scanner: discovery, language selection, exemption overlay, scanner
+  verification, schema mismatch, invalid UTF-8, and the evasion list in
+  REQ-INLINE-CODE.
+- Both consumers MUST produce identical findings for the shared vectors.
 
-Unit tests exercise every rule against known-bad and known-good fixtures,
-covering the REQ-INLINE-CODE acceptance list: prefix trimming, multiline
-construction, heredoc, block scalar, base64, double encoding, zero-width
-insertion, confusable substitution, rename, extension change, extensionless
-paths, Markdown level-one fencing, nested fencing, and unterminated fencing.
-The variant matrix derives cases from each rule's declared behavior.
-
-## 10. Consumer Migration
+## 12. Consumer Migration
 
 A consumer that carries a repository-local inline-code test replaces its body
 with a thin call to the shared checker or removes the local test and relies on
-the hook. Repository-specific loader shapes become consumer policy, not checker
-code. The WORKSPACE-GATEWAY SQL structure documents are updated in the same
-change.
+the hook. Repository-specific loader shapes become consumer policy, not
+checker code. The WORKSPACE-GATEWAY SQL structure documents are updated in the
+same change.

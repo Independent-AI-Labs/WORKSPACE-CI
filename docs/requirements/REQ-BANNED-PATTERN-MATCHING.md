@@ -238,8 +238,7 @@ as arbitrary nested encodings.
 
 ## 15. Exemption Equivalence
 
-1. Exemptions MUST reference stable rule IDs, not duplicate raw regular
-   expression strings.
+1. Exemptions MUST reference stable rule IDs.
 2. Each exemption entry MUST name exactly one anchored repository-relative
    regular file and exactly one stable rule ID.
 3. Exemption entries MUST NOT contain multiple paths or multiple rule IDs.

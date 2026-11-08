@@ -149,7 +149,8 @@ re-running `scaffold-ci`, and vice versa.
   `banned_words.yaml`, `banned_words_exceptions_v5.yaml`, `schemas`,
   `blocked_commit_patterns.yaml`, `required_hooks.yaml`,
   `silent_swallow_patterns.yaml`, `sensitive_files.yaml`,
-  `boot_layout.yaml`. These belong to CI; consumers MUST NOT shadow them.
+  `boot_layout.yaml`. These belong to CI; consumers consume the sealed CI
+  copies.
 
 ---
 
@@ -545,6 +546,12 @@ The hook `kind` from `required_hooks.yaml` determines the `entry:` form:
 | `python_module` | `uv run --project <REL_CI> --no-sync python -m <entry>` |
 | `makefile_target` | `make <entry>` (the consumer's Makefile owns the implementation; no path injection needed) |
 
+Native hook rendering is separate from `.pre-commit-config.yaml` entry
+rendering. `scripts/generate-hooks` renders registered hooks from
+`config/required_hooks.yaml` and passes custom entries through verbatim. The
+native hook body MUST NOT contain an inline interpreter wrapper. The generator
+MUST NOT reconstruct one from an entry string.
+
 **Scope rule: hooks always see all files, never the staged subset.** Native
 git hooks receive no file arguments from git. Each check discovers the full
 tracked+untracked file set itself (`git ls-files --cached --others
@@ -754,8 +761,8 @@ These six are the per-project-OVERRIDABLE configs: checkers read
 The remaining CI configs (`banned_words.yaml`, `silent_swallow_patterns.yaml`,
 `sensitive_files.yaml`, `blocked_commit_patterns.yaml`,
 `required_hooks.yaml`, `boot_layout.yaml`, `*_schema.yaml`) are workspace
-POLICY shared across all consumers; copying them into each consumer would
-create unmanaged shadow-copies that drift.
+POLICY shared across all consumers. They remain in the CI tree and are
+consumed from there.
 
 `boot_layout.yaml` is intentionally NOT scaffolded: it lives at the
 WORKSPACE-VM root and at repos with their own `.boot-linux/` (per

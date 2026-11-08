@@ -5,9 +5,8 @@
 ## Scope
 
 This contract validates dependency declarations, lockfiles, container images,
-exclusions, and the bootstrap catalog for this WORKSPACE-CI repository. It does
-not define other projects, external consumers, migration, prior-install support, or
-source-tree upgrade workflows.
+exclusions, and the bootstrap catalog for this WORKSPACE-CI repository. Scope
+is exactly this repository.
 
 ## Modes
 

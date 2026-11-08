@@ -32,7 +32,7 @@ invoked, not what they match.
    by the triggering process.
 3. Every protected hook MUST hold the same invariant whether it is written as
    a shell entrypoint or as a python-module entrypoint. Two execution paths
-   MUST NOT imply two trust postures.
+   MUST define exactly one trust posture.
 
 ## 3. Environment Construction
 
@@ -46,44 +46,40 @@ invoked, not what they match.
    `GIT_PREFIX`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES`,
    `GIT_NAMESPACE`, `GIT_CEILING_DIRECTORIES`, and
    `GIT_DISCOVERY_ACROSS_FILESYSTEM`. A checker that enumerates tracked files
-   MUST enumerate the repository under check, never a repository selected by
-   the trigger. `GIT_CONFIG_*` MUST be retained: the root-owned artifact's
+   MUST enumerate the repository under check as fixed by the sealed artifact. `GIT_CONFIG_*` MUST be retained: the root-owned artifact's
    `safe.directory` trust is carried through git configuration.
 3. A protected hook MUST set the sealed deployment variables itself:
    `CI_PROJECT_ROOT`, `CI_LIB_DIR`, `CI_CONFIG_DIR`, and `CI_BOOT_DIR` to the
    paths under `/opt/workspace-ci`.
 4. A protected hook MUST set `CI_SCAN_ROOT` to the toplevel of the repository
-   under check. It MUST NOT accept a caller-supplied scan root.
-5. A protected hook MUST NOT forward a caller-supplied `PYTHONPATH`.
+   under check and MUST use only that toplevel as the scan root.
+5. A protected hook MUST clear any caller-supplied `PYTHONPATH`.
 6. The override removal and the sealed assignments MUST be emitted by the hook
-   generator into every stage, so that a new hook cannot be added without
-   inheriting them.
+   generator into every stage, so that every new hook inherits them.
 
 ## 4. Import Path And Code Selection
 
-1. A python-module hook MUST resolve its package from the sealed artifact and
-   MUST NOT admit the working directory as an import source. The generator
-   MUST render the interpreter with the unsafe-path prepend disabled, for
-   example `uv run python -P -m ci.<module>` with the sealed root on
-   `PYTHONPATH`.
-2. A repository that contains a directory named `ci` MUST NOT be able to shadow
-   the sealed checker package.
-3. Running a checker from a working tree MUST NOT change which checker runs.
+1. A python-module hook MUST resolve its package only from the sealed artifact.
+   The generator MUST render the interpreter with the unsafe-path prepend
+   disabled, for example `uv run python -P -m ci.<module>` with the sealed root
+   on `PYTHONPATH`.
+2. The sealed checker package MUST take precedence over any repository
+   directory named `ci`.
+3. Running a checker from a working tree MUST run the sealed checker.
 
 ## 5. Policy And Scan-Root Selection
 
-1. A protected checker MUST NOT read a config or policy path from the
-   environment. It MUST derive the path from its own resolved module location.
-2. A protected checker MUST scan the repository under check, and MUST NOT scan
-   a location selected by the caller.
-3. Environment-driven overrides of config and policy are a developer and
-   build-time interface only. They MUST NOT exist in any protected path.
+1. A protected checker MUST derive the config and policy path from its own
+   resolved module location.
+2. A protected checker MUST scan only the repository under check.
+3. Environment-driven overrides of config and policy SHALL be confined to
+   developer and build-time use.
 
 ## 6. Repository-Supplied Policy Data
 
 1. Where policy permits a repository to supply data, for example an exemption
    file, the file MUST be a root-owned regular file, and the checker MUST fail
-   closed when it is not.
+   closed unless it is.
 2. Exemptions MUST follow the receipt and drift-check semantics of
    [REQ-BANNED-PATTERN-MATCHING](REQ-BANNED-PATTERN-MATCHING.md) section 19.
 
@@ -91,21 +87,26 @@ invoked, not what they match.
 
 1. Repository-tooling hooks, for example `make lint`, `make type-check`, and
    `make check-push`, run repository code by design. They MUST run unprivileged
-   and MUST NOT be treated as a trust boundary.
-2. No decision of a repository-tooling hook MAY authorize policy, grant an
-   exemption, or select a checker.
+   and remain outside the trust boundary.
+2. Only the sealed artifact MAY authorize policy, grant an exemption, or select
+   a checker.
 3. Catalog consistency is a producer-side check. The rules that every
    `ci/check_*.py` in the CI source tree is registered in that tree's
    `config/required_hooks.yaml`, and that every manifest entry resolves in
    that tree's `lib/` and `ci/`, MUST be enforced against the deployment
    candidate during candidate validation. The invocation MUST be made by the
    deployment build script against the candidate, not solely by
-   candidate-controlled Makefile logic. Neither rule MUST be enforced by a
-   protected hook.
+   candidate-controlled Makefile logic. These rules MUST be enforced only by
+   the producer gate.
 4. A protected hook MUST treat the WORKSPACE-CI checkout exactly like any
    other consumer: it executes the sealed checker and reads pooled policy from
-   the sealed artifact. It MUST NOT read the checked repository's
-   `config/required_hooks.yaml` for catalog completeness or entry resolution.
+   the sealed artifact. It MUST read catalog completeness and entry resolution
+   only from the sealed artifact.
+5. Inline-code detection is a sealed WORKSPACE-GUARD dependency. The CI
+   checker MUST verify the guard scanner as a root-owned regular file with
+   mode 0700 under the sealed guard root before use. A missing or incompatible
+   scanner MUST fail the check. The checker MUST obtain detection from the
+   sealed scanner.
 
 ## 8. Verification
 
@@ -118,14 +119,16 @@ invoked, not what they match.
    the proof without a new test.
 3. A generator test MUST assert that no rendered hook invokes an interpreter
    outside the sealed, unsafe-path-disabled form.
+4. A test MUST prove the inline checker verifies the sealed guard scanner and
+   fails closed when the scanner is absent, unreadable, or reports an
+   incompatible schema.
 4. A test MUST prove the producer-side catalog gate of section 7.3: the
    candidate check fails on an unregistered `ci/check_*.py`, passes when that
    file is registered in the candidate's own `config/required_hooks.yaml`, and
    fails when a registered entry has no matching implementation in the
    candidate `lib/` or `ci/`.
-5. A test MUST prove that a protected hook does not read the checked
-   repository's `config/required_hooks.yaml` for catalog completeness or entry
-   resolution.
+5. A test MUST prove that a protected hook reads catalog completeness and
+   entry resolution only from the sealed artifact.
 
 ## 9. Change Control
 
@@ -133,23 +136,22 @@ invoked, not what they match.
    security-control paths. A change to them MUST carry an operator review
    trailer and a known-defects statement.
 2. Hooks are installed root-owned and immutable by the sealed installer. Their
-   replacement is a root operation requested by its Makefile target, never
-   reimplemented by the agent.
+   replacement is a root operation requested by its Makefile target and
+   performed only by the operator.
 
 ## 10. Acceptance
 
 Acceptance tests MUST prove:
 
-1. a hostile environment does not change the checker, the policy, or the scan
-   root;
-2. a shadow `ci` package in the checked repository does not run;
+1. a hostile environment leaves the checker, the policy, and the scan root
+   unchanged;
+2. the sealed checker runs when a shadow `ci` package is present;
 3. a planted inline-code, banned-pattern, or policy-integrity violation is
    still detected under the hostile environment;
 4. an agent-writable exemption file fails the check;
 5. every registered python-module hook passes items 1 through 3;
-6. the protected hook treats the CI checkout as a consumer and never reads the
-   checkout's `config/required_hooks.yaml` for catalog completeness or entry
-   resolution;
-7. the candidate build fails when a `ci/check_*.py` is not registered in the
-   candidate's own `config/required_hooks.yaml`, or when a registered entry
-   does not resolve in the candidate tree.
+6. the protected hook treats the CI checkout as a consumer and reads catalog
+   completeness and entry resolution only from the sealed artifact;
+7. the candidate build fails when a `ci/check_*.py` is missing from the
+   candidate's own `config/required_hooks.yaml`, or when a registered entry has
+   no matching implementation in the candidate tree.

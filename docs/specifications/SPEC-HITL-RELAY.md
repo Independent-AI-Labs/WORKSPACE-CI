@@ -15,7 +15,7 @@ One Rust service owns:
 - SQLite request state;
 - serialized hash-chained JSONL audit.
 
-No private backend IPC or additional security process exists.
+The relay uses one backend IPC path and one security process.
 
 ## 2. Agent Connection
 

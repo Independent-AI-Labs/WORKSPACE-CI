@@ -72,7 +72,7 @@ policy, or executor mechanism may be added to either existing guard.
 | FR-5.1 | `escalate` MUST deterministically shell-quote every validated argv element into one Bash command string. Quoting MUST preserve each argument exactly, including empty strings, whitespace, quotes, substitutions, separators, and leading dashes, without interpretation during construction. |
 | FR-5.2 | `escalate` MUST invoke the normal guarded `/bin/bash -c` path with the complete quoted `sudo` command as command text. It MUST NOT invoke `bash.real`, `sudo.real`, or any diverted real binary directly.                                                                                     |
 | FR-5.3 | The existing Bash guard MUST inspect the complete generated command using its existing policy. If allowed, Bash invokes the normal guarded sudo path, whose existing root and argument checks also apply.                                                                                     |
-| FR-5.4 | Approval MUST NOT bypass or modify any existing Bash, sudo, binary, git, or filesystem guard decision. No duplicate copy of guard policy may exist in `escalate` or the PDP.                                                                                                                  |
+| FR-5.4 | Approval MUST preserve every existing Bash, sudo, binary, git, and filesystem guard decision. Guard policy has one owner; `escalate` and the PDP consume it.                                                                                                                                    |
 
 ### FR-6: Audit
 

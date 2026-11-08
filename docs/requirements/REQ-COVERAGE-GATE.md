@@ -6,10 +6,9 @@
 
 The coverage gate is per-repository. Each repository that carries a test suite
 owns `config/coverage_thresholds.yaml` and enforces it at pre-push. The gate
-never reads another repository's configuration, never aggregates across
-repositories, and never substitutes a shared workspace threshold. A repository
-with no test suite and no configuration is advisory, never left unchecked
-without a warning.
+SHALL evaluate one repository at a time using only that repository's
+configuration. A repository with no test suite and no configuration SHALL
+receive an advisory warning.
 
 ## Requirements
 

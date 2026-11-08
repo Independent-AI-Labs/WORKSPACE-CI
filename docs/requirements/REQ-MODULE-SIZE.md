@@ -27,5 +27,4 @@ checker returns stable diagnostics and never skips a candidate unlogged.
 
 Tests cover complete enumeration, boundary values, malformed policy, symlink
 and unreadable inputs, nested module limits, deterministic diagnostics, and
-failure injection. No test relies on another project or an earlier policy
-activation.
+failure injection. Each test is self-contained.

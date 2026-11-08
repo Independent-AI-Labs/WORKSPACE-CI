@@ -1,7 +1,7 @@
 # REQ-INLINE-CODE: Inline Code Detection And Allowed Constructs
 
-**Date:** 2026-09-28
-**Status:** Active blank-slate requirement, implementation pending
+**Date:** 2026-11-08
+**Status:** Active requirement; detector consolidated in WORKSPACE-GUARD
 
 ## 1. Scope
 
@@ -18,9 +18,11 @@ Markdown document.
 
 This contract complements
 [REQ-BANNED-PATTERN-MATCHING](REQ-BANNED-PATTERN-MATCHING.md). It reuses that
-contract's normalization, encoding, discovery, and exemption semantics. It does
-not introduce a second WORKSPACE-GUARD implementation of WORKSPACE-CI matching
-semantics.
+contract's normalization, encoding, discovery, and exemption semantics.
+
+Detection is implemented once, in Rust, in WORKSPACE-GUARD. WORKSPACE-CI is a
+consumer: it owns discovery, language selection, path exemptions, and
+reporting, and obtains detection results from the sealed guard scanner.
 
 ## 2. Authority And Failure
 
@@ -30,14 +32,23 @@ semantics.
    structural validation succeeds.
 3. Invalid policy, invalid patterns, unreadable files, invalid text encoding,
    internal errors, and resource-limit failures MUST fail the check.
-4. The checker MUST NOT warn and skip invalid policy.
-5. The checker MUST NOT replace invalid input bytes and continue.
+4. The checker MUST fail on invalid policy.
+5. The checker MUST fail on invalid input bytes.
 6. Matching, masking, and exemption behavior MUST be deterministic across
    repeated runs on identical input.
 7. Protected invocation MUST satisfy
-   [REQ-HOOK-TRUST-BOUNDARY](REQ-HOOK-TRUST-BOUNDARY.md): no environment
-   variable, working directory, or `PYTHONPATH` supplied by the triggering
-   process may select the checker, the policy, or the scan root.
+   [REQ-HOOK-TRUST-BOUNDARY](REQ-HOOK-TRUST-BOUNDARY.md): the checker, the
+   policy, and the scan root MUST be fixed by the sealed artifact and MUST be
+   independent of the caller environment and working directory.
+8. The checker MUST invoke the sealed WORKSPACE-GUARD inline scanner. Before
+   use it MUST verify that the scanner is a root-owned regular file with mode
+   0700 under the sealed guard root.
+9. An absent, unreadable, incompatible, or failed scanner MUST fail the
+   check.
+10. The system MUST provide exactly one inline-code detector: the sealed
+    WORKSPACE-GUARD scanner.
+11. Deployment order MUST install the guard scanner before the CI artifact
+    that consumes it.
 
 ## 3. Discovery
 
@@ -47,8 +58,7 @@ semantics.
    non-ignored files.
 3. Ignored paths MAY be excluded. Nothing else is excluded by position,
    extension, or name.
-4. Symlink entries MUST be scanned as link text and MUST NOT be followed to an
-   arbitrary target.
+4. Symlink entries MUST be scanned as link text without following the target.
 5. Enumeration order MUST be stable.
 6. An unreadable or missing discovered file MUST fail the check.
 
@@ -72,15 +82,18 @@ semantics.
 
 ## 5. Detection Modes
 
+Rule evaluation is performed by the WORKSPACE-GUARD engine. WORKSPACE-CI
+supplies file paths and detected languages and does not evaluate patterns.
+
 1. Every detection rule MUST declare a matching mode. Supported modes are
    `raw-regex` for punctuation-significant syntax and `normalized-token` for
    word, directive, and command forms after normalization.
 2. Every rule MUST declare a category. Required categories are query statement,
    interpreter invocation, and remote execution payload.
 3. Every rule MUST declare case behavior, boundary behavior, and separator
-   behavior. Rules MUST NOT rely on implicit pattern defaults.
-4. A rule MUST NOT match a code construct that policy has declared allowed for
-   the file's detected language or format.
+   behavior explicitly.
+4. A rule MUST skip code constructs that policy declares allowed for the
+   file's detected language or format.
 5. Detection output MUST name the rule identity, the original location, the
    matched original text, and the normalized form that matched.
 
@@ -95,11 +108,12 @@ semantics.
    base32, base64, hexadecimal, percent, and URL encodings, for gzip, zlib,
    xz, and bzip2 compression, for single-member archives, and for UTF-16
    text.
-3. Decode depth MUST be declared and bounded. An ordinary text file MUST NOT
-   be decoded as unlimited nested encodings.
+3. Decode depth MUST be declared and finite for every file.
 4. Required views MUST be computed once per file, not once per rule.
 5. Whole-file matching MUST preserve original line and column reporting.
-6. The checker MUST NOT execute source or evaluate a language.
+6. The checker SHALL be a static analyzer.
+7. The guard engine MUST compute the declared views and preserve the original
+   byte offsets used for reporting.
 
 ## 7. Allowed Constructs
 
@@ -110,14 +124,17 @@ semantics.
    allowed, and exactly one selector: the opening and closing syntax (region
    form), a single token pattern (token form), or a rule category (category
    form).
-3. The checker MUST apply allowed constructs at scan time by excluding their
-   content from detection while preserving the offset map.
+3. The guard engine MUST apply allowed constructs at scan time by excluding
+   their content from detection while preserving the offset map. A rule may
+   declare that masking does not apply to it so structural checks see the
+   original text.
 4. The default policy MUST allow level-one fenced code blocks in Markdown
    documents.
 5. A construct at a level other than the declared level MUST remain subject to
    detection.
 6. An unterminated allowed construct MUST fail the check.
-7. Excluding an allowed construct MUST NOT exclude content outside its region.
+7. Excluding an allowed construct MUST leave content outside its region
+   subject to detection.
 8. Adding, changing, or removing an allowed construct is a policy change and
    MUST follow the reviewed policy procedure of this project.
 9. A category-form construct MUST exclude only the rules whose declared
@@ -132,21 +149,24 @@ semantics.
 
 1. Exemptions MUST reference a stable rule identity and exactly one anchored
    repository-relative regular file.
-2. Exemption entries MUST NOT contain multiple files, multiple rules, globs,
-   directories, extensions, alternation, or optional segments.
-3. Exemptions MUST NOT change normalization, decoding, case, or boundary
-   behavior.
+2. An exemption MUST name exactly one rule and one file.
+3. Exemptions MUST leave normalization, decoding, case, and boundary behavior
+   unchanged.
 4. A rule declared non-exemptible MUST remain active for every file.
 5. Exemption resolution and its receipt MUST follow the exemption semantics and
    drift-check requirement of REQ-BANNED-PATTERN-MATCHING section 19.
+6. WORKSPACE-CI MUST resolve exemptions after the guard engine returns
+   findings. Repository path exemptions SHALL apply only in the consumer
+   wrapper.
 
 ## 9. Path Independence
 
 1. Content rules MUST apply to every non-gitignored file regardless of
    directory, basename, or extension.
-2. The checker MUST NOT hardcode a list of protected source directories.
-3. Moving or renaming a file MUST NOT change whether the same inline code is
-   detected.
+2. Detector scope MUST be content-defined, with no hardcoded source-directory
+   list.
+3. Moving or renaming a file SHALL preserve the detection result for the same
+   content.
 4. A newly created directory MUST receive identical enforcement without a
    policy or checker change.
 5. Metamorphic tests MUST copy identical inline code across root-level, nested,
@@ -156,7 +176,7 @@ semantics.
 ## 10. Unicode Safety
 
 1. Text MUST be matched in NFC and NFKC views where applicable.
-2. Zero-width characters inside a code construct MUST NOT defeat detection.
+2. Detection SHALL ignore zero-width characters inside a code construct.
 3. Bidirectional control characters MUST be rejected in scanned text unless an
    exact approved non-executable fixture is declared.
 4. Non-ASCII whitespace MUST act as a token separator.
@@ -177,12 +197,11 @@ semantics.
 
 ## 12. Determinism And Analysis Separation
 
-1. The protected hook path MUST be deterministic and MUST NOT use network
-   access or a learned model.
+1. The protected hook path MUST be deterministic and offline.
 2. A learned or probabilistic classifier MAY be offered as an optional,
    explicitly requested analysis mode.
-3. The optional analysis mode MUST NOT be part of any protected hook, MUST NOT
-   block a commit, and MUST NOT supply policy authority.
+3. The optional analysis mode MUST be absent from every protected hook, MUST be
+   non-blocking, and MUST be advisory.
 
 ## 13. Diagnostics And Receipts
 
@@ -196,9 +215,10 @@ semantics.
 
 1. File content MUST be read once.
 2. Required views MUST be computed once.
-3. Matching MUST NOT spawn one process per file, rule, or line.
-4. Time and memory budgets MUST be documented from measured runs.
-5. Exceeding a budget MUST fail closed with a specific diagnostic.
+3. The checker MUST dispatch one scanner process per batch, not one per file,
+   rule, or line.
+4. Time and memory limits SHALL preserve detection results. The checker MUST
+   process the full batch to completion or fail with a specific diagnostic.
 
 ## 15. Acceptance
 
@@ -208,20 +228,26 @@ Acceptance tests MUST prove:
    detected in every declared context;
 2. prefix trimming, multiline construction, heredoc, block scalar, base64,
    double encoding, zero-width insertion, confusable substitution, and rename
-   or extension change cannot evade detection;
-3. a level-one Markdown fenced code block is allowed, and a nested fenced block
-   is not;
+   or extension change are all detected;
+3. a level-one Markdown fenced code block is allowed; a nested fenced block is
+   reported;
 4. an unterminated allowed construct fails the check;
 5. invalid encoding, NUL bytes, and unreadable files fail closed;
 6. identical inline code moved among arbitrary paths produces identical
    results;
-7. newly introduced directory names require no checker or policy update;
-8. no hardcoded protected-directory allowlist exists;
+7. newly introduced directory names work without a checker or policy update;
+8. detector scope is content-defined;
 9. every exemption resolves to one file and one rule identity, with a receipt
    that fails on unreviewed drift;
-10. the protected hook path performs no network access and loads no learned
-    model;
-11. the optional analysis mode is inert unless explicitly requested;
-12. a category-form construct excludes only its named category: a SQL source
+10. the protected hook path is deterministic and offline;
+11. the optional analysis mode activates only when explicitly requested;
+12. a category-form construct excludes exactly its named category: a SQL source
     file allows SQL statement syntax while interpreter invocations and
-    remote-execution payloads in the same file are still reported.
+    remote-execution payloads in the same file are still reported;
+13. the sealed guard scanner is verified before use, and a missing or
+    incompatible scanner fails the check;
+14. WORKSPACE-CI and the guard produce identical findings for the shared
+    conformance vectors;
+15. a textual substitution that rebuilds an interpreter inline token is
+    rejected in every context;
+16. no native hook renders an inline interpreter wrapper.

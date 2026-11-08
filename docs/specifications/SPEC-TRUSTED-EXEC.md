@@ -6,8 +6,8 @@
 
 ## 1. Purpose
 
-The runtime shell guard cannot scan trusted code. This check closes that
-gap with a deterministic, non-exemptible, blocking static scan of
+The runtime shell guard covers untrusted command text. This check covers
+trusted code with a deterministic, non-exemptible, blocking static scan of
 authored executable code across every consumer repository.
 
 - Hook id: `check-trusted-exec`
@@ -31,15 +31,18 @@ authored executable code across every consumer repository.
 | `lib/checks_core.sh` | `ci_check_trusted_exec` entry that runs the checker under the sealed runtime |
 | `ci/banned_scan/discover.py` | NUL-delimited tracked and untracked discovery (reused) |
 | `ci/banned_scan/classify.py` | Exact-file classification and `policy-definition` skip (reused) |
-| `ci/inline_code_decode.py` | Raw, normalized, and bounded decoded views (reused) |
+| WORKSPACE-GUARD decode service | Raw, normalized, and bounded decoded views, shared with inline detection |
 | `config/trusted_exec.yaml` | Rule table (root-owned policy) |
 | `config/trusted_exec.schema.yaml` | Field documentation |
 | `tests/unit/trusted_exec/test_check_trusted_exec.py` | Unit coverage |
 
-The checker MUST NOT reuse the shell guard's runtime pattern table
-directly. The runtime table includes command-position and pipe-context
-anchors that are correct only against a single command string, not
-against a whole source file.
+The checker obtains bounded decode views from the WORKSPACE-GUARD shared
+decode engine.
+
+The checker's policy table is authored for whole-file scanning. The shell
+guard's runtime table includes command-position and pipe-context anchors that
+are correct only against a single command string, not against a whole source
+file.
 
 ## 3. Policy Shape
 
@@ -58,11 +61,11 @@ rules:
 ```
 
 - One `version`, one `decode.max_depth`, one `rules` list.
-- `exemptions` and `allowed_constructs` are not part of this shape. A
-  policy that declares either MUST fail to load.
+- This shape is exactly `version`, `decode.max_depth`, and `rules`. A policy
+  that declares `exemptions` or `allowed_constructs` MUST fail to load.
 - Every rule is non-exemptible by construction.
-- `carriers` is a nonempty subset of the supported carrier ids. A rule
-  absent from a carrier does not apply to it.
+- `carriers` is a nonempty subset of the supported carrier ids. A rule applies
+  only to the carriers that list it.
 
 ## 4. Carriers
 
@@ -75,11 +78,11 @@ rules:
 | `javascript` | `.js`, `.mjs`, `.cjs`, `.jsx`, `.ts`, `.tsx` |
 | `python` | `.py` |
 | `lua` | `.lua` |
-| `markdown` | `.md`, `.markdown`, `.mdown` - excluded, never scanned |
+| `markdown` | `.md`, `.markdown`, `.mdown` - excluded from scanning |
 
 A file with no supported carrier is scanned with every rule, so renaming
-or removing an extension does not evade detection. Markdown is never
-scanned.
+or removing an extension preserves detection. Markdown is excluded from
+scanning.
 
 ## 5. Scan Pipeline
 
@@ -120,7 +123,7 @@ requires a command form: a verb, a flag, or a trailing argument.
 | `compose-run-no-deps` | compose-run | `(podman-compose\|podman compose\|docker compose) ... run` without `--no-deps` |
 
 The `compose-run-no-deps` pattern uses a negative lookahead so a command
-that passes `--no-deps` is not reported.
+that passes `--no-deps` is allowed.
 
 Broad package-management program names (user, group, module, firewall,
 and mount administration) are deliberately not in this table: they block
@@ -170,7 +173,7 @@ lane.
   `scripts/scaffold-ci --emit-template`.
 - Consumers pick it up on the next scaffold or profile update. Because
   it is `safety: true` and `mandatory: true`, it is installed even at
-  `poc` tier and cannot be exempted through `quality_exceptions.yaml`.
+  `poc` tier and is non-exemptible through `quality_exceptions.yaml`.
 
 ## 10. Tests
 

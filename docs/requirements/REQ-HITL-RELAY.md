@@ -26,7 +26,7 @@ grants, or supervise local execution.
 | AGENT-5 | Protocol version, message type, field lengths, argv count/length, TTL, identity, signature, nonce, host, cwd, and policy MUST be validated before persistence. |
 | AGENT-6 | Unknown fields, unknown message types, invalid UTF-8, malformed signatures, stale nonces, and unsupported versions MUST be rejected.                           |
 | AGENT-7 | Approval MUST be returned only on the same healthy connection and only once. Disconnect ends the request authority; reconnect starts a new request.            |
-| AGENT-8 | Errors MUST use stable bounded shapes and MUST NOT reveal whether another principal, request, or scope exists.                                                 |
+| AGENT-8 | Errors MUST use stable bounded shapes that reveal only the caller's own principal, request, and scope.                                                        |
 
 ## 3. Approver API
 
@@ -49,7 +49,7 @@ grants, or supervise local execution.
 | STATE-4  | The sweeper MUST expire elapsed pending requests within a configured finite interval.                                                       |
 | STATE-5  | Connection loss or authenticated cancellation MUST prevent approval delivery and close the request.                                         |
 | POLICY-1 | Schema-validated policy MUST map host and exact sudo request scope to an approver group.                                                    |
-| POLICY-2 | Policy MUST NOT duplicate local GUARD command rules or create typed executor operations.                                                    |
+| POLICY-2 | Policy MUST reference local GUARD command rules as the single authority.                                                                    |
 | POLICY-3 | Invalid policy MUST make readiness fail.                                                                                                    |
 
 ## 5. Audit

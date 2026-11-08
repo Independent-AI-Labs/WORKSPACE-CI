@@ -205,6 +205,7 @@ root-owned and immutable; there is no user-owned hook installation path).
 | FR-SC-6.6 | The file MUST be preceded by a comment block documenting: the generator source path, the timestamp, the tier and languages, and the re-generation command. |
 | FR-SC-6.7 | If `required_hooks.yaml` is missing, the generator MUST fail fast with `FAILED: config/required_hooks.yaml not found at <CI_ROOT>/config/.`. No generation occurs. |
 | FR-SC-6.8 | If the profile's `kind` field references an unknown value (not one of the six kinds above), the generator MUST fail with the offending hook ID and the unrecognised kind. Adding new kinds requires a code change to `scaffold-ci`. |
+| FR-SC-6.9 | Native hook rendering by `scripts/generate-hooks` MUST render registered hooks from `config/required_hooks.yaml` and custom entries verbatim. It MUST NOT reconstruct an inline interpreter wrapper and MUST NOT emit one in a native hook. |
 
 ### 2.4 Generated `Makefile`
 
@@ -229,7 +230,7 @@ root-owned and immutable; there is no user-owned hook installation path).
 | ID | Requirement |
 |----|-------------|
 | FR-SC-8.1 | The generator MUST copy the following six per-project-overridable config files from `CI/config/` into `<consumer>/config/`: `coverage_thresholds.yaml`, `file_length_limits.yaml`, `dead_code.yaml`, `dependency_excludes.yaml`, `duplicate_dependency_excludes.yaml`, `markdown_docs.yaml`. |
-| FR-SC-8.2 | The generator MUST NOT copy any of: `banned_words.yaml`, `banned_words_exceptions_v5.yaml`, any `*_schema.yaml`, `blocked_commit_patterns.yaml`, `required_hooks.yaml`, `silent_swallow_patterns.yaml`, `sensitive_files.yaml`, `boot_layout.yaml`. These are workspace-policy shared across all consumers; copying them creates unmanaged shadow-copies that drift. |
+| FR-SC-8.2 | The generator's copy set MUST be exactly the six per-project files in FR-SC-8.1. Workspace policy (`banned_words.yaml`, `banned_words_exceptions_v5.yaml`, `*_schema.yaml`, `blocked_commit_patterns.yaml`, `required_hooks.yaml`, `silent_swallow_patterns.yaml`, `sensitive_files.yaml`, `boot_layout.yaml`) MUST remain in the CI tree and be consumed from there. |
 | FR-SC-8.3 | For `coverage_thresholds.yaml`, the generator MUST post-process the copied file by substituting `source_path: ci` for `source_path: <project-name>` (the profile's `project` field). Without this, the coverage checker would scan CI's own source tree from the consumer's project, producing nonsense metrics. |
 | FR-SC-8.3a | The copied `coverage_thresholds.yaml` is a starting point, not a working policy: it carries CI's Python `unit`/`integration` runner. The consumer MUST replace the suites with the runners, source paths, and thresholds that describe its own stack until the file satisfies REQ-COVERAGE-GATE (coverage enabled only on coverage-capable runners; every other suite declared `coverage: false`). The generator MUST NOT emit a suite that claims coverage on a non-measuring runner. |
 | FR-SC-8.4 | For `dead_code.yaml`, the generator MUST post-process the copied file by substituting `scan_paths: [ci]` for `scan_paths: [<language-default-dir>]` based on the profile's `languages`. For `rust`, default is `[src]`. For `python`, default is `[]` (no scan paths; the consumer fills them). For `node`, default is `[]`. For `any` (only or in combination with others), default is `[]`. |
@@ -330,7 +331,7 @@ root-owned and immutable; there is no user-owned hook installation path).
 | ID | Requirement |
 |----|-------------|
 | NFR-SC-11 | The generator MUST be deterministic: same profile + same `required_hooks.yaml` + same configs = same output (modulo the timestamp comment in the auto-generated headers per FR-SC-13.2). |
-| NFR-SC-12 | The generator MUST NOT depend on environment variables other than `PATH` (for finding `realpath`) and the `BASH_SOURCE` of the script itself (for resolving `CI_ROOT`). No `HOME`, no `USER`, no `WORKSPACE_ROOT`. |
+| NFR-SC-12 | The generator MUST depend only on `PATH` (for finding `realpath`) and the `BASH_SOURCE` of the script itself (for resolving `CI_ROOT`). |
 
 ### 3.6 Security
 

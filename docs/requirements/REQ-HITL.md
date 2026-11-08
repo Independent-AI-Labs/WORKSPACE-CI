@@ -72,7 +72,7 @@ execution and command outcome remain local and are not PDP lifecycle states.
 | ID    | Requirement                                                                                                                                                                            |
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PDP-1 | Schema-validated policy MUST map the bound request to an allowed host, command scope, and approver group. Invalid or missing policy MUST make readiness fail.                          |
-| PDP-2 | Policy MUST NOT duplicate Bash, sudo, binary, git, or filesystem guard rules. HITL decides whether a human permits the exact request; local guards remain independently authoritative. |
+| PDP-2 | Policy MUST reference the Bash, sudo, binary, git, and filesystem guard rules as the single authority. HITL decides whether a human permits the exact request; local guards remain independently authoritative. |
 | PDP-3 | Human authentication MUST use Keycloak OIDC. Approver eligibility MUST derive from scoped Keycloak groups and be revalidated when deciding.                                            |
 | PDP-4 | The attributable requester MUST NOT approve their own request.                                                                                                                         |
 | PDP-5 | Justification text MUST be treated only as escaped evidence and MUST NOT affect authorization.                                                                                         |

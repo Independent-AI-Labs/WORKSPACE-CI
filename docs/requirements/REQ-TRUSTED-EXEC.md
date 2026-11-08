@@ -23,19 +23,19 @@ The contract complements
 [REQ-INLINE-CODE](REQ-INLINE-CODE.md) and
 [REQ-BANNED-PATTERN-MATCHING](REQ-BANNED-PATTERN-MATCHING.md) and reuses
 their discovery, normalization, decoding, and classification semantics.
-It does not introduce a second implementation of those semantics.
+Those semantics have one implementation, shared with REQ-INLINE-CODE.
 
 ## 2. Authority And Failure
 
 1. Protected commit and push hooks MUST invoke the checker from
    immutable `/opt/workspace-ci`.
-2. A repository MUST NOT supply exemptions or overrides for this check.
-   Every rule is non-exemptible.
+2. Exemption and override authority SHALL rest with the sealed policy. Every
+   rule is non-exemptible.
 3. Invalid policy, invalid patterns, unreadable files, invalid text
    encoding, internal errors, and resource-limit failures MUST fail the
    check.
-4. The checker MUST NOT warn and skip invalid policy.
-5. The checker MUST NOT replace invalid input bytes and continue.
+4. The checker MUST fail on invalid policy.
+5. The checker MUST fail on invalid input bytes.
 6. Matching, carrier selection, and definitional skipping MUST be
    deterministic across repeated runs on identical input.
 7. Protected invocation MUST satisfy
@@ -53,8 +53,7 @@ It does not introduce a second implementation of those semantics.
 3. Ignored paths MAY be excluded. Nothing else is excluded by position,
    extension, or name, except the carriers excluded in section 7 and the
    definitional files in section 8.
-4. Symlink entries MUST be scanned as link text and MUST NOT be followed
-   to an arbitrary target.
+4. Symlink entries MUST be scanned as link text without following the target.
 5. Enumeration order MUST be stable.
 6. An unreadable or missing discovered file MUST fail the check.
 
@@ -93,12 +92,13 @@ It does not introduce a second implementation of those semantics.
 
 1. The checker MUST reuse the normalized views and offset mapping of
    REQ-BANNED-PATTERN-MATCHING and the bounded decode views of
-   REQ-INLINE-CODE.
+   REQ-INLINE-CODE. The bounded decode views are provided by the
+   WORKSPACE-GUARD shared decode engine.
 2. Decode depth MUST be declared and bounded. An ordinary text file MUST
    NOT be decoded as unlimited nested encodings.
 3. Required views MUST be computed once per file, not once per rule.
 4. Matching MUST preserve original line and column reporting.
-5. The checker MUST NOT execute source or evaluate a language.
+5. The checker SHALL be a static analyzer.
 
 ## 7. Carriers
 
@@ -107,33 +107,29 @@ It does not introduce a second implementation of those semantics.
    scripts.
 2. The supported carriers are shell, YAML, systemd unit, Makefile,
    JavaScript or TypeScript, Python, and Lua.
-3. Markdown is not a carrier and MUST NOT be scanned; prose is not
-   executed.
-4. A file whose carrier is not one of the supported carriers MUST be
-   scanned with every rule, so that renamed or extensionless executable
-   code is not excluded by renaming.
-5. Carrier detection MUST NOT hardcode a protected source directory.
+3. Markdown SHALL be excluded from carrier scanning; prose is not executed.
+4. A file SHALL be scanned with every rule when its carrier is unsupported,
+   so renamed or extensionless executable code remains detected.
+5. Carrier detection SHALL be content-defined.
 
 ## 8. Non-Exemptibility And Self-Reference
 
 1. Every rule MUST be declared non-exemptible. A policy that declares
    an exemption MUST fail to load.
-2. A repository MUST NOT be able to exempt a rule, by any file, path,
-   glob, environment variable, or configuration overlay.
+2. Rule exemption SHALL be unavailable to repository data.
 3. Definitional files that carry rule patterns, schemas, or fixtures
    are excluded by the exact-file classification mechanism already used
    by the sibling checks: `config/file_classifications.yaml` entries of
    class `policy-definition`, plus the checker's fixed definitional
-   file set. This is the same explicit exception mechanism as the other
-   content gates; it is not a repository exemption.
-4. Excluding a definitional file MUST NOT exclude any other file.
+   file set. This is the same explicit definitional exception as the other
+   content gates.
+4. An exclusion SHALL cover exactly the named definitional file.
 
 ## 9. Diagnostics And Receipts
 
 1. Diagnostics MUST be stable, ordered, repository-relative, and fail
    closed.
-2. A file that cannot be safely inspected is an error, not an omitted
-   result.
+2. A file that cannot be safely inspected SHALL be reported as an error.
 3. The checker MUST emit one finding per location with the rule
    identity, category, view, and reason.
 
@@ -141,9 +137,9 @@ It does not introduce a second implementation of those semantics.
 
 1. File content MUST be read once.
 2. Required views MUST be computed once.
-3. Matching MUST NOT spawn one process per file, rule, or line.
-4. Time and memory budgets MUST be documented from measured runs.
-5. Exceeding a budget MUST fail closed with a specific diagnostic.
+3. Matching SHALL process each batch in one process.
+4. Time and memory limits SHALL preserve detection results. The checker SHALL
+   process the batch to completion or fail with a specific diagnostic.
 
 ## 11. Acceptance
 
@@ -159,13 +155,12 @@ Acceptance tests MUST prove:
 5. `podman-compose run` without `--no-deps` is detected;
 6. the same code is detected in JavaScript, TypeScript, Python, Lua,
    and a Makefile recipe, and in an extensionless shebang script;
-7. Markdown prose quoting a pattern is not reported;
+7. Markdown prose quoting a pattern is ignored;
 8. base64, hexadecimal, and percent encodings of a pattern are
    detected within the declared depth;
-9. a definitional policy file that carries the patterns is not
-   reported, and no other file is excluded with it;
+9. a definitional policy file that carries the patterns is ignored, and the
+   exclusion covers exactly that file;
 10. the same inline code moved among root-level, nested, renamed, and
     alternate-extension paths produces identical results;
-11. no repository exemption can suppress a finding;
-12. the protected hook path performs no network access and loads no
-    learned model.
+11. every finding remains reportable regardless of repository data;
+12. the protected hook path is deterministic and offline.
