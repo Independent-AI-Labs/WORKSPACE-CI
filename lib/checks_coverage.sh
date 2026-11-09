@@ -233,6 +233,10 @@ ci_check_coverage_thresholds_no_devolution() {
     # Track both min_coverage and path per suite.
     declare -A old_thresholds old_paths
     local _head_output _suite="" _val=""
+    if ! git cat-file -e "HEAD:$config"; then
+        ci_pass "Coverage thresholds: new file, no baseline."
+        return 0
+    fi
     _head_output="$(git show HEAD:"$config")"
     if [[ $? -eq 0 ]]; then
         while IFS= read -r line; do

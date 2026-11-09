@@ -35,6 +35,16 @@ class HookLike(Protocol):
     kind: str
     entry: str
     stage: str
+    mandatory: bool
+    applicable_to: list[str]
+
+
+def _hook_applies(hook: HookLike, languages: set[str]) -> bool:
+    if not hook.mandatory:
+        return False
+    if "any" in hook.applicable_to:
+        return True
+    return bool(languages & set(hook.applicable_to))
 
 
 def has_inline_interpreter(command: str) -> bool:
@@ -86,8 +96,9 @@ def manifest_entry_issues(
 def rendered_entry_issues(
     hooks: Sequence[HookLike],
     rendered: dict[str, str],
+    languages: set[str],
 ) -> list[str]:
-    """Reject inline entries and shell hooks not rendered through the runner."""
+    """Reject inline entries and applicable shell hooks missing the runner."""
     issues: list[str] = []
     for hook in hooks:
         if hook.kind == "shell_inline":
@@ -98,7 +109,7 @@ def rendered_entry_issues(
             continue
         if has_inline_interpreter(hook.entry):
             issues.append(f"hook '{hook.id}' entry invokes an inline interpreter")
-        if hook.kind in SHELL_KINDS:
+        if hook.kind in SHELL_KINDS and _hook_applies(hook, languages):
             function = hook.entry.split()[0] if hook.entry else ""
             expected = f"{RUNNER} {function}"
             if function and expected not in rendered.get(hook.stage, ""):

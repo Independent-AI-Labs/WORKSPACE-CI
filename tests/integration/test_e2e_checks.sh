@@ -107,6 +107,21 @@ test_e2e_coverage_devolution_unchanged_passes() {
 }
 _run_test "e2e_coverage_devolution: unchanged config passes" test_e2e_coverage_devolution_unchanged_passes
 
+test_e2e_coverage_devolution_new_file_passes() {
+    _source_lib
+    local cfg="config/coverage_thresholds.yaml"
+    rm -f "$cfg"
+    cat > "$cfg" <<'YAML'
+unit:
+  path: tests/unit
+  min_coverage: 90
+  source_path: src
+YAML
+    git add "$cfg"
+    ci_check_coverage_thresholds_no_devolution
+}
+_run_test "e2e_coverage_devolution: new file without baseline passes" test_e2e_coverage_devolution_new_file_passes
+
 test_e2e_coverage_devolution_lowered_blocked() {
     _source_lib
     # Replace symlink with real file and commit original config so

@@ -260,7 +260,7 @@ def _check_hooks_rendered(
         if _hook_applies(hook, languages)
         and _hook_marker(hook.id) not in rendered.get(hook.stage, "")
     ]
-    issues.extend(rendered_entry_issues(manifest.hooks, rendered))
+    issues.extend(rendered_entry_issues(manifest.hooks, rendered, languages))
     return issues
 
 
