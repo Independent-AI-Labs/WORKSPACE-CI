@@ -39,13 +39,12 @@ fi
 _total_entries="$(printf '%s\n' "$_hooks" | awk 'END {print NR}')"
 ci_pass "parsed $_total_entries hook entries from $_config"
 
-# === registry function reconciliation (renames never break consumers) ===
-# .pre-commit-config.yaml duplicates each checker's shell function name in
-# every consumer entry. A rename in config/required_hooks.yaml then breaks
-# every consumer until it is re-scaffolded, and a broken hook deadlocks the
-# fix commit. Resolve each registered hook's function by id: a token the lib
-# no longer defines is replaced with the registry's function for that id.
-# Entries whose functions resolve are untouched, so overrides survive.
+# === registry-driven rendering (single source of truth) ===
+# .pre-commit-config.yaml supplies stage membership, order, name, and the
+# mutable pass-through fields. Registered shell hooks render from
+# config/required_hooks.yaml, so a stale or inline entry in a consumer config
+# cannot reintroduce an interpreter wrapper. Custom entries remain verbatim
+# and are validated below.
 _lib_defines() {
     local _fn="$1" _lib
     for _lib in "$_CI_ROOT"/lib/*.sh; do
@@ -56,83 +55,106 @@ _lib_defines() {
     return 1
 }
 
-_registry_file="$(ci_config_path required_hooks)"
-if [[ -f "$_registry_file" ]]; then
-    declare -A _reg_fn_for_id=()
-    _reg_stream="$(awk -v mode=registry -f "$_CI_ROOT/lib/parse_hook_yaml.awk" "$_registry_file")" || _reg_stream=""
-    while IFS=$'\034' read -r _ri _rk _re _rr; do
-        [[ -n "$_ri" ]] || continue
-        case "$_rk" in
-            shell|shell_with_arg) [[ "$_re" == ci_* ]] && _reg_fn_for_id["$_ri"]="$_re" ;;
-        esac
-    done <<< "$_reg_stream"
-    _reconciled_hooks=""
-    while IFS=$'\034' read -r _h_id _h_name _h_entry _h_stage _h_pass _h_always _h_files _h_exclude _h_args _h_types _h_advisory; do
-        [[ -n "$_h_id" ]] || continue
-        _reg_fn="${_reg_fn_for_id[$_h_id]:-}"
-        if [[ -n "$_reg_fn" ]] && _lib_defines "$_reg_fn"; then
-            _tokens="$(printf '%s\n' "$_h_entry" | grep -oE 'ci_[a-z_][a-z0-9_]*' | sort -u)" || _tokens=""
-            for _tok in $_tokens; do
-                if ! _lib_defines "$_tok"; then
-                    _h_entry="${_h_entry//$_tok/$_reg_fn}"
-                    ci_info "reconcile: hook '$_h_id' '$_tok' -> '$_reg_fn' (registry)"
-                fi
-            done
-        fi
-        _reconciled_hooks+="${_h_id}"$'\034'"${_h_name}"$'\034'"${_h_entry}"$'\034'"${_h_stage}"$'\034'"${_h_pass}"$'\034'"${_h_always}"$'\034'"${_h_files}"$'\034'"${_h_exclude}"$'\034'"${_h_args}"$'\034'"${_h_types}"$'\034'"${_h_advisory}"$'\n'
-    done <<< "$_hooks"
-    _hooks="$_reconciled_hooks"
-fi
+_is_interpreter() {
+    local _name="$1" _candidate
+    case "$_name" in
+        python*) return 0 ;;
+    esac
+    for _candidate in bash sh dash zsh ksh perl ruby node php lua awk; do
+        [[ "$_name" == "$_candidate" ]] && return 0
+    done
+    return 1
+}
 
-# === entry-resolution integrity (2026-08-24 portable_shell incident) ===
-# A rendered hook whose entry does not resolve fails only at commit time,
-# in the deployed artifact, where fixing it deadlocks (the broken gate
-# blocks the fix commit). Refuse at generation instead: every shell
-# function entry must be defined in the sourced lib, and every python-module
-# entry must exist as a file. This mirrors what the hook itself
-# will do: source lib/checks.sh, then invoke the entry.
+_reject_inline() {
+    local _cmd="$1" _id="$2" _i _prev
+    local -a _tokens=()
+    read -r -a _tokens <<< "$_cmd"
+    for ((_i = 1; _i < ${#_tokens[@]}; _i++)); do
+        _prev="${_tokens[_i-1]##*/}"
+        _is_interpreter "$_prev" || continue
+        case "${_tokens[_i]}" in
+            -c|-e)
+                ci_fail "Hook '$_id' renders an inline interpreter form; use the sealed runner or a module."
+                return 1 ;;
+        esac
+    done
+    return 0
+}
+
+_registry_file="$_CI_ROOT/config/required_hooks.yaml"
+[[ -f "$_registry_file" ]] || { ci_fail "config/required_hooks.yaml not found"; exit 1; }
+declare -A _reg_kind=() _reg_entry=() _reg_args=()
+_reg_stream="$(awk -v mode=registry -f "$_CI_ROOT/lib/parse_hook_yaml.awk" "$_registry_file")" || {
+    ci_fail "failed to parse config/required_hooks.yaml"
+    exit 1
+}
+while IFS=$'\034' read -r _ri _rk _re _rstage _rpass _ralways _rmand _rsafety _rapp _rfiles _rargs; do
+    [[ -n "$_ri" ]] || continue
+    _reg_kind["$_ri"]="$_rk"
+    _reg_entry["$_ri"]="$_re"
+    _reg_args["$_ri"]="$_rargs"
+done <<< "$_reg_stream"
+
 _entry_unresolved=0
-_written_stages=()
-while IFS=$'\034' read -r _e_id _e_name _e_entry _e_rest; do
-    [[ -n "$_e_id" ]] || continue
-    # Filename-passing entries are prohibited: a check must discover the
-    # full tracked+untracked tree itself, never receive a file list (which
-    # pre-commit would narrow to the changed subset).
-    if [[ "$_e_entry" == *'"$@'* ]]; then
-        ci_fail "Hook '$_e_id' entry passes filenames (\"\$@\"), which is prohibited; the check must discover the full tree."
+_resolved_hooks=""
+while IFS=$'\034' read -r _h_id _h_name _h_entry _h_stage _h_pass _h_always _h_files _h_exclude _h_args _h_types _h_advisory; do
+    [[ -n "$_h_id" ]] || continue
+    _kind="${_reg_kind[$_h_id]:-}"
+    if [[ -n "$_kind" ]]; then
+        case "$_kind" in
+            shell|shell_with_arg)
+                _fn="${_reg_entry[$_h_id]}"
+                [[ -n "$_fn" ]] || { ci_fail "Hook '$_h_id' has an empty registry entry"; _entry_unresolved=1; continue; }
+                _h_entry="/opt/workspace-ci/scripts/run-hook ${_fn}"
+                [[ -n "${_reg_args[$_h_id]:-}" ]] && _h_entry+=" ${_reg_args[$_h_id]}"
+                _h_args=""
+                ;;
+            python_module|makefile_target)
+                ;;
+            shell_inline)
+                ci_fail "Hook '$_h_id' uses removed kind shell_inline; no inline command is executed."
+                _entry_unresolved=1
+                continue
+                ;;
+            *)
+                ci_fail "Hook '$_h_id' has unknown kind '$_kind'."
+                _entry_unresolved=1
+                continue
+                ;;
+        esac
+    fi
+    if [[ -n "$_h_args" ]]; then
+        _h_entry+=" $_h_args"
+        _h_args=""
+    fi
+    if [[ "$_h_entry" == *'"$@'* ]]; then
+        ci_fail "Hook '$_h_id' entry passes filenames (\"\$@\"), which is prohibited; the check must discover the full tree."
         _entry_unresolved=1
     fi
-    # grep exits 1 when an entry has no shell-function token (make
-    # targets, python-modules, bare commands); that is expected.
-    _e_fns=""
-    _e_fns_rc=0
-    _e_fns="$(printf '%s\n' "$_e_entry" | grep -oE 'ci_[a-z_][a-z0-9_]*' | sort -u)" || _e_fns_rc=$?
+    _reject_inline "$_h_entry" "$_h_id" || _entry_unresolved=1
+    _e_fns="$(printf '%s\n' "$_h_entry" | grep -oE 'ci_[a-z_][a-z0-9_]*' | sort -u)" || _e_fns=""
     for _e_fn in $_e_fns; do
-        _e_found=""
-        for _e_lib in "$_CI_ROOT"/lib/*.sh; do
-            if grep -qE "^[[:space:]]*(function[[:space:]]+)?${_e_fn}[[:space:]]*\(\)" "$_e_lib"; then
-                _e_found="$_e_lib"
-                break
-            fi
-        done
-        if [[ -z "$_e_found" ]]; then
-            ci_fail "Hook '$_e_id' entry references '${_e_fn}' but no lib module defines it."
+        if ! _lib_defines "$_e_fn"; then
+            ci_fail "Hook '$_h_id' entry references '${_e_fn}' but no lib module defines it."
             echo "  Checked: $_CI_ROOT/lib/*.sh" >&2
             _entry_unresolved=1
         fi
     done
     _e_mod=""
-    _e_mod_rc=0
-    _e_mod="$(printf '%s\n' "$_e_entry" | grep -oE 'python -m ci\.[a-z_][a-z0-9_.]*' | sed 's/^python -m //')" || _e_mod_rc=$?
+    _e_mod="$(printf '%s\n' "$_h_entry" | grep -oE 'python -m ci\.[a-z_][a-z0-9_.]*' | sed 's/^python -m //')" || _e_mod=""
     _e_mod="${_e_mod%%$'\n'*}"
     _e_mod_path="${_e_mod//./\/}"
     if [[ -n "$_e_mod" && ! -f "$_CI_ROOT/$_e_mod_path.py" && ! -d "$_CI_ROOT/$_e_mod_path" ]]; then
-        ci_fail "Hook '$_e_id' entry references python-module '$_e_mod' but it does not exist."
+        ci_fail "Hook '$_h_id' entry references python-module '$_e_mod' but it does not exist."
         _entry_unresolved=1
     fi
+    _resolved_hooks+="${_h_id}"$'\034'"${_h_name}"$'\034'"${_h_entry}"$'\034'"${_h_stage}"$'\034'"${_h_pass}"$'\034'"${_h_always}"$'\034'"${_h_files}"$'\034'"${_h_exclude}"$'\034'"${_h_types}"$'\034'"${_h_advisory}"$'\n'
 done <<< "$_hooks"
+_hooks="$_resolved_hooks"
 [[ $_entry_unresolved -eq 0 ]] || exit 1
 ci_pass "entry integrity: all shell functions and python-modules resolve in lib"
+_written_stages=()
 
 for _stage in pre-commit commit-msg pre-push; do
     _stage_hooks="$(printf '%s\n' "$_hooks" | awk -F'\034' -v s="$_stage" '$4 == s')"
@@ -142,7 +164,7 @@ for _stage in pre-commit commit-msg pre-push; do
     # set -e inside $( ). Count with awk's END block instead: always
     # prints, always exits 0.
     _stage_count="$(printf '%s\n' "$_stage_hooks" | awk 'END {print NR}')"
-    _stage_advisory="$(printf '%s\n' "$_hooks" | awk -F'\034' -v s="$_stage" '$4 == s && $11 == "true"' | awk 'END {print NR}')"
+    _stage_advisory="$(printf '%s\n' "$_hooks" | awk -F'\034' -v s="$_stage" '$4 == s && $10 == "true"' | awk 'END {print NR}')"
     _tmp="$(mktemp)"
     {
         printf '%s\n' '#!/usr/bin/env bash' 'set -euo pipefail'
@@ -230,12 +252,11 @@ for _stage in pre-commit commit-msg pre-push; do
         printf '%s\n' '        exit 1'
         printf '%s\n' '    fi'
         printf '%s\n' 'fi'
-        while IFS=$'\034' read -r h_id h_name h_entry h_stage h_pass h_always h_files h_exclude h_args h_types h_advisory; do
+        while IFS=$'\034' read -r h_id h_name h_entry h_stage h_pass h_always h_files h_exclude h_types h_advisory; do
             [[ -n "$h_id" ]] || continue
             [[ -n "$h_entry" ]] || { ci_fail "Hook '$h_id' has empty entry"; exit 1; }
             h_cmd="$h_entry"
             h_cmd="${h_cmd//uv run python -m ci./\/opt\/workspace-ci\/.boot-linux\/bin\/uv run --project \/opt\/workspace-ci --no-sync python -P -m ci.}"
-            [[ -n "$h_args" ]] && h_cmd="$h_cmd $h_args"
             printf '# === Hook: %s ===\n' "$h_id"
             printf 'ci_info "Running: %s..."\n' "$h_name"
             if [[ "$h_advisory" == "true" ]]; then

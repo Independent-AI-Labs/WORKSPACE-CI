@@ -54,33 +54,78 @@ _scl_resolve() {
     fi
 }
 
-# ── Render a hook's entry string ───────────────────────────────────────────
+_scl_is_interpreter() {
+    local _name="$1" _candidate
+    case "$_name" in
+        python*) return 0 ;;
+    esac
+    for _candidate in bash sh dash zsh ksh perl ruby node php lua awk; do
+        [[ "$_name" == "$_candidate" ]] && return 0
+    done
+    return 1
+}
+_scl_reject_entry() {
+    local _cmd="$1" _hid="$2" _i _prev
+    local -a _tokens=()
+    if [[ "$_cmd" == *'"$@'* ]]; then
+        ci_fail "Hook '$_hid' entry passes filenames (\"\$@\")"
+        return 1
+    fi
+    read -r -a _tokens <<< "$_cmd"
+    for ((_i = 1; _i < ${#_tokens[@]}; _i++)); do
+        _prev="${_tokens[_i-1]##*/}"
+        _scl_is_interpreter "$_prev" || continue
+        case "${_tokens[_i]}" in
+            -c|-e)
+                ci_fail "Hook '$_hid' entry renders an inline interpreter form"
+                return 1 ;;
+        esac
+    done
+    return 0
+}
+_scl_reject_rendered_entries() {
+    local _content="$1" _line _value
+    while IFS= read -r _line; do
+        [[ "$_line" == *"entry:"* ]] || continue
+        _value="${_line#*entry:}"
+        _value="${_value#"${_value%%[![:space:]]*}"}"
+        _value="${_value%\"}"
+        _value="${_value#\"}"
+        _scl_reject_entry "$_value" "rendered" || return 1
+    done <<< "$_content"
+    return 0
+}
 _scl_render_entry() {
     local _hid="$1"
     local _kind="${_reg_kind[$_hid]}"
     local _entry="${_reg_entry[$_hid]}"
-    local _i
+    local _args="${_reg_args[$_hid]:-}"
+    local _out="" _i
     for _i in "${!_pf_override_ids[@]}"; do
         if [[ "${_pf_override_ids[$_i]}" == "$_hid" && "${_pf_override_fields[$_i]}" == "entry" ]]; then
-            printf '%s' "${_pf_override_values[$_i]}"
+            _out="${_pf_override_values[$_i]}"
+            _scl_reject_entry "$_out" "$_hid" || exit 1
+            printf '%s' "$_out"
             return
         fi
     done
     case "$_kind" in
-        shell)
-            printf "bash -c 'source %s/lib/checks.sh && %s'" "$REL_CI" "$_entry" ;;
+        shell|shell_with_arg)
+            _out="/opt/workspace-ci/scripts/run-hook ${_entry}"
+            [[ -n "$_args" ]] && _out+=" ${_args}" ;;
         shell_inline)
-            printf '%s' "$_entry" ;;
-        shell_with_arg)
-            printf "bash -c 'source %s/lib/checks.sh && %s \"\$1\"' --" "$REL_CI" "$_entry" ;;
+            ci_fail "Hook '$_hid' uses removed kind shell_inline"
+            exit 1 ;;
         python_module)
-            printf "uv run --project %s --no-sync python -m %s" "$REL_CI" "$_entry" ;;
+            _out="uv run --project ${REL_CI} --no-sync python -m ${_entry}" ;;
         makefile_target)
-            printf "make %s" "$_entry" ;;
+            _out="make ${_entry}" ;;
         *)
             ci_fail "Unknown hook kind '$_kind' for hook '$_hid'"
             exit 1 ;;
     esac
+    _scl_reject_entry "$_out" "$_hid" || exit 1
+    printf '%s' "$_out"
 }
 
 # ── Get a hook field with override support ─────────────────────────────────

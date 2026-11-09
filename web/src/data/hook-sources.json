@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-08T17:42:08.980985+00:00",
+  "generated_at": "2026-11-09T09:18:53.308784+00:00",
   "sources": [
     {
       "name": "ci_check_unstaged",
@@ -288,6 +288,15 @@
       "language": "bash",
       "id": "check-trusted-exec",
       "description": "Delegates to lib/check_trusted_exec.py: non-exemptible scan of trusted authored code (shell, YAML, systemd, Makefile, JavaScript and TypeScript, Python, Lua) for ownership-free service-killing commands. The policy has no exemption key; every rule is non-exemptible."
+    },
+    {
+      "name": "ci.check_galaxy",
+      "source_file": "ci/check_galaxy.py",
+      "docstring": "Galaxy source checker.",
+      "source": "def main() -> int:\n    files = _galaxy_files()\n    if not files:\n        print(\"galaxy: no files\")\n        return 0\n\n    errors: list[str] = []\n    funcs: dict[str, list[str]] = defaultdict(list)\n    includes: dict[str, list[str]] = defaultdict(list)\n    for path in files:\n        text = path.read_text(encoding=\"utf-8\")\n        _check_balance(path, text, errors)\n        _check_tabs(path, text, errors)\n        _check_includes(path, text, errors)\n        for line in text.splitlines():\n            match = FUNC_RE.match(line)\n            if match is not None:\n                funcs[match.group(1)].append(str(path))\n            include = INCLUDE_RE.match(line)\n            if include is not None:\n                includes[include.group(1)].append(str(path))\n    errors.extend(_check_duplicates(funcs, includes))\n\n    for error in errors:\n        print(error)\n    if errors:\n        print(f\"galaxy: {len(errors)} violation(s)\")\n        return 1\n    print(f\"galaxy: {len(files)} file(s) OK\")\n    return 0",
+      "language": "python",
+      "id": "check-galaxy",
+      "description": "Galaxy source checker."
     }
   ]
 }

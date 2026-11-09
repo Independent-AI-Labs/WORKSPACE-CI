@@ -151,9 +151,13 @@ keeps the check.
 ## 10. Native Hook Rendering
 
 Native hooks rendered by `scripts/generate-hooks` carry the check command
-directly. Registered hooks render from `config/required_hooks.yaml`. Custom
-entries render verbatim. Native hook bodies contain only the check command,
-with no inline interpreter wrapper.
+directly. Registered shell hooks render from `config/required_hooks.yaml` and
+invoke `/opt/workspace-ci/scripts/run-hook <function> [args]`. Custom entries
+render verbatim. Native hook bodies contain only the check command, with no
+inline interpreter wrapper. Generation rejects `shell_inline`, inline
+interpreter forms (`-c`/`-e`), and filename-passing entries before writing any
+hook. Installation is idempotent and healing: a drifted hook is replaced from
+the sealed artifact.
 
 ## 11. Tests
 

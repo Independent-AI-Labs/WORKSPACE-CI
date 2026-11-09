@@ -1,6 +1,5 @@
 export type HookKind =
   | 'shell'
-  | 'shell_inline'
   | 'shell_with_arg'
   | 'python_module'
   | 'makefile_target'
@@ -15,6 +14,7 @@ export interface HookRecord {
   pass_filenames: boolean
   always_run: boolean
   files?: string
+  args?: string[]
   mandatory: boolean
   safety: boolean
   applicable_to: string[]

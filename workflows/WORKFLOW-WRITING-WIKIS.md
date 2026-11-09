@@ -11,7 +11,7 @@ README bodies are covered by
 
 Canonical path: `/opt/workspace-ci/workflows/WORKFLOW-WRITING-WIKIS.md`
 
-Sources: [Ward Cunningham, Design Principles of Wiki](https://opensym.org/ws2006/proceedings/),
+Sources: [Ward Cunningham, Design Principles of Wiki](http://www.c2.com/doc/wikisym/WikiSym2006.pdf),
 [Dan Brown, Eight principles of information architecture](https://www.designprinciplesftw.com/collections/eight-principles-of-information-architecture),
 [Diátaxis](https://diataxis.fr/), [Wikipedia:Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing),
 [Wikipedia:Identifying reliable sources](https://en.wikipedia.org/wiki/Wikipedia:Identifying_reliable_sources),
@@ -293,7 +293,7 @@ Fields in order: site, page title, access date, live URL, archive URL.
 - [WORKFLOW-WRITING-README.md](WORKFLOW-WRITING-README.md) (prose style, README structure)
 - [WORKFLOW-CREATING-DIAGRAMS.md](WORKFLOW-CREATING-DIAGRAMS.md) (Mermaid rules)
 - [Diátaxis](https://diataxis.fr/) (tutorials, how-to, reference, explanation)
-- [Ward Cunningham, Design Principles of Wiki](https://opensym.org/ws2006/proceedings/) (open, precise, convergent)
+- [Ward Cunningham, Design Principles of Wiki](http://www.c2.com/doc/wikisym/WikiSym2006.pdf) (open, precise, convergent)
 - [Dan Brown, Eight principles of information architecture](https://www.designprinciplesftw.com/collections/eight-principles-of-information-architecture) (front doors, growth, classification)
 - [Wikipedia:Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) (banned tells)
 - [Wikipedia:Identifying reliable sources](https://en.wikipedia.org/wiki/Wikipedia:Identifying_reliable_sources) (source tiers)

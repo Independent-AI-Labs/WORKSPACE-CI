@@ -33,6 +33,15 @@ invoked, not what they match.
 3. Every protected hook MUST hold the same invariant whether it is written as
    a shell entrypoint or as a python-module entrypoint. Two execution paths
    MUST define exactly one trust posture.
+4. Shell native hooks MUST invoke `/opt/workspace-ci/scripts/run-hook`, which
+   resolves the function only from the sealed `lib/checks.sh`. A missing
+   function or missing sealed lib fails closed.
+5. Hook installation MUST execute only the sealed
+   `/opt/workspace-ci/scripts/generate-hooks`. No environment variable may
+   select a different generator.
+6. Installation MUST be idempotent and healing: it regenerates, replaces
+   drift, restores root ownership, mode `0755`, and immutability, and verifies
+   the result. A generation failure leaves existing hooks untouched.
 
 ## 3. Environment Construction
 
@@ -167,4 +176,8 @@ Acceptance tests MUST prove:
    completeness and entry resolution only from the sealed artifact;
 7. the candidate build fails when a `ci/check_*.py` is missing from the
    candidate's own `config/required_hooks.yaml`, or when a registered entry has
-   no matching implementation in the candidate tree.
+   no matching implementation in the candidate tree;
+8. every registered shell hook renders through the sealed runner and no native
+   hook contains an inline interpreter form;
+9. installation ignores any generator-selection environment variable, and a
+   second run over drifted hooks restores the sealed rendering.

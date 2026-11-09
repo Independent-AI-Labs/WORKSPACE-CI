@@ -20,7 +20,7 @@
 _DELETION_SCOPE_RE='^(scripts/|lib/|ci/|tests/)'
 
 ci_check_deletion_consumers() {
-    local _commit_msg="${CI_COMMIT_MSG_FILE:-}"
+    local _commit_msg="${1:-${CI_COMMIT_MSG_FILE:-}}"
     local _deleted_raw
     _deleted_raw="$(git diff --cached --name-only --diff-filter=D)"
     [[ -n "$_deleted_raw" ]] || { ci_pass "No deletions; no consumer risk."; return 0; }

@@ -4,7 +4,7 @@
 Reads config/required_hooks.yaml to find all hook entries, then extracts
 the source code and a human-readable description of each hook's entrypoint:
 
-  - shell / shell_inline / shell_with_arg:  bash function body via
+  - shell / shell_with_arg:  bash function body via
     brace-matching in lib/checks*.sh files. Description from the
     ``# --- <func> ---`` comment block after the marker.
   - python_module:                          main() function via AST
@@ -222,7 +222,7 @@ def extract_source(hook: dict) -> dict[str, str | None] | None:
     kind = hook.get("kind", "")
     entry = hook.get("entry", "")
 
-    if kind in ("shell", "shell_inline", "shell_with_arg"):
+    if kind in ("shell", "shell_with_arg"):
         return extract_shell_function(entry)
     if kind == "python_module":
         return extract_python_main(entry)
@@ -290,7 +290,7 @@ def extract_description(hook: dict) -> str:
     kind = hook.get("kind", "")
     entry = hook.get("entry", "")
 
-    if kind in ("shell", "shell_inline", "shell_with_arg"):
+    if kind in ("shell", "shell_with_arg"):
         return extract_shell_description(entry)
     if kind == "python_module":
         return extract_python_description(entry)

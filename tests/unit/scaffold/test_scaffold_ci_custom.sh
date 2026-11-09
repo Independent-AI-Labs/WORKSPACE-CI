@@ -23,20 +23,20 @@ repos:
     hooks:
       - id: check-unstaged
         name: Block Unstaged Changes
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_unstaged'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_unstaged"
         language: system
         pass_filenames: false
         always_run: true
       - id: my-tool
         name: My Custom Tool
-        entry: "bash -c 'echo custom; exit 0'"
+        entry: "my-tool --check"
         language: system
         pass_filenames: false
         always_run: true
         files: \.py$
       - id: my-cargo-lint
         name: My Cargo Lint
-        entry: "bash -c 'cargo clippy -- -D warnings'"
+        entry: "cargo clippy -- -D warnings"
         language: system
         pass_filenames: false
         always_run: true
@@ -50,7 +50,7 @@ test_scaffold_lift_preserves_custom_hooks() {
     bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-custom" --force-precommit --yes > "$TEST_TMP/out" 2>&1
     local _c="$TEST_TMP/sci-custom/.pre-commit-config.yaml"
     grep -q 'My Custom Tool' "$_c" || { echo "lost custom hook name"; return 1; }
-    grep -q 'echo custom' "$_c" || { echo "lost custom hook entry"; return 1; }
+    grep -q 'my-tool --check' "$_c" || { echo "lost custom hook entry"; return 1; }
     grep -q 'My Cargo Lint' "$_c" || { echo "lost cargo hook"; return 1; }
     grep -qF 'files: \.py$' "$_c" || { echo "lost files pattern"; return 1; }
     local _n
@@ -100,7 +100,7 @@ hooks:
   pre-commit: [check-unstaged, synth-hook]
 overrides:
   synth-hook:
-    entry: "bash -c 'echo synthetic; exit 0'"
+    entry: "synth-tool --check"
     name: "Synthetic Hook"
     pass_filenames: false
     always_run: true

@@ -7,7 +7,7 @@ repos:
     hooks:
       - id: check-unstaged
         name: Block Unstaged Changes
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_unstaged'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_unstaged"
         language: system
         pass_filenames: false
         always_run: true
@@ -21,21 +21,21 @@ repos:
 
       - id: block-sensitive-files
         name: Block Sensitive Files
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_block_sensitive_files'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_block_sensitive_files"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: gitleaks
         name: Block secrets in all files (gitleaks)
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_scan_secrets'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_scan_secrets"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: ci-check-error-swallow
         name: Block error-swallow patterns
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_silent_swallow'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_silent_swallow"
         language: system
         pass_filenames: false
         always_run: true
@@ -63,70 +63,70 @@ repos:
 
       - id: check-policy-integrity
         name: Check Policy Integrity (non-exemptible)
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_policy_integrity'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_policy_integrity"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-banned-words
         name: Check Banned Words
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_banned_words'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_banned_words"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-resolution-shapes
         name: Check Resolution Shapes
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_resolution_shapes'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_resolution_shapes"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-coverage-no-devolution
         name: Block Coverage Threshold De-Evolution
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_coverage_thresholds_no_devolution'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_coverage_thresholds_no_devolution"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-file-length
         name: Check File Length (max 512 lines)
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_file_length'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_file_length"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-module-size
         name: Check Source File and Module Size
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_module_size'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_module_size"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-init-files
         name: Enforce Empty __init__.py Files
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_init_files'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_init_files"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-py-not-executable
         name: Forbid +x bit on .py modules
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_py_not_executable'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_py_not_executable"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-portable-shell
         name: Block Process Substitution (not portable across virtualization)
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_portable_shell'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_portable_shell"
         language: system
         pass_filenames: false
         always_run: true
 
       - id: check-no-dead-imports
         name: Forbid deleting .py modules that are still imported
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_no_dead_imports'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_no_dead_imports"
         language: system
         pass_filenames: false
         always_run: true
@@ -154,7 +154,14 @@ repos:
 
       - id: check-trusted-exec
         name: Block Service-Killing Patterns in Trusted Code
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_trusted_exec'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_trusted_exec"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-galaxy
+        name: Galaxy Source Checker
+        entry: "uv run python -m ci.check_galaxy"
         language: system
         pass_filenames: false
         always_run: true
@@ -176,7 +183,7 @@ repos:
 
       - id: check-commit-message
         name: Check Commit Message Format
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_commit_message \"$1\"' --"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_commit_message"
         language: system
         stages: [commit-msg]
 
@@ -185,13 +192,13 @@ repos:
       # written the message yet) and the hatch was inert.
       - id: check-deletion-consumers
         name: Forbid deleting files with remaining consumers
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && CI_COMMIT_MSG_FILE=$1 ci_check_deletion_consumers' --"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_deletion_consumers"
         language: system
         stages: [commit-msg]
 
       - id: block-coauthored
         name: Block Co-authored Commits
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_block_coauthored \"$1\"' --"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_block_coauthored"
         language: system
         stages: [commit-msg]
 
@@ -207,7 +214,7 @@ repos:
 
       - id: block-coauthored-history
         name: Block Commits with Blocked Patterns (full history scan)
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_block_coauthored_history'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_block_coauthored_history"
         language: system
         stages: [pre-push]
         pass_filenames: false
@@ -215,7 +222,7 @@ repos:
 
       - id: check-dead-code
         name: Dead Code Analysis (non-blocking)
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_check_dead_code'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_dead_code"
         language: system
         stages: [pre-push]
         pass_filenames: false
@@ -224,7 +231,7 @@ repos:
 
       - id: osv-scan
         name: Dependency Vulnerability Scan (bounded offline validation)
-        entry: "bash -c 'source /opt/workspace-ci/lib/checks.sh && ci_scan_vulnerabilities'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_scan_vulnerabilities"
         language: system
         stages: [pre-push]
         pass_filenames: false

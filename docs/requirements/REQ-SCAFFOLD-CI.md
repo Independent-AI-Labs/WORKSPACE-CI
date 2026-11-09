@@ -198,14 +198,17 @@ root-owned and immutable; there is no user-owned hook installation path).
 | ID | Requirement |
 |----|-------------|
 | FR-SC-6.1 | The generated file MUST follow the EXACT structure of WORKSPACE-GUARD's existing `.pre-commit-config.yaml`: a single `repos:` block containing one `- repo: local` entry with a flat `hooks:` YAML list of `- id:` blocks. |
-| FR-SC-6.2 | Each hook's `entry:` MUST be rendered according to its `kind` from `required_hooks.yaml` per the table in SPEC §6.2. Specifically: `shell` → `bash -c 'source <REL_CI>/lib/checks.sh && <entry>'`; `shell_inline` → verbatim `<entry>`; `shell_with_arg` → `bash -c 'source <REL_CI>/lib/checks.sh && <entry> "$1"' --`; `python_module` → `uv run --project <REL_CI> --no-sync python -m <entry>`; `makefile_target` → `make <entry>` (no `<REL_CI>` substitution). |
-| FR-SC-6.3 | The relative path `<REL_CI>` MUST be substituted into shell-source `entry:` templates only. `makefile_target` entries run from the consumer's repo root and rely on the consumer's own `Makefile` to resolve `CI_DIR` internally. |
+| FR-SC-6.2 | Each hook's `entry:` MUST be rendered according to its `kind` from `required_hooks.yaml` per the table in SPEC §6.2. Specifically: `shell` and `shell_with_arg` → `/opt/workspace-ci/scripts/run-hook <entry> [args]`; `python_module` → `uv run --project <REL_CI> --no-sync python -m <entry>`; `makefile_target` → `make <entry>` (no `<REL_CI>` substitution). `shell_inline` is removed and MUST be rejected. |
+| FR-SC-6.3 | `<REL_CI>` substitution MUST NOT appear in shell runner entries. Shell hooks use the fixed sealed runner path `/opt/workspace-ci/scripts/run-hook`. `makefile_target` entries run from the consumer's repo root and rely on the consumer's own `Makefile` to resolve `CI_DIR` internally. |
 | FR-SC-6.4 | The fields `pass_filenames`, `always_run`, `files`, `exclude` MUST be copied verbatim from `required_hooks.yaml` (after override application). Hook input scope MUST be the full tracked+untracked file set (`git ls-files --cached --others --exclude-standard`); no generated hook may narrow scope to the staged subset, and filename-passing entries (`"$@"`) MUST be refused at generation. |
 | FR-SC-6.5 | Overrides from the profile's `overrides:` block MUST be applied BEFORE the path-substitution rule. If the user supplies an `entry:` override, the generator uses it verbatim (no `<REL_CI>` substitution). The user is responsible for embedding the correct relative path in the override. |
 | FR-SC-6.6 | The file MUST be preceded by a comment block documenting: the generator source path, the timestamp, the tier and languages, and the re-generation command. |
 | FR-SC-6.7 | If `required_hooks.yaml` is missing, the generator MUST fail fast with `FAILED: config/required_hooks.yaml not found at <CI_ROOT>/config/.`. No generation occurs. |
-| FR-SC-6.8 | If the profile's `kind` field references an unknown value (not one of the six kinds above), the generator MUST fail with the offending hook ID and the unrecognised kind. Adding new kinds requires a code change to `scaffold-ci`. |
-| FR-SC-6.9 | Native hook rendering by `scripts/generate-hooks` MUST render registered hooks from `config/required_hooks.yaml` and custom entries verbatim. It MUST NOT reconstruct an inline interpreter wrapper and MUST NOT emit one in a native hook. |
+| FR-SC-6.8 | If the profile's `kind` field references an unknown value (not one of the four kinds above), the generator MUST fail with the offending hook ID and the unrecognised kind. Adding new kinds requires a code change to `scaffold-ci`. |
+| FR-SC-6.9 | Native hook rendering by `scripts/generate-hooks` MUST render registered hooks from `config/required_hooks.yaml` and custom entries verbatim. Registered shell-kind native hooks MUST invoke the sealed runner `/opt/workspace-ci/scripts/run-hook <function> [args]`. Native hook bodies MUST NOT contain an inline interpreter wrapper, and the generator MUST NOT reconstruct one. |
+| FR-SC-6.10 | `config/required_hooks.yaml` MAY declare an optional `args` list for `shell` and `shell_with_arg` hooks. The generator MUST append those arguments in order after the function name. For a `commit-msg` hook the message-file argument MUST follow the declared arguments. |
+| FR-SC-6.11 | `shell_inline` MUST NOT be accepted. A registry entry with `kind: shell_inline` MUST fail generation with a diagnostic naming the hook. No inline command string is ever executed from the registry. |
+| FR-SC-6.12 | The generator MUST reject any rendered native-hook command that invokes an interpreter inline form (`-c` or `-e`) and any entry that passes filenames (`"$@"`). Validation MUST run before any hook file is written. |
 
 ### 2.4 Generated `Makefile`
 
@@ -216,12 +219,13 @@ root-owned and immutable; there is no user-owned hook installation path).
 | FR-SC-7.1 | The generated `Makefile` MUST define all 10 mandatory targets from `lib/makefile_contract.mk`: `init`, `install`, `install-ci`, `install-hooks`, `sync`, `check`, `lint`, `type-check`, `test`, `clean`, `preflight`. |
 | FR-SC-7.2 | The generated `Makefile` MUST `-include $(CI_DIR)/lib/makefile_contract.mk` where `CI_DIR := $(if $(filter /%,<REL_CI>),<REL_CI>,$(abspath $(REPO_ROOT)/<REL_CI>))`, so an absolute `/opt/workspace-ci` path is used as-is. This provides `make contract-check` and validates the 10 targets' presence via `make -n`. |
 | FR-SC-7.3 | The language-specific targets (`lint`, `type-check`, `test`, `check-push`) MUST be vacuous pass targets with `:` recipe bodies and `TODO` echo diagnostics. Recipes MUST NOT use the `@` silent prefix (`make-at-silent` forbids it). They MUST exit 0 so `make check` passes out-of-the-box on a brand-new project. |
-| FR-SC-7.4 | The `install-hooks` target MUST call `$(SCRIPT_BASH) $(CI_DIR)/scripts/reinstall-hooks` so root-owned hooks are regenerated through the operator-safe path. |
+| FR-SC-7.4 | The `install-hooks` target MUST call `$(SCRIPT_BASH) $(CI_DIR)/scripts/reinstall-hooks` so root-owned hooks are regenerated through the operator-safe path. Installation MUST use only the sealed `scripts/generate-hooks`; no environment variable may select a different generator. |
 | FR-SC-7.5 | The `clean-precommit` target MUST call `bash $(CI_DIR)/scripts/cleanup-precommit`. |
 | FR-SC-7.6 | The generator MUST NOT generate `moon.yml` (per SPEC §1.3: out of scope). |
 | FR-SC-7.7 | The generated `Makefile` MUST include a `help` target that greps `## ` annotations and prints them, mirroring CI's own Makefile. |
 | FR-SC-7.8 | The generator MUST NOT generate language-specific recipes (no `cargo build`, no `pytest`, no `npm test`). The consumer fills the vacuous targets themselves; the generator's purpose is structural compliance, not stack-specific defaults. |
 | FR-SC-7.9 | Hook installation MUST be root-only. The generated `Makefile`'s `install`, `install-ci`, and `sync` targets MUST NOT depend on `install-hooks`. `reinstall-hooks` MUST refuse non-root invocation with exit 1 and a diagnostic directing the operator to `sudo make install-hooks`; hooks are only ever installed root-owned and immutable. There is no user-owned hook installation path. |
+| FR-SC-7.10 | `reinstall-hooks` MUST be idempotent and healing: every run regenerates hooks from the sealed artifact, replaces any hook whose content, owner, mode, or immutability differs, removes the immutable flag before replacement, restores root ownership mode `0755` and the immutable flag, and verifies the result. A failed generation leaves existing hooks untouched and fails non-zero. |
 
 ### 2.5 Generated `config/` Files
 
@@ -350,7 +354,7 @@ root-owned and immutable; there is no user-owned hook installation path).
 
 | ID | Requirement |
 |----|-------------|
-| TR-SC-1 | The unit test file `tests/unit/scaffold/test_scaffold_ci.sh` MUST cover every validation phase (A through E), the path-computation function, and every hook-kind entry-render rule (six kinds). |
+| TR-SC-1 | The unit test file `tests/unit/scaffold/test_scaffold_ci.sh` MUST cover every validation phase (A through E), the path-computation function, and every hook-kind entry-render rule (four kinds). |
 | TR-SC-2 | The integration test file `tests/integration/test_scaffold_ci.sh` MUST cover: full scaffold run, dry-run, force, emit-template, vendored tier, explicit-missing-profile failure, unknown hook ID. Each integration test asserts filesystem state after the run. |
 | TR-SC-3 | Unit and integration tests MUST run under the existing `tests/run_tests.sh` (shell tests) and `tests/run_tests_unit.sh` / `tests/run_tests_integration.sh` harnesses. No new harness. |
 | TR-SC-4 | The unit tests MUST run without network access (no `mktemp -d` touching `/tmp` requiring redis-json from a network drive; all temp dirs under the existing test sandbox). |
@@ -363,6 +367,7 @@ root-owned and immutable; there is no user-owned hook installation path).
 | TR-SC-6 | The unit tests MUST assert the generated `.pre-commit-config.yaml` is consumable by `scripts/generate-hooks` without modification (round-trip: scaffold → `generate-hooks` → inspect `.git/hooks/*` for the expected hook entries). |
 | TR-SC-7 | The unit tests MUST assert the generated `Makefile` passes `make -n <target>` for every contract target (init, install, install-ci, install-hooks, sync, check, lint, type-check, test, clean, preflight): equivalent to `make contract-check` succeeding. |
 | TR-SC-8 | The integration tests MUST assert that running `scaffold-ci --emit-template` produces a template whose hook-total equals the hook-total in `config/required_hooks.yaml` (counts match at both the stage level and overall). |
+| TR-SC-9 | Tests MUST assert that every rendered shell hook uses `/opt/workspace-ci/scripts/run-hook` and that no native hook body or `.pre-commit-config.yaml` shell entry contains an inline interpreter wrapper. |
 
 ---
 

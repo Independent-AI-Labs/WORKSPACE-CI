@@ -6,7 +6,7 @@
 # Mode "registry": Parse required_hooks.yaml hooks list.
 #   Output: One line per hook, fields separated by \034 (ASCII FS):
 #     id \034 kind \034 entry \034 stage \034 pass_filenames \034 always_run
-#          \034 mandatory \034 safety \034 applicable_to \034 files
+#          \034 mandatory \034 safety \034 applicable_to \034 files \034 args
 #
 # Mode "profile": Parse ci-profile.yaml.
 #   Output: Structured records prefixed by type tag:
@@ -39,6 +39,10 @@ mode == "registry" {
         next
     }
     if (!in_hook) next
+    if (/^[[:space:]]+[A-Za-z_][A-Za-z0-9_]*:/) {
+        in_applicable = 0
+        in_args = 0
+    }
     if (/^[[:space:]]+kind:/)           { kind = scalar(); next }
     if (/^[[:space:]]+entry:/)          { entry = entry_val(); next }
     if (/^[[:space:]]+stage:/)          { stage = scalar(); next }
@@ -62,6 +66,21 @@ mode == "registry" {
         next
     }
     if (/^[[:space:]]+files:/)          { files = scalar(); next }
+    if (/^[[:space:]]+args:/) {
+        args = inline_list()
+        in_args = (args == "")
+        next
+    }
+    if (in_args && /^[[:space:]]+- /) {
+        v = $0
+        sub(/^[[:space:]]+- /, "", v)
+        gsub(/["']/, "", v)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
+        if (v != "") {
+            args = args (args == "" ? "" : " ") v
+        }
+        next
+    }
 }
 
 # ── Profile mode ───────────────────────────────────────────────────────────
@@ -161,16 +180,17 @@ END {
 
 function flush_hook() {
     if (id == "") return
-    printf "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n", \
+    printf "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n", \
         id, sep, kind, sep, entry, sep, stage, sep, \
         pass_filenames, sep, always_run, sep, mandatory, sep, \
-        safety, sep, applicable_to, sep, files
+        safety, sep, applicable_to, sep, files, sep, args
     id = ""
     kind = ""; entry = ""; stage = ""
     pass_filenames = "true"; always_run = "false"
     mandatory = "true"; safety = "false"
-    applicable_to = ""; files = ""
+    applicable_to = ""; files = ""; args = ""
     in_applicable = 0
+    in_args = 0
     in_hook = 0
 }
 

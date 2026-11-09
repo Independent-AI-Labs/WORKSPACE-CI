@@ -37,9 +37,9 @@ Today, consumer projects (WORKSPACE-GUARD, WORKSPACE-VM, the freshly-created
 WORKSPACE-GATEWAY) integrate with WORKSPACE-CI by **hand-writing** two files:
 
 - `.pre-commit-config.yaml`: a list of `repo: local` hooks, each with a
-  path-specific `entry:` (e.g. `bash -c 'source ../CI/lib/checks.sh && ...'`
-  for projects immediately under `projects/`, vs
-  `bash -c 'source ../../CI/lib/checks.sh && ...'` for nested grandschildren).
+  sealed runner `entry:` (for example
+  `/opt/workspace-ci/scripts/run-hook ci_check_unstaged`) instead of a
+  path-specific inline wrapper.
 - `Makefile`: a hand-written contract Makefile with the 10 mandatory targets
   from `lib/makefile_contract.mk` (`init`, `install`, `install-ci`,
   `install-hooks`, `sync`, `check`, `lint`, `type-check`, `test`, `clean`,
@@ -473,15 +473,22 @@ Examples:
 
 `REL_CI` is the ONLY path constant. It is substituted into:
 
-- Every shell-sourced `entry:` in `.pre-commit-config.yaml`:
-  `bash -c 'source <REL_CI>/lib/checks.sh && <fn>'`
 - The `Makefile::CI_DIR` assignment:
   `CI_DIR := $(if $(filter /%,<REL_CI>),<REL_CI>,$(abspath $(REPO_ROOT)/<REL_CI>))`
   (an absolute `<REL_CI>` for a protected `/opt/workspace-ci` install is
   used as-is; a relative sibling-checkout path is resolved against the
   repo root)
+
+Shell entries use the fixed sealed runner path
+`/opt/workspace-ci/scripts/run-hook` and do not carry `<REL_CI>`.
 - The `Makefile::install-hooks` recipe:
   `bash <REL_CI>/scripts/reinstall-hooks`
+
+`reinstall-hooks` is idempotent and healing. It always regenerates from the
+sealed artifact, compares each target hook, replaces drift, restores root
+ownership, mode `0755`, and the immutable flag, then verifies the result. It
+never honours an environment variable that selects a different generator. A
+generation failure leaves existing hooks untouched.
 
 `realpath --relative-to` is POSIX extension `realpath(1)` behaviour. It is
 available in coreutils >= 8.23 (already required by the workspace; the
@@ -527,7 +534,7 @@ repos:
     hooks:
       - id: check-unstaged
         name: Block Unstaged Changes
-        entry: "bash -c 'source ../CI/lib/checks.sh && ci_check_unstaged'"
+        entry: "/opt/workspace-ci/scripts/run-hook ci_check_unstaged"
         language: system
         pass_filenames: false
         always_run: true
@@ -540,17 +547,29 @@ The hook `kind` from `required_hooks.yaml` determines the `entry:` form:
 
 | `kind` | Generated `entry:` template |
 |--------|----------------------------|
-| `shell` | `bash -c 'source <REL_CI>/lib/checks.sh && <entry>'` |
-| `shell_inline` | `<entry>` (already complete; the entry IS the inline command) |
-| `shell_with_arg` (commit-msg stage) | `bash -c 'source <REL_CI>/lib/checks.sh && <entry> "$1"' --` |
+| `shell` | `/opt/workspace-ci/scripts/run-hook <entry> [args]` |
+| `shell_with_arg` | `/opt/workspace-ci/scripts/run-hook <entry> [args]`; the commit-msg file follows the declared arguments |
 | `python_module` | `uv run --project <REL_CI> --no-sync python -m <entry>` |
 | `makefile_target` | `make <entry>` (the consumer's Makefile owns the implementation; no path injection needed) |
 
+`shell_inline` is removed. A registry entry with that kind fails generation;
+no inline command string is executed from the registry.
+
 Native hook rendering is separate from `.pre-commit-config.yaml` entry
-rendering. `scripts/generate-hooks` renders registered hooks from
-`config/required_hooks.yaml` and passes custom entries through verbatim. The
-native hook body MUST NOT contain an inline interpreter wrapper. The generator
-MUST NOT reconstruct one from an entry string.
+rendering. `scripts/generate-hooks` renders registered shell hooks from
+`config/required_hooks.yaml`, not from the stale entry text. Stage membership,
+order, name, `pass_filenames`, `always_run`, `files`, `exclude`, `types_or`,
+and `advisory` still come from `.pre-commit-config.yaml`. Custom entries pass
+through verbatim. Shell native hooks invoke the sealed runner. The native hook
+body MUST NOT contain an inline interpreter wrapper. The generator MUST NOT
+reconstruct one from an entry string.
+
+The optional `args:` list on a registry hook is authoritative for registered
+shell hooks. Arguments are appended after the function name in declared order.
+For a `commit-msg` hook the message file is appended after those arguments.
+The generator rejects any rendered command that invokes an interpreter inline
+form (`-c` or `-e`) or passes filenames (`"$@"`). Validation runs before any
+hook file is written.
 
 **Scope rule: hooks always see all files, never the staged subset.** Native
 git hooks receive no file arguments from git. Each check discovers the full
@@ -604,6 +623,10 @@ generated `.pre-commit-config.yaml` (after override application):
   with the offending hook ID and the unrecognised `kind` value. New kinds
   require a code change to `scaffold-ci` (§6.2): adding entries to
   `required_hooks.yaml` is insufficient.
+- If a registry hook uses `kind: shell_inline`, the script fails naming the
+  hook. If any rendered or override entry invokes an interpreter inline form
+  (`-c` or `-e`) or passes filenames (`"$@"`), generation fails before any
+  file is written.
 - If the profile's `protobuf-style` schema validation encounters a YAML
   parse error, the script surfaces the `awk` parser's line number with the
   failing line content and exits 1. No partial YAML is ever written.

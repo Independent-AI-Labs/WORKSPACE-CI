@@ -27,7 +27,6 @@ const labels: WikiLabelsConfig = {
   },
   hook_kinds: {
     shell: 'Shell',
-    shell_inline: 'Shell (inline)',
     shell_with_arg: 'Shell (with arg)',
     python_module: 'Python Module',
     makefile_target: 'Makefile Target',

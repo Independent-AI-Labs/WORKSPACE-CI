@@ -342,11 +342,11 @@ _registry_parsed="$(awk -v mode=registry -f "$_PARSER" "$_REGISTRY")" || {
 }
 
 declare -A _reg_id _reg_kind _reg_entry _reg_stage _reg_pass_fn _reg_always
-declare -A _reg_mandatory _reg_safety _reg_applicable _reg_files
+declare -A _reg_mandatory _reg_safety _reg_applicable _reg_files _reg_args
 
 while IFS= read -r _rline; do
     if [[ -z "$_rline" ]]; then continue; fi
-    IFS=$'\034' read -r _rid _rkind _rentry _rstage _rpass _ralways _rmand _rsafety _rapp _rfiles <<< "$_rline"
+    IFS=$'\034' read -r _rid _rkind _rentry _rstage _rpass _ralways _rmand _rsafety _rapp _rfiles _rargs <<< "$_rline"
     _reg_id["$_rid"]=1
     _reg_kind["$_rid"]="$_rkind"
     _reg_entry["$_rid"]="$_rentry"
@@ -357,6 +357,7 @@ while IFS= read -r _rline; do
     _reg_safety["$_rid"]="$_rsafety"
     _reg_applicable["$_rid"]="$_rapp"
     _reg_files["$_rid"]="$_rfiles"
+    _reg_args["$_rid"]="$_rargs"
 done <<< "$_registry_parsed"
 
 # ── Lift custom hooks from the existing .pre-commit-config.yaml ────────────
@@ -521,6 +522,7 @@ done
 _pc_target="$_consumer/.pre-commit-config.yaml"
 _mf_target="$_consumer/Makefile"
 _pc_content="$(_scl_gen_precommit)"
+_scl_reject_rendered_entries "$_pc_content" || exit 1
 _mf_content="$(_scl_gen_makefile)"
 
 # ── Inspection-only dispatch (no writes, no confirmation needed) ───────────

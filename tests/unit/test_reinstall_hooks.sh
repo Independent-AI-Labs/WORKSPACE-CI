@@ -41,6 +41,29 @@ test_reinstall_hooks_no_user_owned_generate_branch() {
     fi
 }
 
+test_reinstall_hooks_sealed_only_and_healing() {
+    grep -Fq '"$_CI_ROOT/scripts/generate-hooks"' "$PROJECT_DIR/scripts/reinstall-hooks" || {
+        echo "installer does not invoke the sealed generator"
+        return 1
+    }
+    if grep -q 'CI_REINSTALL_GENERATE' "$PROJECT_DIR/scripts/reinstall-hooks"; then
+        echo "installer still honours a generator-selection variable"
+        return 1
+    fi
+    grep -Fq 'cmp -s --' "$PROJECT_DIR/scripts/reinstall-hooks" || {
+        echo "installer does not compare drift"
+        return 1
+    }
+    grep -Fq "stat -c '%U:%G:%a'" "$PROJECT_DIR/scripts/reinstall-hooks" || {
+        echo "installer does not verify ownership/mode"
+        return 1
+    }
+    grep -Fq 'chattr +i --' "$PROJECT_DIR/scripts/reinstall-hooks" || {
+        echo "installer does not restore immutability"
+        return 1
+    }
+}
+
 test_install_hooks_delegates_to_sealed() {
     # The CI repo's own install-hooks must run the sealed /opt installer, not
     # the agent-owned working-tree script (which the shell guard blocks on
@@ -62,4 +85,5 @@ test_install_hooks_delegates_to_sealed() {
 _run_test "reinstall-hooks exists" test_reinstall_hooks_exists
 _run_test "reinstall-hooks refuses non-root" test_reinstall_hooks_refuses_non_root
 _run_test "reinstall-hooks has no user-owned generate branch" test_reinstall_hooks_no_user_owned_generate_branch
+_run_test "reinstall-hooks is sealed-only and healing" test_reinstall_hooks_sealed_only_and_healing
 _run_test "install-hooks delegates to sealed installer" test_install_hooks_delegates_to_sealed

@@ -238,10 +238,10 @@ hooks:
 EOF
     cd "$PROJECT_DIR"
     bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-kind" > "$TEST_TMP/out" 2>&1
-    grep -q "bash -c" "$TEST_TMP/sci-kind/.pre-commit-config.yaml" || { echo "missing shell entry"; return 1; }
-    grep -q "checks.sh" "$TEST_TMP/sci-kind/.pre-commit-config.yaml" || { echo "missing checks.sh source"; return 1; }
+    grep -q "/opt/workspace-ci/scripts/run-hook ci_check_unstaged" "$TEST_TMP/sci-kind/.pre-commit-config.yaml" || { echo "missing sealed runner entry"; return 1; }
+    if grep -q "bash -c" "$TEST_TMP/sci-kind/.pre-commit-config.yaml"; then echo "inline wrapper rendered"; return 1; fi
 }
-_run_test "scaffold: shell kind renders bash -c entry" test_scaffold_entry_shell_kind
+_run_test "scaffold: shell kind renders sealed runner entry" test_scaffold_entry_shell_kind
 
 test_scaffold_entry_makefile_target() {
     mkdir -p "$TEST_TMP/sci-mk"
@@ -294,9 +294,10 @@ EOF
     cd "$PROJECT_DIR"
     bash "$_SCI_SCRIPT" --consumer "$TEST_TMP/sci-swa" > "$TEST_TMP/out" 2>&1
     grep -q 'check-commit-message' "$TEST_TMP/sci-swa/.pre-commit-config.yaml" || { echo "missing commit-msg hook"; return 1; }
-    grep -q '"\$1"' "$TEST_TMP/sci-swa/.pre-commit-config.yaml" || { echo "missing \$1 arg"; return 1; }
+    grep -q "/opt/workspace-ci/scripts/run-hook ci_check_commit_message" "$TEST_TMP/sci-swa/.pre-commit-config.yaml" || { echo "missing runner entry"; return 1; }
+    grep -q 'stages: \[commit-msg\]' "$TEST_TMP/sci-swa/.pre-commit-config.yaml" || { echo "missing commit-msg stage"; return 1; }
 }
-_run_test "scaffold: shell_with_arg renders with \$1" test_scaffold_entry_shell_with_arg
+_run_test "scaffold: shell_with_arg renders runner at commit-msg" test_scaffold_entry_shell_with_arg
 
 test_scaffold_override_entry() {
     mkdir -p "$TEST_TMP/sci-ov"

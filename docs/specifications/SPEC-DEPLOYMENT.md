@@ -207,6 +207,13 @@ Deployment exports its held-lock marker before invoking the installer, so the
 child reuses the parent serialization boundary rather than acquiring the same
 lock again.
 
+The installer regenerates every stage from the sealed
+`scripts/generate-hooks`, never from an environment-selected generator. It is
+idempotent and healing: it compares target hooks, replaces content, owner,
+mode, or immutability drift, and verifies the final root-owned mode `0755`
+immutable result. A generation or validation failure leaves existing hooks
+untouched.
+
 Hook installation is not part of artifact publication. If it fails:
 
 1. deployment exits nonzero;

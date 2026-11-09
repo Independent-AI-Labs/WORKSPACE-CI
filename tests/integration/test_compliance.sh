@@ -35,37 +35,37 @@ repos:
     hooks:
       - id: block-sensitive-files
         name: Block Sensitive Files
-        entry: "bash -c 'echo ok'"
+        entry: "true"
         language: system
       - id: check-banned-words
         name: Check Banned Words
-        entry: "bash -c 'echo ok'"
+        entry: "true"
         language: system
       - id: check-commit-message
         name: Check Commit Message
-        entry: "bash -c 'echo ok'"
+        entry: "true"
         language: system
         stages: [commit-msg]
       - id: block-coauthored
         name: Block Co-authored
-        entry: "bash -c 'echo ok'"
+        entry: "true"
         language: system
         stages: [commit-msg]
   - repo: local
     hooks:
       - id: block-coauthored-history
         name: Block History
-        entry: "bash -c 'echo ok'"
+        entry: "true"
         language: system
         stages: [pre-push]
       - id: ci-check-push
         name: Pre-push Quality Gate
-        entry: "bash -c 'echo ok'"
+        entry: "true"
         language: system
         stages: [pre-push]
       - id: check-markdown-docs
         name: Check Markdown Docs
-        entry: "bash -c 'echo ok' --check-remote"
+        entry: "true --check-remote"
         language: system
         types: [markdown]
 YAML

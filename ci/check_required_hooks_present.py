@@ -21,6 +21,8 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
+from ci.hook_entry_rules import manifest_entry_issues, rendered_entry_issues
+
 EXIT_OK = 0
 EXIT_VIOLATION = 1
 EXIT_INFRA_ERROR = 2
@@ -54,6 +56,7 @@ class HookEntry(BaseModel):
     pass_filenames: bool = True
     applicable_to: list[str] = Field(default_factory=lambda: ["any"])
     files: str | None = None
+    args: list[str] = Field(default_factory=list)
 
 
 class HooksManifest(BaseModel):
@@ -257,6 +260,7 @@ def _check_hooks_rendered(
         if _hook_applies(hook, languages)
         and _hook_marker(hook.id) not in rendered.get(hook.stage, "")
     ]
+    issues.extend(rendered_entry_issues(manifest.hooks, rendered))
     return issues
 
 
@@ -397,25 +401,7 @@ def _run_invariant_4_entries(
         return issues
     defined = _shell_function_names(lib_dir)
     for hook in manifest.hooks:
-        if hook.kind == "shell":
-            issues.extend(
-                f"hook '{hook.id}' entry references shell function"
-                f" '{fn}' but no lib/*.sh module defines it"
-                for fn in sorted(
-                    set(re.findall(r"\bci_[a-z_][a-z0-9_]*\b", hook.entry))
-                )
-                if fn not in defined
-            )
-        elif hook.kind == "python_module":
-            module_path = hook.entry.replace("ci.", "ci/", 1)
-            if not (
-                (package_root / f"{module_path}.py").is_file()
-                or (package_root / module_path).is_dir()
-            ):
-                issues.append(
-                    f"hook '{hook.id}' entry references python-module"
-                    f" '{hook.entry}' but it does not exist"
-                )
+        issues.extend(manifest_entry_issues(hook, defined, package_root))
     if not issues and not quiet:
         _emit("OK", "every manifest entry resolves in the shipping lib")
     return issues

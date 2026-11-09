@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# run-hook: invoke one registered shell hook function from the sealed lib.
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+    printf 'run-hook: missing function name\n' >&2
+    exit 2
+fi
+
+_hook_fn="$1"
+shift
+
+case "$_hook_fn" in
+    ci_[a-z_][a-z0-9_]*) ;;
+    *)
+        printf 'run-hook: invalid function name: %s\n' "$_hook_fn" >&2
+        exit 2
+        ;;
+esac
+
+if [[ ! -f /opt/workspace-ci/lib/checks.sh ]]; then
+    printf 'run-hook: sealed lib/checks.sh missing\n' >&2
+    exit 2
+fi
+if ! source /opt/workspace-ci/lib/checks.sh; then
+    printf 'run-hook: failed to source sealed lib/checks.sh\n' >&2
+    exit 2
+fi
+_hook_defined=""
+if _hook_defined="$(declare -F "$_hook_fn")"; then
+    :
+else
+    _hook_defined=""
+fi
+if [[ -z "$_hook_defined" ]]; then
+    printf 'run-hook: sealed lib does not define %s\n' "$_hook_fn" >&2
+    exit 2
+fi
+
+"$_hook_fn" "$@"

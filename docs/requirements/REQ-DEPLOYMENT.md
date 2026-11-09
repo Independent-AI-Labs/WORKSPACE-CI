@@ -120,6 +120,11 @@ migration path, or restoration workflow.
     MUST NOT alter, replace, or unseal the deployed artifact.
 27. Missing, replaced, mutable, or unverifiable `/opt/workspace-ci` MUST make
     protected Git operations fail closed.
+28. Hook installation MUST execute only the sealed generator and MUST be
+    idempotent and healing: rerunning it replaces drifted hooks, restores root
+    ownership, mode `0755`, and immutability, and verifies the result.
+29. No environment variable may select a generator other than the sealed
+    `/opt/workspace-ci/scripts/generate-hooks`.
 
 ### Platform
 

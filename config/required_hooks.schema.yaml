@@ -53,12 +53,16 @@ fields:
   - path: hooks[].always_run
     type: boolean
     description: Whether the hook runs unconditionally. Content checks run on every invocation regardless of staged state.
-  - path: hooks[].kind
-    type: string
-    required: true
-    description: Hook implementation kind (shell, shell_inline, shell_with_arg, python_module, makefile_target).
   - path: hooks[].safety
     type: boolean
     required: false
     default: false
     description: Whether the hook is safety-marked and installed even at poc tier
+  - path: hooks[].kind
+    type: string
+    required: true
+    description: Hook implementation kind (shell, shell_with_arg, python_module, makefile_target).
+  - path: hooks[].args
+    type: list<string>
+    required: false
+    description: Optional arguments appended after a shell function name.

@@ -15,6 +15,11 @@ Protected hooks resolve `/opt/workspace-ci` directly. Source-development hooks
 may still be generated from a writable checkout, but they are not protected
 deployment hooks.
 
+`make install-hooks` is idempotent and healing. It always regenerates from the
+sealed artifact, replaces drifted hooks, restores root ownership, mode `0755`,
+and the immutable flag, and verifies the result. No environment variable
+selects a different generator. Rerun the same command to converge.
+
 Ansible construction and verification never source or execute the current
 `/opt/workspace-ci`. If the deployed artifact is absent or unusable, rerunning
 normal provisioning constructs a fresh reviewed candidate and replaces it. Do
