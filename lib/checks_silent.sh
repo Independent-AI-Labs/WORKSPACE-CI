@@ -161,8 +161,10 @@ ci_check_silent_swallow() {
         # checker exits 0. Any non-zero exit (violations, crash, timeout,
         # missing config) returns 1. There is no code path where a
         # non-zero child exit is swallowed as a clean pass.
-        ci_run_python_checker "$script_path" < "$diff_tmp"
-        local _chk_rc=$?
+        # rc is captured via `||` so callers running under `set -e`
+        # (scripts/run-hook) still reach the violation report below.
+        local _chk_rc=0
+        ci_run_python_checker "$script_path" < "$diff_tmp" || _chk_rc=$?
         if [[ $_chk_rc -ne 0 ]]; then
             if [[ -s "$CI_CHECKER_STDOUT" ]]; then
                 cat "$CI_CHECKER_STDOUT" >> "$combined_tmp"

@@ -240,6 +240,42 @@ EOF
 _run_test "fail-closed: silent-swallow blocks real violations (no regression)" test_fail_closed_silent_swallow_blocks_violation
 
 # ---------------------------------------------------------------------------
+# Test: under `set -e` (as scripts/run-hook runs it), violations are still
+# reported. Regression: a bare checker call aborted the function before the
+# report, so the hook exited 1 with no output.
+# ---------------------------------------------------------------------------
+test_fail_closed_silent_swallow_reports_under_set_e() {
+    _source_lib
+    cat > bad.py <<'EOF'
+def f():
+    try:
+        foo()
+    except Exception:
+        pass
+EOF
+    git add bad.py
+    # errexit is ignored in `||`/`if` contexts of this shell, so the
+    # set -e caller must be a separate bash process (mirrors run-hook).
+    local _runner _out _rc=0
+    _runner="$(mktemp --suffix=.sh)"
+    _out="$(mktemp)"
+    cat > "$_runner" <<'EOF'
+set -euo pipefail
+source lib/checks.sh
+ci_validate_exemption_file() { return 0; }
+ci_check_silent_swallow
+EOF
+    bash "$_runner" > "$_out" 2>&1 || _rc=$?
+    local _text
+    _text="$(cat "$_out")"
+    rm -f "$_runner" "$_out"
+    [[ $_rc -ne 0 ]] || return 1
+    [[ "$_text" == *"violations found"* ]] || return 1
+    [[ "$_text" == *"bad.py:"* ]]
+}
+_run_test "fail-closed: silent-swallow prints violations under set -e" test_fail_closed_silent_swallow_reports_under_set_e
+
+# ---------------------------------------------------------------------------
 # Test: ci_run_python_checker propagates CI_CONFIG_DIR to child.
 # This proves the env var propagation fix works.
 # ---------------------------------------------------------------------------
