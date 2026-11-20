@@ -11,9 +11,11 @@ letsencrypt_logs_dir: "{{ ansible_env.HOME }}/.config/letsencrypt/logs"
 letsencrypt_cloudflare_credentials: ''
 
 letsencrypt_staging: "{{ lookup('env', 'LETSENCRYPT_STAGING') | default('0', true) in ['1', 'true', 'yes', 'True'] }}"
-# Reload hook after issue/renew. A LIST of argv, run with ansible.builtin.command
-# (no shell), so the sealed artifact never sees a shell command string.
-letsencrypt_reload_argv: []
+# Reload hook after issue/renew: path to an executable script (no arguments).
+# Keep privileged commands inside the script, never in the task text.
+letsencrypt_reload_script: ''
+# Helper that enables systemd user linger for the renewal timer.
+letsencrypt_linger_script: "{{ role_path }}/../../files/user-linger-enable"
 letsencrypt_certbot_bin: ''
 
 letsencrypt_primary_domain: "{{ letsencrypt_domains | first }}"

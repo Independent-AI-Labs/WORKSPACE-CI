@@ -488,7 +488,7 @@ ANSIBLE_LETSENCRYPT_EXTRA := \
 	-e "letsencrypt_cert_dir=$(WIKI_TLS_DIR)" \
 	-e "letsencrypt_email=$(LETSENCRYPT_EMAIL)" \
 	-e "letsencrypt_cloudflare_zone=$(LETSENCRYPT_CLOUDFLARE_ZONE)" \
-	-e @$(CURDIR)/res/ansible/examples/wiki-tls-reload.yml \
+	-e "letsencrypt_reload_script=$(CURDIR)/res/ansible/files/tls-consumer-reload" \
 	-e "ansible_playbook_bin=$(ANSIBLE_PLAYBOOK)" \
 	-e "letsencrypt_project_root=$(CURDIR)" \
 	-e "letsencrypt_playbook_path=$(CURDIR)/res/ansible/letsencrypt.yml"

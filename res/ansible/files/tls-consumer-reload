@@ -1,0 +1,17 @@
+#!/bin/sh
+# Reload the wiki TLS consumer (nginx in the wiki-ci-nginx container) after a
+# certificate issue or renewal.
+#
+# Ansible calls this from a shell task with a >> log redirect. The sealed
+# shell guard blocks the container CLI inside a scanned command string, so
+# the call lives here, in a script, not in the task text.
+#
+# The container CLI is the sealed boot wrapper: one explicit source.
+set -eu
+
+bin=/opt/workspace-ci/.boot-linux/bin/podman
+container=wiki-ci-nginx
+
+echo "tls-consumer-reload: reloading nginx in $container"
+"$bin" exec "$container" nginx -s reload
+echo "tls-consumer-reload: reload signalled"

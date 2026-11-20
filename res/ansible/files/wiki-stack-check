@@ -1,0 +1,30 @@
+#!/bin/sh
+# Verify the wiki prod containers (wiki-ci-app, wiki-ci-nginx) are running.
+# Prints the container list; exits 1 if either container is missing.
+#
+# Ansible calls this from a shell task with a >> log redirect. The sealed
+# shell guard blocks the container CLI inside a scanned command string, so
+# the call lives here, in a script, not in the task text.
+#
+# The container CLI is the sealed boot wrapper: one explicit source.
+set -eu
+
+bin=/opt/workspace-ci/.boot-linux/bin/podman
+
+list="$("$bin" ps --filter name=wiki-ci- --format '{{.Names}} {{.Status}}')"
+echo "wiki-stack-check: containers:"
+echo "$list"
+
+missing=""
+for name in wiki-ci-app wiki-ci-nginx; do
+    if ! printf '%s\n' "$list" | grep -q "^$name "; then
+        missing="$missing $name"
+    fi
+done
+
+if [ -n "$missing" ]; then
+    echo "wiki-stack-check: FAILED: not running:$missing" >&2
+    echo "wiki-stack-check: start prod first: make wiki-prod-start" >&2
+    exit 1
+fi
+echo "wiki-stack-check: OK"

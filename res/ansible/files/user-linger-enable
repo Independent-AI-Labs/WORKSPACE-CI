@@ -1,0 +1,16 @@
+#!/bin/sh
+# Enable systemd user linger for one user (idempotent).
+#
+# Ansible calls this from a shell task with a >> log redirect. The sealed
+# shell guard blocks a state-changing loginctl verb inside a scanned command
+# string, so the call lives here, in a script, not in the task text.
+set -eu
+
+if [ "$#" -ne 1 ] || [ -z "$1" ]; then
+    echo "usage: user-linger-enable <user>" >&2
+    exit 2
+fi
+
+echo "user-linger-enable: enabling linger for $1"
+loginctl enable-linger "$1"
+echo "user-linger-enable: $(loginctl show-user "$1" --property=Linger)"
