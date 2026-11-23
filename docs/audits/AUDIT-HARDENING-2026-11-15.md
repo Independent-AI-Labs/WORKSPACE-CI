@@ -1,8 +1,9 @@
 # AUDIT-HARDENING-2026-11-15: WORKSPACE-CI hardening audit
 
-Status: Phase I audit in progress. Initial CI-01/CI-02 mitigation implemented
-and tested in QEMU on 2026-11-20. GUARD remediation landed the same day.
-Started 2026-11-15.
+Status: Phase II mitigation implemented and tested in QEMU. CI-03 and CI-06
+fixed; CI-01/CI-02 mitigated but the bootstrap gap is still OPEN. Final guest
+claim matrix run 2026-11-23: 20 claims, 0 fail, 2 open. GUARD remediation
+landed 2026-11-20. Started 2026-11-15.
 Scope: deployment chain, hook generation/trust boundary, policy locking, config
 resolution, CI checkers, and QEMU coverage.
 Companion: `projects/WORKSPACE-GUARD/docs/AUDIT-HARDENING-2026-11.md`.
@@ -151,6 +152,33 @@ test that proves dirty-tree and hash-mismatch refusal before execution.
 **E2E-5: Guest mounts the host sealed artifact.** CI changes on the host are invisible to
 the guest test, so the test validates the host deployment, not the source.
 
+## Per-claim verification 2026-11-23
+
+`tests/qemu/audit_ci_claims.sh` runs in a disposable QEMU guest.
+
+- 20 claims, 0 fail. Two claims remain explicitly OPEN and are reported as
+  such, not as passes.
+- CI-01: clean fixture reaches the fake Ansible; dirty tracked, untracked and
+  staged trees are refused before execution.
+- CI-01-BOOTSTRAP: OPEN. Committed content still executes without an
+  `origin/main` binding. This needs an operator root launcher.
+- CI-02: `lock-repo` uses the sealed artifact.
+- CI-03: a failing `chattr` fails closed.
+- CI-04: the CI source claims execute in QEMU.
+- CI-05: a custom entry does not execute during generation; consumer config is
+  input; the generated hook re-execs as the repository owner; inline custom
+  commands are rejected.
+- CI-06: an inherited override is ignored; no other entry point resolves
+  overrides; the generated hook uses the sealed CI library.
+- E2E-4: OPEN. Full guest `deploy-ci` plus hook installation still needs a
+  dedicated integration scenario.
+- E2E-5: guest tests check out the source, not only the sealed artifact.
+- CI-07: deployment requirements include dirty exclusion; no stale checkout
+  Ansible path remains outside this historical audit.
+
+Baseline comparison of the pre-fix code was not run for CI. CI-01/CI-02 were
+reproduced earlier in a guest, as recorded above.
+
 ## Preliminary conclusions
 
 - The root deploy trust anchor is the highest-risk area. It is agent-writable by design.
@@ -176,9 +204,11 @@ the guest test, so the test validates the host deployment, not the source.
 
 ## Open items
 
-- Reproduce CI-01 and CI-02 in a QEMU guest as root.
-- Audit all `ci.sh` entry points for config overrides.
-- Audit `generate-hooks` custom-entry handling end to end.
+- CI-01-BOOTSTRAP: bind committed content to `origin/main`, or deploy from an
+  operator-run root launcher. This is the remaining CRITICAL gap.
+- E2E-4: build the full guest `deploy-ci` plus hook-installation scenario.
 - Review `ci/*.py` checkers and `scripts/install-system-deps`.
 - Review exemption manifest resolution and `config/required_hooks.yaml`.
 - Confirm deploy rollback steps and evidence requirements.
+- Run the full CI suite, shell tests and QEMU suites three times before any
+  host redeploy.
