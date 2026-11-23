@@ -16,11 +16,10 @@
 #                     agent-writable. Used by `make lock-repo` and by
 #                     deploy-ci as its final step for the work repo.
 #
-# Full mode also sets the immutable flag (chattr +i) on every tracked
-# file and the .git tree when chattr is available: the workspace guard
-# loans CAP_DAC_OVERRIDE to the agent's git, so chown alone does not stop
-# an agent-side git write from rewriting "root-locked" files.
-# cap_linux_immutable is never loaned, so the flag holds. deploy-ci runs
+# Full mode requires and sets the immutable flag (chattr +i) on every tracked
+# file and the .git tree: the workspace guard loans CAP_DAC_OVERRIDE to the
+# agent's git, so chown alone does not stop an agent-side git write from
+# rewriting "root-locked" files. deploy-ci runs
 # lock-repo --unseal (root only) to strip the flags before syncing, and
 # the full lock re-applies them. Idempotent.
 #
@@ -73,7 +72,7 @@ fi
 # chattr capability probe: the immutable flag is the only ownership-
 # independent barrier against agents running git with loaned
 # CAP_DAC_OVERRIDE (cap_linux_immutable is never loaned). Filesystems
-# without chattr support get ownership-only locking with a warning.
+# without chattr support fail closed: ownership-only locking is not accepted.
 _has_chattr() {
     _cv="$(command -v chattr 2>&1)" || return 1
     _cv="$(command -v lsattr 2>&1)" || return 1
@@ -232,10 +231,12 @@ if _has_chattr; then
         if ! _rb_out="$(chattr -R -i "$_REPO/.git" 2>&1)"; then
             log_warn "rollback chattr -i on .git failed: $_rb_out"
         fi
-        log_warn "chattr +i unsupported under $_REPO; ownership-only locking"
+        log_error "chattr +i unsupported under $_REPO; refusing ownership-only locking"
+        exit 1
     fi
 else
-    log_warn "chattr/lsattr not found; ownership-only locking"
+    log_error "chattr/lsattr not found; refusing ownership-only locking"
+    exit 1
 fi
 
 # 5. Final integrity gate: the deployment must verify clean before any

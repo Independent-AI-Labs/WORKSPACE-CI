@@ -35,7 +35,7 @@ export PATH := $(_HB_PREFIX)/opt/coreutils/libexec/gnubin:$(_HB_PREFIX)/opt/gnu-
 override BOOT_NAME := $(if $(filter Darwin,$(_OS)),.boot-macos,.boot-linux)
 override BOOT_BIN := $(CURDIR)/$(BOOT_NAME)/bin
 ANSIBLE_PLAYBOOK := /opt/workspace-ci/.boot-linux/bin/ansible-playbook
-DEPLOY_ANSIBLE_PLAYBOOK := $(abspath ../../.boot-linux/bin/ansible-playbook)
+DEPLOY_ANSIBLE_PLAYBOOK := /opt/workspace-ci/.boot-linux/bin/ansible-playbook
 CI_DIR ?= /opt/workspace-ci
 
 # uv is the hermetic runner for all Python tooling (FR-2.4). Resolve the
@@ -230,7 +230,7 @@ install-hooks: ## (Re)generate native git hooks from the sealed artifact (root-o
 
 .PHONY: lock-repo
 lock-repo: ## Root-lock config/*.yaml catalogs and regenerate root-owned hooks (root only)
-	$(SCRIPT_BASH) scripts/lock-repo --config-only $(CURDIR)
+	$(SCRIPT_BASH) $(CI_DIR)/scripts/lock-repo --config-only $(CURDIR)
 	env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' \
 		$(SCRIPT_BASH) $(CI_DIR)/scripts/reinstall-hooks
 
@@ -443,9 +443,10 @@ TUNNEL_CONFIG := $(CURDIR)/cloudflare/config.yml
 else ifeq ($(filter /%,$(TUNNEL_CONFIG)),)
 TUNNEL_CONFIG := $(CURDIR)/$(TUNNEL_CONFIG)
 endif
+# Secrets (TUNNEL_TOKEN, CLOUDFLARE_API_TOKEN) reach recipes via the export
+# near the top; never expand them inline, or make echoes them.
 ANSIBLE_TUNNEL_ENV := TUNNEL_CONFIG="$(TUNNEL_CONFIG)" \
-	TUNNEL_TOKEN="$(TUNNEL_TOKEN)" \
-	CLOUDFLARE_ACCOUNT_ID="$(CLOUDFLARE_ACCOUNT_ID)" CLOUDFLARE_API_TOKEN="$(CLOUDFLARE_API_TOKEN)" \
+	CLOUDFLARE_ACCOUNT_ID="$(CLOUDFLARE_ACCOUNT_ID)" \
 	WIKI_TUNNEL_HOSTNAME="$(WIKI_TUNNEL_HOSTNAME)" WIKI_TUNNEL_NAME="$(WIKI_TUNNEL_NAME)" \
 	WIKI_TUNNEL_ID="$(WIKI_TUNNEL_ID)" \
 	WIKI_TUNNEL_ORIGIN="$(WIKI_TUNNEL_ORIGIN)" WIKI_HTTPS_PORT="$(_WIKI_HTTPS_PORT)" \
@@ -479,8 +480,7 @@ wiki-tunnel-route-dns: ## Route DNS (WIKI_TUNNEL_HOSTNAME from .env)
 # Wiki TLS
 # =============================================================================
 
-ANSIBLE_LETSENCRYPT_ENV := CLOUDFLARE_API_TOKEN="$(CLOUDFLARE_API_TOKEN)" \
-	LETSENCRYPT_EMAIL="$(LETSENCRYPT_EMAIL)" \
+ANSIBLE_LETSENCRYPT_ENV := LETSENCRYPT_EMAIL="$(LETSENCRYPT_EMAIL)" \
 	LETSENCRYPT_STAGING="$(LETSENCRYPT_STAGING)" \
 	LETSENCRYPT_CLOUDFLARE_ZONE="$(LETSENCRYPT_CLOUDFLARE_ZONE)"
 ANSIBLE_LETSENCRYPT_EXTRA := \
@@ -498,7 +498,7 @@ ANSIBLE_LETSENCRYPT := $(ANSIBLE_LETSENCRYPT_ENV) $(ANSIBLE_PLAYBOOK) res/ansibl
 wiki-tls-issue: ## Issue Let's Encrypt cert (DNS-01; LETSENCRYPT_STAGING=1 to test)
 	test -n "$(WIKI_TUNNEL_HOSTNAME)" || (echo "Set WIKI_TUNNEL_HOSTNAME in .env" >&2; exit 1)
 	test -n "$(LETSENCRYPT_EMAIL)" || (echo "Set LETSENCRYPT_EMAIL in .env" >&2; exit 1)
-	test -n "$(CLOUDFLARE_API_TOKEN)" || (echo "Set CLOUDFLARE_API_TOKEN in .env (Zone:DNS:Edit)" >&2; exit 1)
+	test -n "$$CLOUDFLARE_API_TOKEN" || (echo "Set CLOUDFLARE_API_TOKEN in .env (Zone:DNS:Edit)" >&2; exit 1)
 	$(ANSIBLE_LETSENCRYPT) --tags issue
 wiki-tls-renew: ## Renew Let's Encrypt cert and reload nginx
 	test -n "$(WIKI_TUNNEL_HOSTNAME)" || (echo "Set WIKI_TUNNEL_HOSTNAME in .env" >&2; exit 1)

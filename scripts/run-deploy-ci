@@ -8,6 +8,32 @@ set -euo pipefail
     exit 2
 }
 
+source_root=$1
+case "$source_root" in
+    /*) ;;
+    *) printf 'ERROR: SOURCE_ROOT must be absolute: %s\n' "$source_root" >&2; exit 2 ;;
+esac
+[[ -d "$source_root" && ! -L "$source_root" ]] \
+    || { printf 'ERROR: SOURCE_ROOT must be a real directory: %s\n' "$source_root" >&2; exit 2; }
+
+git_root() {
+    env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*' \
+        git -C "$source_root" "$@"
+}
+
+if ! inside="$(git_root rev-parse --is-inside-work-tree 2>&1)"; then
+    printf 'ERROR: SOURCE_ROOT is not a git worktree: %s\n%s\n' "$source_root" "$inside" >&2
+    exit 1
+fi
+
+dirty="$(git_root status --porcelain=v1 --untracked-files=normal)" \
+    || { printf 'ERROR: cannot inspect SOURCE_ROOT worktree: %s\n' "$source_root" >&2; exit 1; }
+if [[ -n "$dirty" ]]; then
+    printf 'ERROR: SOURCE_ROOT has uncommitted or untracked changes; refusing root deploy:\n' >&2
+    printf '%s\n' "$dirty" >&2
+    exit 1
+fi
+
 log=$(mktemp /tmp/workspace-ci-deploy.XXXXXX)
 ansible_pid=
 tail_pid=

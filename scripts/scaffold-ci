@@ -21,6 +21,14 @@ case "$_SELF" in /proc/self/fd/*) _SELF="${SHG_SCRIPT_PATH:-$_SELF}" ;; esac
 _SCRIPT_DIR="$(cd "$(dirname "$_SELF")" && pwd)"
 _CI_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
 
+# Inherited override variables are untrusted input. Explicit
+# --config-overrides is parsed below and remains supported.
+unset CI_CONFIG_OVERRIDES CI_GUARD_CONFIG_OVERRIDES
+for _ci_ov in "${!CI_CONFIG_PATH_@}" "${!CI_GUARD_CONFIG_PATH_@}"; do
+    unset "$_ci_ov"
+done
+unset _ci_ov
+
 if ! source "$_CI_ROOT/lib/ci.sh"; then
     echo "ERROR: failed to source $_CI_ROOT/lib/ci.sh" >&2
     exit 2

@@ -148,6 +148,25 @@ def test_linger_enabled_via_helper_script() -> None:
     )
 
 
+# Make echoes every recipe line, so a secret expanded inline as $(VAR) lands
+# in terminal output and logs. The Ansible recipes get secrets via `export`
+# only; recipes reference them as $$VAR (expanded by the shell).
+_SECRETS = ("CLOUDFLARE_API_TOKEN", "TUNNEL_TOKEN")
+_INLINE_SECRET = re.compile(r"\$[({](" + "|".join(_SECRETS) + r")[)}]")
+
+
+def test_makefiles_never_expand_secrets_inline() -> None:
+    makefiles = [_REPO_ROOT / "Makefile", *_REPO_ROOT.glob("*.mk")]
+    offenders = [
+        f"{path.name}:{lineno}: {line.strip()}"
+        for path in makefiles
+        if path.is_file()
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
+        if _INLINE_SECRET.search(line)
+    ]
+    assert not offenders, "secret expanded inline (make echoes it):\n" + "\n".join(offenders)
+
+
 if __name__ == "__main__":  # pragma: no cover - manual runnable check
     test_no_shell_task_touches_privileged_channels()
     test_no_command_task_touches_privileged_channels()
