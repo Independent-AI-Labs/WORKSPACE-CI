@@ -62,19 +62,6 @@ scripts:
     category: bootstrap
     output: "Installs rustc/cargo/rustup into $CI_PROJECT_ROOT/${boot_dir}/rust and symlinks toolchain + llvm-tools-preview binaries into ${boot_dir}/bin (boot_dir read from config/boot_layout.yaml; default .boot-linux). Refreshes symlinks + components and exits 0 if a working toolchain is already present; reinstalls if rustc is present but fails --version. Repo-private: does NOT touch $HOME/.rustup or $HOME/.cargo."
 
-  - id: bootstrap-workspace-guard
-    path: scripts/bootstrap-workspace-guard
-    summary: Build and install the capability-based git guard binary from the sibling WORKSPACE-GUARD repo.
-    usage: bootstrap-workspace-guard [build-only|install-host-exec|check-host-exec|uninstall]
-    category: bootstrap
-    args:
-      - { name: build-only, description: "Compile workspace-guard and workspace-git-ssh (no root needed)" }
-      - { name: install-host-exec, description: "Install or reconcile host-exec git guard (requires root)" }
-      - { name: check-host-exec, description: "Report host-exec guard installation status" }
-      - { name: uninstall, description: "Restore stock git; preserve host-provision state" }
-    output: "Builds/installs/removes the git-guard binary. Status text on stdout."
-    make_target: build-guard
-
   - id: audit-workspace
     path: scripts/audit-workspace
     summary: Discover all git repos under a root and report working-tree, sync, and CI integration status.
@@ -130,3 +117,10 @@ scripts:
     args:
       - { name: PROJECT_DIR, description: "Project to audit (default: current directory)" }
     output: "Score + findings on stdout. Always exits 0 (non-blocking, per FR-BL-7.7)."
+  - id: bootstrap-certbot
+    path: scripts/bootstrap-certbot
+    summary: Install pinned certbot 5.8.0 + certbot-dns-cloudflare 5.8.0 into the boot bin dir via uv tool.
+    usage: bootstrap-certbot
+    category: bootstrap
+    output: Installs certbot to $CI_PROJECT_ROOT/${boot_dir}/bin (root-locked; run elevated). No-op if a working certbot is already present.
+    make_target: install-certbot
