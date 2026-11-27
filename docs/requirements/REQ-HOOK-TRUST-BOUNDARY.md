@@ -112,14 +112,15 @@ invoked, not what they match.
    the sealed artifact. It MUST read catalog completeness and entry resolution
    only from the sealed artifact.
 5. Inline-code detection is a sealed WORKSPACE-GUARD dependency. The CI
-   checker MUST verify the guard scanner as a root-owned regular file with
-   mode 0755 under the sealed guard root before use, with the sealed guard root
-   at mode 0711 so the CI user can traverse to it. A missing or incompatible
-   scanner MUST fail the check. The checker MUST obtain detection from the
-   sealed scanner.
+   checker MUST verify the guard scanner at
+   `/usr/lib/workspace-guard/inline-scan` before use: a root-owned regular
+   file, mode 0755, with no file capabilities, and a root-owned parent chain
+   that is not group or other writable. A missing, incompatible, or
+   capability-bearing scanner MUST fail the check. The checker MUST obtain
+   detection from that scanner.
 6. The sealed real shell is a WORKSPACE-GUARD dependency at the fixed
    documented path `/usr/lib/workspace-guard/sealed/bash`: root-owned regular
-   file, mode 0700, under the sealed guard root at mode 0711. CI MUST NOT
+   file, mode 0700, under the sealed guard root at mode 0700. CI MUST NOT
    hardcode an obsolete real-shell path. A missing or non-conforming sealed shell
    MUST fail closed.
 

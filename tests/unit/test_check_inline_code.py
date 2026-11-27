@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from ci import check_inline_code as check
 from ci import inline_scanner, verify_runtime
 
-SCANNER = Path("/usr/lib/workspace-guard/sealed/inline-scan")
+SCANNER = inline_scanner.SCANNER
 
 
 def _write(root: Path, name: str, text: str) -> str:
@@ -185,7 +185,7 @@ def test_main_fails_closed_on_scanner_error(monkeypatch, tmp_path, capsys):
     assert "scanner failed" in capsys.readouterr().err
 
 
-@pytest.mark.skipif(not SCANNER.is_file(), reason="sealed inline scanner not installed")
+@pytest.mark.skipif(not SCANNER.is_file(), reason="inline scanner not installed")
 def test_sealed_scanner_detects_inline_code(tmp_path):
     payload = "value=$(" + "python" + "3" + " -c 'print(1)')\n"
     rel = _write(tmp_path, "bad.sh", payload)

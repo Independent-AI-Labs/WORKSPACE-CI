@@ -40,10 +40,13 @@ reporting, and obtains detection results from the sealed guard scanner.
    [REQ-HOOK-TRUST-BOUNDARY](REQ-HOOK-TRUST-BOUNDARY.md): the checker, the
    policy, and the scan root MUST be fixed by the sealed artifact and MUST be
    independent of the caller environment and working directory.
-8. The checker MUST invoke the sealed WORKSPACE-GUARD inline scanner. Before
-   use it MUST verify that the scanner is a root-owned regular file with mode
-   0755 under the sealed guard root, with the sealed guard root at mode 0711
-   so the CI user can traverse to it.
+8. The checker MUST invoke the WORKSPACE-GUARD inline scanner at
+   `/usr/lib/workspace-guard/inline-scan`. Before use it MUST verify that the
+   scanner is a root-owned regular file (not a symlink) with mode 0755 and no
+   file capabilities, and that every parent directory is root-owned and not
+   group or other writable. The scanner lives outside the sealed guard root,
+   which stays mode 0700. It reads files with the caller's own access only
+   (WORKSPACE-GUARD HG-13).
 9. An absent, unreadable, incompatible, or failed scanner MUST fail the
    check.
 10. The system MUST provide exactly one inline-code detector: the sealed

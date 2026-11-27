@@ -7,12 +7,14 @@
 | Component | Owner | Role |
 | --------- | ----- | ---- |
 | `ci/check_inline_code.py` | WORKSPACE-CI | Consumer: discovery, language selection, scanner verification, exemption overlay, reporting |
-| `/usr/lib/workspace-guard/sealed/inline-scan` | WORKSPACE-GUARD | Sealed scanner entrypoint, a hardlink of the guard binary |
+| `/usr/lib/workspace-guard/inline-scan` | WORKSPACE-GUARD | Scanner entrypoint: a separate copy of the guard binary with no file capabilities, outside the sealed root |
+| `ci/inline_scanner.py` | WORKSPACE-CI | Scanner client: trust verification and request/response handling |
 | WORKSPACE-GUARD inline library | WORKSPACE-GUARD | Rust rule engine, decode views, allowed-construct mask, findings |
 | WORKSPACE-GUARD inline policy | WORKSPACE-GUARD | Canonical rules, allowed constructs, decode depth, contexts |
 | `config/inline_code_exceptions.yaml` | Consumer | Consumer path exemptions applied by the CI wrapper |
 | `config/required_hooks.yaml` | WORKSPACE-CI | Hook manifest entry that wires the consumer |
 | `tests/unit/test_check_inline_code.py` | WORKSPACE-CI | Integration tests for the consumer and evasion cases |
+| `tests/unit/inline/test_scanner_trust.py` | WORKSPACE-CI | Unit tests for the scanner trust checks |
 
 WORKSPACE-CI delegates matching, masking, decoding, and rule evaluation to the
 guard library. Those functions exist once, in Rust.
@@ -20,9 +22,13 @@ guard library. Those functions exist once, in Rust.
 ## 2. Authority And Dependency
 
 1. The protected hook invokes the checker from immutable `/opt/workspace-ci`.
-2. The checker invokes the sealed guard scanner. It verifies the scanner is a
-   root-owned regular file with mode 0755 under the sealed guard root, and the
-   sealed guard root is mode 0711 so the CI user can traverse to it.
+2. The checker invokes the guard scanner at
+   `/usr/lib/workspace-guard/inline-scan`. With `lstat` it checks that the
+   scanner is a root-owned regular file with mode 0755. It checks that the
+   `security.capability` xattr is absent; an unreadable xattr fails the check.
+   It checks that every parent directory is root-owned and not group or
+   other writable. The scanner holds no privilege and reads files with the
+   CI user's own access. The sealed guard root stays mode 0700.
 3. An absent, unreadable, incompatible, or failed scanner fails the check.
 4. The checker consumes the sealed guard scanner.
 5. The guard scanner is installed before the CI artifact that consumes it.
