@@ -16,6 +16,8 @@
     > {{ letsencrypt_run_log_dir | quote }}/cert-meta.log 2>&1
     && cat {{ letsencrypt_run_log_dir | quote }}/cert-meta.log
     >>{{ letsencrypt_run_log | quote }}
+  args:
+    executable: /bin/sh
   register: _cert_meta
   changed_when: false
   failed_when: _cert_meta.rc != 0
@@ -29,6 +31,8 @@
     openssl x509 -in '{{ letsencrypt_cert_dir }}/fullchain.pem'
     -noout -checkend '{{ (letsencrypt_cert_min_days | int) * 86400 }}'
     >>{{ letsencrypt_run_log_dir | quote }}/cert-checkend.log 2>&1
+  args:
+    executable: /bin/sh
   register: _cert_checkend
   changed_when: false
   failed_when: _cert_checkend.rc not in [0, 1]
@@ -48,6 +52,8 @@
     && grep -q {{ letsencrypt_primary_domain | quote }}
     {{ letsencrypt_run_log_dir | quote }}/cert-text.log
     >>{{ letsencrypt_run_log | quote }} 2>&1
+  args:
+    executable: /bin/sh
   register: _cert_san
   changed_when: false
   failed_when: _cert_san.rc not in [0, 1, 2]

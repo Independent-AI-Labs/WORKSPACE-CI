@@ -6,7 +6,10 @@
   hosts: localhost
   gather_facts: true
 
+  # Guarded /bin/sh: no nested shell wrap; see shell_plugins/guarded_sh.py.
   vars:
+    ansible_shell_type: guarded_sh
+    ansible_shell_executable: ''
     project_root: '{{ playbook_dir | dirname | dirname }}'
     web_dir: '{{ project_root }}/web'
     compose_file: compose.prod.yaml
@@ -56,6 +59,8 @@
           ansible.builtin.shell: >-
             '{{ podman_path }}' --version
             >>{{ prod_log | quote }} 2>&1
+          args:
+            executable: /bin/sh
           register: podman_check
           changed_when: false
           failed_when: podman_check.rc != 0
@@ -98,6 +103,8 @@
             '{{ podman_path }}' ps --filter name=gw-grafana --filter status=running
             --format '{{ "{{" }}.Names{{ "}}" }}' | grep -q .
             >>{{ prod_log | quote }} 2>&1
+          args:
+            executable: /bin/sh
           register: grafana_running
           changed_when: false
           failed_when: grafana_running.rc not in [0, 1]
@@ -113,6 +120,8 @@
           ansible.builtin.shell: >-
             '{{ podman_path }}' image exists localhost/workspace-ci-wiki:0.1.0
             >>{{ prod_log | quote }} 2>&1
+          args:
+            executable: /bin/sh
           register: prod_image
           changed_when: false
           failed_when: prod_image.rc not in [0, 1]
@@ -143,6 +152,8 @@
           ansible.builtin.shell: >-
             {{ (playbook_dir ~ '/files/user-linger-enable') | quote }} {{ ansible_facts["user_id"] | quote }}
             >>{{ prod_log | quote }} 2>&1
+          args:
+            executable: /bin/sh
           register: linger_result
           changed_when: linger_result.rc == 0
           failed_when: linger_result.rc != 0
@@ -225,6 +236,8 @@
           ansible.builtin.shell: >-
             systemctl --user is-active {{ prod_unit | quote }}
             >>{{ prod_log_dir | quote }}/unit-state.log 2>&1
+          args:
+            executable: /bin/sh
           register: prod_status
           failed_when: prod_status.rc not in [0, 3]
           changed_when: false
@@ -234,6 +247,8 @@
             '{{ podman_path }}' ps --filter name=wiki-ci-
             --format 'table {{ "{{" }}.Names{{ "}}" }}\t{{ "{{" }}.Status{{ "}}" }}\t{{ "{{" }}.Ports{{ "}}" }}'
             >>{{ prod_log_dir | quote }}/containers.log 2>&1
+          args:
+            executable: /bin/sh
           register: wiki_containers
           changed_when: false
           failed_when: wiki_containers.rc not in [0, 1]

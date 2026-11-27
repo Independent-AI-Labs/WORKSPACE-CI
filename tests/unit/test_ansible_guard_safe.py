@@ -13,6 +13,7 @@ which is exactly how the wiki TLS reload/linger tasks were silently blocked.
 
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
 from typing import Any
@@ -148,6 +149,69 @@ def test_linger_enabled_via_helper_script() -> None:
     )
 
 
+# The guarded /bin/sh blocks a nested shell invocation (inline-shell) and a
+# `> /dev/null` suffix (suppress-null). Ansible's default local execution
+# produces both, so every play must select the guarded_sh plugin and drop the
+# nested executable wrap, and every shell task must exec /bin/sh directly
+# (with an empty play executable the shell module would exec "").
+_SHELL_PLUGIN = _ANSIBLE_DIR / "shell_plugins" / "guarded_sh.py"
+
+
+def _plays() -> list[tuple[Path, dict]]:
+    plays: list[tuple[Path, dict]] = []
+    for path in sorted(_ANSIBLE_DIR.glob("*.yml")):
+        doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if isinstance(doc, list):
+            plays.extend((path, p) for p in doc if isinstance(p, dict) and "hosts" in p)
+    return plays
+
+
+def test_playbooks_discovered() -> None:
+    names = {path.name for path, _ in _plays()}
+    expected = {"advisory-db.yml", "deploy-ci.yml", "letsencrypt.yml", "prod.yml", "tunnel.yml"}
+    assert expected <= names, f"missing playbooks: {sorted(expected - names)}"
+
+
+@pytest.mark.parametrize(
+    "path,play", _plays(), ids=lambda v: v.name if isinstance(v, Path) else v.get("name")
+)
+def test_play_uses_guard_safe_shell(path: Path, play: dict) -> None:
+    where = f"{path.relative_to(_REPO_ROOT)}: {play.get('name')}"
+    play_vars = play.get("vars") or {}
+    assert play_vars.get("ansible_shell_type") == "guarded_sh", where
+    assert play_vars.get("ansible_shell_executable") == "", where
+
+
+def test_shell_tasks_exec_bin_sh_directly() -> None:
+    offenders = [
+        f"{path.relative_to(_REPO_ROOT)}: {node.get('name')}"
+        for path in _ansible_files()
+        for key, node in _iter_tasks(path)
+        if key in _SHELL_KEYS and (node.get("args") or {}).get("executable") != "/bin/sh"
+    ]
+    assert not offenders, "shell tasks need args.executable: /bin/sh:\n" + "\n".join(offenders)
+
+
+def test_guarded_shell_plugin_keeps_cleanup_output() -> None:
+    tree = ast.parse(_SHELL_PLUGIN.read_text(encoding="utf-8"))
+    doc = next(
+        node.value.value
+        for node in tree.body
+        if isinstance(node, ast.Assign)
+        and any(isinstance(t, ast.Name) and t.id == "DOCUMENTATION" for t in node.targets)
+    )
+    assert yaml.safe_load(doc)["name"] == "guarded_sh"
+    cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "ShellModule")
+    values = {
+        t.id: n.value.value
+        for n in cls.body
+        if isinstance(n, ast.Assign) and isinstance(n.value, ast.Constant)
+        for t in n.targets
+        if isinstance(t, ast.Name)
+    }
+    assert values.get("_SHELL_REDIRECT_ALLNULL") == ""
+
+
 # Make echoes every recipe line, so a secret expanded inline as $(VAR) lands
 # in terminal output and logs. The Ansible recipes get secrets via `export`
 # only; recipes reference them as $$VAR (expanded by the shell).
@@ -174,4 +238,9 @@ if __name__ == "__main__":  # pragma: no cover - manual runnable check
         test_helper_script_is_executable(_name)
     test_reload_handler_runs_hook_script()
     test_linger_enabled_via_helper_script()
+    test_playbooks_discovered()
+    for _path, _play in _plays():
+        test_play_uses_guard_safe_shell(_path, _play)
+    test_shell_tasks_exec_bin_sh_directly()
+    test_guarded_shell_plugin_keeps_cleanup_output()
     print("ansible guard-safe invariants OK")

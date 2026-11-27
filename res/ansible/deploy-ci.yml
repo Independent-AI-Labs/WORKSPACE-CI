@@ -4,7 +4,10 @@
   connection: local
   gather_facts: false
   become: false
+  # Guarded /bin/sh: no nested shell wrap; see shell_plugins/guarded_sh.py.
   vars:
+    ansible_shell_type: guarded_sh
+    ansible_shell_executable: ''
     workspace_ci_source_root: '{{ source_root }}'
     workspace_ci_deploy_rev: '{{ deploy_rev | default("") }}'
   tasks:
@@ -27,6 +30,8 @@
       ansible.builtin.shell: >-
         /usr/bin/unshare --mount --propagation private -- /bin/true
         >>{{ deploy_output | quote }} 2>&1
+      args:
+        executable: /bin/sh
       register: namespace_stream
       changed_when: false
       failed_when: namespace_stream.rc != 0
@@ -41,6 +46,8 @@
         --from-ansible {{ ('--rev ' ~ (workspace_ci_deploy_rev | quote))
         if workspace_ci_deploy_rev else '' }}
         >>{{ deploy_output | quote }} 2>&1
+      args:
+        executable: /bin/sh
       register: deploy_run
       changed_when: true
       failed_when: deploy_run.rc != 0
@@ -70,6 +77,8 @@
         /opt/workspace-ci/.boot-linux/bin/uv run
         --project /opt/workspace-ci --no-sync python
         -m ci.verify_runtime >>{{ deploy_output | quote }} 2>&1
+      args:
+        executable: /bin/sh
       register: deployed_python_stream
       changed_when: false
       failed_when: deployed_python_stream.rc != 0

@@ -59,6 +59,8 @@
   ansible.builtin.shell: >-
     {{ letsencrypt_linger_script | quote }} {{ ansible_user_id | quote }}
     >>{{ letsencrypt_run_log | quote }} 2>&1
+  args:
+    executable: /bin/sh
   register: _linger
   changed_when: _linger.rc == 0
   failed_when: _linger.rc != 0

@@ -32,6 +32,8 @@
         --logs-dir '{{ letsencrypt_logs_dir }}'
         --non-interactive
         >>{{ letsencrypt_run_log | quote }} 2>&1
+      args:
+        executable: /bin/sh
       register: _certbot_renew
       failed_when: _certbot_renew.rc != 0
       no_log: true

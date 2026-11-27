@@ -72,6 +72,8 @@
     openssl x509 -in '{{ letsencrypt_cert_dir }}/fullchain.pem'
     -noout -enddate
     >>{{ letsencrypt_run_log_dir | quote }}/cert-expiry.log 2>&1
+  args:
+    executable: /bin/sh
   register: _cert_expiry
   changed_when: false
   failed_when: _cert_expiry.rc != 0

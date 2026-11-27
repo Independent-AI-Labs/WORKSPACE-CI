@@ -16,7 +16,10 @@
   hosts: localhost
   gather_facts: true
 
+  # Guarded /bin/sh: no nested shell wrap; see shell_plugins/guarded_sh.py.
   vars:
+    ansible_shell_type: guarded_sh
+    ansible_shell_executable: ''
     project_root: '{{ playbook_dir | dirname | dirname }}'
     tunnel_unit: wiki-ci-tunnel.service
     systemd_dir: '{{ ansible_facts["env"]["HOME"] }}/.config/systemd/user'
@@ -62,14 +65,16 @@
             >>{{ tunnel_log | quote }} 2>&1
           args:
             chdir: '{{ project_root }}'
+            executable: /bin/sh
           register: cloudflared_resolve
           changed_when: false
           failed_when: cloudflared_resolve.rc != 0
           when: lookup('env', 'CLOUDFLARED_BIN') | length == 0
 
+        # run.log is append-only across runs; the resolver's path is the last line.
         - name: Set cloudflared from resolver
           ansible.builtin.set_fact:
-            cloudflared_bin: "{{ lookup('ansible.builtin.file', tunnel_log) | trim }}"
+            cloudflared_bin: "{{ (lookup('ansible.builtin.file', tunnel_log) | trim).splitlines() | last }}"
           when: lookup('env', 'CLOUDFLARED_BIN') | length == 0
 
     - name: Ensure systemd user directory exists
@@ -136,6 +141,8 @@
           ansible.builtin.shell: >-
             {{ (playbook_dir ~ '/files/wiki-stack-check') | quote }}
             >>{{ tunnel_log | quote }} 2>&1
+          args:
+            executable: /bin/sh
           register: wiki_containers
           changed_when: false
           failed_when: wiki_containers.rc != 0
@@ -230,6 +237,8 @@
           ansible.builtin.shell: >-
             {{ (playbook_dir ~ '/files/user-linger-enable') | quote }} {{ ansible_facts["user_id"] | quote }}
             >>{{ tunnel_log | quote }} 2>&1
+          args:
+            executable: /bin/sh
           register: linger_result
           failed_when: linger_result.rc != 0
           changed_when: linger_result.rc == 0
@@ -285,6 +294,8 @@
           ansible.builtin.shell: >-
             systemctl --user is-active {{ tunnel_unit | quote }}
             >>{{ tunnel_log_dir | quote }}/unit-state.log 2>&1
+          args:
+            executable: /bin/sh
           register: tunnel_status
           failed_when: tunnel_status.rc not in [0, 3]
           changed_when: false
@@ -340,6 +351,8 @@
             '{{ cloudflared_bin }}' tunnel route dns
             {{ wiki_tunnel_name | quote }} {{ wiki_tunnel_hostname | quote }}
             >>{{ tunnel_log | quote }} 2>&1
+          args:
+            executable: /bin/sh
           register: route_dns
           failed_when: route_dns.rc != 0
           changed_when: route_dns.rc == 0

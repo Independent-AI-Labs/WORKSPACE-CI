@@ -416,6 +416,8 @@ completion.
 - [x] Preserve Ansible's exact exit status through `scripts/run-deploy-ci`; focused wrapper test verifies status 17.
 - [x] Terminate the Ansible child process when the operator wrapper is interrupted.
 - [x] Remove the invalid `/dev/tty` dependency from Ansible module execution.
+- [x] Run every playbook under the guarded `/bin/sh` (HG-07): each play sets `ansible_shell_executable: ''` (no nested shell wrap, `inline-shell`), every `ansible.builtin.shell` task sets `args.executable: /bin/sh` (direct exec), and `ansible_shell_type: guarded_sh` (`res/ansible/shell_plugins/guarded_sh.py`) keeps temp-dir cleanup output instead of appending `> /dev/null 2>&1` (`suppress-null`). Enforced by `tests/unit/test_ansible_guard_safe.py`; verified with agent-run `make wiki-tunnel-status`.
+- [ ] Re-run `sudo make deploy-ci` on the host after the guarded-shell playbook fix.
 - [x] Remove every direct `bash.real` invocation from candidate namespace construction.
 - [x] Preserve the shell guard's required root-owned mode-`0700` backing shell without invoking it directly from provisioning.
 - [ ] Execute the root-only namespace test proving the candidate owner cannot execute `bash.real` and the host artifact view is unchanged.

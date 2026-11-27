@@ -32,6 +32,8 @@
   ansible.builtin.shell: >-
     {{ (role_path ~ '/../../files/user-linger-enable') | quote }} {{ ansible_user_id | quote }}
     >>{{ rust_advisory_db_run_log | quote }} 2>&1
+  args:
+    executable: /bin/sh
   register: rust_advisory_db_linger
   changed_when: rust_advisory_db_linger.rc == 0
   failed_when: rust_advisory_db_linger.rc != 0
